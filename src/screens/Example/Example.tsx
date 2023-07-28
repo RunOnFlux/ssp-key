@@ -112,7 +112,7 @@ const Example = () => {
         >
           <Brand height={300} width={300} />
         </View>
-        {menominc}
+        <Text>{menominc}</Text>
         <Image
           style={[
             Layout.absolute,

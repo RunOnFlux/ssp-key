@@ -12,13 +12,6 @@ module.exports = {
           types: './@types',
         },
       },
-      ['babel-plugin-rewrite-require', {
-        'aliases': {
-          stream: 'stream-browserify',
-          crypto: 'crypto-browserify',
-          process: 'process/browser',
-        }
-      }]
     ],
     'inline-dotenv',
     'react-native-reanimated/plugin', // needs to be last
