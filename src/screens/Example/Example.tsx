@@ -15,7 +15,7 @@ import { useTheme } from '../../hooks';
 import { useLazyFetchOneQuery } from '../../services/modules/users';
 import { changeTheme, ThemeState } from '../../store/theme';
 import i18next from 'i18next';
-// import { getUniqueId } from 'react-native-device-info';
+import { getUniqueId } from 'react-native-device-info';
 
 import { generateMnemonic } from '../../lib/wallet';
 
@@ -61,15 +61,13 @@ const Example = () => {
     }
   });
 
-  // console.log(getUniqueId);
-
-  // getUniqueId()
-  //   .then((id) => {
-  //     setUniqueId(id);
-  //   })
-  //   .catch((error) => {
-  //     console.log(error);
-  //   });
+  getUniqueId()
+    .then((id) => {
+      setUniqueId(id);
+    })
+    .catch((error) => {
+      console.log(error);
+    });
 
   return (
     <ScrollView
@@ -124,8 +122,8 @@ const Example = () => {
         >
           <Brand height={300} width={300} />
         </View>
-        <Text style={[Fonts.textSmall, Fonts.textLight]}>{mnemonic}</Text>
-        <Text style={[Fonts.textSmall, Fonts.textLight]}>{uniqueId}</Text>
+        <Text style={[Fonts.textSmall]}>{mnemonic}</Text>
+        <Text style={[Fonts.textSmall]}>{uniqueId}</Text>
         <Image
           style={[
             Layout.absolute,
