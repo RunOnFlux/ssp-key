@@ -1,3 +1,4 @@
+import 'react-native-reanimated';
 import 'react-native-get-random-values';
 import 'react-native-gesture-handler';
 import React from 'react';

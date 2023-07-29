@@ -15,6 +15,7 @@ import { useTheme } from '../../hooks';
 import { useLazyFetchOneQuery } from '../../services/modules/users';
 import { changeTheme, ThemeState } from '../../store/theme';
 import i18next from 'i18next';
+// import { getUniqueId } from 'react-native-device-info';
 
 import { generateMnemonic } from '../../lib/wallet';
 
@@ -29,7 +30,8 @@ const Example = () => {
     darkMode: isDark,
   } = useTheme();
   const dispatch = useDispatch();
-  const [menominc, setMnemonic] = useState('');
+  const [mnemonic, setMnemonic] = useState('');
+  const [uniqueId, setUniqueId] = useState('');
 
   const [fetchOne, { data, isSuccess, isLoading, isFetching }] =
     useLazyFetchOneQuery();
@@ -54,10 +56,20 @@ const Example = () => {
   };
 
   useEffect(() => {
-    if (!menominc) {
+    if (!mnemonic) {
       generateMnemonicPhrase(256);
     }
   });
+
+  // console.log(getUniqueId);
+
+  // getUniqueId()
+  //   .then((id) => {
+  //     setUniqueId(id);
+  //   })
+  //   .catch((error) => {
+  //     console.log(error);
+  //   });
 
   return (
     <ScrollView
@@ -112,7 +124,8 @@ const Example = () => {
         >
           <Brand height={300} width={300} />
         </View>
-        <Text>{menominc}</Text>
+        <Text style={[Fonts.textSmall, Fonts.textLight]}>{mnemonic}</Text>
+        <Text style={[Fonts.textSmall, Fonts.textLight]}>{uniqueId}</Text>
         <Image
           style={[
             Layout.absolute,
