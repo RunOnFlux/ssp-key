@@ -12,6 +12,7 @@ module.exports = {
     'react/require-default-props': ['error'],
     'react/default-props-match-prop-types': ['error'],
     'react/sort-prop-types': ['error'],
+    'react-native/no-inline-styles': 'off',
   },
   settings: {
     'import/resolver': {

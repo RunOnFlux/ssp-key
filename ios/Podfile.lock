@@ -1127,7 +1127,7 @@ PODS:
     - React-Core
   - RNDeviceInfo (10.8.0):
     - React-Core
-  - RNGestureHandler (2.12.0):
+  - RNGestureHandler (2.12.1):
     - RCT-Folly
     - RCTRequired
     - RCTTypeSafety
@@ -1175,6 +1175,23 @@ PODS:
     - ReactCommon/turbomodule/core
     - RNScreens/common (= 3.23.0)
   - RNScreens/common (3.23.0):
+    - RCT-Folly
+    - RCTRequired
+    - RCTTypeSafety
+    - React
+    - React-Codegen
+    - React-RCTFabric
+    - ReactCommon/turbomodule/core
+  - RNSVG (13.10.0):
+    - RCT-Folly
+    - RCTRequired
+    - RCTTypeSafety
+    - React
+    - React-Codegen
+    - React-RCTFabric
+    - ReactCommon/turbomodule/core
+    - RNSVG/common (= 13.10.0)
+  - RNSVG/common (13.10.0):
     - RCT-Folly
     - RCTRequired
     - RCTTypeSafety
@@ -1265,6 +1282,7 @@ DEPENDENCIES:
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
+  - RNSVG (from `../node_modules/react-native-svg`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -1392,6 +1410,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
     :path: "../node_modules/react-native-screens"
+  RNSVG:
+    :path: "../node_modules/react-native-svg"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -1459,9 +1479,10 @@ SPEC CHECKSUMS:
   ReactCommon: 3ccb8fb14e6b3277e38c73b0ff5e4a1b8db017a9
   RNCMaskedView: 949696f25ec596bfc697fc88e6f95cf0c79669b6
   RNDeviceInfo: 5795b418ed3451ebcaf39384e6cf51f60cb931c9
-  RNGestureHandler: d8224aad6d7081834ae6e6cf925397059485b69e
+  RNGestureHandler: 0f92ab218707c97810df75609886828ee1b7c5e3
   RNReanimated: 4d38caf8e1138a644ab0690a0980ba9a7f2d60bf
   RNScreens: 95b62f9fb2aa427d7c1a2a2d127a72edb7450390
+  RNSVG: 724693428496ff2c462e1854053e200ce166681b
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
   Yoga: 8796b55dba14d7004f980b54bcc9833ee45b28ce
   YogaKit: f782866e155069a2cca2517aafea43200b01fd5a

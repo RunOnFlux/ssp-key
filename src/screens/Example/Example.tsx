@@ -23,7 +23,7 @@ type Props = {
   navigation: any;
 };
 
-const Example = ({navigation}: Props) => {
+const Example = ({ navigation }: Props) => {
   const { t } = useTranslation(['example', 'welcome']);
   const {
     Common,
@@ -53,7 +53,7 @@ const Example = ({navigation}: Props) => {
   const onChangeLanguage = (lang: 'fr' | 'en') => {
     i18next.changeLanguage(lang);
     if (lang === 'fr') {
-      navigation.navigate('Welcome')
+      navigation.navigate('Welcome');
     }
   };
 
