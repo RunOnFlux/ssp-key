@@ -19,7 +19,11 @@ import { getUniqueId } from 'react-native-device-info';
 
 import { generateMnemonic } from '../../lib/wallet';
 
-const Example = () => {
+type Props = {
+  navigation: any;
+};
+
+const Example = ({navigation}: Props) => {
   const { t } = useTranslation(['example', 'welcome']);
   const {
     Common,
@@ -48,6 +52,9 @@ const Example = () => {
 
   const onChangeLanguage = (lang: 'fr' | 'en') => {
     i18next.changeLanguage(lang);
+    if (lang === 'fr') {
+      navigation.navigate('Welcome')
+    }
   };
 
   const generateMnemonicPhrase = (entValue: 128 | 256) => {

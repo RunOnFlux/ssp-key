@@ -15,9 +15,13 @@ import { MMKV } from 'react-native-mmkv';
 
 import { api } from '../services/api';
 import theme from './theme';
+import ssp from './ssp';
+import flux from './flux';
 
 const reducers = combineReducers({
   theme,
+  ssp,
+  flux,
   [api.reducerPath]: api.reducer,
 });
 
@@ -40,7 +44,6 @@ export const reduxStorage: Storage = {
 const persistConfig = {
   key: 'root',
   storage: reduxStorage,
-  whitelist: ['theme', 'auth'],
 };
 
 const persistedReducer = persistReducer(persistConfig, reducers);
@@ -68,3 +71,8 @@ const persistor = persistStore(store);
 setupListeners(store.dispatch);
 
 export { store, persistor };
+
+// Infer the `RootState` and `AppDispatch` types from the store itself
+export type RootState = ReturnType<typeof store.getState>;
+// Inferred type: {posts: PostsState, comments: CommentsState, users: UsersState}
+export type AppDispatch = typeof store.dispatch;

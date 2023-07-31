@@ -10,7 +10,7 @@
     "test": "jest",
     "type-check": "tsc",
     "test:report": "jest --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --reporters=jest-junit --coverage",
-    "pod-install": "cd ios && RCT_NEW_ARCH_ENABLED=1 bundle exec pod install && cd ..",
+    "pod": "cd ios && RCT_NEW_ARCH_ENABLED=1 bundle exec pod install && cd ..",
     "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process,crypto' --yarn"
   },
   "dependencies": {

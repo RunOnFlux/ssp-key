@@ -14,11 +14,6 @@ module.exports = {
       },
     ],
     'inline-dotenv',
-    [
-      'react-native-reanimated/plugin',
-      {
-        globals: ['__scanCodes'],
-      },
-    ], // needs to be last
+    'react-native-reanimated/plugin',
   ],
 };
