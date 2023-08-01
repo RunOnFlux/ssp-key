@@ -1,5 +1,7 @@
 {
   "title": "$t(common:appName.full)",
   "subtitle": "Simple. Secure. Powerful.",
-  "description": "The Key for your dual signature SSP Wallet."
+  "description": "The Key for your dual signature SSP Wallet.",
+  "synchronise_key": "Synchronise Key!",
+  "restore_key": "Restore Key"
 }

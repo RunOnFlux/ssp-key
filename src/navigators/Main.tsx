@@ -1,5 +1,5 @@
 import React from 'react';
-import { Example, Welcome } from '../screens';
+import { Welcome, Create } from '../screens';
 import { createStackNavigator } from '@react-navigation/stack';
 
 const Stack = createStackNavigator();
@@ -8,8 +8,8 @@ const Stack = createStackNavigator();
 const MainNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {/* <Stack.Screen name="Home" component={Example} /> */}
       <Stack.Screen name="Welcome" component={Welcome} />
+      <Stack.Screen name="Create" component={Create} />
     </Stack.Navigator>
   );
 };

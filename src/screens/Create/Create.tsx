@@ -7,6 +7,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/AntDesign';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
@@ -22,8 +23,8 @@ type Props = {
 
 function Welcome({ navigation }: Props) {
   const dispatch = useAppDispatch();
-  const { t } = useTranslation(['welcome']);
-  const { Common, Fonts, Gutters, Layout, Images } = useTheme();
+  const { t } = useTranslation(['create', 'common']);
+  const { Common, Fonts, Gutters, Layout, Images, Colors } = useTheme();
 
   const generateMnemonicPhrase = (entValue: 128 | 256) => {
     const generatedMnemonic = generateMnemonic(entValue);
@@ -48,6 +49,31 @@ function Welcome({ navigation }: Props) {
     >
       <View
         style={[
+          Layout.row,
+          Layout.justifyContentBetween,
+          Layout.fullWidth,
+          Gutters.smallTMargin,
+          Gutters.smallHPadding,
+        ]}
+      >
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Welcome')}
+          style={[Layout.row]}
+        >
+          <Icon name="left" size={20} color={Colors.bluePrimary} />
+          <Text
+            style={[
+              Fonts.textSmall,
+              Fonts.textBluePrimary,
+              Gutters.tinyLPadding,
+            ]}
+          >
+            {t('common:back')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <View
+        style={[
           Layout.fill,
           Layout.relative,
           Layout.fullWidth,
@@ -56,18 +82,12 @@ function Welcome({ navigation }: Props) {
         ]}
       >
         <Image
-          style={{ width: 120, height: 200 }}
+          style={{ width: 80, height: 160 }}
           source={Images.ssp.logo}
           resizeMode={'contain'}
         />
-        <Text style={[Fonts.titleRegular, Gutters.tinyBMargin]}>
-          {t('welcome:title')}
-        </Text>
-        <Text style={[Fonts.textBold, Fonts.textRegular, Gutters.smallBMargin]}>
-          {t('welcome:subtitle')}
-        </Text>
-        <Text style={[Fonts.textSmall, Gutters.largeBMargin]}>
-          {t('welcome:description')}
+        <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
+          {t('create:secure_key')}
         </Text>
         <TouchableOpacity
           style={[
@@ -75,17 +95,17 @@ function Welcome({ navigation }: Props) {
             Common.button.bluePrimary,
             Gutters.regularBMargin,
           ]}
-          onPress={() => navigation.navigate('Create')}
+          onPress={() => Alert.alert('TODO navigate to create page')}
         >
           <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('welcome:synchronise_key')}
+            {t('create:setup_key')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => Alert.alert('TODO navigate to restore page')}
         >
           <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
-            {t('welcome:restore_key')}
+            {t('create:restore_key')}
           </Text>
         </TouchableOpacity>
       </View>
