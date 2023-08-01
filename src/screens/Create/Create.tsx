@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   ScrollView,
   Image,
   Alert,
+  TextInput,
+  StyleSheet,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/AntDesign';
+import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
@@ -23,6 +25,13 @@ type Props = {
 
 function Welcome({ navigation }: Props) {
   const dispatch = useAppDispatch();
+  const [password, setPassword] = useState('');
+  const [passwordVisibility, setPasswordVisibility] = useState(true);
+  const [rightIcon, setRightIcon] = useState('eye-off');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [passwordVisibilityConfirm, setPasswordVisibilityConfirm] =
+    useState(true);
+  const [rightIconConfirm, setRightIconConfirm] = useState('eye-off');
   const { t } = useTranslation(['create', 'common']);
   const { Common, Fonts, Gutters, Layout, Images, Colors } = useTheme();
 
@@ -37,6 +46,34 @@ function Welcome({ navigation }: Props) {
   if (!seedPhrase) {
     generateMnemonicPhrase(256);
   }
+  const onChangePassword = (text: string) => {
+    setPassword(text);
+  };
+
+  const onChangePasswordConfirm = (text: string) => {
+    setPasswordConfirm(text);
+  };
+
+  const handlePasswordVisibility = () => {
+    if (rightIcon === 'eye') {
+      setRightIcon('eye-off');
+      setPasswordVisibility(!passwordVisibility);
+    } else if (rightIcon === 'eye-off') {
+      setRightIcon('eye');
+      setPasswordVisibility(!passwordVisibility);
+    }
+  };
+
+  const handlePasswordVisibilityConfirm = () => {
+    if (rightIconConfirm === 'eye') {
+      setRightIconConfirm('eye-off');
+      setPasswordVisibilityConfirm(!passwordVisibilityConfirm);
+    } else if (rightIconConfirm === 'eye-off') {
+      setRightIconConfirm('eye');
+      setPasswordVisibilityConfirm(!passwordVisibilityConfirm);
+    }
+  };
+
   return (
     <ScrollView
       style={Layout.fill}
@@ -60,7 +97,7 @@ function Welcome({ navigation }: Props) {
           onPress={() => navigation.navigate('Welcome')}
           style={[Layout.row]}
         >
-          <Icon name="left" size={20} color={Colors.bluePrimary} />
+          <Icon name="chevron-left" size={20} color={Colors.bluePrimary} />
           <Text
             style={[
               Fonts.textSmall,
@@ -89,11 +126,56 @@ function Welcome({ navigation }: Props) {
         <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
           {t('create:secure_key')}
         </Text>
+        <View style={styles.passwordSection}>
+          <TextInput
+            style={styles.input}
+            autoComplete="new-password"
+            inputMode="email"
+            textContentType="password"
+            autoCapitalize="none"
+            placeholder="Set Key Password"
+            secureTextEntry={passwordVisibility ? true : false}
+            onChangeText={onChangePassword}
+            value={password}
+            autoCorrect={false}
+          />
+          <TouchableOpacity
+            onPress={handlePasswordVisibility}
+            style={styles.eyeIcon}
+          >
+            <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.passwordSection}>
+          <TextInput
+            style={styles.input}
+            autoComplete="new-password"
+            inputMode="email"
+            textContentType="password"
+            autoCapitalize="none"
+            placeholder="Confirm Key Password"
+            secureTextEntry={passwordVisibilityConfirm ? true : false}
+            onChangeText={onChangePasswordConfirm}
+            value={passwordConfirm}
+            autoCorrect={false}
+          />
+          <TouchableOpacity
+            onPress={handlePasswordVisibilityConfirm}
+            style={styles.eyeIcon}
+          >
+            <Icon
+              name={rightIconConfirm}
+              size={20}
+              color={Colors.bluePrimary}
+            />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
             Gutters.regularBMargin,
+            Gutters.smallTMargin,
           ]}
           onPress={() => Alert.alert('TODO navigate to create page')}
         >
@@ -112,5 +194,27 @@ function Welcome({ navigation }: Props) {
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  input: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: '#fff',
+    color: '#424242',
+  },
+  passwordSection: {
+    width: '80%',
+    height: 50,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginTop: 16,
+  },
+  eyeIcon: {
+    padding: 12,
+  },
+});
 
 export default Welcome;
