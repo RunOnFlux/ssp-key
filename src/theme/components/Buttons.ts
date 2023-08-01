@@ -6,11 +6,15 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     ...Layout.center,
     ...Gutters.regularHPadding,
     height: 40,
-    backgroundColor: Colors.primary,
   };
   const rounded = {
     ...base,
     borderRadius: 10,
+  };
+  const bluePrimary = {
+    ...base,
+    color: Colors.white,
+    backgroundColor: Colors.bluePrimary,
   };
   const circle = {
     ...Layout.center,
@@ -26,6 +30,7 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     base,
     rounded,
     circle,
+    bluePrimary,
     outline: {
       ...base,
       backgroundColor: Colors.transparent,

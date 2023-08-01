@@ -1,22 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
-  ActivityIndicator,
   Text,
   TouchableOpacity,
   ScrollView,
   Image,
   Alert,
 } from 'react-native';
-import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { Brand } from '../../components';
 import { useTheme } from '../../hooks';
-import { useLazyFetchOneQuery } from '../../services/modules/users';
-import { changeTheme, ThemeState } from '../../store/theme';
-import i18next from 'i18next';
-
-import { getUniqueId } from 'react-native-device-info';
 
 import { generateMnemonic } from '../../lib/wallet';
 
@@ -67,16 +59,31 @@ function Welcome() {
         <Text style={[Fonts.titleRegular, Gutters.tinyBMargin]}>
           {t('welcome:title')}
         </Text>
-        <Text
-          style={[Fonts.textBold, Fonts.textRegular, Gutters.regularBMargin]}
-        >
+        <Text style={[Fonts.textBold, Fonts.textRegular, Gutters.smallBMargin]}>
           {t('welcome:subtitle')}
         </Text>
-        <Text style={[Fonts.textSmall, Gutters.smallBMargin]}>
+        <Text style={[Fonts.textSmall, Gutters.largeBMargin]}>
           {t('welcome:description')}
         </Text>
-        <Text style={[Fonts.textSmall]}>Get Started!</Text>
-        <Text style={[Fonts.textSmall]}>Restore</Text>
+        <TouchableOpacity
+          style={[
+            Common.button.rounded,
+            Common.button.bluePrimary,
+            Gutters.regularBMargin,
+          ]}
+          onPress={() => Alert.alert('TODO navigate to create page')}
+        >
+          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+            Synchronise Key!
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => Alert.alert('TODO navigate to restore page')}
+        >
+          <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
+            Restore Key
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

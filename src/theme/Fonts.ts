@@ -67,6 +67,12 @@ export default function ({ FontSize, Colors }: ThemeVariables) {
     textLight: {
       color: Colors.textGray200,
     },
+    textWhite: {
+      color: Colors.white,
+    },
+    textBluePrimary: {
+      color: Colors.bluePrimary,
+    },
     textLobster: {
       fontFamily: 'lobster',
       fontWeight: 'normal',
