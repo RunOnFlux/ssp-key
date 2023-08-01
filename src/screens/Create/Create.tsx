@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
@@ -25,6 +26,8 @@ type Props = {
 
 function Welcome({ navigation }: Props) {
   const dispatch = useAppDispatch();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mnemonic, setMnemonic] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(true);
   const [rightIcon, setRightIcon] = useState('eye-off');
@@ -37,14 +40,14 @@ function Welcome({ navigation }: Props) {
 
   const generateMnemonicPhrase = (entValue: 128 | 256) => {
     const generatedMnemonic = generateMnemonic(entValue);
-    dispatch(setSeedPhrase(generatedMnemonic));
+    setMnemonic(generatedMnemonic);
   };
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   // if seedPhrse exist, navigate to Home page
 
-  if (!seedPhrase) {
-    generateMnemonicPhrase(256);
+  if (seedPhrase) {
+    // todo navigate to home page
   }
   const onChangePassword = (text: string) => {
     setPassword(text);
@@ -73,6 +76,38 @@ function Welcome({ navigation }: Props) {
       setPasswordVisibilityConfirm(!passwordVisibilityConfirm);
     }
   };
+
+  const setupKey = () => {
+    if (password !== passwordConfirm) {
+      Toast.show({
+        type: 'error',
+        text1: 'PINs do not match :(',
+      });
+    } else if (password.length < 4) {
+      Toast.show({
+        type: 'error',
+        text1: 'PIN must be at least 4 characters',
+      });
+    } else if (!seedPhrase) {
+      generateMnemonicPhrase(256);
+    } else {
+      Toast.show({
+        type: 'error',
+        text1: 'Unexpected error C1. Contact support',
+      });
+    }
+  };
+
+  const showModal = () => {
+    setIsModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (mnemonic) {
+      dispatch(setSeedPhrase(mnemonic));
+      showModal();
+    }
+  }, [mnemonic]);
 
   return (
     <ScrollView
@@ -133,7 +168,7 @@ function Welcome({ navigation }: Props) {
             inputMode="email"
             textContentType="password"
             autoCapitalize="none"
-            placeholder="Set Key Password"
+            placeholder="Set Key Password PIN"
             secureTextEntry={passwordVisibility ? true : false}
             onChangeText={onChangePassword}
             value={password}
@@ -153,7 +188,7 @@ function Welcome({ navigation }: Props) {
             inputMode="email"
             textContentType="password"
             autoCapitalize="none"
-            placeholder="Confirm Key Password"
+            placeholder="Confirm Key Password PIN"
             secureTextEntry={passwordVisibilityConfirm ? true : false}
             onChangeText={onChangePasswordConfirm}
             value={passwordConfirm}
@@ -177,7 +212,7 @@ function Welcome({ navigation }: Props) {
             Gutters.regularBMargin,
             Gutters.smallTMargin,
           ]}
-          onPress={() => Alert.alert('TODO navigate to create page')}
+          onPress={() => setupKey()}
         >
           <Text style={[Fonts.textRegular, Fonts.textWhite]}>
             {t('create:setup_key')}
@@ -191,6 +226,7 @@ function Welcome({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
       </View>
+      <Toast />
     </ScrollView>
   );
 }
