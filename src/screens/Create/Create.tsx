@@ -13,10 +13,18 @@ import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import { encrypt as passworderEncrypt } from '@metamask/browser-passworder';
+import { getUniqueId } from 'react-native-device-info';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
-import { generateMnemonic } from '../../lib/wallet';
+import {
+  generateMnemonic,
+  getMasterXpriv,
+  getMasterXpub,
+} from '../../lib/wallet';
 
 import { setSeedPhrase } from '../../store/ssp';
+import { setXpubKey, setXprivKey } from '../../store/flux';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 
@@ -37,6 +45,13 @@ function Welcome({ navigation }: Props) {
   const [rightIconConfirm, setRightIconConfirm] = useState('eye-off');
   const { t } = useTranslation(['create', 'common']);
   const { Common, Fonts, Gutters, Layout, Images, Colors } = useTheme();
+
+  const displayMessage = (type: string, content: string) => {
+    Toast.show({
+      type,
+      text1: content,
+    });
+  };
 
   const generateMnemonicPhrase = (entValue: 128 | 256) => {
     const generatedMnemonic = generateMnemonic(entValue);
@@ -79,22 +94,14 @@ function Welcome({ navigation }: Props) {
 
   const setupKey = () => {
     if (password !== passwordConfirm) {
-      Toast.show({
-        type: 'error',
-        text1: 'PINs do not match :(',
-      });
+      displayMessage('error', 'PINs do not match :(');
     } else if (password.length < 4) {
-      Toast.show({
-        type: 'error',
-        text1: 'PIN must be at least 4 characters',
-      });
+      displayMessage('error', 'PIN must be at least 4 characters');
     } else if (!seedPhrase) {
-      generateMnemonicPhrase(256);
+      // todo change negation of condition
+      displayMessage('error', 'Unexpected error C1. Contact support'); // this should not occur otherwise we would be in home screen already
     } else {
-      Toast.show({
-        type: 'error',
-        text1: 'Unexpected error C1. Contact support',
-      });
+      generateMnemonicPhrase(256);
     }
   };
 
@@ -104,10 +111,69 @@ function Welcome({ navigation }: Props) {
 
   useEffect(() => {
     if (mnemonic) {
-      dispatch(setSeedPhrase(mnemonic));
       showModal();
+      console.log(mnemonic);
+      storeMnemonic(mnemonic);
     }
   }, [mnemonic]);
+
+  const storeMnemonic = (mnemonicPhrase: string) => {
+    if (!mnemonicPhrase) {
+      displayMessage('error', 'Key seed phrase is invalid.');
+      return;
+    }
+    crypto.subtle
+      .generateKey(
+        {
+          name: 'ECDSA',
+          namedCurve: 'P-256', //can be "P-256", "P-384", or "P-521"
+        },
+        true, //whether the key is extractable (i.e. can be used in exportKey)
+        ['sign', 'verify'], //can be any combination of "sign" and "verify"
+      )
+      .then(function (key) {
+        //returns a keypair object
+        console.log(key);
+        console.log(key.publicKey);
+        console.log(key.privateKey);
+      })
+      .catch(function (err) {
+        console.error(err);
+      });
+
+    getUniqueId()
+      .then(async (id) => {
+        const pwForEncryption = id + password;
+        const mnemonicBlob = await passworderEncrypt(
+          // [TypeError: Cannot read property 'importKey' of undefined]
+          pwForEncryption,
+          mnemonicPhrase,
+        );
+        console.log(mnemonicBlob);
+        // store in redux persist
+        dispatch(setSeedPhrase(mnemonicBlob));
+        // generate master xpriv for flux
+        const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh');
+        const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh');
+        const xprivBlob = await passworderEncrypt(pwForEncryption, xpriv);
+        const xpubBlob = await passworderEncrypt(pwForEncryption, xpub);
+        const fingerprint: string = await getUniqueId();
+        console.log(fingerprint);
+        dispatch(setSeedPhrase(mnemonicBlob));
+        dispatch(setXprivKey(xprivBlob));
+        dispatch(setXpubKey(xpubBlob));
+        // In keychain plain password is stored (only password not id)
+        await EncryptedStorage.setItem('ssp_key_pw', password);
+        // navigate('/home');
+      })
+      .catch((error) => {
+        displayMessage(
+          'error',
+          'Code C1: Something went wrong while setting up your Key.',
+        );
+        console.log(error);
+      });
+  };
 
   return (
     <ScrollView
