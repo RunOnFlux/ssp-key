@@ -1,5 +1,5 @@
 SSP Key
-Simple. Secure. Powerful.
+Secure. Simple. Powerful.
 
 The Key to your Wallet
 
