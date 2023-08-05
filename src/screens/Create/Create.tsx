@@ -13,9 +13,9 @@ import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-import { encrypt as passworderEncrypt } from '@metamask/browser-passworder';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
+const CryptoJS = require('crypto-js');
 
 import {
   generateMnemonic,
@@ -122,41 +122,30 @@ function Welcome({ navigation }: Props) {
       displayMessage('error', 'Key seed phrase is invalid.');
       return;
     }
-    crypto.subtle
-      .generateKey(
-        {
-          name: 'ECDSA',
-          namedCurve: 'P-256', //can be "P-256", "P-384", or "P-521"
-        },
-        true, //whether the key is extractable (i.e. can be used in exportKey)
-        ['sign', 'verify'], //can be any combination of "sign" and "verify"
-      )
-      .then(function (key) {
-        //returns a keypair object
-        console.log(key);
-        console.log(key.publicKey);
-        console.log(key.privateKey);
-      })
-      .catch(function (err) {
-        console.error(err);
-      });
 
     getUniqueId()
       .then(async (id) => {
         const pwForEncryption = id + password;
-        const mnemonicBlob = await passworderEncrypt(
-          // [TypeError: Cannot read property 'importKey' of undefined]
-          pwForEncryption,
+        const mnemonicBlob = CryptoJS.AES.encrypt(
           mnemonicPhrase,
-        );
+          pwForEncryption,
+        ).toString();
         console.log(mnemonicBlob);
+        const mmm = CryptoJS.AES.decrypt(mnemonicBlob, pwForEncryption);
+        console.log(mmm.toString(CryptoJS.enc.Utf8));
         // store in redux persist
         dispatch(setSeedPhrase(mnemonicBlob));
         // generate master xpriv for flux
-        const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh');
-        const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh');
-        const xprivBlob = await passworderEncrypt(pwForEncryption, xpriv);
-        const xpubBlob = await passworderEncrypt(pwForEncryption, xpub);
+        console.log(new Date().getTime());
+        const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
+        console.log(new Date().getTime());
+        const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
+        console.log(new Date().getTime());
+        const xprivBlob = CryptoJS.AES.encrypt(
+          xpriv,
+          pwForEncryption,
+        ).toString();
+        const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
         const fingerprint: string = await getUniqueId();
         console.log(fingerprint);
         dispatch(setSeedPhrase(mnemonicBlob));

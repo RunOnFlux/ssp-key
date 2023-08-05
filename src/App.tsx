@@ -1,6 +1,6 @@
 import 'react-native-reanimated';
-import 'react-native-get-random-values';
 import 'react-native-gesture-handler';
+import 'react-native-quick-crypto';
 import React from 'react';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/lib/integration/react';
@@ -8,17 +8,16 @@ import { store, persistor } from './store';
 import ApplicationNavigator from './navigators/Application';
 import './translations';
 
-import { decode, encode } from 'base-64';
+import { btoa, atob } from 'react-native-quick-base64';
 import { Buffer } from 'buffer';
 import 'fastestsmallesttextencoderdecoder';
-import PolyfillCrypto from 'react-native-webview-crypto';
 
 if (!global.btoa) {
-  global.btoa = encode;
+  global.btoa = btoa;
 }
 
 if (!global.atob) {
-  global.atob = decode;
+  global.atob = atob;
 }
 
 if (!global.Buffer) {
@@ -27,7 +26,6 @@ if (!global.Buffer) {
 
 const App = () => (
   <Provider store={store}>
-    <PolyfillCrypto debug={true} />
     {/**
      * PersistGate delays the rendering of the app's UI until the persisted state has been retrieved
      * and saved to redux.

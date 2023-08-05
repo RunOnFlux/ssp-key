@@ -10,6 +10,7 @@ module.exports = {
         alias: {
           '@': './src',
           types: './@types',
+          crypto: 'react-native-quick-crypto',
         },
       },
     ],
