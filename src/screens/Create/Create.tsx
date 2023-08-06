@@ -8,6 +8,8 @@ import {
   Alert,
   TextInput,
   StyleSheet,
+  Modal,
+  Switch,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
@@ -28,6 +30,8 @@ import { setXpubKey, setXprivKey } from '../../store/flux';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 
+import Divider from '../../components/Divider/Divider';
+
 type Props = {
   navigation: any;
 };
@@ -43,6 +47,9 @@ function Welcome({ navigation }: Props) {
   const [passwordVisibilityConfirm, setPasswordVisibilityConfirm] =
     useState(true);
   const [rightIconConfirm, setRightIconConfirm] = useState('eye-off');
+  const [mnemonicShow, setMnemonicShow] = useState(false);
+  const [WSPbackedUp, setWSPbackedUp] = useState(false);
+  const [wspWasShown, setWSPwasShown] = useState(false);
   const { t } = useTranslation(['create', 'common']);
   const { Common, Fonts, Gutters, Layout, Images, Colors } = useTheme();
 
@@ -112,10 +119,33 @@ function Welcome({ navigation }: Props) {
   useEffect(() => {
     if (mnemonic) {
       showModal();
-      console.log(mnemonic);
-      storeMnemonic(mnemonic);
     }
   }, [mnemonic]);
+
+  const onChangeWSP = () => {
+    setWSPbackedUp(!WSPbackedUp);
+  };
+
+  const handleOk = () => {
+    if (WSPbackedUp && wspWasShown) {
+      setIsModalOpen(false);
+      storeMnemonic(mnemonic);
+    } else {
+      displayMessage(
+        'info',
+        'You must backup your key seed phrase before you can synchronise a key.',
+      );
+    }
+  };
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
+    setMnemonic('');
+    setPassword('');
+    setPasswordConfirm('');
+    setWSPwasShown(false);
+    setWSPbackedUp(false);
+  };
 
   const storeMnemonic = (mnemonicPhrase: string) => {
     if (!mnemonicPhrase) {
@@ -281,7 +311,104 @@ function Welcome({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
       </View>
-      <Toast />
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isModalOpen}
+        onRequestClose={() => handleCancel()}
+      >
+        <ScrollView
+          style={[Layout.fill, styles.modalView]}
+          contentContainerStyle={[Gutters.smallBPadding]}
+        >
+          <Text
+            style={[Fonts.titleSmall, Gutters.smallBMargin, Fonts.textCenter]}
+          >
+            Key Backup
+          </Text>
+          <Text
+            style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
+          >
+            Wallet seed is used to generate all addresses. Anyone with the
+            access to the wallet seed has partial control over the wallet.
+          </Text>
+          <Text
+            style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
+          >
+            Keep your wallet seed backup safe and secure
+          </Text>
+          <Text
+            style={[Fonts.textSmall, Gutters.smallBMargin, Fonts.textCenter]}
+          >
+            Loosing the wallet seed will result in the loss of access to your
+            wallet.
+          </Text>
+          <Divider color={'#C0C0C0'} />
+          <Text
+            style={[
+              Fonts.textItalic,
+              Fonts.textBold,
+              Fonts.textSmall,
+              Fonts.textCenter,
+              Gutters.tinyBMargin,
+            ]}
+          >
+            {mnemonicShow
+              ? mnemonic
+              : '*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***'}
+          </Text>
+          <View style={[Gutters.tinyBMargin]}>
+            <TouchableOpacity
+              style={[
+                Common.button.outlineRounded,
+                Common.button.secondaryButton,
+              ]}
+              onPress={() => {
+                setMnemonicShow(!mnemonicShow);
+                setWSPwasShown(true);
+              }}
+            >
+              <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
+                {mnemonicShow ? 'Hide Mnemonic' : 'Show Mnemonic'} Key Seed
+                Phrase
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Divider color={'#C0C0C0'} />
+          <View style={[Layout.row, Gutters.smallTMargin]}>
+            <Switch
+              onValueChange={onChangeWSP}
+              value={WSPbackedUp}
+              style={styles.toggleStyle}
+            />
+            <Text style={[Gutters.largeRPadding, Gutters.tinyBMargin]}>
+              I have backed up my key seed phrase in a secure location.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[
+              Common.button.rounded,
+              Common.button.bluePrimary,
+              Gutters.regularBMargin,
+              Gutters.smallTMargin,
+            ]}
+            onPress={() => handleOk()}
+          >
+            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+              {t('create:setup_key')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleCancel()}>
+            <Text
+              style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
+            >
+              Cancel
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+        <Toast />
+      </Modal>
+      {!isModalOpen && <Toast />}
     </ScrollView>
   );
 }
@@ -305,6 +432,23 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 12,
+  },
+  modalView: {
+    backgroundColor: 'white',
+    margin: 30,
+    marginTop: 50,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  toggleStyle: {
+    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
 });
 

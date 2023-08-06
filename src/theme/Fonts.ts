@@ -25,6 +25,9 @@ export default function ({ FontSize, Colors }: ThemeVariables) {
     textBold: {
       fontWeight: 'bold',
     },
+    textItalic: {
+      fontStyle: 'italic',
+    },
     textUppercase: {
       textTransform: 'uppercase',
     },

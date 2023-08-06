@@ -4,7 +4,6 @@ import { CommonParams } from '../../../@types/theme';
 export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
   const base = {
     ...Layout.center,
-    ...Gutters.regularHPadding,
     height: 40,
   };
   const rounded = {
@@ -15,6 +14,13 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     ...base,
     color: Colors.white,
     backgroundColor: Colors.bluePrimary,
+    ...Gutters.regularHPadding,
+  };
+  const secondaryButton = {
+    ...base,
+    color: Colors.bluePrimary,
+    backgroundColor: Colors.white,
+    borderColor: Colors.bluePrimary,
   };
   const circle = {
     ...Layout.center,
@@ -31,17 +37,17 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     rounded,
     circle,
     bluePrimary,
+    secondaryButton,
     outline: {
       ...base,
       backgroundColor: Colors.transparent,
-      borderWidth: 2,
+      borderWidth: 1,
       borderColor: Colors.primary,
     },
     outlineRounded: {
       ...rounded,
-      backgroundColor: Colors.transparent,
-      borderWidth: 2,
-      borderColor: Colors.primary,
+      borderStyle: 'dashed',
+      borderWidth: 1,
     },
   });
 }
