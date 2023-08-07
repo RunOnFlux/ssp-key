@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  Alert,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
@@ -81,9 +74,7 @@ function Welcome({ navigation }: Props) {
             {t('welcome:synchronise_key')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => Alert.alert('TODO navigate to restore page')}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
           <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
             {t('welcome:restore_key')}
           </Text>

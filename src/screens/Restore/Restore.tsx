@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Alert,
   TextInput,
   StyleSheet,
   Modal,
@@ -302,7 +303,9 @@ function Welcome({ navigation }: Props) {
             {t('create:setup_key')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
+        <TouchableOpacity
+          onPress={() => Alert.alert('TODO navigate to restore page')}
+        >
           <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
             {t('create:restore_key')}
           </Text>
