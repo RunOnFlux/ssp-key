@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert,
   TextInput,
   StyleSheet,
   Modal,
@@ -19,16 +18,12 @@ import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 const CryptoJS = require('crypto-js');
 
-import {
-  generateMnemonic,
-  getMasterXpriv,
-  getMasterXpub,
-} from '../../lib/wallet';
+import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
 
-import { setSeedPhrase } from '../../store/ssp';
-import { setXpubKey, setXprivKey } from '../../store/flux';
+import { setSeedPhrase, setSeedPhraseInitialState } from '../../store/ssp';
+import { setXpubKey, setXprivKey, setFluxInitialState } from '../../store/flux';
 
-import { useAppSelector, useAppDispatch } from '../../hooks';
+import { useAppDispatch } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 
@@ -60,17 +55,6 @@ function Welcome({ navigation }: Props) {
     });
   };
 
-  const generateMnemonicPhrase = (entValue: 128 | 256) => {
-    const generatedMnemonic = generateMnemonic(entValue);
-    setMnemonic(generatedMnemonic);
-  };
-
-  const { seedPhrase } = useAppSelector((state) => state.ssp);
-  // if seedPhrse exist, navigate to Home page
-
-  if (seedPhrase) {
-    // todo navigate to home page
-  }
   const onChangePassword = (text: string) => {
     setPassword(text);
   };
@@ -99,16 +83,27 @@ function Welcome({ navigation }: Props) {
     }
   };
 
-  const setupKey = () => {
+  const setupImportKey = () => {
+    const seedPhrase = mnemonic.trim();
+    if (!seedPhrase) {
+      displayMessage('error', 'Please enter your Key seed phrase');
+      return;
+    }
+    const splittedSeed = seedPhrase.split(' ');
+    if (splittedSeed.length < 12) {
+      displayMessage(
+        'error',
+        'Key Seed Phrase is invalid. Key Seed Phrase consists of at least 12 words.',
+      );
+      return;
+    }
     if (password !== passwordConfirm) {
       displayMessage('error', 'PINs do not match :(');
     } else if (password.length < 4) {
       displayMessage('error', 'PIN must be at least 4 characters');
-    } else if (!seedPhrase) {
-      // todo change negation of condition
-      displayMessage('error', 'Unexpected error C1. Contact support'); // this should not occur otherwise we would be in home screen already
     } else {
-      generateMnemonicPhrase(256);
+      setMnemonic(seedPhrase);
+      showModal();
     }
   };
 
@@ -116,11 +111,9 @@ function Welcome({ navigation }: Props) {
     setIsModalOpen(true);
   };
 
-  useEffect(() => {
-    if (mnemonic) {
-      showModal();
-    }
-  }, [mnemonic]);
+  const onChangeMnemonic = (text: string) => {
+    setMnemonic(text);
+  };
 
   const onChangeWSP = () => {
     setWSPbackedUp(!WSPbackedUp);
@@ -129,7 +122,7 @@ function Welcome({ navigation }: Props) {
   const handleOk = () => {
     if (WSPbackedUp && wspWasShown) {
       setIsModalOpen(false);
-      storeMnemonic(mnemonic);
+      storeMnemonic(mnemonic.trim());
     } else {
       displayMessage(
         'info',
@@ -152,9 +145,14 @@ function Welcome({ navigation }: Props) {
       displayMessage('error', 'Key seed phrase is invalid.');
       return;
     }
+    // first clean up data
+    dispatch(setSeedPhraseInitialState());
+    dispatch(setFluxInitialState());
 
     getUniqueId()
       .then(async (id) => {
+        // clean up password from encrypted storage
+        await EncryptedStorage.clear();
         const pwForEncryption = id + password;
         const mnemonicBlob = CryptoJS.AES.encrypt(
           mnemonicPhrase,
@@ -244,8 +242,20 @@ function Welcome({ navigation }: Props) {
           resizeMode={'contain'}
         />
         <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
-          {t('create:secure_key')}
+          Import Key Seed Phrase
         </Text>
+        <View style={styles.passwordSection}>
+          <TextInput
+            style={styles.input}
+            inputMode="email"
+            autoCapitalize="none"
+            placeholder="Input your Mnemonic Key Seed Phrase"
+            secureTextEntry={false}
+            onChangeText={onChangeMnemonic}
+            value={mnemonic}
+            autoCorrect={false}
+          />
+        </View>
         <View style={styles.passwordSection}>
           <TextInput
             style={styles.input}
@@ -297,18 +307,9 @@ function Welcome({ navigation }: Props) {
             Gutters.regularBMargin,
             Gutters.smallTMargin,
           ]}
-          onPress={() => setupKey()}
+          onPress={() => setupImportKey()}
         >
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('create:setup_key')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => Alert.alert('TODO navigate to restore page')}
-        >
-          <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
-            {t('create:restore_key')}
-          </Text>
+          <Text style={[Fonts.textRegular, Fonts.textWhite]}>Import Key</Text>
         </TouchableOpacity>
       </View>
       <Modal
@@ -329,18 +330,18 @@ function Welcome({ navigation }: Props) {
           <Text
             style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
           >
-            Wallet seed is used to generate all addresses. Anyone with the
-            access to the wallet seed has partial control over the wallet.
+            Key seed is used to generate all addresses. Anyone with the access
+            to the key seed has partial control over the wallet.
           </Text>
           <Text
             style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
           >
-            Keep your wallet seed backup safe and secure
+            Keep your key seed backup safe and secure
           </Text>
           <Text
             style={[Fonts.textSmall, Gutters.smallBMargin, Fonts.textCenter]}
           >
-            Loosing the wallet seed will result in the loss of access to your
+            Loosing the key seed will result in the loss of access to your
             wallet.
           </Text>
           <Divider color={'#C0C0C0'} />
