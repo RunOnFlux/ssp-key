@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Modal,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
@@ -27,7 +28,7 @@ import {
 import { setSeedPhrase } from '../../store/ssp';
 import { setXpubKey, setXprivKey } from '../../store/flux';
 
-import { useAppSelector, useAppDispatch } from '../../hooks';
+import { useAppDispatch } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 
@@ -35,8 +36,9 @@ type Props = {
   navigation: any;
 };
 
-function Welcome({ navigation }: Props) {
+function Create({ navigation }: Props) {
   const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mnemonic, setMnemonic] = useState('');
   const [password, setPassword] = useState('');
@@ -64,12 +66,6 @@ function Welcome({ navigation }: Props) {
     setMnemonic(generatedMnemonic);
   };
 
-  const { seedPhrase } = useAppSelector((state) => state.ssp);
-  // if seedPhrse exist, navigate to Home page
-
-  if (seedPhrase) {
-    // todo navigate to home page
-  }
   const onChangePassword = (text: string) => {
     setPassword(text);
   };
@@ -103,9 +99,6 @@ function Welcome({ navigation }: Props) {
       displayMessage('error', 'PINs do not match :(');
     } else if (password.length < 4) {
       displayMessage('error', 'PIN must be at least 4 characters');
-    } else if (!seedPhrase) {
-      // todo change negation of condition
-      displayMessage('error', 'Unexpected error C1. Contact support'); // this should not occur otherwise we would be in home screen already
     } else {
       generateMnemonicPhrase(256);
     }
@@ -127,7 +120,6 @@ function Welcome({ navigation }: Props) {
 
   const handleOk = () => {
     if (WSPbackedUp && wspWasShown) {
-      setIsModalOpen(false);
       storeMnemonic(mnemonic);
     } else {
       displayMessage(
@@ -153,6 +145,8 @@ function Welcome({ navigation }: Props) {
       return;
     }
 
+    setIsLoading(true);
+
     getUniqueId()
       .then(async (id) => {
         const pwForEncryption = id + password;
@@ -160,32 +154,26 @@ function Welcome({ navigation }: Props) {
           mnemonicPhrase,
           pwForEncryption,
         ).toString();
-        console.log(mnemonicBlob);
-        const mmm = CryptoJS.AES.decrypt(mnemonicBlob, pwForEncryption);
-        console.log(mmm.toString(CryptoJS.enc.Utf8));
         // store in redux persist
         dispatch(setSeedPhrase(mnemonicBlob));
         // generate master xpriv for flux
-        console.log(new Date().getTime());
         const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
-        console.log(new Date().getTime());
         const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
-        console.log(new Date().getTime());
         const xprivBlob = CryptoJS.AES.encrypt(
           xpriv,
           pwForEncryption,
         ).toString();
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
-        const fingerprint: string = await getUniqueId();
-        console.log(fingerprint);
         dispatch(setXprivKey(xprivBlob));
         dispatch(setXpubKey(xpubBlob));
         // In keychain plain password is stored (only password not id)
         await EncryptedStorage.setItem('ssp_key_pw', password);
-        console.log('DONE');
-        // navigate('/home');
+        setIsModalOpen(false);
+        setIsLoading(false);
+        navigation.navigate('Home');
       })
       .catch((error) => {
+        setIsLoading(false);
         displayMessage(
           'error',
           'Code C1: Something went wrong while setting up your Key.',
@@ -393,13 +381,22 @@ function Welcome({ navigation }: Props) {
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
+            disabled={isLoading}
             onPress={() => handleOk()}
           >
-            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-              {t('create:setup_key')}
-            </Text>
+            {isLoading && (
+              <ActivityIndicator
+                size={'large'}
+                style={[Gutters.largeVMargin]}
+              />
+            )}
+            {!isLoading && (
+              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                {t('create:setup_key')}
+              </Text>
+            )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleCancel()}>
+          <TouchableOpacity disabled={isLoading} onPress={() => handleCancel()}>
             <Text
               style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >
@@ -453,4 +450,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Welcome;
+export default Create;

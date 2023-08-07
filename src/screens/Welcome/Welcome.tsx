@@ -3,32 +3,14 @@ import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
-import { generateMnemonic } from '../../lib/wallet';
-
-import { setSeedPhrase } from '../../store/ssp';
-
-import { useAppSelector, useAppDispatch } from '../../hooks';
-
 type Props = {
   navigation: any;
 };
 
 function Welcome({ navigation }: Props) {
-  const dispatch = useAppDispatch();
   const { t } = useTranslation(['welcome']);
   const { Common, Fonts, Gutters, Layout, Images } = useTheme();
 
-  const generateMnemonicPhrase = (entValue: 128 | 256) => {
-    const generatedMnemonic = generateMnemonic(entValue);
-    dispatch(setSeedPhrase(generatedMnemonic));
-  };
-
-  const { seedPhrase } = useAppSelector((state) => state.ssp);
-  // if seedPhrse exist, navigate to Home page
-
-  if (!seedPhrase) {
-    generateMnemonicPhrase(256);
-  }
   return (
     <ScrollView
       style={Layout.fill}

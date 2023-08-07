@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Modal,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
@@ -23,7 +24,7 @@ import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
 import { setSeedPhrase, setSeedPhraseInitialState } from '../../store/ssp';
 import { setXpubKey, setXprivKey, setFluxInitialState } from '../../store/flux';
 
-import { useAppDispatch } from '../../hooks';
+import { useAppSelector, useAppDispatch } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 
@@ -31,8 +32,10 @@ type Props = {
   navigation: any;
 };
 
-function Welcome({ navigation }: Props) {
+function Restore({ navigation }: Props) {
   const dispatch = useAppDispatch();
+  const { seedPhrase } = useAppSelector((state) => state.ssp);
+  const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mnemonic, setMnemonic] = useState('');
   const [password, setPassword] = useState('');
@@ -84,12 +87,12 @@ function Welcome({ navigation }: Props) {
   };
 
   const setupImportKey = () => {
-    const seedPhrase = mnemonic.trim();
-    if (!seedPhrase) {
+    const newSeedPhrase = mnemonic.trim();
+    if (!newSeedPhrase) {
       displayMessage('error', 'Please enter your Key seed phrase');
       return;
     }
-    const splittedSeed = seedPhrase.split(' ');
+    const splittedSeed = newSeedPhrase.split(' ');
     if (splittedSeed.length < 12) {
       displayMessage(
         'error',
@@ -102,7 +105,7 @@ function Welcome({ navigation }: Props) {
     } else if (password.length < 4) {
       displayMessage('error', 'PIN must be at least 4 characters');
     } else {
-      setMnemonic(seedPhrase);
+      setMnemonic(newSeedPhrase);
       showModal();
     }
   };
@@ -121,7 +124,6 @@ function Welcome({ navigation }: Props) {
 
   const handleOk = () => {
     if (WSPbackedUp && wspWasShown) {
-      setIsModalOpen(false);
       storeMnemonic(mnemonic.trim());
     } else {
       displayMessage(
@@ -149,6 +151,7 @@ function Welcome({ navigation }: Props) {
     // first clean up data
     dispatch(setSeedPhraseInitialState());
     dispatch(setFluxInitialState());
+    setIsLoading(true);
 
     getUniqueId()
       .then(async (id) => {
@@ -159,33 +162,26 @@ function Welcome({ navigation }: Props) {
           mnemonicPhrase,
           pwForEncryption,
         ).toString();
-        console.log(mnemonicBlob);
-        const mmm = CryptoJS.AES.decrypt(mnemonicBlob, pwForEncryption);
-        console.log(mmm.toString(CryptoJS.enc.Utf8));
         // store in redux persist
         dispatch(setSeedPhrase(mnemonicBlob));
         // generate master xpriv for flux
-        console.log(new Date().getTime());
         const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
-        console.log(new Date().getTime());
         const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
-        console.log(new Date().getTime());
-        console.log(xpub);
         const xprivBlob = CryptoJS.AES.encrypt(
           xpriv,
           pwForEncryption,
         ).toString();
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
-        const fingerprint: string = await getUniqueId();
-        console.log(fingerprint);
         dispatch(setXprivKey(xprivBlob));
         dispatch(setXpubKey(xpubBlob));
         // In keychain plain password is stored (only password not id)
         await EncryptedStorage.setItem('ssp_key_pw', password);
-        console.log('DONE');
-        // navigate('/home');
+        setIsModalOpen(false);
+        setIsLoading(false);
+        navigation.navigate('Home');
       })
       .catch((error) => {
+        setIsLoading(false);
         displayMessage(
           'error',
           error.message ||
@@ -193,6 +189,14 @@ function Welcome({ navigation }: Props) {
         );
         console.log(error.message);
       });
+  };
+
+  const navigateBack = () => {
+    if (seedPhrase) {
+      navigation.navigate('Home');
+    } else {
+      navigation.navigate('Welcome');
+    }
   };
 
   return (
@@ -214,10 +218,7 @@ function Welcome({ navigation }: Props) {
           Gutters.smallHPadding,
         ]}
       >
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Welcome')}
-          style={[Layout.row]}
-        >
+        <TouchableOpacity onPress={() => navigateBack()} style={[Layout.row]}>
           <Icon name="chevron-left" size={20} color={Colors.bluePrimary} />
           <Text
             style={[
@@ -401,13 +402,22 @@ function Welcome({ navigation }: Props) {
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
+            disabled={isLoading}
             onPress={() => handleOk()}
           >
-            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-              {t('create:setup_key')}
-            </Text>
+            {isLoading && (
+              <ActivityIndicator
+                size={'large'}
+                style={[Gutters.largeVMargin]}
+              />
+            )}
+            {!isLoading && (
+              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                {t('create:setup_key')}
+              </Text>
+            )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleCancel()}>
+          <TouchableOpacity disabled={isLoading} onPress={() => handleCancel()}>
             <Text
               style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >
@@ -473,4 +483,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Welcome;
+export default Restore;
