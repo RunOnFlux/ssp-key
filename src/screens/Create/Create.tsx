@@ -144,6 +144,7 @@ function Welcome({ navigation }: Props) {
     setPasswordConfirm('');
     setWSPwasShown(false);
     setWSPbackedUp(false);
+    setMnemonicShow(false);
   };
 
   const storeMnemonic = (mnemonicPhrase: string) => {
@@ -177,11 +178,11 @@ function Welcome({ navigation }: Props) {
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
         const fingerprint: string = await getUniqueId();
         console.log(fingerprint);
-        dispatch(setSeedPhrase(mnemonicBlob));
         dispatch(setXprivKey(xprivBlob));
         dispatch(setXpubKey(xpubBlob));
         // In keychain plain password is stored (only password not id)
         await EncryptedStorage.setItem('ssp_key_pw', password);
+        console.log('DONE');
         // navigate('/home');
       })
       .catch((error) => {
@@ -316,7 +317,10 @@ function Welcome({ navigation }: Props) {
       >
         <ScrollView
           style={[Layout.fill, styles.modalView]}
-          contentContainerStyle={[Gutters.smallBPadding]}
+          contentContainerStyle={[
+            Gutters.smallBPadding,
+            Layout.scrollSpaceBetween,
+          ]}
         >
           <Text
             style={[Fonts.titleSmall, Gutters.smallBMargin, Fonts.textCenter]}
@@ -433,7 +437,7 @@ const styles = StyleSheet.create({
   modalView: {
     backgroundColor: 'white',
     margin: 30,
-    marginTop: 50,
+    marginTop: 60,
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',

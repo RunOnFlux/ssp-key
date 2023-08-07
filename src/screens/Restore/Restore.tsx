@@ -138,6 +138,7 @@ function Welcome({ navigation }: Props) {
     setPasswordConfirm('');
     setWSPwasShown(false);
     setWSPbackedUp(false);
+    setMnemonicShow(false);
   };
 
   const storeMnemonic = (mnemonicPhrase: string) => {
@@ -169,6 +170,7 @@ function Welcome({ navigation }: Props) {
         console.log(new Date().getTime());
         const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
         console.log(new Date().getTime());
+        console.log(xpub);
         const xprivBlob = CryptoJS.AES.encrypt(
           xpriv,
           pwForEncryption,
@@ -176,19 +178,20 @@ function Welcome({ navigation }: Props) {
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
         const fingerprint: string = await getUniqueId();
         console.log(fingerprint);
-        dispatch(setSeedPhrase(mnemonicBlob));
         dispatch(setXprivKey(xprivBlob));
         dispatch(setXpubKey(xpubBlob));
         // In keychain plain password is stored (only password not id)
         await EncryptedStorage.setItem('ssp_key_pw', password);
+        console.log('DONE');
         // navigate('/home');
       })
       .catch((error) => {
         displayMessage(
           'error',
-          'Code C1: Something went wrong while setting up your Key.',
+          error.message ||
+            'Code C1: Something went wrong while setting up your Key.',
         );
-        console.log(error);
+        console.log(error.message);
       });
   };
 
@@ -244,9 +247,11 @@ function Welcome({ navigation }: Props) {
         <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
           Import Key Seed Phrase
         </Text>
-        <View style={styles.passwordSection}>
+        <View style={styles.seedPhraseArea}>
           <TextInput
-            style={styles.input}
+            multiline={true}
+            numberOfLines={4}
+            style={styles.inputArea}
             inputMode="email"
             autoCapitalize="none"
             placeholder="Input your Mnemonic Key Seed Phrase"
@@ -320,7 +325,10 @@ function Welcome({ navigation }: Props) {
       >
         <ScrollView
           style={[Layout.fill, styles.modalView]}
-          contentContainerStyle={[Gutters.smallBPadding]}
+          contentContainerStyle={[
+            Gutters.smallBPadding,
+            Layout.scrollSpaceBetween,
+          ]}
         >
           <Text
             style={[Fonts.titleSmall, Gutters.smallBMargin, Fonts.textCenter]}
@@ -421,6 +429,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: '#424242',
   },
+  inputArea: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: '#fff',
+    color: '#424242',
+    borderRadius: 10,
+    marginTop: 16,
+  },
+  seedPhraseArea: {
+    width: '80%',
+    height: 100,
+  },
   passwordSection: {
     width: '80%',
     height: 50,
@@ -437,7 +457,7 @@ const styles = StyleSheet.create({
   modalView: {
     backgroundColor: 'white',
     margin: 30,
-    marginTop: 50,
+    marginTop: 60,
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
