@@ -326,18 +326,18 @@ function Welcome({ navigation }: Props) {
           <Text
             style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
           >
-            Wallet seed is used to generate all addresses. Anyone with the
-            access to the wallet seed has partial control over the wallet.
+            Key seed is used to generate all addresses. Anyone with the access
+            to the key seed has partial control over the wallet.
           </Text>
           <Text
             style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
           >
-            Keep your wallet seed backup safe and secure
+            Keep your key seed backup safe and secure
           </Text>
           <Text
             style={[Fonts.textSmall, Gutters.smallBMargin, Fonts.textCenter]}
           >
-            Loosing the wallet seed will result in the loss of access to your
+            Loosing the key seed will result in the loss of access to your
             wallet.
           </Text>
           <Divider color={'#C0C0C0'} />
