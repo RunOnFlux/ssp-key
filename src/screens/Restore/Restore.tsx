@@ -353,7 +353,7 @@ function Restore({ navigation }: Props) {
             Loosing the key seed will result in the loss of access to your
             wallet.
           </Text>
-          <Divider color={'#C0C0C0'} />
+          <Divider color={Colors.textGray200} />
           <Text
             style={[
               Fonts.textItalic,
@@ -371,6 +371,7 @@ function Restore({ navigation }: Props) {
             <TouchableOpacity
               style={[
                 Common.button.outlineRounded,
+                Common.button.dashed,
                 Common.button.secondaryButton,
               ]}
               onPress={() => {
@@ -384,7 +385,7 @@ function Restore({ navigation }: Props) {
               </Text>
             </TouchableOpacity>
           </View>
-          <Divider color={'#C0C0C0'} />
+          <Divider color={Colors.textGray200} />
           <View style={[Layout.row, Gutters.smallTMargin]}>
             <Switch
               onValueChange={onChangeWSP}

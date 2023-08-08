@@ -46,8 +46,10 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     },
     outlineRounded: {
       ...rounded,
-      borderStyle: 'dashed',
       borderWidth: 1,
+    },
+    dashed: {
+      borderStyle: 'dashed',
     },
   });
 }
