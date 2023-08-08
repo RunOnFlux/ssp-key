@@ -6,14 +6,18 @@ export interface FluxState {
   xprivKey: string;
   address: string;
   redeemScript: string;
+  sspWalletKeyIdentity: string;
+  sspWalletIdentity: string;
 }
 
 const initialState: FluxState = {
-  xpubWallet: '',
-  xpubKey: '',
-  xprivKey: '',
+  xpubWallet: '', // encrypted
+  xpubKey: '', // encrypted
+  xprivKey: '', // encrypted
   address: '',
-  redeemScript: '',
+  redeemScript: '', // encrypted
+  sspWalletKeyIdentity: '',
+  sspWalletIdentity: '',
 };
 
 const fluxSlice = createSlice({
@@ -35,6 +39,12 @@ const fluxSlice = createSlice({
     setXprivKey: (state, action: PayloadAction<string>) => {
       state.xprivKey = action.payload;
     },
+    setSspWalletKeyIdentity: (state, action: PayloadAction<string>) => {
+      state.sspWalletKeyIdentity = action.payload;
+    },
+    setsspWalletIdentity: (state, action: PayloadAction<string>) => {
+      state.sspWalletIdentity = action.payload;
+    },
     // to reset data
     setFluxInitialState: (state) => {
       state.xpubWallet = '';
@@ -42,6 +52,8 @@ const fluxSlice = createSlice({
       state.xprivKey = '';
       state.address = '';
       state.redeemScript = '';
+      state.sspWalletKeyIdentity = '';
+      state.sspWalletIdentity = '';
     },
   },
 });
@@ -53,6 +65,8 @@ export const {
   setXpubKey,
   setXprivKey,
   setFluxInitialState,
+  setsspWalletIdentity,
+  setSspWalletKeyIdentity,
 } = fluxSlice.actions;
 
 export default fluxSlice.reducer;

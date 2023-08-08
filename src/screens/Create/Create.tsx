@@ -25,7 +25,7 @@ import {
   getMasterXpub,
 } from '../../lib/wallet';
 
-import { setSeedPhrase } from '../../store/ssp';
+import { setSeedPhrase, setSeedPhraseInitialState } from '../../store/ssp';
 import { setXpubKey, setXprivKey } from '../../store/flux';
 
 import { useAppDispatch } from '../../hooks';
@@ -174,6 +174,7 @@ function Create({ navigation }: Props) {
       })
       .catch((error) => {
         setIsLoading(false);
+        dispatch(setSeedPhraseInitialState());
         displayMessage(
           'error',
           'Code C1: Something went wrong while setting up your Key.',

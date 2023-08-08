@@ -182,6 +182,7 @@ function Restore({ navigation }: Props) {
       })
       .catch((error) => {
         setIsLoading(false);
+        dispatch(setSeedPhraseInitialState());
         displayMessage(
           'error',
           error.message ||
