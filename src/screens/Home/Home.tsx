@@ -239,16 +239,16 @@ function Home({ navigation }: Props) {
   const handleRefresh = async () => {
     try {
       console.log('refresh');
-      if (sspWalletIdentity) {
-        // get some pending request
-        const result = await axios.get(
-          `https://relay.ssp.runonflux.io/v1/get/${sspWalletIdentity}`,
-        );
-        console.log('result', result.data);
-      } else if (sspWalletKeyIdentity) {
-        // get some pending request
+      if (sspWalletKeyIdentity) {
+        // get some pending request on W-K identity
         const result = await axios.get(
           `https://relay.ssp.runonflux.io/v1/get/${sspWalletKeyIdentity}`,
+        );
+        console.log('result', result.data);
+      } else if (sspWalletIdentity) {
+        // get some pending request on W identity
+        const result = await axios.get(
+          `https://relay.ssp.runonflux.io/v1/get/${sspWalletIdentity}`,
         );
         console.log('result', result.data);
       } else {
@@ -258,8 +258,7 @@ function Home({ navigation }: Props) {
       console.log(error);
     }
   };
-  // refresh for pending actions needed
-  // on click refresh pending actions
+
   return (
     <ScrollView
       style={Layout.fill}
