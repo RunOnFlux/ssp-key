@@ -1,0 +1,15 @@
+{
+  "secure_key": "Secure your Key",
+  "set_pw": "Set Password",
+  "confirm_pw": "Confirm Password",
+  "setup_key": "Setup Key!",
+  "restore_key": "Restore Key",
+  "key_backup": "Key Backup",
+  "show_mnemonic": "Show Mnemonic",
+  "hide_mnemonic": "Hide Mnemonic",
+  "key_backup_text_1": "Key seed is used to generate all addresses. Anyone with the access to the key seed has partial control over the wallet.",
+  "key_backup_text_2": "Keep your key seed backup safe and secure.",
+  "key_backup_text_3": "Loosing the key seed will result in the loss of access to your wallet.",
+  "seed_phrase_backed_up": "I have backed up my key seed phrase in a secure location.",
+  "import_key_phrase": "Import Key Seed Phrase"
+}

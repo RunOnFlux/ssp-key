@@ -1,0 +1,7 @@
+{
+  "process_input": "Process Input",
+  "manual_input": "Manual Input",
+  "scan_code": "Scan Code",
+  "no_pending_actions": "No pending actions.",
+  "sign_resync": "Sign transaction or resync wallet manually"
+}

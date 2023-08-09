@@ -51,7 +51,7 @@ function Create({ navigation }: Props) {
   const [mnemonicShow, setMnemonicShow] = useState(false);
   const [WSPbackedUp, setWSPbackedUp] = useState(false);
   const [wspWasShown, setWSPwasShown] = useState(false);
-  const { t } = useTranslation(['create', 'common']);
+  const { t } = useTranslation(['cr', 'common']);
   const { Common, Fonts, Gutters, Layout, Images, Colors } = useTheme();
 
   const displayMessage = (type: string, content: string) => {
@@ -233,7 +233,7 @@ function Create({ navigation }: Props) {
           resizeMode={'contain'}
         />
         <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
-          {t('create:secure_key')}
+          {t('cr:secure_key')}
         </Text>
         <View style={styles.passwordSection}>
           <TextInput
@@ -289,12 +289,12 @@ function Create({ navigation }: Props) {
           onPress={() => setupKey()}
         >
           <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('create:setup_key')}
+            {t('cr:setup_key')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
           <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
-            {t('create:restore_key')}
+            {t('cr:restore_key')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -314,24 +314,22 @@ function Create({ navigation }: Props) {
           <Text
             style={[Fonts.titleSmall, Gutters.smallBMargin, Fonts.textCenter]}
           >
-            Key Backup
+            {t('cr:key_backup')}
           </Text>
           <Text
             style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
           >
-            Key seed is used to generate all addresses. Anyone with the access
-            to the key seed has partial control over the wallet.
+            {t('cr:key_backup_text_1')}
           </Text>
           <Text
             style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
           >
-            Keep your key seed backup safe and secure
+            {t('cr:key_backup_text_2')}
           </Text>
           <Text
             style={[Fonts.textSmall, Gutters.smallBMargin, Fonts.textCenter]}
           >
-            Loosing the key seed will result in the loss of access to your
-            wallet.
+            {t('cr:key_backup_text_3')}
           </Text>
           <Divider color={Colors.textGray200} />
           <Text
@@ -360,8 +358,8 @@ function Create({ navigation }: Props) {
               }}
             >
               <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
-                {mnemonicShow ? 'Hide Mnemonic' : 'Show Mnemonic'} Key Seed
-                Phrase
+                {mnemonicShow ? t('cr:hide_mnemonic') : t('cr:show_mnemonic')}{' '}
+                {t('common:key_seed_phrase')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -373,7 +371,7 @@ function Create({ navigation }: Props) {
               style={styles.toggleStyle}
             />
             <Text style={[Gutters.largeRPadding, Gutters.tinyBMargin]}>
-              I have backed up my key seed phrase in a secure location.
+              {t('cr:seed_phrase_backed_up')}
             </Text>
           </View>
           <TouchableOpacity
@@ -394,7 +392,7 @@ function Create({ navigation }: Props) {
             )}
             {!isLoading && (
               <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                {t('create:setup_key')}
+                {t('cr:setup_key')}
               </Text>
             )}
           </TouchableOpacity>
@@ -402,7 +400,7 @@ function Create({ navigation }: Props) {
             <Text
               style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >
-              Cancel
+              {t('common:cancel')}
             </Text>
           </TouchableOpacity>
         </ScrollView>

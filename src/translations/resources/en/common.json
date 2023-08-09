@@ -3,5 +3,10 @@
     "full": "SSP Key",
     "initials": "SSPKey"
   },
-  "back": "Back"
+  "back": "Back",
+  "cancel": "Cancel",
+  "key_seed_phrase": "Key Seed Phrase",
+  "refresh": "Refresh",
+  "settings": "Settings",
+  "restore": "Restore"
 }

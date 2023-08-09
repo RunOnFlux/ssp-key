@@ -54,7 +54,7 @@ type Props = {
 
 function Home({ navigation }: Props) {
   const dispatch = useAppDispatch();
-  const { t } = useTranslation(['welcome', 'common']);
+  const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Images, Colors, Common } = useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [isManuaInputlModalOpen, setIsManualInputModalOpen] = useState(false);
@@ -308,7 +308,7 @@ function Home({ navigation }: Props) {
       >
         <Icon name="key" size={60} color={Colors.textGray400} />
         <Text style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}>
-          No pending actions.
+          {t('home:no_pending_actions')}
         </Text>
         <TouchableOpacity
           onPress={() => handleRefresh()}
@@ -324,7 +324,7 @@ function Home({ navigation }: Props) {
               Gutters.tinyLMargin,
             ]}
           >
-            Refresh
+            {t('common:refresh')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -345,7 +345,7 @@ function Home({ navigation }: Props) {
               Gutters.regularHPadding,
             ]}
           >
-            Scan code
+            {t('home:scan_code')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -373,7 +373,7 @@ function Home({ navigation }: Props) {
                     Gutters.tinyPadding,
                   ]}
                 >
-                  Manual Input
+                  {t('home:manual_input')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => openManualInput()}>
@@ -385,7 +385,7 @@ function Home({ navigation }: Props) {
                     Gutters.tinyPadding,
                   ]}
                 >
-                  Settings
+                  {t('common:settings')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
@@ -397,7 +397,7 @@ function Home({ navigation }: Props) {
                     Gutters.tinyPadding,
                   ]}
                 >
-                  Restore
+                  {t('common:restore')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -418,10 +418,10 @@ function Home({ navigation }: Props) {
           ]}
         >
           <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
-            Manul Input
+            {t('home:manual_input')}
           </Text>
           <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
-            Sign transaction or resync wallet manually
+            {t('home:sign_resync')}
           </Text>
           <View style={styles.seedPhraseArea}>
             <TextInput
@@ -447,14 +447,14 @@ function Home({ navigation }: Props) {
             onPress={() => handleMnualInput()}
           >
             <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-              Process input
+              {t('home:process_input')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => handleCancelManualInput()}>
             <Text
               style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >
-              Cancel
+              {t('common:cancel')}
             </Text>
           </TouchableOpacity>
         </ScrollView>
