@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   Modal,
+  TextInput,
   StyleSheet,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -48,6 +49,8 @@ function Home({ navigation }: Props) {
   const { t } = useTranslation(['welcome', 'common']);
   const { Fonts, Gutters, Layout, Images, Colors, Common } = useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
+  const [isMnauaInputlModalOpen, setIsManualInputModalOpen] = useState(false);
+  const [manualInput, setManualInput] = useState('');
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   const {
@@ -151,9 +154,26 @@ function Home({ navigation }: Props) {
       });
   };
 
-  const manualInput = () => {
-    // open input dialog. we recognise 2 strings. one with starting xpub being xpub of wallet and second starting 04 being transaction for signign
-    console.log('manual');
+  const openManualInput = () => {
+    setIsManualInputModalOpen(true);
+  };
+  const handleCancelManualInput = () => {
+    setIsManualInputModalOpen(false);
+    setManualInput('');
+  };
+  const onChangeManualInput = (text: string) => {
+    setManualInput(text);
+  };
+  const handleMnualInput = () => {
+    // check if input is xpub or transaction
+    if (manualInput.startsWith('xpub')) {
+      // xpub
+    } else if (manualInput.startsWith('04')) {
+      // transaction
+    } else {
+      // invalid input
+    }
+    // todo close input modal and clean input
   };
   const openHelp = () => {
     console.log('help');
@@ -290,7 +310,7 @@ function Home({ navigation }: Props) {
         >
           <View style={[Layout.fill]}>
             <View style={[styles.modalMenu]}>
-              <TouchableOpacity onPress={() => manualInput()}>
+              <TouchableOpacity onPress={() => openManualInput()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -302,7 +322,7 @@ function Home({ navigation }: Props) {
                   Manual Input
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => manualInput()}>
+              <TouchableOpacity onPress={() => openManualInput()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -317,6 +337,61 @@ function Home({ navigation }: Props) {
             </View>
           </View>
         </TouchableWithoutFeedback>
+      </Modal>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isMnauaInputlModalOpen}
+        onRequestClose={() => handleCancelManualInput()}
+      >
+        <ScrollView
+          style={[Layout.fill, styles.modalManualInput]}
+          contentContainerStyle={[
+            Gutters.smallBPadding,
+            Layout.scrollSpaceBetween,
+          ]}
+        >
+          <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
+            Manul Input
+          </Text>
+          <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
+            Sign transaction or resync wallet manually
+          </Text>
+          <View style={styles.seedPhraseArea}>
+            <TextInput
+              multiline={true}
+              numberOfLines={4}
+              style={styles.inputArea}
+              inputMode="email"
+              autoCapitalize="none"
+              placeholder="Input your transaction to sign or xpub of your wallet to sync."
+              secureTextEntry={false}
+              onChangeText={onChangeManualInput}
+              value={manualInput}
+              autoCorrect={false}
+            />
+          </View>
+          <TouchableOpacity
+            style={[
+              Common.button.rounded,
+              Common.button.bluePrimary,
+              Gutters.regularBMargin,
+              Gutters.smallTMargin,
+            ]}
+            onPress={() => handleMnualInput()}
+          >
+            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+              Process input
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleCancelManualInput()}>
+            <Text
+              style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
+            >
+              Cancel
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
       </Modal>
     </ScrollView>
   );
@@ -338,6 +413,32 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  modalManualInput: {
+    backgroundColor: 'white',
+    margin: 30,
+    marginTop: 60,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  seedPhraseArea: {
+    width: '80%',
+    height: 100,
+  },
+  inputArea: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: '#fff',
+    color: '#424242',
+    borderRadius: 10,
+    marginTop: 16,
   },
 });
 
