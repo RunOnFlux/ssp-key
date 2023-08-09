@@ -1,17 +1,18 @@
 import utxolib from 'utxo-lib';
+// import { Buffer } from 'buffer'; // this does not work for some reason but only here
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
-import { Buffer } from 'buffer';
 import { utxo, broadcastTxResult } from '../types';
 
-import { blockchains } from '@storage/blockchains';
+import { blockchains } from '../storage/blockchains'; // todo fix @storage?
 
 export async function fetchUtxos(
   address: string,
-  api: string,
+  chain: string,
 ): Promise<utxo[]> {
   try {
-    const url = `https://${api}/api/addr/${address}/utxo`;
+    const blockchainConfig = blockchains[chain];
+    const url = `https://${blockchainConfig.explorer}/api/addr/${address}/utxo`;
     const { data } = await axios.get<utxo[]>(url);
     const fetchedUtxos = data;
     const utxos = fetchedUtxos.map((x) => ({
@@ -45,7 +46,7 @@ export function finaliseTransaction(rawTx: string, chain = 'flux'): string {
 }
 
 function getValueHexBuffer(hex: string) {
-  const buf = Buffer.from(hex, 'hex').reverse();
+  const buf = global.Buffer.from(hex, 'hex').reverse();
   return buf.toString('hex');
 }
 
@@ -76,7 +77,7 @@ export function signTransaction(
       txb.sign(
         i,
         keyPair,
-        Buffer.from(redeemScript, 'hex'),
+        global.Buffer.from(redeemScript, 'hex'),
         hashType,
         new BigNumber(utxoFound.satoshis).toNumber(),
       );
@@ -135,7 +136,7 @@ export function buildUnsignedRawTx(
     );
 
     if (message) {
-      const data = Buffer.from(message, 'utf8');
+      const data = global.Buffer.from(message, 'utf8');
       const dataScript = utxolib.script.nullData.output.encode(data);
       txb.addOutput(dataScript, 0);
     }
@@ -280,8 +281,7 @@ export async function constructAndSignTransaction(
   redeemScript: string,
 ): Promise<string> {
   try {
-    const blockchainConfig = blockchains[chain];
-    const utxos = await fetchUtxos(sender, blockchainConfig.explorer);
+    const utxos = await fetchUtxos(sender, chain);
     const amountToSend = new BigNumber(amount).plus(new BigNumber(fee));
     const pickedUtxos = pickUtxos(utxos, amountToSend);
     const rawTx = buildUnsignedRawTx(

@@ -26,7 +26,15 @@ import {
   getMasterXpub,
   generateMultisigAddress,
   generateIdentityAddress,
+  generateAddressKeypair,
 } from '../../lib/wallet';
+
+import {
+  signTransaction,
+  finaliseTransaction,
+  broadcastTx,
+  fetchUtxos,
+} from '../../lib/constructTx';
 
 import {
   setXpubKey,
@@ -49,7 +57,7 @@ function Home({ navigation }: Props) {
   const { t } = useTranslation(['welcome', 'common']);
   const { Fonts, Gutters, Layout, Images, Colors, Common } = useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
-  const [isMnauaInputlModalOpen, setIsManualInputModalOpen] = useState(false);
+  const [isManuaInputlModalOpen, setIsManualInputModalOpen] = useState(false);
   const [manualInput, setManualInput] = useState('');
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
@@ -95,6 +103,7 @@ function Home({ navigation }: Props) {
   }
 
   if (
+    // todo use effect
     !address ||
     !redeemScript ||
     !xpubWallet ||
@@ -155,7 +164,11 @@ function Home({ navigation }: Props) {
   };
 
   const openManualInput = () => {
-    setIsManualInputModalOpen(true);
+    console.log('here');
+    setIsMenuModalOpen(false);
+    setTimeout(() => {
+      setIsManualInputModalOpen(true);
+    });
   };
   const handleCancelManualInput = () => {
     setIsManualInputModalOpen(false);
@@ -164,12 +177,51 @@ function Home({ navigation }: Props) {
   const onChangeManualInput = (text: string) => {
     setManualInput(text);
   };
-  const handleMnualInput = () => {
+  const handleMnualInput = async () => {
     // check if input is xpub or transaction
     if (manualInput.startsWith('xpub')) {
       // xpub
+      const xpubw = manualInput;
+      generateAddresses(xpubw);
     } else if (manualInput.startsWith('04')) {
       // transaction
+      // sign transaction
+      if (!address || !redeemScript) {
+        // display error, we are not synced yet with wallet
+        console.log('not synced yet');
+      } else {
+        // todo some checks
+        const rawTx = manualInput;
+
+        const utxos = await fetchUtxos(address, 'flux');
+        console.log(utxos);
+        const id = await getUniqueId();
+        const password = await EncryptedStorage.getItem('ssp_key_pw');
+
+        const pwForEncryption = id + password;
+        const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
+        const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+        const rds = CryptoJS.AES.decrypt(redeemScript, pwForEncryption);
+        const redeemScriptDecrypted = rds.toString(CryptoJS.enc.Utf8);
+
+        const keyPair = generateAddressKeypair(xprivKeyDecrypted, 0, 0, 'flux');
+        console.log(keyPair);
+        try {
+          const signedTx = await signTransaction(
+            rawTx,
+            'flux',
+            keyPair.privKey,
+            redeemScriptDecrypted,
+            utxos,
+          );
+          const finalTx = finaliseTransaction(signedTx, 'flux');
+          console.log(finalTx);
+          const txid = await broadcastTx(finalTx, 'flux');
+          console.log(txid);
+        } catch (error) {
+          console.log(error);
+        }
+      }
     } else {
       // invalid input
     }
@@ -224,6 +276,7 @@ function Home({ navigation }: Props) {
           Layout.justifyContentBetween,
           Layout.fullWidth,
           Gutters.smallHPadding,
+          Gutters.tinyTMargin,
         ]}
       >
         <Image
@@ -281,6 +334,7 @@ function Home({ navigation }: Props) {
             Common.button.outlineRounded,
             Common.button.secondaryButton,
             Layout.fullWidth,
+            Gutters.smallBMargin,
           ]}
           onPress={() => scanCode()}
         >
@@ -334,6 +388,18 @@ function Home({ navigation }: Props) {
                   Settings
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Fonts.textCenter,
+                    Gutters.tinyPadding,
+                  ]}
+                >
+                  Restore
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </TouchableWithoutFeedback>
@@ -341,7 +407,7 @@ function Home({ navigation }: Props) {
       <Modal
         animationType="fade"
         transparent={true}
-        visible={isMnauaInputlModalOpen}
+        visible={isManuaInputlModalOpen}
         onRequestClose={() => handleCancelManualInput()}
       >
         <ScrollView

@@ -11,6 +11,7 @@ module.exports = {
           '@': './src',
           types: './@types',
           crypto: 'react-native-quick-crypto',
+          '@storage': './src/storage',
         },
       },
     ],
