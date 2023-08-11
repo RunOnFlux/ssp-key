@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -53,6 +53,7 @@ type Props = {
 };
 
 function Home({ navigation }: Props) {
+  const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const dispatch = useAppDispatch();
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Images, Colors, Common } = useTheme();
@@ -61,6 +62,17 @@ function Home({ navigation }: Props) {
   const [manualInput, setManualInput] = useState('');
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
+  useEffect(() => {
+    if (alreadyMounted.current) {
+      return;
+    }
+    alreadyMounted.current = true;
+    if (sspWalletKeyIdentity) {
+      // get some pending request on W-K identity
+      handleRefresh();
+    }
+  });
+
   const {
     address,
     redeemScript,
@@ -177,6 +189,42 @@ function Home({ navigation }: Props) {
   const onChangeManualInput = (text: string) => {
     setManualInput(text);
   };
+  const handleTxRequest = async (rawTx: string) => {
+    try {
+      // todo some checks
+      const utxos = await fetchUtxos(address, 'flux');
+      console.log(utxos);
+      const id = await getUniqueId();
+      const password = await EncryptedStorage.getItem('ssp_key_pw');
+
+      const pwForEncryption = id + password;
+      const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
+      const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+      const rds = CryptoJS.AES.decrypt(redeemScript, pwForEncryption);
+      const redeemScriptDecrypted = rds.toString(CryptoJS.enc.Utf8);
+
+      const keyPair = generateAddressKeypair(xprivKeyDecrypted, 0, 0, 'flux');
+      console.log(keyPair);
+      try {
+        const signedTx = await signTransaction(
+          rawTx,
+          'flux',
+          keyPair.privKey,
+          redeemScriptDecrypted,
+          utxos,
+        );
+        const finalTx = finaliseTransaction(signedTx, 'flux');
+        console.log(finalTx);
+        const txid = await broadcastTx(finalTx, 'flux');
+        console.log(txid);
+      } catch (error) {
+        console.log(error);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    console.log('tx request');
+  };
   const handleMnualInput = async () => {
     // check if input is xpub or transaction
     if (manualInput.startsWith('xpub')) {
@@ -190,37 +238,8 @@ function Home({ navigation }: Props) {
         // display error, we are not synced yet with wallet
         console.log('not synced yet');
       } else {
-        // todo some checks
         const rawTx = manualInput;
-
-        const utxos = await fetchUtxos(address, 'flux');
-        console.log(utxos);
-        const id = await getUniqueId();
-        const password = await EncryptedStorage.getItem('ssp_key_pw');
-
-        const pwForEncryption = id + password;
-        const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
-        const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-        const rds = CryptoJS.AES.decrypt(redeemScript, pwForEncryption);
-        const redeemScriptDecrypted = rds.toString(CryptoJS.enc.Utf8);
-
-        const keyPair = generateAddressKeypair(xprivKeyDecrypted, 0, 0, 'flux');
-        console.log(keyPair);
-        try {
-          const signedTx = await signTransaction(
-            rawTx,
-            'flux',
-            keyPair.privKey,
-            redeemScriptDecrypted,
-            utxos,
-          );
-          const finalTx = finaliseTransaction(signedTx, 'flux');
-          console.log(finalTx);
-          const txid = await broadcastTx(finalTx, 'flux');
-          console.log(txid);
-        } catch (error) {
-          console.log(error);
-        }
+        handleTxRequest(rawTx);
       }
     } else {
       // invalid input
@@ -241,14 +260,19 @@ function Home({ navigation }: Props) {
       console.log('refresh');
       if (sspWalletKeyIdentity) {
         // get some pending request on W-K identity
+        console.log(sspWalletKeyIdentity);
         const result = await axios.get(
-          `https://relay.ssp.runonflux.io/v1/get/${sspWalletKeyIdentity}`,
+          `https://relay.ssp.runonflux.io/v1/action/${sspWalletKeyIdentity}`,
         );
         console.log('result', result.data);
+        if (result.data.action === 'tx') {
+          // todo some popup blabla
+          handleTxRequest(result.data.payload);
+        }
       } else if (sspWalletIdentity) {
         // get some pending request on W identity
         const result = await axios.get(
-          `https://relay.ssp.runonflux.io/v1/get/${sspWalletIdentity}`,
+          `https://relay.ssp.runonflux.io/v1/action/${sspWalletIdentity}`,
         );
         console.log('result', result.data);
       } else {
