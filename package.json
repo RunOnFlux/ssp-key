@@ -29,6 +29,7 @@
     "events": "^3.3.0",
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "i18next": "^23.3.0",
+    "postinstall-postinstall": "^2.1.0",
     "process": "^0.11.10",
     "react": "~18.2.0",
     "react-i18next": "^13.0.2",

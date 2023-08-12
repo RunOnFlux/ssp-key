@@ -168,7 +168,15 @@ function Home({ navigation }: Props) {
           'flux',
         );
         dispatch(setsspWalletIdentity(generatedSspWalletIdentity));
-        console.log('TODO ALL DONE');
+        // tell ssp relay that we are synced, post data to ssp sync
+        const syncData = {
+          chain: 'flux',
+          walletIdentity: generatedSspWalletIdentity,
+          keyXpub: xpubKeyDecrypted,
+          wkIdentity: generatedSspWalletKeyIdentity.address,
+        };
+        await axios.post('https://relay.ssp.runonflux.io/v1/sync', syncData);
+        // todo continue
       })
       .catch((error) => {
         console.log(error.message);
