@@ -1,10 +1,10 @@
 import utxolib from 'utxo-lib';
-// import { Buffer } from 'buffer'; // this does not work for some reason but only here
+import { Buffer } from 'buffer';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { utxo, broadcastTxResult } from '../types';
 
-import { blockchains } from '../storage/blockchains'; // todo fix @storage?
+import { blockchains } from '@storage/blockchains';
 
 export async function fetchUtxos(
   address: string,
@@ -46,7 +46,7 @@ export function finaliseTransaction(rawTx: string, chain = 'flux'): string {
 }
 
 function getValueHexBuffer(hex: string) {
-  const buf = global.Buffer.from(hex, 'hex').reverse();
+  const buf = Buffer.from(hex, 'hex').reverse();
   return buf.toString('hex');
 }
 
@@ -77,7 +77,7 @@ export function signTransaction(
       txb.sign(
         i,
         keyPair,
-        global.Buffer.from(redeemScript, 'hex'),
+        Buffer.from(redeemScript, 'hex'),
         hashType,
         new BigNumber(utxoFound.satoshis).toNumber(),
       );
@@ -136,7 +136,7 @@ export function buildUnsignedRawTx(
     );
 
     if (message) {
-      const data = global.Buffer.from(message, 'utf8');
+      const data = Buffer.from(message, 'utf8');
       const dataScript = utxolib.script.nullData.output.encode(data);
       txb.addOutput(dataScript, 0);
     }
