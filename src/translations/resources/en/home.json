@@ -5,5 +5,8 @@
   "no_pending_actions": "No pending actions.",
   "sign_resync": "Sign transaction or resync wallet manually",
   "ssp_key_details": "SSP Key Details",
-  "synced_ssp_address": "Address Details"
+  "synced_ssp_address": "Address Details",
+  "transaction_request": "Transaction Request",
+  "approve_transaction": "Approve Transaction",
+  "reject": "Reject"
 }

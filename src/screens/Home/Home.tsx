@@ -15,6 +15,7 @@ import { useTheme } from '../../hooks';
 import Icon from 'react-native-vector-icons/Feather';
 import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import Divider from '../../components/Divider/Divider';
+import TransactionRequest from '../../components/TransactionRequest/TransactionRequest';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -61,6 +62,7 @@ function Home({ navigation }: Props) {
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [isManuaInputlModalOpen, setIsManualInputModalOpen] = useState(false);
   const [manualInput, setManualInput] = useState('');
+  const [rawTx, setRawTx] = useState('');
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   useEffect(() => {
@@ -220,19 +222,19 @@ function Home({ navigation }: Props) {
     axios
       .post('https://relay.ssp.runonflux.io/v1/action', data)
       .then((res) => {
-        console.log(res);
+        console.log(res.data);
       })
       .catch((error) => {
         console.log(error);
       });
   };
-  const handleTxRequest = async (rawTx: string) => {
-    await approveTransaction(rawTx);
+  const handleTxRequest = async (rawTransactions: string) => {
+    setRawTx(rawTransactions);
   };
   const handleAddressRequest = async (xpubw: string) => {
     generateAddresses(xpubw);
   };
-  const approveTransaction = async (rawTx: string) => {
+  const approveTransaction = async (rawTransactions: string) => {
     try {
       // todo some checks
       const utxos = await fetchUtxos(address, 'flux');
@@ -250,7 +252,7 @@ function Home({ navigation }: Props) {
       console.log(keyPair);
       try {
         const signedTx = await signTransaction(
-          rawTx,
+          rawTransactions,
           'flux',
           keyPair.privKey,
           redeemScriptDecrypted,
@@ -260,6 +262,7 @@ function Home({ navigation }: Props) {
         console.log(finalTx);
         const txid = await broadcastTx(finalTx, 'flux');
         console.log(txid);
+        setRawTx('');
         // here tell ssp-relay that we are finished, rewrite the request
         await postAction('txid', txid, 'flux', sspWalletKeyIdentity);
       } catch (error) {
@@ -283,8 +286,8 @@ function Home({ navigation }: Props) {
         // display error, we are not synced yet with wallet
         console.log('not synced yet');
       } else {
-        const rawTx = manualInput;
-        handleTxRequest(rawTx);
+        const rawTransactions = manualInput;
+        handleTxRequest(rawTransactions);
       }
     } else {
       displayMessage('error', 'Invalid manual input');
@@ -338,6 +341,22 @@ function Home({ navigation }: Props) {
     navigation.navigate('Restore');
   };
 
+  const handleTransactionRequestAction = async (status: boolean) => {
+    try {
+      if (status === true) {
+        const rtx = rawTx;
+        await approveTransaction(rtx);
+      } else {
+        // reject
+        const rtx = rawTx;
+        setRawTx('');
+        await postAction('txrejected', rtx, 'flux', sspWalletKeyIdentity);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <ScrollView
       style={Layout.fill}
@@ -375,62 +394,71 @@ function Home({ navigation }: Props) {
         </View>
       </View>
       <Divider color={Colors.textGray200} />
-      <>
-        <View
-          style={[
-            Layout.fill,
-            Layout.relative,
-            Layout.fullWidth,
-            Layout.justifyContentCenter,
-            Layout.alignItemsCenter,
-          ]}
-        >
-          <Icon name="key" size={60} color={Colors.textGray400} />
-          <Text
-            style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
-          >
-            {t('home:no_pending_actions')}
-          </Text>
-          <TouchableOpacity
-            onPress={() => handleRefresh()}
-            style={[Layout.row, Gutters.regularMargin]}
-          >
-            <IconB name="gesture-tap" size={30} color={Colors.bluePrimary} />
-            <Text
-              style={[
-                Fonts.textSmall,
-                Fonts.textBold,
-                Fonts.textBluePrimary,
-                Gutters.tinyTMargin,
-                Gutters.tinyLMargin,
-              ]}
-            >
-              {t('common:refresh')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View>
-          <TouchableOpacity
+      {!rawTx && (
+        <>
+          <View
             style={[
-              Common.button.outlineRounded,
-              Common.button.secondaryButton,
+              Layout.fill,
+              Layout.relative,
               Layout.fullWidth,
-              Gutters.smallBMargin,
+              Layout.justifyContentCenter,
+              Layout.alignItemsCenter,
             ]}
-            onPress={() => scanCode()}
           >
+            <Icon name="key" size={60} color={Colors.textGray400} />
             <Text
-              style={[
-                Fonts.textSmall,
-                Fonts.textBluePrimary,
-                Gutters.regularHPadding,
-              ]}
+              style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
             >
-              {t('home:scan_code')}
+              {t('home:no_pending_actions')}
             </Text>
-          </TouchableOpacity>
-        </View>
-      </>
+            <TouchableOpacity
+              onPress={() => handleRefresh()}
+              style={[Layout.row, Gutters.regularMargin]}
+            >
+              <IconB name="gesture-tap" size={30} color={Colors.bluePrimary} />
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textBold,
+                  Fonts.textBluePrimary,
+                  Gutters.tinyTMargin,
+                  Gutters.tinyLMargin,
+                ]}
+              >
+                {t('common:refresh')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View>
+            <TouchableOpacity
+              style={[
+                Common.button.outlineRounded,
+                Common.button.secondaryButton,
+                Layout.fullWidth,
+                Gutters.smallBMargin,
+              ]}
+              onPress={() => scanCode()}
+            >
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textBluePrimary,
+                  Gutters.regularHPadding,
+                ]}
+              >
+                {t('home:scan_code')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+      {rawTx && (
+        <TransactionRequest
+          rawTx={rawTx}
+          actionStatus={handleTransactionRequestAction}
+        />
+      )}
+
       <Modal
         animationType="fade"
         onRequestClose={() => {
