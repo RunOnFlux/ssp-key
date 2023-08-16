@@ -17,6 +17,7 @@ import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import Divider from '../../components/Divider/Divider';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import Toast from 'react-native-toast-message';
 import axios from 'axios';
 
 const CryptoJS = require('crypto-js');
@@ -72,6 +73,13 @@ function Home({ navigation }: Props) {
       handleRefresh();
     }
   });
+
+  const displayMessage = (type: string, content: string) => {
+    Toast.show({
+      type,
+      text1: content,
+    });
+  };
 
   const {
     address,
@@ -197,7 +205,34 @@ function Home({ navigation }: Props) {
   const onChangeManualInput = (text: string) => {
     setManualInput(text);
   };
+  const postAction = (
+    action: string,
+    payload: string,
+    chain: string,
+    wkIdentity: string,
+  ) => {
+    const data = {
+      action,
+      payload,
+      chain,
+      wkIdentity,
+    };
+    axios
+      .post('https://relay.ssp.runonflux.io/v1/action', data)
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
   const handleTxRequest = async (rawTx: string) => {
+    await approveTransaction(rawTx);
+  };
+  const handleAddressRequest = async (xpubw: string) => {
+    generateAddresses(xpubw);
+  };
+  const approveTransaction = async (rawTx: string) => {
     try {
       // todo some checks
       const utxos = await fetchUtxos(address, 'flux');
@@ -225,6 +260,8 @@ function Home({ navigation }: Props) {
         console.log(finalTx);
         const txid = await broadcastTx(finalTx, 'flux');
         console.log(txid);
+        // here tell ssp-relay that we are finished, rewrite the request
+        await postAction('txid', txid, 'flux', sspWalletKeyIdentity);
       } catch (error) {
         console.log(error);
       }
@@ -238,7 +275,7 @@ function Home({ navigation }: Props) {
     if (manualInput.startsWith('xpub')) {
       // xpub
       const xpubw = manualInput;
-      generateAddresses(xpubw);
+      handleAddressRequest(xpubw);
     } else if (manualInput.startsWith('04')) {
       // transaction
       // sign transaction
@@ -250,9 +287,12 @@ function Home({ navigation }: Props) {
         handleTxRequest(rawTx);
       }
     } else {
-      // invalid input
+      displayMessage('error', 'Invalid manual input');
     }
-    // todo close input modal and clean input
+    setTimeout(() => {
+      setManualInput('');
+      setIsManualInputModalOpen(true);
+    });
   };
   const openHelp = () => {
     console.log('help');
@@ -274,10 +314,12 @@ function Home({ navigation }: Props) {
         );
         console.log('result', result.data);
         if (result.data.action === 'tx') {
+          // only this action is valid for us
           // todo some popup blabla
           handleTxRequest(result.data.payload);
         }
       } else if (sspWalletIdentity) {
+        // should not be possible?
         // get some pending request on W identity
         const result = await axios.get(
           `https://relay.ssp.runonflux.io/v1/action/${sspWalletIdentity}`,
@@ -289,6 +331,11 @@ function Home({ navigation }: Props) {
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const handleRestore = () => {
+    setIsMenuModalOpen(false);
+    navigation.navigate('Restore');
   };
 
   return (
@@ -328,58 +375,62 @@ function Home({ navigation }: Props) {
         </View>
       </View>
       <Divider color={Colors.textGray200} />
-      <View
-        style={[
-          Layout.fill,
-          Layout.relative,
-          Layout.fullWidth,
-          Layout.justifyContentCenter,
-          Layout.alignItemsCenter,
-        ]}
-      >
-        <Icon name="key" size={60} color={Colors.textGray400} />
-        <Text style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}>
-          {t('home:no_pending_actions')}
-        </Text>
-        <TouchableOpacity
-          onPress={() => handleRefresh()}
-          style={[Layout.row, Gutters.regularMargin]}
-        >
-          <IconB name="gesture-tap" size={30} color={Colors.bluePrimary} />
-          <Text
-            style={[
-              Fonts.textSmall,
-              Fonts.textBold,
-              Fonts.textBluePrimary,
-              Gutters.tinyTMargin,
-              Gutters.tinyLMargin,
-            ]}
-          >
-            {t('common:refresh')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-      <View>
-        <TouchableOpacity
+      <>
+        <View
           style={[
-            Common.button.outlineRounded,
-            Common.button.secondaryButton,
+            Layout.fill,
+            Layout.relative,
             Layout.fullWidth,
-            Gutters.smallBMargin,
+            Layout.justifyContentCenter,
+            Layout.alignItemsCenter,
           ]}
-          onPress={() => scanCode()}
         >
+          <Icon name="key" size={60} color={Colors.textGray400} />
           <Text
-            style={[
-              Fonts.textSmall,
-              Fonts.textBluePrimary,
-              Gutters.regularHPadding,
-            ]}
+            style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
           >
-            {t('home:scan_code')}
+            {t('home:no_pending_actions')}
           </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            onPress={() => handleRefresh()}
+            style={[Layout.row, Gutters.regularMargin]}
+          >
+            <IconB name="gesture-tap" size={30} color={Colors.bluePrimary} />
+            <Text
+              style={[
+                Fonts.textSmall,
+                Fonts.textBold,
+                Fonts.textBluePrimary,
+                Gutters.tinyTMargin,
+                Gutters.tinyLMargin,
+              ]}
+            >
+              {t('common:refresh')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View>
+          <TouchableOpacity
+            style={[
+              Common.button.outlineRounded,
+              Common.button.secondaryButton,
+              Layout.fullWidth,
+              Gutters.smallBMargin,
+            ]}
+            onPress={() => scanCode()}
+          >
+            <Text
+              style={[
+                Fonts.textSmall,
+                Fonts.textBluePrimary,
+                Gutters.regularHPadding,
+              ]}
+            >
+              {t('home:scan_code')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </>
       <Modal
         animationType="fade"
         onRequestClose={() => {
@@ -416,10 +467,34 @@ function Home({ navigation }: Props) {
                     Gutters.tinyPadding,
                   ]}
                 >
+                  {t('home:synced_ssp_address')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => openManualInput()}>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Fonts.textCenter,
+                    Gutters.tinyPadding,
+                  ]}
+                >
+                  {t('home:ssp_key_details')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => openManualInput()}>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Fonts.textCenter,
+                    Gutters.tinyPadding,
+                  ]}
+                >
                   {t('common:settings')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
+              <TouchableOpacity onPress={() => handleRestore()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -434,6 +509,7 @@ function Home({ navigation }: Props) {
             </View>
           </View>
         </TouchableWithoutFeedback>
+        <Toast />
       </Modal>
       <Modal
         animationType="fade"
@@ -489,7 +565,9 @@ function Home({ navigation }: Props) {
             </Text>
           </TouchableOpacity>
         </ScrollView>
+        <Toast />
       </Modal>
+      {!isManuaInputlModalOpen && !isMenuModalOpen && <Toast />}
     </ScrollView>
   );
 }
