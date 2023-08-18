@@ -9,6 +9,10 @@ declare module 'utxo-lib' {
     hash: Buffer;
     index: number;
   }
+  interface output {
+    script: Buffer;
+    value: number;
+  }
   interface builtTx {
     toHex: () => string;
   }
@@ -25,6 +29,7 @@ declare module 'utxo-lib' {
     inputs: input[];
     tx: {
       ins: inInput[];
+      outs: output[];
     };
   }
   type networks = Record<string, object>;
@@ -84,7 +89,7 @@ declare module 'utxo-lib' {
     };
     fromPublicKeyBuffer: (
       publicKeyBuffer: Buffer,
-      network: object,
+      network?: object,
     ) => {
       getAddress: () => string;
     };

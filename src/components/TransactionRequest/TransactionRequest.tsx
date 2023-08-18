@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import { decodeTransactionForApproval } from '../../lib/transactions';
+
+import { useAppSelector } from '../../hooks';
 
 const TransactionRequest = (props: {
   rawTx: string;
   actionStatus: (status: boolean) => void;
 }) => {
+  const { address } = useAppSelector((state) => state.flux);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [sendingAmount, setSendingAmount] = useState('');
   const [receiverAddress, setReceiverAddress] = useState('');
-
-  // decode txrawTxid
 
   const approve = () => {
     console.log('Approve');
@@ -23,6 +25,13 @@ const TransactionRequest = (props: {
     console.log('Reject');
     props.actionStatus(false);
   };
+  useEffect(() => {
+    const txInfo = decodeTransactionForApproval(props.rawTx, address);
+    setSendingAmount(txInfo.amount);
+    setReceiverAddress(txInfo.receiver);
+    console.log(txInfo);
+  });
+
   return (
     <>
       <View
@@ -38,8 +47,9 @@ const TransactionRequest = (props: {
         <Text style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}>
           {t('home:transaction_request')}
         </Text>
-        <Text>transaction details informatio XXX FLUX to ABCDE</Text>
-        <Text>{props.rawTx}</Text>
+        <Text style={[Fonts.textSmall, Fonts.textCenter]}>
+          Sending {sendingAmount} FLUX to {receiverAddress}
+        </Text>
       </View>
       <View>
         <TouchableOpacity
@@ -47,7 +57,7 @@ const TransactionRequest = (props: {
             Common.button.outlineRounded,
             Common.button.secondaryButton,
             Layout.fullWidth,
-            Gutters.smallBMargin,
+            Gutters.regularBMargin,
           ]}
           onPress={() => approve()}
         >
@@ -62,7 +72,14 @@ const TransactionRequest = (props: {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => reject()}>
-          <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
+          <Text
+            style={[
+              Fonts.textSmall,
+              Fonts.textBluePrimary,
+              Gutters.regularBMargin,
+              Fonts.textCenter,
+            ]}
+          >
             {t('home:reject')}
           </Text>
         </TouchableOpacity>
