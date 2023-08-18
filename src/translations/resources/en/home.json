@@ -13,5 +13,7 @@
   "approve_sync": "Approve Synchronisation",
   "show_in_explorer": "Show in Explorer",
   "close": "Close",
-  "transaction_sent": "Transaction Sent!"
+  "transaction_sent": "Transaction Sent!",
+  "sync_success": "Synchronisation Successful!",
+  "double_check_address": "Please double check that address is the same as your SSP Wallet address."
 }

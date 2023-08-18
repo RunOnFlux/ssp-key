@@ -18,6 +18,7 @@ import Divider from '../../components/Divider/Divider';
 import TransactionRequest from '../../components/TransactionRequest/TransactionRequest';
 import SyncRequest from '../../components/SyncRequest/SyncRequest';
 import TxSent from '../../components/TxSent/TxSent';
+import SyncSuccess from '../../components/SyncSuccess/SyncSuccess';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -67,6 +68,7 @@ function Home({ navigation }: Props) {
   const [rawTx, setRawTx] = useState('');
   const [syncReq, setSyncReq] = useState('');
   const [txid, setTxid] = useState('');
+  const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   useEffect(() => {
@@ -190,8 +192,8 @@ function Home({ navigation }: Props) {
           wkIdentity: generatedSspWalletKeyIdentity.address,
         };
         await axios.post('https://relay.ssp.runonflux.io/v1/sync', syncData);
-        // todo show modal of generated synced address
         setSyncReq('');
+        setSyncSuccessOpen(true);
       })
       .catch((error) => {
         console.log(error.message);
@@ -241,7 +243,6 @@ function Home({ navigation }: Props) {
   };
   const approveTransaction = async (rawTransactions: string) => {
     try {
-      // todo some checks
       const utxos = await fetchUtxos(address, 'flux');
       console.log(utxos);
       const id = await getUniqueId();
@@ -270,7 +271,6 @@ function Home({ navigation }: Props) {
         setRawTx('');
         // here tell ssp-relay that we are finished, rewrite the request
         await postAction('txid', ttxid, 'flux', sspWalletKeyIdentity);
-        // todo here show modal of txid tx sent
         setTxid(ttxid);
       } catch (error) {
         console.log(error);
@@ -325,7 +325,6 @@ function Home({ navigation }: Props) {
         console.log('result', result.data);
         if (result.data.action === 'tx') {
           // only this action is valid for us
-          // todo some popup blabla
           handleTxRequest(result.data.payload);
         }
       } else if (sspWalletIdentity) {
@@ -381,6 +380,11 @@ function Home({ navigation }: Props) {
   const handleTxSentModalAction = () => {
     console.log('tx sent modal close. Clean TXID');
     setTxid('');
+  };
+
+  const handleSyncSuccessModalAction = () => {
+    console.log('sync success modal close.');
+    setSyncSuccessOpen(false);
   };
 
   return (
@@ -491,6 +495,12 @@ function Home({ navigation }: Props) {
         />
       )}
       {txid && <TxSent txid={txid} actionStatus={handleTxSentModalAction} />}
+      {syncSuccessOpen && (
+        <SyncSuccess
+          address={address}
+          actionStatus={handleSyncSuccessModalAction}
+        />
+      )}
 
       <Modal
         animationType="fade"

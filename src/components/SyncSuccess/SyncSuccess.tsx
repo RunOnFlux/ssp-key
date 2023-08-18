@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
 const SyncRequest = (props: {
-  txid: string; // if chain not provided, default to flux
+  address: string; // generated multisig address
   actionStatus: (status: boolean) => void;
 }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
@@ -27,7 +27,7 @@ const SyncRequest = (props: {
 
   const openExplorer = () => {
     console.log('Open Explorer');
-    Linking.openURL(`https://explorer.runonflux.io/tx/${props.txid}`);
+    Linking.openURL(`https://explorer.runonflux.io/address/${props.address}`);
   };
 
   return (
@@ -62,9 +62,16 @@ const SyncRequest = (props: {
               Fonts.textCenter,
             ]}
           >
-            {t('home:transaction_sent')}
+            {t('home:sync_success')}
           </Text>
-          <Text style={[Fonts.textSmall, Fonts.textCenter]}>{props.txid}</Text>
+          <Text
+            style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallMargin]}
+          >
+            {props.address}
+          </Text>
+          <Text style={[Fonts.textTiny, Fonts.textCenter]}>
+            {t('home:double_check_address')}
+          </Text>
         </View>
         <View>
           <TouchableOpacity
