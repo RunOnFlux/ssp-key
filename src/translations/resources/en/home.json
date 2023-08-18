@@ -8,5 +8,7 @@
   "synced_ssp_address": "Address Details",
   "transaction_request": "Transaction Request",
   "approve_transaction": "Approve Transaction",
-  "reject": "Reject"
+  "reject": "Reject",
+  "sync_request": "Synchronisation Request",
+  "approve_sync": "Approve Synchronisation"
 }

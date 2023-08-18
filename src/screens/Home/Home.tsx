@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import Divider from '../../components/Divider/Divider';
 import TransactionRequest from '../../components/TransactionRequest/TransactionRequest';
+import SyncRequest from '../../components/SyncRequest/SyncRequest';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -63,6 +64,7 @@ function Home({ navigation }: Props) {
   const [isManuaInputlModalOpen, setIsManualInputModalOpen] = useState(false);
   const [manualInput, setManualInput] = useState('');
   const [rawTx, setRawTx] = useState('');
+  const [syncReq, setSyncReq] = useState('');
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   useEffect(() => {
@@ -186,7 +188,8 @@ function Home({ navigation }: Props) {
           wkIdentity: generatedSspWalletKeyIdentity.address,
         };
         await axios.post('https://relay.ssp.runonflux.io/v1/sync', syncData);
-        // todo continue
+        // todo show modal of generated synced address
+        setSyncReq('');
       })
       .catch((error) => {
         console.log(error.message);
@@ -231,8 +234,8 @@ function Home({ navigation }: Props) {
   const handleTxRequest = async (rawTransactions: string) => {
     setRawTx(rawTransactions);
   };
-  const handleAddressRequest = async (xpubw: string) => {
-    generateAddresses(xpubw);
+  const handleSyncRequest = async (xpubw: string) => {
+    setSyncReq(xpubw);
   };
   const approveTransaction = async (rawTransactions: string) => {
     try {
@@ -265,6 +268,7 @@ function Home({ navigation }: Props) {
         setRawTx('');
         // here tell ssp-relay that we are finished, rewrite the request
         await postAction('txid', txid, 'flux', sspWalletKeyIdentity);
+        // todo here show modal of txid tx sent
       } catch (error) {
         console.log(error);
       }
@@ -278,7 +282,7 @@ function Home({ navigation }: Props) {
     if (manualInput.startsWith('xpub')) {
       // xpub
       const xpubw = manualInput;
-      handleAddressRequest(xpubw);
+      handleSyncRequest(xpubw);
     } else if (manualInput.startsWith('04')) {
       // transaction
       // sign transaction
@@ -294,7 +298,7 @@ function Home({ navigation }: Props) {
     }
     setTimeout(() => {
       setManualInput('');
-      setIsManualInputModalOpen(true);
+      setIsManualInputModalOpen(false);
     });
   };
   const openHelp = () => {
@@ -357,6 +361,20 @@ function Home({ navigation }: Props) {
     }
   };
 
+  const handleSynchronisationRequestAction = async (status: boolean) => {
+    try {
+      if (status === true) {
+        const xpubw = syncReq;
+        generateAddresses(xpubw);
+      } else {
+        // reject
+        setSyncReq('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <ScrollView
       style={Layout.fill}
@@ -394,7 +412,7 @@ function Home({ navigation }: Props) {
         </View>
       </View>
       <Divider color={Colors.textGray200} />
-      {!rawTx && (
+      {!rawTx && !syncReq && (
         <>
           <View
             style={[
@@ -456,6 +474,12 @@ function Home({ navigation }: Props) {
         <TransactionRequest
           rawTx={rawTx}
           actionStatus={handleTransactionRequestAction}
+        />
+      )}
+      {syncReq && (
+        <SyncRequest
+          chain="flux"
+          actionStatus={handleSynchronisationRequestAction}
         />
       )}
 
