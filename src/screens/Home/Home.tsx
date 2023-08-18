@@ -17,6 +17,7 @@ import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import Divider from '../../components/Divider/Divider';
 import TransactionRequest from '../../components/TransactionRequest/TransactionRequest';
 import SyncRequest from '../../components/SyncRequest/SyncRequest';
+import TxSent from '../../components/TxSent/TxSent';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -65,6 +66,7 @@ function Home({ navigation }: Props) {
   const [manualInput, setManualInput] = useState('');
   const [rawTx, setRawTx] = useState('');
   const [syncReq, setSyncReq] = useState('');
+  const [txid, setTxid] = useState('');
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   useEffect(() => {
@@ -263,12 +265,13 @@ function Home({ navigation }: Props) {
         );
         const finalTx = finaliseTransaction(signedTx, 'flux');
         console.log(finalTx);
-        const txid = await broadcastTx(finalTx, 'flux');
-        console.log(txid);
+        const ttxid = await broadcastTx(finalTx, 'flux');
+        console.log(ttxid);
         setRawTx('');
         // here tell ssp-relay that we are finished, rewrite the request
-        await postAction('txid', txid, 'flux', sspWalletKeyIdentity);
+        await postAction('txid', ttxid, 'flux', sspWalletKeyIdentity);
         // todo here show modal of txid tx sent
+        setTxid(ttxid);
       } catch (error) {
         console.log(error);
       }
@@ -373,6 +376,11 @@ function Home({ navigation }: Props) {
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const handleTxSentModalAction = () => {
+    console.log('tx sent modal close. Clean TXID');
+    setTxid('');
   };
 
   return (
@@ -482,6 +490,7 @@ function Home({ navigation }: Props) {
           actionStatus={handleSynchronisationRequestAction}
         />
       )}
+      {txid && <TxSent txid={txid} actionStatus={handleTxSentModalAction} />}
 
       <Modal
         animationType="fade"

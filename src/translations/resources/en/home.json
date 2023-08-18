@@ -10,5 +10,8 @@
   "approve_transaction": "Approve Transaction",
   "reject": "Reject",
   "sync_request": "Synchronisation Request",
-  "approve_sync": "Approve Synchronisation"
+  "approve_sync": "Approve Synchronisation",
+  "show_in_explorer": "Show in Explorer",
+  "close": "Close",
+  "transaction_sent": "Transaction Sent!"
 }
