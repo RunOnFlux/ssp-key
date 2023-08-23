@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, DimensionValue } from 'react-native';
+import { View, Image, DimensionValue, Text } from 'react-native';
 import { useTheme } from '../../hooks';
 
 type Props = {
@@ -8,24 +8,28 @@ type Props = {
   mode?: 'contain' | 'cover' | 'stretch' | 'repeat' | 'center';
 };
 
-const Brand = ({ height, width, mode }: Props) => {
-  const { Layout, Images } = useTheme();
+const Brand = ({ mode }: Props) => {
+  const { Layout, Images, Fonts, Gutters } = useTheme();
 
   return (
-    <View testID={'brand-img-wrapper'} style={{ height, width }}>
+    <View
+      testID={'brand-img-wrapper'}
+      style={[Layout.colCenter, Gutters.regularTMargin]}
+    >
       <Image
         testID={'brand-img'}
-        style={Layout.fullSize}
+        style={{ width: 140 }}
         source={Images.logo}
         resizeMode={mode}
       />
+      <Text style={[Fonts.textLarge, Fonts.textBold]}>SSP Key</Text>
     </View>
   );
 };
 
 Brand.defaultProps = {
-  height: 200,
-  width: 200,
+  height: 150,
+  width: 150,
   mode: 'contain',
 };
 

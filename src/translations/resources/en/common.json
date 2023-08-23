@@ -8,5 +8,7 @@
   "key_seed_phrase": "Key Seed Phrase",
   "refresh": "Refresh",
   "settings": "Settings",
-  "restore": "Restore"
+  "restore": "Restore",
+  "Flux": "Flux",
+  "powered_by": "Powered by"
 }
