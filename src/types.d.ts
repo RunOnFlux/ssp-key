@@ -113,3 +113,17 @@ export interface getInfoInsight {
     testnet: boolean;
   };
 }
+
+export interface syncSSPRelay {
+  chain: string;
+  walletIdentity: string;
+  keyXpub: string;
+  wkIdentity: string;
+}
+
+export type currencySSPRelay = Record<
+  string,
+  {
+    usd: number;
+  }
+>;

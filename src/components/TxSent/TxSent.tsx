@@ -11,6 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import { backends } from '@storage/backends';
 
 const SyncRequest = (props: {
   txid: string; // if chain not provided, default to flux
@@ -27,7 +28,8 @@ const SyncRequest = (props: {
 
   const openExplorer = () => {
     console.log('Open Explorer');
-    Linking.openURL(`https://explorer.runonflux.io/tx/${props.txid}`);
+    const backendConfig = backends().flux;
+    Linking.openURL(`https://${backendConfig.node}/tx/${props.txid}`);
   };
 
   return (

@@ -25,7 +25,7 @@ const reducers = combineReducers({
   [api.reducerPath]: api.reducer,
 });
 
-const storage = new MMKV();
+export const storage = new MMKV();
 export const reduxStorage: Storage = {
   setItem: (key, value) => {
     storage.set(key, value);

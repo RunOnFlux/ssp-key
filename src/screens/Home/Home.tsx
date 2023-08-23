@@ -23,6 +23,7 @@ import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
+import { sspConfig } from '@storage/ssp';
 
 const CryptoJS = require('crypto-js');
 
@@ -191,7 +192,7 @@ function Home({ navigation }: Props) {
           keyXpub: xpubKeyDecrypted,
           wkIdentity: generatedSspWalletKeyIdentity.address,
         };
-        await axios.post('https://relay.ssp.runonflux.io/v1/sync', syncData);
+        await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
         setSyncSuccessOpen(true);
       })
@@ -227,7 +228,7 @@ function Home({ navigation }: Props) {
       wkIdentity,
     };
     axios
-      .post('https://relay.ssp.runonflux.io/v1/action', data)
+      .post(`https://${sspConfig().relay}/v1/action`, data)
       .then((res) => {
         console.log(res.data);
       })
@@ -320,7 +321,7 @@ function Home({ navigation }: Props) {
         // get some pending request on W-K identity
         console.log(sspWalletKeyIdentity);
         const result = await axios.get(
-          `https://relay.ssp.runonflux.io/v1/action/${sspWalletKeyIdentity}`,
+          `https://${sspConfig().relay}/v1/action/${sspWalletKeyIdentity}`,
         );
         console.log('result', result.data);
         if (result.data.action === 'tx') {
@@ -331,7 +332,7 @@ function Home({ navigation }: Props) {
         // should not be possible?
         // get some pending request on W identity
         const result = await axios.get(
-          `https://relay.ssp.runonflux.io/v1/action/${sspWalletIdentity}`,
+          `https://${sspConfig().relay}/v1/action/${sspWalletIdentity}`,
         );
         console.log('result', result.data);
       } else {
