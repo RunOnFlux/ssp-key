@@ -22,6 +22,7 @@ import SSPKeyDetails from '../../components/SSPKeyDetails/SSKeyDetails';
 import TxSent from '../../components/TxSent/TxSent';
 import SyncSuccess from '../../components/SyncSuccess/SyncSuccess';
 import HelpSection from '../../components/HelpSection/HelpSection';
+import SettingsSection from '../../components/SettingsSection/SettingsSection';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -550,10 +551,7 @@ function Home({ navigation }: Props) {
         <SSPKeyDetails actionStatus={handleSSPKeyModalAction} />
       )}
       {settingsMenuOpen && (
-        <SyncSuccess
-          address={address}
-          actionStatus={handleSettingsModalAction}
-        />
+        <SettingsSection actionStatus={handleSettingsModalAction} />
       )}
       {helpSectionModalOpen && (
         <HelpSection actionStatus={handleHelpModalAction} />
