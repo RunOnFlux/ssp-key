@@ -17,6 +17,7 @@ import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import Divider from '../../components/Divider/Divider';
 import TransactionRequest from '../../components/TransactionRequest/TransactionRequest';
 import SyncRequest from '../../components/SyncRequest/SyncRequest';
+import AddressDetails from '../../components/AddressDetails/AddressDetails';
 import TxSent from '../../components/TxSent/TxSent';
 import SyncSuccess from '../../components/SyncSuccess/SyncSuccess';
 import { getUniqueId } from 'react-native-device-info';
@@ -70,6 +71,9 @@ function Home({ navigation }: Props) {
   const [syncReq, setSyncReq] = useState('');
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
+  const [addrDetailsOpen, setAddrDetailsOpen] = useState(false);
+  const [sspKeyDetailsOpen, setSSPKeyDetailsOpen] = useState(false);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   useEffect(() => {
@@ -206,6 +210,24 @@ function Home({ navigation }: Props) {
     setIsMenuModalOpen(false);
     setTimeout(() => {
       setIsManualInputModalOpen(true);
+    });
+  };
+  const openAddressDetails = () => {
+    setIsMenuModalOpen(false);
+    setTimeout(() => {
+      setAddrDetailsOpen(true);
+    });
+  };
+  const openSSPKeyDetails = () => {
+    setIsMenuModalOpen(false);
+    setTimeout(() => {
+      setSSPKeyDetailsOpen(true);
+    });
+  };
+  const openMenuSettings = () => {
+    setIsMenuModalOpen(false);
+    setTimeout(() => {
+      setSettingsMenuOpen(true);
     });
   };
   const handleCancelManualInput = () => {
@@ -388,6 +410,21 @@ function Home({ navigation }: Props) {
     setSyncSuccessOpen(false);
   };
 
+  const handleAddrDetailsModalAction = () => {
+    console.log('address details modal close.');
+    setAddrDetailsOpen(false);
+  };
+
+  const handleSSPKeyModalAction = () => {
+    console.log('address details modal close.');
+    setSSPKeyDetailsOpen(false);
+  };
+
+  const handleSettingsModalAction = () => {
+    console.log('settings modal close.');
+    setSettingsMenuOpen(false);
+  };
+
   return (
     <ScrollView
       style={Layout.fill}
@@ -502,6 +539,21 @@ function Home({ navigation }: Props) {
           actionStatus={handleSyncSuccessModalAction}
         />
       )}
+      {addrDetailsOpen && (
+        <AddressDetails
+          address={address}
+          actionStatus={handleAddrDetailsModalAction}
+        />
+      )}
+      {sspKeyDetailsOpen && (
+        <SyncSuccess address={address} actionStatus={handleSSPKeyModalAction} />
+      )}
+      {settingsMenuOpen && (
+        <SyncSuccess
+          address={address}
+          actionStatus={handleSettingsModalAction}
+        />
+      )}
 
       <Modal
         animationType="fade"
@@ -530,7 +582,7 @@ function Home({ navigation }: Props) {
                   {t('home:manual_input')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => openManualInput()}>
+              <TouchableOpacity onPress={() => openAddressDetails()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -542,7 +594,7 @@ function Home({ navigation }: Props) {
                   {t('home:synced_ssp_address')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => openManualInput()}>
+              <TouchableOpacity onPress={() => openSSPKeyDetails()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -554,7 +606,7 @@ function Home({ navigation }: Props) {
                   {t('home:ssp_key_details')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => openManualInput()}>
+              <TouchableOpacity onPress={() => openMenuSettings()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -596,16 +648,25 @@ function Home({ navigation }: Props) {
             Layout.scrollSpaceBetween,
           ]}
         >
-          <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
+          <Text
+            style={[Fonts.titleSmall, Gutters.tinyBMargin, Fonts.textCenter]}
+          >
             {t('home:manual_input')}
           </Text>
-          <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
+          <Text
+            style={[
+              Fonts.textRegular,
+              Fonts.textCenter,
+              Fonts.textBold,
+              Gutters.tinyBMargin,
+            ]}
+          >
             {t('home:sign_resync')}
           </Text>
           <View style={styles.seedPhraseArea}>
             <TextInput
               multiline={true}
-              numberOfLines={4}
+              numberOfLines={6}
               style={styles.inputArea}
               inputMode="email"
               autoCapitalize="none"
@@ -677,12 +738,12 @@ const styles = StyleSheet.create({
   },
   seedPhraseArea: {
     width: '100%',
-    height: 100,
+    height: 150,
   },
   inputArea: {
     flex: 1,
     padding: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f9f9f9',
     color: '#424242',
     borderRadius: 10,
     marginTop: 16,
