@@ -103,7 +103,6 @@ function Home({ navigation }: Props) {
     sspWalletKeyIdentity,
     sspWalletIdentity,
   } = useAppSelector((state) => state.flux);
-  console.log('seedPhrase', seedPhrase);
   // if seedPhrse does not exist, navigate to Welcome page
   if (!seedPhrase) {
     navigation.navigate('Welcome');
@@ -161,7 +160,6 @@ function Home({ navigation }: Props) {
           0,
           'flux',
         );
-        console.log(addrInfo.address, addrInfo.redeemScript);
         dispatch(setAddress(addrInfo.address));
         const encryptedReedemScript = CryptoJS.AES.encrypt(
           addrInfo.redeemScript,
@@ -206,7 +204,6 @@ function Home({ navigation }: Props) {
   };
 
   const openManualInput = () => {
-    console.log('here');
     setIsMenuModalOpen(false);
     setTimeout(() => {
       setIsManualInputModalOpen(true);
@@ -278,7 +275,6 @@ function Home({ navigation }: Props) {
       const redeemScriptDecrypted = rds.toString(CryptoJS.enc.Utf8);
 
       const keyPair = generateAddressKeypair(xprivKeyDecrypted, 0, 0, 'flux');
-      console.log(keyPair);
       try {
         const signedTx = await signTransaction(
           rawTransactions,
@@ -540,10 +536,7 @@ function Home({ navigation }: Props) {
         />
       )}
       {addrDetailsOpen && (
-        <AddressDetails
-          address={address}
-          actionStatus={handleAddrDetailsModalAction}
-        />
+        <AddressDetails actionStatus={handleAddrDetailsModalAction} />
       )}
       {sspKeyDetailsOpen && (
         <SyncSuccess address={address} actionStatus={handleSSPKeyModalAction} />

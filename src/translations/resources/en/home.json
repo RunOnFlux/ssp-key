@@ -15,5 +15,9 @@
   "close": "Close",
   "transaction_sent": "Transaction Sent!",
   "sync_success": "Synchronisation Successful!",
-  "double_check_address": "Please double check that address is the same as your SSP Wallet address."
+  "double_check_address": "Please double check that address is the same as your SSP Wallet address.",
+  "flux_addr_details": "FLUX Address Details (BIP-48)",
+  "wallet_address": "Wallet Address",
+  "wallet_redeem_script": "Wallet Redeem Script",
+  "wallet_private_key": "Wallet Private Key"
 }
