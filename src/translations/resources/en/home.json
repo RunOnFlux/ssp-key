@@ -19,5 +19,9 @@
   "flux_addr_details": "FLUX Address Details (BIP-48)",
   "wallet_address": "Wallet Address",
   "wallet_redeem_script": "Wallet Redeem Script",
-  "wallet_private_key": "Wallet Private Key"
+  "wallet_private_key": "Wallet Private Key",
+  "ssp_key_mnemonic": "SSP Key Mnemonic Seed Phrase",
+  "flux_xpub": "Flux Extended Public Key",
+  "flux_xpriv": "Flux Extended Private Key",
+  "flux_ssp_details": "FLUX SSP Key Details (BIP-48)"
 }

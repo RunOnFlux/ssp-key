@@ -18,6 +18,7 @@ import Divider from '../../components/Divider/Divider';
 import TransactionRequest from '../../components/TransactionRequest/TransactionRequest';
 import SyncRequest from '../../components/SyncRequest/SyncRequest';
 import AddressDetails from '../../components/AddressDetails/AddressDetails';
+import SSPKeyDetails from 'ssp-key/src/components/SSPKeyDetails/SSKeyDetails';
 import TxSent from '../../components/TxSent/TxSent';
 import SyncSuccess from '../../components/SyncSuccess/SyncSuccess';
 import { getUniqueId } from 'react-native-device-info';
@@ -539,7 +540,7 @@ function Home({ navigation }: Props) {
         <AddressDetails actionStatus={handleAddrDetailsModalAction} />
       )}
       {sspKeyDetailsOpen && (
-        <SyncSuccess address={address} actionStatus={handleSSPKeyModalAction} />
+        <SSPKeyDetails actionStatus={handleSSPKeyModalAction} />
       )}
       {settingsMenuOpen && (
         <SyncSuccess
