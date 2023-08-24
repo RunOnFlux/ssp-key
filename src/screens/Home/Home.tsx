@@ -676,13 +676,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   seedPhraseArea: {
-    width: '80%',
+    width: '100%',
     height: 100,
   },
   inputArea: {
     flex: 1,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
     color: '#424242',
     borderRadius: 10,
     marginTop: 16,
