@@ -194,13 +194,7 @@ function Create({ navigation }: Props) {
       ]}
     >
       <View
-        style={[
-          Layout.row,
-          Layout.justifyContentBetween,
-          Layout.fullWidth,
-          Gutters.smallTMargin,
-          Gutters.smallHPadding,
-        ]}
+        style={[Layout.fullWidth, Gutters.smallTMargin, Gutters.smallHPadding]}
       >
         <TouchableOpacity
           onPress={() => navigation.navigate('Welcome')}
@@ -225,6 +219,7 @@ function Create({ navigation }: Props) {
           Layout.fullWidth,
           Layout.justifyContentCenter,
           Layout.alignItemsCenter,
+          Gutters.regularBMargin,
         ]}
       >
         <Image

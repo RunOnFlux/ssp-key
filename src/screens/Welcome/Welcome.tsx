@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import PoweredByFlux from 'ssp-key/src/components/PoweredByFlux/PoweredByFlux';
 
 type Props = {
   navigation: any;
@@ -28,6 +29,7 @@ function Welcome({ navigation }: Props) {
           Layout.fullWidth,
           Layout.justifyContentCenter,
           Layout.alignItemsCenter,
+          Gutters.largeBMargin,
         ]}
       >
         <Image
@@ -61,6 +63,9 @@ function Welcome({ navigation }: Props) {
             {t('welcome:restore_key')}
           </Text>
         </TouchableOpacity>
+      </View>
+      <View style={[Layout.absolute, Layout.bottom0, Gutters.tinyBMargin]}>
+        <PoweredByFlux />
       </View>
     </ScrollView>
   );
