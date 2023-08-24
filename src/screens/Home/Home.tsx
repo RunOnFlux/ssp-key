@@ -18,9 +18,10 @@ import Divider from '../../components/Divider/Divider';
 import TransactionRequest from '../../components/TransactionRequest/TransactionRequest';
 import SyncRequest from '../../components/SyncRequest/SyncRequest';
 import AddressDetails from '../../components/AddressDetails/AddressDetails';
-import SSPKeyDetails from 'ssp-key/src/components/SSPKeyDetails/SSKeyDetails';
+import SSPKeyDetails from '../../components/SSPKeyDetails/SSKeyDetails';
 import TxSent from '../../components/TxSent/TxSent';
 import SyncSuccess from '../../components/SyncSuccess/SyncSuccess';
+import HelpSection from '../../components/HelpSection/HelpSection';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -75,6 +76,7 @@ function Home({ navigation }: Props) {
   const [addrDetailsOpen, setAddrDetailsOpen] = useState(false);
   const [sspKeyDetailsOpen, setSSPKeyDetailsOpen] = useState(false);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+  const [helpSectionModalOpen, setHelpSectionModalOpen] = useState(false);
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   useEffect(() => {
@@ -325,7 +327,7 @@ function Home({ navigation }: Props) {
     });
   };
   const openHelp = () => {
-    console.log('help');
+    setHelpSectionModalOpen(true);
   };
   const openSettings = () => {
     setIsMenuModalOpen(!isMenuModalOpen);
@@ -420,6 +422,11 @@ function Home({ navigation }: Props) {
   const handleSettingsModalAction = () => {
     console.log('settings modal close.');
     setSettingsMenuOpen(false);
+  };
+
+  const handleHelpModalAction = () => {
+    console.log('help modal close.');
+    setHelpSectionModalOpen(false);
   };
 
   return (
@@ -547,6 +554,9 @@ function Home({ navigation }: Props) {
           address={address}
           actionStatus={handleSettingsModalAction}
         />
+      )}
+      {helpSectionModalOpen && (
+        <HelpSection actionStatus={handleHelpModalAction} />
       )}
 
       <Modal
