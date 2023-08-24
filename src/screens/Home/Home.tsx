@@ -551,7 +551,10 @@ function Home({ navigation }: Props) {
         <SSPKeyDetails actionStatus={handleSSPKeyModalAction} />
       )}
       {settingsMenuOpen && (
-        <SettingsSection actionStatus={handleSettingsModalAction} />
+        <SettingsSection
+          actionStatus={handleSettingsModalAction}
+          navigation={navigation}
+        />
       )}
       {helpSectionModalOpen && (
         <HelpSection actionStatus={handleHelpModalAction} />
@@ -745,7 +748,7 @@ const styles = StyleSheet.create({
   inputArea: {
     flex: 1,
     padding: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f6f6f6',
     color: '#424242',
     borderRadius: 10,
     marginTop: 16,

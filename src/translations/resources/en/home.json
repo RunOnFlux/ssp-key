@@ -23,5 +23,9 @@
   "ssp_key_mnemonic": "SSP Key Mnemonic Seed Phrase",
   "flux_xpub": "Flux Extended Public Key",
   "flux_xpriv": "Flux Extended Private Key",
-  "flux_ssp_details": "FLUX SSP Key Details (BIP-48)"
+  "flux_ssp_details": "FLUX SSP Key Details (BIP-48)",
+  "change_pw": "Change Password PIN",
+  "change_pw_restore": "Change PIN? Restore!",
+  "ssp_relay_server": "SSP Relay Server",
+  "flux_node_service": "Flux Node Service"
 }
