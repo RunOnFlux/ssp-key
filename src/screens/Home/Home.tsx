@@ -582,7 +582,10 @@ function Home({ navigation }: Props) {
         <HelpSection actionStatus={handleHelpModalAction} />
       )}
       {authenticationOpen && (
-        <Authentication actionStatus={handleAuthenticationOpen} />
+        <Authentication
+          actionStatus={handleAuthenticationOpen}
+          type="sensitive"
+        />
       )}
 
       <Modal

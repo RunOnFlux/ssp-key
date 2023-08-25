@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
@@ -17,27 +18,68 @@ import { useTheme } from '../../hooks';
 
 const rnBiometrics = new ReactNativeBiometrics();
 
-const Authentication = (props: { actionStatus: (status: boolean) => void }) => {
+const Authentication = (props: {
+  actionStatus: (status: boolean) => void;
+  type: string;
+}) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(false);
+  const [biometricsAvailable, setBiometricsAvailable] = useState(false);
 
-  rnBiometrics.isSensorAvailable().then((resultObject) => {
-    const { available, biometryType } = resultObject;
+  useEffect(() => {
+    rnBiometrics.isSensorAvailable().then((resultObject) => {
+      const { available, biometryType } = resultObject;
 
-    if (available && biometryType === BiometryTypes.TouchID) {
-      console.log('TouchID is supported');
-    } else if (available && biometryType === BiometryTypes.FaceID) {
-      console.log('FaceID is supported');
-    } else if (available && biometryType === BiometryTypes.Biometrics) {
-      console.log('Biometrics is supported');
-    } else {
-      // here we show fallback mechanism if none of the above succeed
-      console.log('Biometrics not supported');
+      if (available && biometryType === BiometryTypes.TouchID) {
+        console.log('TouchID is supported');
+        setBiometricsAvailable(true);
+        initiateFingerprint();
+      } else if (available && biometryType === BiometryTypes.FaceID) {
+        console.log('FaceID is supported');
+        setBiometricsAvailable(true);
+        initiateFingerprint();
+      } else if (available && biometryType === BiometryTypes.Biometrics) {
+        console.log('Biometrics is supported');
+        setBiometricsAvailable(true);
+        initiateFingerprint();
+      } else {
+        // here we show fallback mechanism if none of the above succeed
+        console.log('Biometrics not supported');
+        setBiometricsAvailable(false);
+      }
+    });
+  }, []);
+
+  const initiateFingerprint = () => {
+    let textForPrompt = 'Grant access to view senstivie SSP Key information.';
+    if (props.type === 'tx') {
+      textForPrompt = 'Confirm to sign and send transaction.';
+    } else if (props.type === 'sync') {
+      textForPrompt = 'Confirm to sync SSP Wallet with SSP Key.';
     }
-  });
+    console.log('Initiate Fingerprint');
+    rnBiometrics
+      .simplePrompt({
+        promptMessage: textForPrompt,
+      })
+      .then((resultObject) => {
+        const { success } = resultObject;
 
+        if (success) {
+          console.log('successful biometrics provided');
+          setPassword('');
+          setPasswordVisibility(false);
+          props.actionStatus(true);
+        } else {
+          console.log('user cancelled biometric prompt');
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
   const displayMessage = (type: string, content: string) => {
     Toast.show({
       type,
@@ -92,12 +134,36 @@ const Authentication = (props: { actionStatus: (status: boolean) => void }) => {
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
           {t('home:confirm_password_pin')}
         </Text>
-        <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-          You are about to access sensitive information.
+        <Text
+          style={[
+            Fonts.textBold,
+            Fonts.textSmall,
+            Fonts.textCenter,
+            Gutters.smallTMargin,
+          ]}
+        >
+          {props.type === 'tx'
+            ? 'You are about to sign and send transaction!'
+            : props.type === 'sync'
+            ? 'You are about to sync SSP Wallet with SSP Key!'
+            : 'You are about to access sensitive information!'}
         </Text>
         <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-          Grant access with psasword.
+          {props.type === 'tx'
+            ? 'Confirm with password.'
+            : props.type === 'sync'
+            ? 'Confirm with password.'
+            : 'Grant access with psasword.'}
         </Text>
+        {biometricsAvailable && (
+          <IconB
+            name="fingerprint"
+            size={50}
+            color={Colors.bluePrimary}
+            style={[Fonts.textCenter, Gutters.regularTMargin]}
+            onPress={() => initiateFingerprint()}
+          />
+        )}
         <View style={styles.passwordSection}>
           <TextInput
             style={styles.input}
@@ -140,7 +206,9 @@ const Authentication = (props: { actionStatus: (status: boolean) => void }) => {
                 Gutters.regularHPadding,
               ]}
             >
-              {t('home:grant_access')}
+              {props.type === 'sensitive'
+                ? t('home:grant_access')
+                : t('common:confirm')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => close()}>
@@ -177,7 +245,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    height: 400,
+    height: 420,
     position: 'absolute',
     bottom: 30,
   },
