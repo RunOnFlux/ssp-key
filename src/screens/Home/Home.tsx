@@ -206,7 +206,11 @@ function Home({ navigation }: Props) {
         setSyncSuccessOpen(true);
       })
       .catch((error) => {
+        setSyncReq('');
         console.log(error.message);
+        setTimeout(() => {
+          displayMessage('error', 'Synchronisation failed. Try again later.');
+        }, 200);
       });
   };
 
@@ -302,6 +306,7 @@ function Home({ navigation }: Props) {
         setTxid(ttxid);
       } catch (error) {
         console.log(error);
+        displayMessage('error', 'Transaction failed. Try again later.');
       }
     } catch (error) {
       console.log(error);
@@ -325,7 +330,9 @@ function Home({ navigation }: Props) {
         handleTxRequest(rawTransactions);
       }
     } else {
-      displayMessage('error', 'Invalid manual input');
+      setTimeout(() => {
+        displayMessage('error', 'Invalid manual input');
+      }, 200);
     }
     setTimeout(() => {
       setManualInput('');
