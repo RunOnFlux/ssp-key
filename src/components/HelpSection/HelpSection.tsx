@@ -6,17 +6,35 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
+  Linking,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import PoweredByFlux from '../PoweredByFlux/PoweredByFlux';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
 const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Common } = useTheme();
+  const { Fonts, Gutters, Layout, Common, Colors } = useTheme();
 
   const close = () => {
     console.log('Close');
     props.actionStatus(false);
+  };
+
+  const openWebsite = () => {
+    console.log('Open Discord');
+    Linking.openURL('https://runonflux.io');
+  };
+
+  const openSupport = () => {
+    console.log('Open Discord');
+    Linking.openURL('https://support.runonflux.io');
+  };
+
+  const openDiscord = () => {
+    console.log('Open Discord');
+    Linking.openURL('https://discord.io/runonflux');
   };
 
   return (
@@ -45,18 +63,48 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
             Layout.alignItemsCenter,
           ]}
         >
-          <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-            Don't be evil. TBD
-          </Text>
-          <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-            Support TBD
-          </Text>
-          <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-            Website TBD
-          </Text>
-          <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-            Discord TBD
-          </Text>
+          <View style={[Gutters.smallVPadding]}>
+            <Text style={[Fonts.textBold, Fonts.textRegular, Fonts.textCenter]}>
+              SSP Key
+            </Text>
+            <Text
+              style={[
+                Fonts.textBold,
+                Fonts.textSmall,
+                Fonts.textCenter,
+                Gutters.tinyTMargin,
+              ]}
+            >
+              Secure. Simple. Powerful.
+            </Text>
+            <Text
+              style={[Fonts.textSmall, Fonts.textCenter, Gutters.tinyTMargin]}
+            >
+              Your Second Key Factor authentication for your SSP Wallet.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={openWebsite}
+            style={[Layout.center, Gutters.smallVPadding]}
+          >
+            <Icon name={'web'} size={30} color={Colors.bluePrimary} />
+            <Text style={[Fonts.textSmall, Fonts.textCenter]}>Website</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={openSupport}
+            style={[Layout.center, Gutters.tinyVPadding]}
+          >
+            <Icon name={'help'} size={30} color={Colors.bluePrimary} />
+            <Text style={[Fonts.textSmall, Fonts.textCenter]}>Support</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={openDiscord}
+            style={[Layout.center, Gutters.smallVPadding]}
+          >
+            <Icon name={'discord'} size={30} color={Colors.bluePrimary} />
+            <Text style={[Fonts.textSmall, Fonts.textCenter]}>Discord</Text>
+          </TouchableOpacity>
         </View>
         <View>
           <TouchableOpacity
@@ -64,7 +112,7 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
               Common.button.outlineRounded,
               Common.button.secondaryButton,
               Layout.fullWidth,
-              Gutters.regularTMargin,
+              Gutters.smallTMargin,
             ]}
             onPress={() => close()}
           >
@@ -78,6 +126,9 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
               {t('common:ok')}
             </Text>
           </TouchableOpacity>
+        </View>
+        <View style={[Gutters.smallTMargin, styles.poweredBy]}>
+          <PoweredByFlux />
         </View>
       </ScrollView>
     </Modal>
@@ -101,13 +152,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
   },
-  eyeIcon: {
-    padding: 12,
-  },
-  passwordSection: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+  poweredBy: {
+    marginBottom: -25,
   },
 });
