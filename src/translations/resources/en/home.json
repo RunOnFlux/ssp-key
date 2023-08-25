@@ -27,5 +27,7 @@
   "change_pw": "Change Password PIN",
   "change_pw_restore": "Change PIN? Restore!",
   "ssp_relay_server": "SSP Relay Server",
-  "flux_node_service": "Flux Node Service"
+  "flux_node_service": "Flux Node Service",
+  "confirm_password_pin": "Confirm Password PIN",
+  "grant_access": "Grant Access"
 }

@@ -22,6 +22,7 @@ import SSPKeyDetails from '../../components/SSPKeyDetails/SSKeyDetails';
 import TxSent from '../../components/TxSent/TxSent';
 import SyncSuccess from '../../components/SyncSuccess/SyncSuccess';
 import HelpSection from '../../components/HelpSection/HelpSection';
+import Authentication from '../../components/Authentication/Authentication';
 import SettingsSection from '../../components/SettingsSection/SettingsSection';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -78,6 +79,8 @@ function Home({ navigation }: Props) {
   const [sspKeyDetailsOpen, setSSPKeyDetailsOpen] = useState(false);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [helpSectionModalOpen, setHelpSectionModalOpen] = useState(false);
+  const [authenticationOpen, setAuthenticationOpen] = useState(false);
+  const [actionToPerform, setActionToPerform] = useState('');
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   useEffect(() => {
@@ -214,15 +217,17 @@ function Home({ navigation }: Props) {
     });
   };
   const openAddressDetails = () => {
+    setActionToPerform('address');
     setIsMenuModalOpen(false);
     setTimeout(() => {
-      setAddrDetailsOpen(true);
+      setAuthenticationOpen(true);
     });
   };
   const openSSPKeyDetails = () => {
+    setActionToPerform('sspkey');
     setIsMenuModalOpen(false);
     setTimeout(() => {
-      setSSPKeyDetailsOpen(true);
+      setAuthenticationOpen(true);
     });
   };
   const openMenuSettings = () => {
@@ -430,6 +435,23 @@ function Home({ navigation }: Props) {
     setHelpSectionModalOpen(false);
   };
 
+  const handleAuthenticationOpen = (status: boolean) => {
+    console.log(status);
+    console.log('authentication modal close.');
+    setAuthenticationOpen(false);
+    if (status === true) {
+      setTimeout(() => {
+        // open proper dialog
+        if (actionToPerform === 'address') {
+          setAddrDetailsOpen(true);
+        } else if (actionToPerform === 'sspkey') {
+          setSSPKeyDetailsOpen(true);
+        }
+        setActionToPerform('');
+      });
+    }
+  };
+
   return (
     <ScrollView
       style={Layout.fill}
@@ -558,6 +580,9 @@ function Home({ navigation }: Props) {
       )}
       {helpSectionModalOpen && (
         <HelpSection actionStatus={handleHelpModalAction} />
+      )}
+      {authenticationOpen && (
+        <Authentication actionStatus={handleAuthenticationOpen} />
       )}
 
       <Modal

@@ -361,6 +361,7 @@ function Restore({ navigation }: Props) {
               Fonts.textCenter,
               Gutters.tinyBMargin,
             ]}
+            selectable={true}
           >
             {mnemonicShow
               ? mnemonic

@@ -335,6 +335,7 @@ function Create({ navigation }: Props) {
               Fonts.textCenter,
               Gutters.tinyBMargin,
             ]}
+            selectable={true}
           >
             {mnemonicShow
               ? mnemonic
