@@ -83,24 +83,6 @@ function Home({ navigation }: Props) {
   const [actionToPerform, setActionToPerform] = useState('');
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
-  useEffect(() => {
-    if (alreadyMounted.current) {
-      return;
-    }
-    alreadyMounted.current = true;
-    if (sspWalletKeyIdentity) {
-      // get some pending request on W-K identity
-      handleRefresh();
-    }
-  });
-
-  const displayMessage = (type: string, content: string) => {
-    Toast.show({
-      type,
-      text1: content,
-    });
-  };
-
   const {
     address,
     redeemScript,
@@ -110,47 +92,67 @@ function Home({ navigation }: Props) {
     sspWalletKeyIdentity,
     sspWalletIdentity,
   } = useAppSelector((state) => state.flux);
-  // if seedPhrse does not exist, navigate to Welcome page
-  if (!seedPhrase) {
-    navigation.navigate('Welcome');
-    return <></>;
-  }
 
-  if (!xpubKey || !xprivKey) {
-    // just a precaution to make sure xpub and xpriv are set. Should acutally never end up here
-    getUniqueId()
-      .then(async (id) => {
-        // clean up password from encrypted storage
-        const password = await EncryptedStorage.getItem('ssp_key_pw');
-        const pwForEncryption = id + password;
-        const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
-        const mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
-        // generate master xpriv for flux
-        const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
-        const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
-        const xprivBlob = CryptoJS.AES.encrypt(
-          xpriv,
-          pwForEncryption,
-        ).toString();
-        const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
-        dispatch(setXprivKey(xprivBlob));
-        dispatch(setXpubKey(xpubBlob));
-      })
-      .catch((error) => {
-        console.log(error.message);
-      });
-  }
+  useEffect(() => {
+    if (alreadyMounted.current) {
+      return;
+    }
+    alreadyMounted.current = true;
+    if (sspWalletKeyIdentity) {
+      // get some pending request on W-K identity
+      handleRefresh();
+    }
 
-  if (
-    // todo use effect
-    !address ||
-    !redeemScript ||
-    !xpubWallet ||
-    !sspWalletKeyIdentity ||
-    !sspWalletIdentity
-  ) {
-    console.log('Request for scanning QR code');
-  }
+    if (
+      // todo use effect
+      !address ||
+      !redeemScript ||
+      !xpubWallet ||
+      !sspWalletKeyIdentity ||
+      !sspWalletIdentity
+    ) {
+      console.log('Request for scanning QR code');
+    }
+
+    checkXpubXpriv();
+  });
+
+  const checkXpubXpriv = () => {
+    if (!xpubKey || !xprivKey) {
+      // just a precaution to make sure xpub and xpriv are set. Should acutally never end up here
+      getUniqueId()
+        .then(async (id) => {
+          // clean up password from encrypted storage
+          const password = await EncryptedStorage.getItem('ssp_key_pw');
+          const pwForEncryption = id + password;
+          const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
+          const mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
+          // generate master xpriv for flux
+          const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
+          const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
+          const xprivBlob = CryptoJS.AES.encrypt(
+            xpriv,
+            pwForEncryption,
+          ).toString();
+          const xpubBlob = CryptoJS.AES.encrypt(
+            xpub,
+            pwForEncryption,
+          ).toString();
+          dispatch(setXprivKey(xprivBlob));
+          dispatch(setXpubKey(xpubBlob));
+        })
+        .catch((error) => {
+          console.log(error.message);
+        });
+    }
+  };
+
+  const displayMessage = (type: string, content: string) => {
+    Toast.show({
+      type,
+      text1: content,
+    });
+  };
 
   const generateAddresses = (suppliedXpubWallet: string) => {
     getUniqueId()
