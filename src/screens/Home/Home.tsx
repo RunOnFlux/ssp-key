@@ -64,6 +64,8 @@ type Props = {
 };
 
 function Home({ navigation }: Props) {
+  // focusability of inputs
+  const textInputA = useRef<TextInput | null>(null);
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const dispatch = useAppDispatch();
   const { t } = useTranslation(['home', 'common']);
@@ -487,12 +489,12 @@ function Home({ navigation }: Props) {
         />
         <View style={[Layout.row, Gutters.tinyTMargin]}>
           <TouchableOpacity
-            onPress={() => openHelp()}
+            onPressIn={() => openHelp()}
             style={[Gutters.smallRMargin]}
           >
             <Icon name="help-circle" size={22} color={Colors.textGray400} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => openSettings()} style={[]}>
+          <TouchableOpacity onPressIn={() => openSettings()} style={[]}>
             <Icon name="settings" size={22} color={Colors.textGray400} />
           </TouchableOpacity>
         </View>
@@ -516,7 +518,7 @@ function Home({ navigation }: Props) {
               {t('home:no_pending_actions')}
             </Text>
             <TouchableOpacity
-              onPress={() => handleRefresh()}
+              onPressIn={() => handleRefresh()}
               style={[Layout.row, Gutters.regularMargin]}
             >
               <IconB name="gesture-tap" size={30} color={Colors.bluePrimary} />
@@ -541,7 +543,7 @@ function Home({ navigation }: Props) {
                 Layout.fullWidth,
                 Gutters.smallBMargin,
               ]}
-              onPress={() => scanCode()}
+              onPressIn={() => scanCode()}
             >
               <Text
                 style={[
@@ -606,13 +608,13 @@ function Home({ navigation }: Props) {
         visible={isMenuModalOpen}
       >
         <TouchableWithoutFeedback
-          onPressOut={() => {
+          onPressIn={() => {
             setIsMenuModalOpen(false);
           }}
         >
           <View style={[Layout.fill]}>
             <View style={[styles.modalMenu]}>
-              <TouchableOpacity onPress={() => openManualInput()}>
+              <TouchableOpacity onPressIn={() => openManualInput()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -624,7 +626,7 @@ function Home({ navigation }: Props) {
                   {t('home:manual_input')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => openAddressDetails()}>
+              <TouchableOpacity onPressIn={() => openAddressDetails()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -636,7 +638,7 @@ function Home({ navigation }: Props) {
                   {t('home:synced_ssp_address')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => openSSPKeyDetails()}>
+              <TouchableOpacity onPressIn={() => openSSPKeyDetails()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -648,7 +650,7 @@ function Home({ navigation }: Props) {
                   {t('home:ssp_key_details')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => openMenuSettings()}>
+              <TouchableOpacity onPressIn={() => openMenuSettings()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -660,7 +662,7 @@ function Home({ navigation }: Props) {
                   {t('common:settings')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleRestore()}>
+              <TouchableOpacity onPressIn={() => handleRestore()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -710,13 +712,14 @@ function Home({ navigation }: Props) {
               multiline={true}
               numberOfLines={6}
               style={styles.inputArea}
-              inputMode="email"
               autoCapitalize="none"
               placeholder="Input your transaction to sign or xpub of your wallet to sync."
               secureTextEntry={false}
               onChangeText={onChangeManualInput}
               value={manualInput}
               autoCorrect={false}
+              ref={textInputA}
+              onPressIn={() => textInputA.current?.focus()}
             />
           </View>
           <TouchableOpacity
@@ -726,13 +729,13 @@ function Home({ navigation }: Props) {
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
-            onPress={() => handleMnualInput()}
+            onPressIn={() => handleMnualInput()}
           >
             <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {t('home:process_input')}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleCancelManualInput()}>
+          <TouchableOpacity onPressIn={() => handleCancelManualInput()}>
             <Text
               style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >

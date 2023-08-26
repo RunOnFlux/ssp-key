@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,10 @@ type Props = {
 };
 
 function Restore({ navigation }: Props) {
+  // focusability of inputs
+  const seedInput = useRef<TextInput | null>(null);
+  const passwordInputA = useRef<TextInput | null>(null);
+  const passwordInputB = useRef<TextInput | null>(null);
   const dispatch = useAppDispatch();
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   const [isLoading, setIsLoading] = useState(false);
@@ -219,7 +223,7 @@ function Restore({ navigation }: Props) {
           Gutters.smallHPadding,
         ]}
       >
-        <TouchableOpacity onPress={() => navigateBack()} style={[Layout.row]}>
+        <TouchableOpacity onPressIn={() => navigateBack()} style={[Layout.row]}>
           <Icon name="chevron-left" size={20} color={Colors.bluePrimary} />
           <Text
             style={[
@@ -254,20 +258,20 @@ function Restore({ navigation }: Props) {
             multiline={true}
             numberOfLines={4}
             style={styles.inputArea}
-            inputMode="email"
             autoCapitalize="none"
             placeholder="Input your Mnemonic Key Seed Phrase"
             secureTextEntry={false}
             onChangeText={onChangeMnemonic}
             value={mnemonic}
             autoCorrect={false}
+            ref={seedInput}
+            onPressIn={() => seedInput.current?.focus()}
           />
         </View>
         <View style={styles.passwordSection}>
           <TextInput
             style={styles.input}
             autoComplete="new-password"
-            inputMode="email"
             textContentType="password"
             autoCapitalize="none"
             placeholder="Set Key Password PIN"
@@ -275,9 +279,11 @@ function Restore({ navigation }: Props) {
             onChangeText={onChangePassword}
             value={password}
             autoCorrect={false}
+            ref={passwordInputA}
+            onPressIn={() => passwordInputA.current?.focus()}
           />
           <TouchableOpacity
-            onPress={handlePasswordVisibility}
+            onPressIn={handlePasswordVisibility}
             style={styles.eyeIcon}
           >
             <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
@@ -287,7 +293,6 @@ function Restore({ navigation }: Props) {
           <TextInput
             style={styles.input}
             autoComplete="new-password"
-            inputMode="email"
             textContentType="password"
             autoCapitalize="none"
             placeholder="Confirm Key Password PIN"
@@ -295,9 +300,11 @@ function Restore({ navigation }: Props) {
             onChangeText={onChangePasswordConfirm}
             value={passwordConfirm}
             autoCorrect={false}
+            ref={passwordInputB}
+            onPressIn={() => passwordInputB.current?.focus()}
           />
           <TouchableOpacity
-            onPress={handlePasswordVisibilityConfirm}
+            onPressIn={handlePasswordVisibilityConfirm}
             style={styles.eyeIcon}
           >
             <Icon
@@ -314,7 +321,7 @@ function Restore({ navigation }: Props) {
             Gutters.regularBMargin,
             Gutters.smallTMargin,
           ]}
-          onPress={() => setupImportKey()}
+          onPressIn={() => setupImportKey()}
         >
           <Text style={[Fonts.textRegular, Fonts.textWhite]}>Import Key</Text>
         </TouchableOpacity>
@@ -374,7 +381,7 @@ function Restore({ navigation }: Props) {
                 Common.button.dashed,
                 Common.button.secondaryButton,
               ]}
-              onPress={() => {
+              onPressIn={() => {
                 setMnemonicShow(!mnemonicShow);
                 setWSPwasShown(true);
               }}
@@ -404,7 +411,7 @@ function Restore({ navigation }: Props) {
               Gutters.smallTMargin,
             ]}
             disabled={isLoading}
-            onPress={() => handleOk()}
+            onPressIn={() => handleOk()}
           >
             {isLoading && (
               <ActivityIndicator
@@ -418,7 +425,10 @@ function Restore({ navigation }: Props) {
               </Text>
             )}
           </TouchableOpacity>
-          <TouchableOpacity disabled={isLoading} onPress={() => handleCancel()}>
+          <TouchableOpacity
+            disabled={isLoading}
+            onPressIn={() => handleCancel()}
+          >
             <Text
               style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >
@@ -439,6 +449,7 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#fff',
     color: '#424242',
+    borderRadius: 10,
   },
   inputArea: {
     flex: 1,

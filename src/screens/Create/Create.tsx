@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -37,6 +37,9 @@ type Props = {
 };
 
 function Create({ navigation }: Props) {
+  // focusability of inputs
+  const passwordInputA = useRef<TextInput | null>(null);
+  const passwordInputB = useRef<TextInput | null>(null);
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -197,7 +200,7 @@ function Create({ navigation }: Props) {
         style={[Layout.fullWidth, Gutters.smallTMargin, Gutters.smallHPadding]}
       >
         <TouchableOpacity
-          onPress={() => navigation.navigate('Welcome')}
+          onPressIn={() => navigation.navigate('Welcome')}
           style={[Layout.row]}
         >
           <Icon name="chevron-left" size={20} color={Colors.bluePrimary} />
@@ -234,7 +237,6 @@ function Create({ navigation }: Props) {
           <TextInput
             style={styles.input}
             autoComplete="new-password"
-            inputMode="email"
             textContentType="password"
             autoCapitalize="none"
             placeholder="Set Key Password PIN"
@@ -242,9 +244,11 @@ function Create({ navigation }: Props) {
             onChangeText={onChangePassword}
             value={password}
             autoCorrect={false}
+            ref={passwordInputA}
+            onPressIn={() => passwordInputA.current?.focus()}
           />
           <TouchableOpacity
-            onPress={handlePasswordVisibility}
+            onPressIn={handlePasswordVisibility}
             style={styles.eyeIcon}
           >
             <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
@@ -254,7 +258,6 @@ function Create({ navigation }: Props) {
           <TextInput
             style={styles.input}
             autoComplete="new-password"
-            inputMode="email"
             textContentType="password"
             autoCapitalize="none"
             placeholder="Confirm Key Password PIN"
@@ -262,9 +265,11 @@ function Create({ navigation }: Props) {
             onChangeText={onChangePasswordConfirm}
             value={passwordConfirm}
             autoCorrect={false}
+            ref={passwordInputB}
+            onPressIn={() => passwordInputB.current?.focus()}
           />
           <TouchableOpacity
-            onPress={handlePasswordVisibilityConfirm}
+            onPressIn={handlePasswordVisibilityConfirm}
             style={styles.eyeIcon}
           >
             <Icon
@@ -281,13 +286,13 @@ function Create({ navigation }: Props) {
             Gutters.regularBMargin,
             Gutters.smallTMargin,
           ]}
-          onPress={() => setupKey()}
+          onPressIn={() => setupKey()}
         >
           <Text style={[Fonts.textRegular, Fonts.textWhite]}>
             {t('cr:setup_key')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
+        <TouchableOpacity onPressIn={() => navigation.navigate('Restore')}>
           <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
             {t('cr:restore_key')}
           </Text>
@@ -348,7 +353,7 @@ function Create({ navigation }: Props) {
                 Common.button.dashed,
                 Common.button.secondaryButton,
               ]}
-              onPress={() => {
+              onPressIn={() => {
                 setMnemonicShow(!mnemonicShow);
                 setWSPwasShown(true);
               }}
@@ -378,7 +383,7 @@ function Create({ navigation }: Props) {
               Gutters.smallTMargin,
             ]}
             disabled={isLoading}
-            onPress={() => handleOk()}
+            onPressIn={() => handleOk()}
           >
             {isLoading && (
               <ActivityIndicator
@@ -392,7 +397,10 @@ function Create({ navigation }: Props) {
               </Text>
             )}
           </TouchableOpacity>
-          <TouchableOpacity disabled={isLoading} onPress={() => handleCancel()}>
+          <TouchableOpacity
+            disabled={isLoading}
+            onPressIn={() => handleCancel()}
+          >
             <Text
               style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >
@@ -413,6 +421,8 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#fff',
     color: '#424242',
+    borderRadius: 10,
+    zIndex: 19,
   },
   passwordSection: {
     width: '80%',
@@ -423,6 +433,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
     marginTop: 16,
+    zIndex: 19,
   },
   eyeIcon: {
     padding: 12,

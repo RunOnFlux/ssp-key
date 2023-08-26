@@ -91,7 +91,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
           <View>
             <View style={[Gutters.regularTMargin, styles.passwordSection]}>
               <TouchableOpacity
-                onPress={() => setMnemonicVisible(!mnemonicVisible)}
+                onPressIn={() => setMnemonicVisible(!mnemonicVisible)}
                 style={styles.eyeIcon}
               >
                 <Icon
@@ -118,7 +118,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
           <View>
             <View style={styles.passwordSection}>
               <TouchableOpacity
-                onPress={() => setXpubVisible(!xpubVisible)}
+                onPressIn={() => setXpubVisible(!xpubVisible)}
                 style={styles.eyeIcon}
               >
                 <Icon
@@ -143,7 +143,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
           <View>
             <View style={styles.passwordSection}>
               <TouchableOpacity
-                onPress={() => setXprivVisible(!xprivVisible)}
+                onPressIn={() => setXprivVisible(!xprivVisible)}
                 style={styles.eyeIcon}
               >
                 <Icon
@@ -174,7 +174,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
               Layout.fullWidth,
               Gutters.regularTMargin,
             ]}
-            onPress={() => close()}
+            onPressIn={() => close()}
           >
             <Text
               style={[

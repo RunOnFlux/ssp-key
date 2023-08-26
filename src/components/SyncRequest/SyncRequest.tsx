@@ -71,7 +71,7 @@ const SyncRequest = (props: {
             Layout.fullWidth,
             Gutters.regularBMargin,
           ]}
-          onPress={() => openAuthentication()}
+          onPressIn={() => openAuthentication()}
         >
           <Text
             style={[
@@ -83,7 +83,7 @@ const SyncRequest = (props: {
             {t('home:approve_sync')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => reject()}>
+        <TouchableOpacity onPressIn={() => reject()}>
           <Text
             style={[
               Fonts.textSmall,

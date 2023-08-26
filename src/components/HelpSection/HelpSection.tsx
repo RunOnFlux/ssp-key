@@ -85,21 +85,21 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
           </View>
 
           <TouchableOpacity
-            onPress={openWebsite}
+            onPressIn={openWebsite}
             style={[Layout.center, Gutters.smallVPadding]}
           >
             <Icon name={'web'} size={30} color={Colors.bluePrimary} />
             <Text style={[Fonts.textSmall, Fonts.textCenter]}>Website</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={openSupport}
+            onPressIn={openSupport}
             style={[Layout.center, Gutters.tinyVPadding]}
           >
             <Icon name={'help'} size={30} color={Colors.bluePrimary} />
             <Text style={[Fonts.textSmall, Fonts.textCenter]}>Support</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={openDiscord}
+            onPressIn={openDiscord}
             style={[Layout.center, Gutters.smallVPadding]}
           >
             <Icon name={'discord'} size={30} color={Colors.bluePrimary} />
@@ -114,7 +114,7 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
               Layout.fullWidth,
               Gutters.smallTMargin,
             ]}
-            onPress={() => close()}
+            onPressIn={() => close()}
           >
             <Text
               style={[

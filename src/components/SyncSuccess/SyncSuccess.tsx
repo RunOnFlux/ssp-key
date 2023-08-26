@@ -83,7 +83,7 @@ const SyncRequest = (props: {
               Layout.fullWidth,
               Gutters.regularBMargin,
             ]}
-            onPress={() => openExplorer()}
+            onPressIn={() => openExplorer()}
           >
             <Text
               style={[
@@ -95,7 +95,7 @@ const SyncRequest = (props: {
               {t('home:show_in_explorer')}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => close()}>
+          <TouchableOpacity onPressIn={() => close()}>
             <Text
               style={[
                 Fonts.textSmall,

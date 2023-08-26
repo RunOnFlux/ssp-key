@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,9 @@ const SettingsSection = (props: {
   actionStatus: (status: boolean) => void;
   navigation: any;
 }) => {
+  // focusability of inputs
+  const textInputA = useRef<TextInput | null>(null);
+  const textInputB = useRef<TextInput | null>(null);
   const FNC = backends().flux.node;
   const SSPR = sspConfig().relay;
   console.log(SSPR);
@@ -144,7 +147,7 @@ const SettingsSection = (props: {
                   Common.button.secondaryButton,
                   Gutters.regularTMargin,
                 ]}
-                onPress={() => handleRestore()}
+                onPressIn={() => handleRestore()}
               >
                 <Text
                   style={[
@@ -166,14 +169,18 @@ const SettingsSection = (props: {
             <View style={styles.passwordSection}>
               <TextInput
                 style={styles.input}
-                inputMode="email"
                 autoCapitalize="none"
                 placeholder="relay.ssp.runonflux.io"
                 onChangeText={onChangeSSPrelay}
                 value={sspConfigRelay}
                 autoCorrect={false}
+                ref={textInputA}
+                onPressIn={() => textInputA.current?.focus()}
               />
-              <TouchableOpacity onPress={resetSSPRelay} style={styles.eyeIcon}>
+              <TouchableOpacity
+                onPressIn={resetSSPRelay}
+                style={styles.eyeIcon}
+              >
                 <Icon name="x" size={20} color={Colors.bluePrimary} />
               </TouchableOpacity>
             </View>
@@ -185,15 +192,16 @@ const SettingsSection = (props: {
             <View style={styles.passwordSection}>
               <TextInput
                 style={styles.input}
-                inputMode="email"
                 autoCapitalize="none"
                 placeholder="explorer.runonflux.io"
                 onChangeText={onChangeFluxNodeService}
                 value={fluxNodeConfig}
                 autoCorrect={false}
+                ref={textInputB}
+                onPressIn={() => textInputB.current?.focus()}
               />
               <TouchableOpacity
-                onPress={resetFluxNodeService}
+                onPressIn={resetFluxNodeService}
                 style={styles.eyeIcon}
               >
                 <Icon name="x" size={20} color={Colors.bluePrimary} />
@@ -210,7 +218,7 @@ const SettingsSection = (props: {
               Gutters.regularTMargin,
               Gutters.smallBMargin,
             ]}
-            onPress={() => handleSave()}
+            onPressIn={() => handleSave()}
           >
             <Text
               style={[
@@ -222,7 +230,7 @@ const SettingsSection = (props: {
               {t('common:save')}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleCancel()}>
+          <TouchableOpacity onPressIn={() => handleCancel()}>
             <Text
               style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >
@@ -257,6 +265,7 @@ const styles = StyleSheet.create({
     padding: 12,
     color: '#424242',
     width: '100%',
+    borderRadius: 10,
   },
   eyeIcon: {
     padding: 12,

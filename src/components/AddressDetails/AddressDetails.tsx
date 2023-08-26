@@ -100,7 +100,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
           <View>
             <View style={styles.passwordSection}>
               <TouchableOpacity
-                onPress={() => setRedeemScriptVisible(!redeemScriptVisible)}
+                onPressIn={() => setRedeemScriptVisible(!redeemScriptVisible)}
                 style={styles.eyeIcon}
               >
                 <Icon
@@ -127,7 +127,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
           <View>
             <View style={styles.passwordSection}>
               <TouchableOpacity
-                onPress={() => setPrivateKeyVisible(!privateKeyVisible)}
+                onPressIn={() => setPrivateKeyVisible(!privateKeyVisible)}
                 style={styles.eyeIcon}
               >
                 <Icon
@@ -160,7 +160,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
               Layout.fullWidth,
               Gutters.regularTMargin,
             ]}
-            onPress={() => close()}
+            onPressIn={() => close()}
           >
             <Text
               style={[

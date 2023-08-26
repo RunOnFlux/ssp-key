@@ -24,7 +24,7 @@ function PoweredByFlux() {
         ]}
       >
         <Text style={[Fonts.textSmall]}>{t('common:powered_by')} </Text>
-        <TouchableOpacity onPress={() => openFlux()}>
+        <TouchableOpacity onPressIn={() => openFlux()}>
           <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
             {t('common:Flux')}
           </Text>

@@ -89,7 +89,7 @@ const TransactionRequest = (props: {
             Layout.fullWidth,
             Gutters.regularBMargin,
           ]}
-          onPress={() => openAuthentication()}
+          onPressIn={() => openAuthentication()}
         >
           <Text
             style={[
@@ -101,7 +101,7 @@ const TransactionRequest = (props: {
             {t('home:approve_transaction')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => reject()}>
+        <TouchableOpacity onPressIn={() => reject()}>
           <Text
             style={[
               Fonts.textSmall,

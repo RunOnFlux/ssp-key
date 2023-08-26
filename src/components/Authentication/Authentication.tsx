@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,8 @@ const Authentication = (props: {
   actionStatus: (status: boolean) => void;
   type: string;
 }) => {
+  // focusability of inputs
+  const textInputA = useRef<TextInput | null>(null);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const [password, setPassword] = useState('');
@@ -168,7 +170,6 @@ const Authentication = (props: {
           <TextInput
             style={styles.input}
             autoComplete="new-password"
-            inputMode="email"
             textContentType="password"
             autoCapitalize="none"
             placeholder="Set Key Password PIN"
@@ -176,9 +177,11 @@ const Authentication = (props: {
             onChangeText={onChangePassword}
             value={password}
             autoCorrect={false}
+            ref={textInputA}
+            onPressIn={() => textInputA.current?.focus()}
           />
           <TouchableOpacity
-            onPress={() => setPasswordVisibility(!passwordVisibility)}
+            onPressIn={() => setPasswordVisibility(!passwordVisibility)}
             style={styles.eyeIcon}
           >
             <Icon
@@ -197,7 +200,7 @@ const Authentication = (props: {
               Gutters.regularTMargin,
               Gutters.smallBMargin,
             ]}
-            onPress={() => grantAccess()}
+            onPressIn={() => grantAccess()}
           >
             <Text
               style={[
@@ -211,7 +214,7 @@ const Authentication = (props: {
                 : t('common:confirm')}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => close()}>
+          <TouchableOpacity onPressIn={() => close()}>
             <Text
               style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >
@@ -266,5 +269,6 @@ const styles = StyleSheet.create({
     padding: 12,
     color: '#424242',
     width: '100%',
+    borderRadius: 10,
   },
 });
