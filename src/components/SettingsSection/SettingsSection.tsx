@@ -117,6 +117,7 @@ const SettingsSection = (props: {
     >
       <KeyboardAwareScrollView
         enableOnAndroid={true}
+        extraScrollHeight={20}
         style={[Layout.fill, styles.modalView]}
         contentContainerStyle={[
           Gutters.smallBPadding,

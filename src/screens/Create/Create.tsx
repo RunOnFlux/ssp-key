@@ -192,6 +192,7 @@ function Create({ navigation }: Props) {
 
   return (
     <KeyboardAwareScrollView
+      extraScrollHeight={20}
       style={Layout.fill}
       contentContainerStyle={[
         Layout.fullSize,
