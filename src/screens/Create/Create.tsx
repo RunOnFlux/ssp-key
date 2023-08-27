@@ -174,6 +174,9 @@ function Create({ navigation }: Props) {
         await EncryptedStorage.setItem('ssp_key_pw', password);
         setIsModalOpen(false);
         setIsLoading(false);
+        setMnemonic('');
+        setPassword('');
+        setPasswordConfirm('');
         navigation.navigate('Home');
       })
       .catch((error) => {
