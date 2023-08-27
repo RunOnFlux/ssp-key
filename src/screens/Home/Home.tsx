@@ -691,10 +691,11 @@ function Home({ navigation }: Props) {
       >
         <KeyboardAwareScrollView
           extraScrollHeight={20}
-          style={[Layout.fill, styles.modalManualInput]}
+          style={[Layout.fill, styles.modalBackdrop]}
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
+            styles.modalManualInput,
           ]}
         >
           <Text
@@ -800,6 +801,9 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   seedPhraseArea: {
     width: '100%',
