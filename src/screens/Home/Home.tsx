@@ -690,6 +690,7 @@ function Home({ navigation }: Props) {
         onRequestClose={() => handleCancelManualInput()}
       >
         <KeyboardAwareScrollView
+          extraScrollHeight={20}
           style={[Layout.fill, styles.modalManualInput]}
           contentContainerStyle={[
             Gutters.smallBPadding,

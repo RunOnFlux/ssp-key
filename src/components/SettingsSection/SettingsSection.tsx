@@ -117,6 +117,7 @@ const SettingsSection = (props: {
     >
       <KeyboardAwareScrollView
         enableOnAndroid={true}
+        extraScrollHeight={20}
         style={[Layout.fill, styles.modalView]}
         contentContainerStyle={[
           Gutters.smallBPadding,
@@ -135,33 +136,28 @@ const SettingsSection = (props: {
             Gutters.regularTMargin,
           ]}
         >
-          <View style={[Gutters.regularTMargin]}>
+          <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
             <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
               {t('home:change_pw')}
             </Text>
-            <Text
-              style={[Fonts.textTiny, Fonts.textCenter, Gutters.smallMargin]}
+            <TouchableOpacity
+              style={[
+                Common.button.outlineRounded,
+                Common.button.secondaryButton,
+                Gutters.smallTMargin,
+              ]}
+              onPressIn={() => handleRestore()}
             >
-              <TouchableOpacity
+              <Text
                 style={[
-                  Common.button.outlineRounded,
-                  Common.button.secondaryButton,
-                  Gutters.regularTMargin,
+                  Fonts.textTiny,
+                  Fonts.textBluePrimary,
+                  Gutters.tinyVPadding,
                 ]}
-                onPressIn={() => handleRestore()}
               >
-                <Text
-                  style={[
-                    Fonts.textTiny,
-                    Fonts.textBluePrimary,
-                    Gutters.tinyHPadding,
-                    Gutters.tinyVPadding,
-                  ]}
-                >
-                  {t('home:change_pw_restore')}
-                </Text>
-              </TouchableOpacity>
-            </Text>
+                {t('home:change_pw_restore')}
+              </Text>
+            </TouchableOpacity>
           </View>
           <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
             <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
