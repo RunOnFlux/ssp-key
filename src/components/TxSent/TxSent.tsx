@@ -68,34 +68,23 @@ const SyncRequest = (props: {
           </Text>
           <Text style={[Fonts.textSmall, Fonts.textCenter]}>{props.txid}</Text>
         </View>
-        <View>
+        <View style={[Layout.justifyContentEnd]}>
           <TouchableOpacity
             style={[
-              Common.button.outlineRounded,
-              Common.button.secondaryButton,
-              Layout.fullWidth,
+              Common.button.rounded,
+              Common.button.bluePrimary,
               Gutters.regularBMargin,
+              Gutters.smallTMargin,
             ]}
             onPressIn={() => openExplorer()}
           >
-            <Text
-              style={[
-                Fonts.textSmall,
-                Fonts.textBluePrimary,
-                Gutters.regularHPadding,
-              ]}
-            >
+            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {t('home:show_in_explorer')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPressIn={() => close()}>
             <Text
-              style={[
-                Fonts.textSmall,
-                Fonts.textBluePrimary,
-                Gutters.regularBMargin,
-                Fonts.textCenter,
-              ]}
+              style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
             >
               {t('home:close')}
             </Text>

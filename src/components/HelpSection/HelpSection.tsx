@@ -52,21 +52,17 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
         ]}
       >
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-          {t('common:help')}
+          {t('common:appName.full')}
         </Text>
         <View
           style={[
             Layout.fill,
             Layout.relative,
             Layout.fullWidth,
-            Layout.justifyContentCenter,
             Layout.alignItemsCenter,
           ]}
         >
           <View style={[Gutters.smallVPadding]}>
-            <Text style={[Fonts.textBold, Fonts.textRegular, Fonts.textCenter]}>
-              SSP Key
-            </Text>
             <Text
               style={[
                 Fonts.textBold,
@@ -83,7 +79,6 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
               Your Second Key Factor authentication for your SSP Wallet.
             </Text>
           </View>
-
           <TouchableOpacity
             onPressIn={openWebsite}
             style={[Layout.center, Gutters.smallVPadding]}
@@ -106,13 +101,14 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
             <Text style={[Fonts.textSmall, Fonts.textCenter]}>Discord</Text>
           </TouchableOpacity>
         </View>
-        <View>
+        <View style={[Layout.justifyContentEnd]}>
+          <PoweredByFlux />
           <TouchableOpacity
             style={[
               Common.button.outlineRounded,
               Common.button.secondaryButton,
               Layout.fullWidth,
-              Gutters.smallTMargin,
+              Gutters.regularTMargin,
             ]}
             onPressIn={() => close()}
           >
@@ -126,9 +122,6 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
               {t('common:ok')}
             </Text>
           </TouchableOpacity>
-        </View>
-        <View style={[Gutters.smallTMargin, styles.poweredBy]}>
-          <PoweredByFlux />
         </View>
       </ScrollView>
     </Modal>

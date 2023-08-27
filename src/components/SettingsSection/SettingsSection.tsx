@@ -131,8 +131,8 @@ const SettingsSection = (props: {
             Layout.fill,
             Layout.relative,
             Layout.fullWidth,
-            Layout.justifyContentCenter,
             Layout.alignItemsCenter,
+            Gutters.regularTMargin,
           ]}
         >
           <View style={[Gutters.regularTMargin]}>
@@ -210,24 +210,17 @@ const SettingsSection = (props: {
             </View>
           </View>
         </View>
-        <View>
+        <View style={[Layout.justifyContentEnd]}>
           <TouchableOpacity
             style={[
               Common.button.rounded,
               Common.button.bluePrimary,
-              Layout.fullWidth,
-              Gutters.regularTMargin,
-              Gutters.smallBMargin,
+              Gutters.regularBMargin,
+              Gutters.smallTMargin,
             ]}
             onPressIn={() => handleSave()}
           >
-            <Text
-              style={[
-                Fonts.textSmall,
-                Fonts.textWhite,
-                Gutters.regularHPadding,
-              ]}
-            >
+            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {t('common:save')}
             </Text>
           </TouchableOpacity>

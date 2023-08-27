@@ -137,79 +137,84 @@ const Authentication = (props: {
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
           {t('home:confirm_password_pin')}
         </Text>
-        <Text
+        <View
           style={[
-            Fonts.textBold,
-            Fonts.textSmall,
-            Fonts.textCenter,
+            Layout.fill,
+            Layout.relative,
+            Layout.fullWidth,
+            Layout.alignItemsCenter,
             Gutters.smallTMargin,
           ]}
         >
-          {props.type === 'tx'
-            ? 'You are about to sign and send transaction!'
-            : props.type === 'sync'
-            ? 'You are about to sync SSP Wallet with SSP Key!'
-            : 'You are about to access sensitive information!'}
-        </Text>
-        <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-          {props.type === 'tx'
-            ? 'Confirm with password.'
-            : props.type === 'sync'
-            ? 'Confirm with password.'
-            : 'Grant access with psasword.'}
-        </Text>
-        {biometricsAvailable && (
-          <IconB
-            name="fingerprint"
-            size={50}
-            color={Colors.bluePrimary}
-            style={[Fonts.textCenter, Gutters.regularTMargin]}
-            onPress={() => initiateFingerprint()}
-          />
-        )}
-        <View style={styles.passwordSection}>
-          <TextInput
-            style={styles.input}
-            autoComplete="new-password"
-            textContentType="password"
-            autoCapitalize="none"
-            placeholder="Set Key Password PIN"
-            secureTextEntry={passwordVisibility ? false : true}
-            onChangeText={onChangePassword}
-            value={password}
-            autoCorrect={false}
-            ref={textInputA}
-            onPressIn={() => textInputA.current?.focus()}
-          />
-          <TouchableOpacity
-            onPressIn={() => setPasswordVisibility(!passwordVisibility)}
-            style={styles.eyeIcon}
+          <Text
+            style={[
+              Fonts.textBold,
+              Fonts.textSmall,
+              Fonts.textCenter,
+              Gutters.smallTMargin,
+            ]}
           >
-            <Icon
-              name={passwordVisibility ? 'eye' : 'eye-off'}
-              size={20}
+            {props.type === 'tx'
+              ? 'You are about to sign and send transaction!'
+              : props.type === 'sync'
+              ? 'You are about to sync SSP Wallet with SSP Key!'
+              : 'You are about to access sensitive information!'}
+          </Text>
+          <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
+            {props.type === 'tx'
+              ? 'Confirm with password.'
+              : props.type === 'sync'
+              ? 'Confirm with password.'
+              : 'Grant access with psasword.'}
+          </Text>
+
+          {biometricsAvailable && (
+            <IconB
+              name="fingerprint"
+              size={50}
               color={Colors.bluePrimary}
+              style={[Fonts.textCenter, Gutters.regularTMargin]}
+              onPress={() => initiateFingerprint()}
             />
-          </TouchableOpacity>
+          )}
+          {!biometricsAvailable && <View style={[Gutters.smallMargin]} />}
+          <View style={styles.passwordSection}>
+            <TextInput
+              style={styles.input}
+              autoComplete="new-password"
+              textContentType="password"
+              autoCapitalize="none"
+              placeholder="Set Key Password PIN"
+              secureTextEntry={passwordVisibility ? false : true}
+              onChangeText={onChangePassword}
+              value={password}
+              autoCorrect={false}
+              ref={textInputA}
+              onPressIn={() => textInputA.current?.focus()}
+            />
+            <TouchableOpacity
+              onPressIn={() => setPasswordVisibility(!passwordVisibility)}
+              style={styles.eyeIcon}
+            >
+              <Icon
+                name={passwordVisibility ? 'eye' : 'eye-off'}
+                size={20}
+                color={Colors.bluePrimary}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View>
+        <View style={[Layout.justifyContentEnd]}>
           <TouchableOpacity
             style={[
               Common.button.rounded,
               Common.button.bluePrimary,
-              Layout.fullWidth,
-              Gutters.regularTMargin,
-              Gutters.smallBMargin,
+              Gutters.regularBMargin,
+              Gutters.smallTMargin,
             ]}
             onPressIn={() => grantAccess()}
           >
-            <Text
-              style={[
-                Fonts.textSmall,
-                Fonts.textWhite,
-                Gutters.regularHPadding,
-              ]}
-            >
+            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {props.type === 'sensitive'
                 ? t('home:grant_access')
                 : t('common:confirm')}
@@ -249,9 +254,9 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    height: 420,
+    height: 480,
     position: 'absolute',
-    bottom: 30,
+    bottom: 40,
   },
   eyeIcon: {
     padding: 12,

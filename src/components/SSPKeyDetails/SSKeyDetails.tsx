@@ -84,8 +84,8 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
             Layout.fill,
             Layout.relative,
             Layout.fullWidth,
-            Layout.justifyContentCenter,
             Layout.alignItemsCenter,
+            Gutters.regularTMargin,
           ]}
         >
           <View>
@@ -166,7 +166,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
             </View>
           </View>
         </View>
-        <View>
+        <View style={[Layout.justifyContentEnd]}>
           <TouchableOpacity
             style={[
               Common.button.outlineRounded,

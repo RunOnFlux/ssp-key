@@ -82,8 +82,8 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
             Layout.fill,
             Layout.relative,
             Layout.fullWidth,
-            Layout.justifyContentCenter,
             Layout.alignItemsCenter,
+            Gutters.regularTMargin,
           ]}
         >
           <View style={[Gutters.regularTMargin]}>
@@ -152,7 +152,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
             </View>
           </View>
         </View>
-        <View>
+        <View style={[Layout.justifyContentEnd]}>
           <TouchableOpacity
             style={[
               Common.button.outlineRounded,
