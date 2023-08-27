@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   StyleSheet,
+  SafeAreaView,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useTranslation } from 'react-i18next';
@@ -613,70 +614,72 @@ function Home({ navigation }: Props) {
             setIsMenuModalOpen(false);
           }}
         >
-          <View style={[Layout.fill]}>
-            <View style={[styles.modalMenu]}>
-              <TouchableOpacity onPressIn={() => openManualInput()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBluePrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('home:manual_input')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPressIn={() => openAddressDetails()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBluePrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('home:synced_ssp_address')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPressIn={() => openSSPKeyDetails()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBluePrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('home:ssp_key_details')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPressIn={() => openMenuSettings()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBluePrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('common:settings')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPressIn={() => handleRestore()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBluePrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('common:restore')}
-                </Text>
-              </TouchableOpacity>
+          <SafeAreaView style={[Layout.fill]}>
+            <View>
+              <View style={[styles.modalMenu]}>
+                <TouchableOpacity onPressIn={() => openManualInput()}>
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBluePrimary,
+                      Fonts.textCenter,
+                      Gutters.tinyPadding,
+                    ]}
+                  >
+                    {t('home:manual_input')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPressIn={() => openAddressDetails()}>
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBluePrimary,
+                      Fonts.textCenter,
+                      Gutters.tinyPadding,
+                    ]}
+                  >
+                    {t('home:synced_ssp_address')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPressIn={() => openSSPKeyDetails()}>
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBluePrimary,
+                      Fonts.textCenter,
+                      Gutters.tinyPadding,
+                    ]}
+                  >
+                    {t('home:ssp_key_details')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPressIn={() => openMenuSettings()}>
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBluePrimary,
+                      Fonts.textCenter,
+                      Gutters.tinyPadding,
+                    ]}
+                  >
+                    {t('common:settings')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPressIn={() => handleRestore()}>
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBluePrimary,
+                      Fonts.textCenter,
+                      Gutters.tinyPadding,
+                    ]}
+                  >
+                    {t('common:restore')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </SafeAreaView>
         </TouchableWithoutFeedback>
         <Toast />
       </Modal>
@@ -754,7 +757,6 @@ function Home({ navigation }: Props) {
 const styles = StyleSheet.create({
   modalMenu: {
     position: 'absolute',
-    top: 40,
     right: 5,
     width: 150,
     backgroundColor: 'white',
