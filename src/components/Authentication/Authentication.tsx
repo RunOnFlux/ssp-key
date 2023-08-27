@@ -125,6 +125,7 @@ const Authentication = (props: {
       onRequestClose={() => close()}
     >
       <KeyboardAwareScrollView
+        enableOnAndroid={true}
         style={[styles.modalView]}
         contentContainerStyle={[
           Gutters.smallBPadding,

@@ -116,6 +116,7 @@ const SettingsSection = (props: {
       onRequestClose={() => handleCancel()}
     >
       <KeyboardAwareScrollView
+        enableOnAndroid={true}
         style={[Layout.fill, styles.modalView]}
         contentContainerStyle={[
           Gutters.smallBPadding,
