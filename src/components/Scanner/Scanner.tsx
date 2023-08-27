@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, StyleSheet, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Modal, PermissionsAndroid, Text } from 'react-native';
 import { Camera, CameraType } from 'react-native-camera-kit';
+
 
 interface QRScannerProps {
   onRead?: (data: string) => void;
@@ -15,6 +16,38 @@ const Scanner: React.FC<QRScannerProps> = ({
   visible,
   transparent = true,
 }) => {
+  const [hasCameraPermission, setHasCameraPermission] = useState(false);
+
+  useEffect(() => {
+    if(visible) {
+      (async () => {
+        try {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            {
+              title: 'Camera Permission',
+              message:
+                'This app needs access to your camera ' +
+                'so you can scan QR codes.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            },
+          );
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            setHasCameraPermission(true);
+          } else {
+            console.log('Camera permission denied');
+            onClose?.();
+          }
+        } catch (err) {
+          console.warn(err);
+          onClose?.();
+        }
+      })();
+    }
+  }, [visible]);
+
   const handleQRRead = (event: any) => {
     console.log(event.nativeEvent.codeStringValue);
     onRead?.(event.nativeEvent.codeStringValue);
@@ -27,22 +60,35 @@ const Scanner: React.FC<QRScannerProps> = ({
       animationType="fade"
       transparent={transparent}
       visible={visible}
+      onDismiss={onClose}
     >
-      <View style={styles.container}>
-        <Camera
-          style={styles.camera}
-          cameraType={CameraType.Back}
-          flashMode="auto"
-          scanBarcode={true}
-          onReadCode={handleQRRead}
-          showFrame={true}
-          laserColor="green"
-          frameColor="white"
-        />
-      </View>
+      {visible ? 
+        <View style={styles.container}>
+          {hasCameraPermission ? (
+            <Camera
+              style={styles.camera}
+              cameraType={CameraType.Back}
+              flashMode="auto"
+              scanBarcode={true}
+              onReadCode={handleQRRead}
+              showFrame={true}
+              laserColor="green"
+              frameColor="white"
+            />
+          ) : (
+            <View style={styles.camera}>
+              <Text>
+                camera permission is not granted
+              </Text>
+            </View>
+          )}
+        </View>
+      : null}
     </Modal>
   );
 };
+
+export default Scanner;
 
 const styles = StyleSheet.create({
   container: {
@@ -51,22 +97,4 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
   },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rectangle: {
-    width: 250,
-    height: 250,
-    borderWidth: 2,
-    borderColor: 'white',
-    backgroundColor: 'transparent',
-  },
 });
-
-export default Scanner;
