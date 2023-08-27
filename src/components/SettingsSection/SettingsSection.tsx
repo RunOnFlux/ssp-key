@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  ScrollView,
   TextInput,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -115,7 +115,7 @@ const SettingsSection = (props: {
       visible={true}
       onRequestClose={() => handleCancel()}
     >
-      <ScrollView
+      <KeyboardAwareScrollView
         style={[Layout.fill, styles.modalView]}
         contentContainerStyle={[
           Gutters.smallBPadding,
@@ -238,7 +238,7 @@ const SettingsSection = (props: {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </Modal>
   );
 };

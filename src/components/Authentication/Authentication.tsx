@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  ScrollView,
   TextInput,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Icon from 'react-native-vector-icons/Feather';
 import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics';
@@ -124,7 +124,7 @@ const Authentication = (props: {
       visible={true}
       onRequestClose={() => close()}
     >
-      <ScrollView
+      <KeyboardAwareScrollView
         style={[styles.modalView]}
         contentContainerStyle={[
           Gutters.smallBPadding,
@@ -222,7 +222,7 @@ const Authentication = (props: {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <Toast />
     </Modal>
   );

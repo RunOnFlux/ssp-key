@@ -10,6 +10,7 @@ import {
   TextInput,
   StyleSheet,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Icon from 'react-native-vector-icons/Feather';
@@ -685,7 +686,7 @@ function Home({ navigation }: Props) {
         visible={isManuaInputlModalOpen}
         onRequestClose={() => handleCancelManualInput()}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           style={[Layout.fill, styles.modalManualInput]}
           contentContainerStyle={[
             Gutters.smallBPadding,
@@ -742,7 +743,7 @@ function Home({ navigation }: Props) {
               {t('common:cancel')}
             </Text>
           </TouchableOpacity>
-        </ScrollView>
+        </KeyboardAwareScrollView>
         <Toast />
       </Modal>
       {!isManuaInputlModalOpen && !isMenuModalOpen && <Toast />}

@@ -38,6 +38,7 @@
     "react-native-device-info": "^10.8.0",
     "react-native-encrypted-storage": "^4.0.3",
     "react-native-gesture-handler": "^2.12.1",
+    "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-mmkv": "^2.10.1",
     "react-native-popup-menu": "^0.16.1",
     "react-native-quick-base64": "^2.0.7",

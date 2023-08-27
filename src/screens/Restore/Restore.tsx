@@ -11,6 +11,7 @@ import {
   Switch,
   ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
@@ -205,7 +206,7 @@ function Restore({ navigation }: Props) {
   };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={Layout.fill}
       contentContainerStyle={[
         Layout.fullSize,
@@ -439,7 +440,7 @@ function Restore({ navigation }: Props) {
         <Toast />
       </Modal>
       {!isModalOpen && <Toast />}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
