@@ -379,38 +379,44 @@ function Create({ navigation }: Props) {
               {t('cr:seed_phrase_backed_up')}
             </Text>
           </View>
-          <TouchableOpacity
-            style={[
-              Common.button.rounded,
-              Common.button.bluePrimary,
-              Gutters.regularBMargin,
-              Gutters.smallTMargin,
-            ]}
-            disabled={isLoading}
-            onPressIn={() => handleOk()}
-          >
-            {isLoading && (
-              <ActivityIndicator
-                size={'large'}
-                style={[Gutters.largeVMargin]}
-              />
-            )}
-            {!isLoading && (
-              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                {t('cr:setup_key')}
-              </Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            disabled={isLoading}
-            onPressIn={() => handleCancel()}
-          >
-            <Text
-              style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
+          <View style={[Layout.justifyContentEnd]}>
+            <TouchableOpacity
+              style={[
+                Common.button.rounded,
+                Common.button.bluePrimary,
+                Gutters.regularBMargin,
+                Gutters.smallTMargin,
+              ]}
+              disabled={isLoading}
+              onPressIn={() => handleOk()}
             >
-              {t('common:cancel')}
-            </Text>
-          </TouchableOpacity>
+              {isLoading && (
+                <ActivityIndicator
+                  size={'large'}
+                  style={[Gutters.largeVMargin]}
+                />
+              )}
+              {!isLoading && (
+                <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                  {t('cr:setup_key')}
+                </Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              disabled={isLoading}
+              onPressIn={() => handleCancel()}
+            >
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textBluePrimary,
+                  Fonts.textCenter,
+                ]}
+              >
+                {t('common:cancel')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
         <Toast />
       </Modal>
