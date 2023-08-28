@@ -1,4 +1,4 @@
-package com.sspkey;
+package com.runonflux.sspkey;
 
 import android.app.Application;
 import com.facebook.react.PackageList;
