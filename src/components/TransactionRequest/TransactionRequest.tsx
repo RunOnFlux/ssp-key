@@ -81,23 +81,17 @@ const TransactionRequest = (props: {
           Sending {sendingAmount} FLUX to {receiverAddress}
         </Text>
       </View>
-      <View>
+      <View style={[Layout.justifyContentEnd]}>
         <TouchableOpacity
           style={[
-            Common.button.outlineRounded,
-            Common.button.secondaryButton,
-            Layout.fullWidth,
+            Common.button.rounded,
+            Common.button.bluePrimary,
             Gutters.regularBMargin,
+            Gutters.smallTMargin,
           ]}
           onPressIn={() => openAuthentication()}
         >
-          <Text
-            style={[
-              Fonts.textSmall,
-              Fonts.textBluePrimary,
-              Gutters.regularHPadding,
-            ]}
-          >
+          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
             {t('home:approve_transaction')}
           </Text>
         </TouchableOpacity>

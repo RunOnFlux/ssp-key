@@ -63,23 +63,17 @@ const SyncRequest = (props: {
           {props.chain.toUpperCase()} chain to your SSP Key.
         </Text>
       </View>
-      <View>
+      <View style={[Layout.justifyContentEnd]}>
         <TouchableOpacity
           style={[
-            Common.button.outlineRounded,
-            Common.button.secondaryButton,
-            Layout.fullWidth,
+            Common.button.rounded,
+            Common.button.bluePrimary,
             Gutters.regularBMargin,
+            Gutters.smallTMargin,
           ]}
           onPressIn={() => openAuthentication()}
         >
-          <Text
-            style={[
-              Fonts.textSmall,
-              Fonts.textBluePrimary,
-              Gutters.regularHPadding,
-            ]}
-          >
+          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
             {t('home:approve_sync')}
           </Text>
         </TouchableOpacity>

@@ -27,6 +27,7 @@ import SyncSuccess from '../../components/SyncSuccess/SyncSuccess';
 import HelpSection from '../../components/HelpSection/HelpSection';
 import Authentication from '../../components/Authentication/Authentication';
 import SettingsSection from '../../components/SettingsSection/SettingsSection';
+import SyncNeeded from '../../components/SyncNeeded/SyncNeeded';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -87,6 +88,7 @@ function Home({ navigation }: Props) {
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const [actionToPerform, setActionToPerform] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [syncNeededModalOpen, setSyncNeededModalOpen] = useState(false);
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   const {
@@ -116,8 +118,7 @@ function Home({ navigation }: Props) {
       !sspWalletKeyIdentity ||
       !sspWalletIdentity
     ) {
-      // we are not synced yet TODO show modal that we are not synced yet
-      console.log('Request for scanning QR code');
+      setSyncNeededModalOpen(true);
     }
 
     checkXpubXpriv();
@@ -409,7 +410,7 @@ function Home({ navigation }: Props) {
     }
   };
 
-  const handleSynchronisationRequestAction = async (status: boolean) => {
+  const handleSynchronisationRequestAction = (status: boolean) => {
     try {
       if (status === true) {
         const xpubw = syncReq;
@@ -451,6 +452,21 @@ function Home({ navigation }: Props) {
   const handleHelpModalAction = () => {
     console.log('help modal close.');
     setHelpSectionModalOpen(false);
+  };
+
+  const handleSyncNeededModalAction = async (status: string) => {
+    try {
+      setSyncNeededModalOpen(false);
+      setTimeout(() => {
+        if (status === 'scan') {
+          scanCode();
+        } else if (status === 'manual') {
+          setIsManualInputModalOpen(true);
+        }
+      });
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const handleAuthenticationOpen = (status: boolean) => {
@@ -522,8 +538,32 @@ function Home({ navigation }: Props) {
             <Text
               style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
             >
-              {t('home:no_pending_actions')}
+              {!address ||
+              !redeemScript ||
+              !xpubWallet ||
+              !sspWalletKeyIdentity ||
+              !sspWalletIdentity ? (
+                <>{t('home:sync_needed')}!</>
+              ) : (
+                t('home:no_pending_actions')
+              )}
             </Text>
+            {(!address ||
+              !redeemScript ||
+              !xpubWallet ||
+              !sspWalletKeyIdentity ||
+              !sspWalletIdentity) && (
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textCenter,
+                  Gutters.smallLMargin,
+                  Gutters.smallRMargin,
+                ]}
+              >
+                Please scan QR code to synchronise your SSP Key first.
+              </Text>
+            )}
             {isRefreshing && (
               <ActivityIndicator
                 size={'large'}
@@ -610,6 +650,9 @@ function Home({ navigation }: Props) {
       )}
       {helpSectionModalOpen && (
         <HelpSection actionStatus={handleHelpModalAction} />
+      )}
+      {syncNeededModalOpen && (
+        <SyncNeeded actionStatus={handleSyncNeededModalAction} />
       )}
       {authenticationOpen && (
         <Authentication

@@ -29,5 +29,6 @@
   "ssp_relay_server": "SSP Relay Server",
   "flux_node_service": "Flux Node Service",
   "confirm_password_pin": "Confirm Password PIN",
-  "grant_access": "Grant Access"
+  "grant_access": "Grant Access",
+  "sync_needed": "Synchronisation Needed"
 }
