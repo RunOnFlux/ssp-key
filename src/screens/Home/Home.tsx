@@ -10,6 +10,7 @@ import {
   TextInput,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useTranslation } from 'react-i18next';
@@ -85,6 +86,7 @@ function Home({ navigation }: Props) {
   const [helpSectionModalOpen, setHelpSectionModalOpen] = useState(false);
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const [actionToPerform, setActionToPerform] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   const {
@@ -108,13 +110,13 @@ function Home({ navigation }: Props) {
     }
 
     if (
-      // todo use effect
       !address ||
       !redeemScript ||
       !xpubWallet ||
       !sspWalletKeyIdentity ||
       !sspWalletIdentity
     ) {
+      // we are not synced yet TODO show modal that we are not synced yet
       console.log('Request for scanning QR code');
     }
 
@@ -357,6 +359,7 @@ function Home({ navigation }: Props) {
   const handleRefresh = async () => {
     try {
       console.log('refresh');
+      setIsRefreshing(true);
       if (sspWalletKeyIdentity) {
         // get some pending request on W-K identity
         console.log(sspWalletKeyIdentity);
@@ -380,6 +383,8 @@ function Home({ navigation }: Props) {
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -519,23 +524,35 @@ function Home({ navigation }: Props) {
             >
               {t('home:no_pending_actions')}
             </Text>
-            <TouchableOpacity
-              onPressIn={() => handleRefresh()}
-              style={[Layout.row, Gutters.regularMargin]}
-            >
-              <IconB name="gesture-tap" size={30} color={Colors.bluePrimary} />
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBold,
-                  Fonts.textBluePrimary,
-                  Gutters.tinyTMargin,
-                  Gutters.tinyLMargin,
-                ]}
+            {isRefreshing && (
+              <ActivityIndicator
+                size={'large'}
+                style={[Layout.row, Gutters.regularTMargin, { height: 30 }]}
+              />
+            )}
+            {!isRefreshing && (
+              <TouchableOpacity
+                onPressIn={() => handleRefresh()}
+                style={[Layout.row, Gutters.regularTMargin, { height: 30 }]}
               >
-                {t('common:refresh')}
-              </Text>
-            </TouchableOpacity>
+                <IconB
+                  name="gesture-tap"
+                  size={30}
+                  color={Colors.bluePrimary}
+                />
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBold,
+                    Fonts.textBluePrimary,
+                    Gutters.tinyTMargin,
+                    Gutters.tinyLMargin,
+                  ]}
+                >
+                  {t('common:refresh')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           <View>
             <TouchableOpacity
