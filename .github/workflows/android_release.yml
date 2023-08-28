@@ -1,8 +1,11 @@
 name: react-native-android-build-apk
 on:
-  push:
-    branches:
-      - master
+  # push:
+  #   branches:
+  #     - master
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
 jobs:
   install-and-test:
     runs-on: ubuntu-latest
@@ -14,7 +17,7 @@ jobs:
   build-android:
     needs: install-and-test
     runs-on: ubuntu-latest
-    steps: 
+    steps:
       - uses: actions/checkout@v3
       - name: Install npm dependencies
         run: |
