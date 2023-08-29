@@ -73,9 +73,9 @@ android {
 
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "com.runonflux.sspkey"
+    namespace "io.runonflux.sspkey"
     defaultConfig {
-        applicationId "com.runonflux.sspkey"
+        applicationId "io.runonflux.sspkey"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
