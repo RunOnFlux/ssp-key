@@ -350,10 +350,11 @@ function Restore({ navigation }: Props) {
         onRequestClose={() => handleCancel()}
       >
         <ScrollView
-          style={[Layout.fill, styles.modalView]}
+          style={[Layout.fill, styles.modalBackdrop]}
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
+            styles.modalView,
           ]}
         >
           <Text
@@ -513,6 +514,9 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   toggleStyle: {
     transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],

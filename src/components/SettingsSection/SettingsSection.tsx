@@ -118,115 +118,121 @@ const SettingsSection = (props: {
       <KeyboardAwareScrollView
         enableOnAndroid={true}
         extraScrollHeight={20}
-        style={[Layout.fill, styles.modalView]}
+        style={[Layout.fill, styles.modalBackdrop]}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
         ]}
       >
-        <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-          {t('common:settings')}
-        </Text>
-        <View
-          style={[
-            Layout.fill,
-            Layout.relative,
-            Layout.fullWidth,
-            Layout.alignItemsCenter,
-            Gutters.regularTMargin,
-          ]}
-        >
-          <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
-            <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-              {t('home:change_pw')}
-            </Text>
+        <View style={[Layout.fill, styles.modalView]}>
+          <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+            {t('common:settings')}
+          </Text>
+          <View
+            style={[
+              Layout.fill,
+              Layout.relative,
+              Layout.fullWidth,
+              Layout.alignItemsCenter,
+              Gutters.regularTMargin,
+            ]}
+          >
+            <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
+              <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
+                {t('home:change_pw')}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                  Gutters.smallTMargin,
+                ]}
+                onPressIn={() => handleRestore()}
+              >
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    Fonts.textBluePrimary,
+                    Gutters.tinyVPadding,
+                  ]}
+                >
+                  {t('home:change_pw_restore')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
+              <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
+                {t('home:ssp_relay_server')}
+              </Text>
+              <View style={styles.passwordSection}>
+                <TextInput
+                  style={styles.input}
+                  autoCapitalize="none"
+                  placeholder="relay.ssp.runonflux.io"
+                  onChangeText={onChangeSSPrelay}
+                  value={sspConfigRelay}
+                  autoCorrect={false}
+                  ref={textInputA}
+                  onPressIn={() => textInputA.current?.focus()}
+                />
+                <TouchableOpacity
+                  onPressIn={resetSSPRelay}
+                  style={styles.eyeIcon}
+                >
+                  <Icon name="x" size={20} color={Colors.bluePrimary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
+              <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
+                {t('home:flux_node_service')}
+              </Text>
+              <View style={styles.passwordSection}>
+                <TextInput
+                  style={styles.input}
+                  autoCapitalize="none"
+                  placeholder="explorer.runonflux.io"
+                  onChangeText={onChangeFluxNodeService}
+                  value={fluxNodeConfig}
+                  autoCorrect={false}
+                  ref={textInputB}
+                  onPressIn={() => textInputB.current?.focus()}
+                />
+                <TouchableOpacity
+                  onPressIn={resetFluxNodeService}
+                  style={styles.eyeIcon}
+                >
+                  <Icon name="x" size={20} color={Colors.bluePrimary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+          <View style={[Layout.justifyContentEnd]}>
             <TouchableOpacity
               style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
+                Common.button.rounded,
+                Common.button.bluePrimary,
+                Gutters.regularBMargin,
                 Gutters.smallTMargin,
               ]}
-              onPressIn={() => handleRestore()}
+              onPressIn={() => handleSave()}
             >
+              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                {t('common:save')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPressIn={() => handleCancel()}>
               <Text
                 style={[
-                  Fonts.textTiny,
+                  Fonts.textSmall,
                   Fonts.textBluePrimary,
-                  Gutters.tinyVPadding,
+                  Fonts.textCenter,
                 ]}
               >
-                {t('home:change_pw_restore')}
+                {t('common:cancel')}
               </Text>
             </TouchableOpacity>
           </View>
-          <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
-            <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-              {t('home:ssp_relay_server')}
-            </Text>
-            <View style={styles.passwordSection}>
-              <TextInput
-                style={styles.input}
-                autoCapitalize="none"
-                placeholder="relay.ssp.runonflux.io"
-                onChangeText={onChangeSSPrelay}
-                value={sspConfigRelay}
-                autoCorrect={false}
-                ref={textInputA}
-                onPressIn={() => textInputA.current?.focus()}
-              />
-              <TouchableOpacity
-                onPressIn={resetSSPRelay}
-                style={styles.eyeIcon}
-              >
-                <Icon name="x" size={20} color={Colors.bluePrimary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
-            <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-              {t('home:flux_node_service')}
-            </Text>
-            <View style={styles.passwordSection}>
-              <TextInput
-                style={styles.input}
-                autoCapitalize="none"
-                placeholder="explorer.runonflux.io"
-                onChangeText={onChangeFluxNodeService}
-                value={fluxNodeConfig}
-                autoCorrect={false}
-                ref={textInputB}
-                onPressIn={() => textInputB.current?.focus()}
-              />
-              <TouchableOpacity
-                onPressIn={resetFluxNodeService}
-                style={styles.eyeIcon}
-              >
-                <Icon name="x" size={20} color={Colors.bluePrimary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-        <View style={[Layout.justifyContentEnd]}>
-          <TouchableOpacity
-            style={[
-              Common.button.rounded,
-              Common.button.bluePrimary,
-              Gutters.regularBMargin,
-              Gutters.smallTMargin,
-            ]}
-            onPressIn={() => handleSave()}
-          >
-            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-              {t('common:save')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPressIn={() => handleCancel()}>
-            <Text
-              style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
-            >
-              {t('common:cancel')}
-            </Text>
-          </TouchableOpacity>
         </View>
       </KeyboardAwareScrollView>
     </Modal>
@@ -249,6 +255,9 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   input: {
     flex: 1,
