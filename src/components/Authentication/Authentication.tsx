@@ -127,7 +127,7 @@ const Authentication = (props: {
       <KeyboardAwareScrollView
         enableOnAndroid={true}
         extraScrollHeight={20}
-        style={[Layout.fill]}
+        style={[Layout.fill, styles.modalBackdrop]}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
@@ -246,7 +246,7 @@ export default Authentication;
 const styles = StyleSheet.create({
   modalView: {
     backgroundColor: 'white',
-    marginTop: 60,
+    marginTop: '50%',
     borderRadius: 20,
     padding: 20,
     marginLeft: 30,
@@ -262,8 +262,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     height: 480,
-    position: 'absolute',
     bottom: 40,
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   eyeIcon: {
     padding: 12,

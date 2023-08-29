@@ -70,10 +70,11 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
       onRequestClose={() => close()}
     >
       <ScrollView
-        style={[Layout.fill, styles.modalView]}
+        style={[Layout.fill, styles.modalBackdrop]}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
+          styles.modalView,
         ]}
       >
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
@@ -208,6 +209,9 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   eyeIcon: {
     padding: 12,
