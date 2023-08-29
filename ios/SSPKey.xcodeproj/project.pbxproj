@@ -576,6 +576,8 @@
 				DEVELOPMENT_TEAM = URVD95GYQ7;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = SSPKey/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "SSP Key";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -610,6 +612,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = URVD95GYQ7;
 				INFOPLIST_FILE = SSPKey/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "SSP Key";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
