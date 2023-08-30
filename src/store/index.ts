@@ -13,7 +13,6 @@ import {
 } from 'redux-persist';
 import { MMKV } from 'react-native-mmkv';
 
-import { api } from '../services/api';
 import theme from './theme';
 import ssp from './ssp';
 import flux from './flux';
@@ -22,7 +21,6 @@ const reducers = combineReducers({
   theme,
   ssp,
   flux,
-  [api.reducerPath]: api.reducer,
 });
 
 export const storage = new MMKV();
@@ -55,7 +53,7 @@ const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }).concat(api.middleware);
+    });
 
     if (__DEV__ && !process.env.JEST_WORKER_ID) {
       const createDebugger = require('redux-flipper').default;
