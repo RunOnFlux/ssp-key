@@ -28,6 +28,7 @@ import { setXpubKey, setXprivKey, setFluxInitialState } from '../../store/flux';
 import { useAppSelector, useAppDispatch } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
+import Scanner from 'ssp-key/src/components/Scanner/Scanner';
 
 type Props = {
   navigation: any;
@@ -53,8 +54,9 @@ function Restore({ navigation }: Props) {
   const [mnemonicShow, setMnemonicShow] = useState(false);
   const [WSPbackedUp, setWSPbackedUp] = useState(false);
   const [wspWasShown, setWSPwasShown] = useState(false);
-  const { t } = useTranslation(['cr', 'common']);
+  const { t } = useTranslation(['cr', 'common', 'home']);
   const { Common, Fonts, Gutters, Layout, Images, Colors } = useTheme();
+  const [showScanner, setShowScanner] = useState(false);
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -208,6 +210,10 @@ function Restore({ navigation }: Props) {
     }
   };
 
+  const openScanner = () => {
+    setShowScanner(true);
+  };
+
   return (
     <KeyboardAwareScrollView
       extraScrollHeight={20}
@@ -323,12 +329,24 @@ function Restore({ navigation }: Props) {
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
-            Gutters.regularBMargin,
             Gutters.smallTMargin,
           ]}
           onPressIn={() => setupImportKey()}
         >
           <Text style={[Fonts.textRegular, Fonts.textWhite]}>Import Key</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            Common.button.rounded,
+            Common.button.bluePrimary,
+            Gutters.regularBMargin,
+            Gutters.smallTMargin,
+          ]}
+          onPressIn={openScanner}
+        >
+          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+            {t('home:scan_code')}
+          </Text>
         </TouchableOpacity>
       </View>
       <Modal
@@ -451,6 +469,9 @@ function Restore({ navigation }: Props) {
         <Toast />
       </Modal>
       {!isModalOpen && <Toast />}
+      {showScanner ? (
+        <Scanner onRead={console.log} onClose={() => setShowScanner(false)} />
+      ) : null}
     </KeyboardAwareScrollView>
   );
 }
