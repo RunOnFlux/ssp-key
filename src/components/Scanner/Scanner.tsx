@@ -8,13 +8,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { Camera, CameraType } from 'react-native-camera-kit';
-import {
-  request,
-  check,
-  PERMISSIONS,
-  RESULTS,
-  openSettings,
-} from 'react-native-permissions';
+import { request, check, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
 import { useTheme } from 'ssp-key/src/hooks';
@@ -72,9 +66,8 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
           } else if (cameraPermission === RESULTS.BLOCKED) {
             displayMessage(
               'error',
-              'Camera access is denied. Please enable it first.',
+              'Camera access is forbidden. Please enable it in your phone app permission settings first.',
             );
-            openSettings().catch(() => console.warn('cannot open settings'));
             onClose?.();
           } else {
             // treat as we need to request permissions
@@ -113,9 +106,8 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
           } else if (cameraPermission === RESULTS.BLOCKED) {
             displayMessage(
               'error',
-              'Camera access is denied. Please enable it first.',
+              'Camera access is forbidden. Please enable it in your phone app permission settings first.',
             );
-            openSettings().catch(() => console.warn('cannot open settings'));
             onClose?.();
           } else {
             // treat as we need to request permissions
