@@ -1,59 +1,63 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, PermissionsAndroid, Text, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  PermissionsAndroid,
+  Text,
+  TouchableOpacity,
+  Platform,
+  StatusBar,
+} from 'react-native';
 import { Camera, CameraType } from 'react-native-camera-kit';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from 'ssp-key/src/hooks';
 
 interface QRScannerProps {
-  onRead?: (data: string) => void;
-  onClose?: () => void;
+  onRead: (data: string) => void;
+  onClose: () => void;
 }
 
-const Scanner: React.FC<QRScannerProps> = ({
-  onRead,
-  onClose,
-}) => {
+const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   StatusBar.setHidden(true);
   const { Colors } = useTheme();
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
-  
+
   useEffect(() => {
-      (async () => {
-        try {
-          if (Platform.OS === 'android') {
-            const granted = await PermissionsAndroid.request(
-              PermissionsAndroid.PERMISSIONS.CAMERA,
-              {
-                title: 'Camera Permission',
-                message:
-                  'This app needs access to your camera ' +
-                  'so you can scan QR codes.',
-                buttonNeutral: 'Ask Me Later',
-                buttonNegative: 'Cancel',
-                buttonPositive: 'OK',
-              },
-            );
-            if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-              setHasCameraPermission(true);
-            } else {
-              console.log('Camera permission denied');
-              onClose?.();
-            }
-          } else if (Platform.OS === 'ios') {
-            const status = await Camera.checkDeviceCameraAuthorizationStatus();
-            if (status === true) {
-              setHasCameraPermission(true);
-            } else if (status === false) {
-              const newStatus = await Camera.requestDeviceCameraAuthorization();
-              setHasCameraPermission(newStatus === true);
-            }
+    (async () => {
+      try {
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            {
+              title: 'Camera Permission',
+              message:
+                'This app needs access to your camera ' +
+                'so you can scan QR codes.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            },
+          );
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            setHasCameraPermission(true);
+          } else {
+            console.log('Camera permission denied');
+            onClose?.();
           }
-        } catch (err) {
-          console.warn(err);
-          onClose?.();
+        } else if (Platform.OS === 'ios') {
+          const status = await Camera.checkDeviceCameraAuthorizationStatus();
+          if (status === true) {
+            setHasCameraPermission(true);
+          } else if (status === false) {
+            const newStatus = await Camera.requestDeviceCameraAuthorization();
+            setHasCameraPermission(newStatus === true);
+          }
         }
-      })();
-    
+      } catch (err) {
+        console.warn(err);
+        onClose?.();
+      }
+    })();
   }, []);
 
   const handleQRRead = (event: any) => {
@@ -80,9 +84,7 @@ const Scanner: React.FC<QRScannerProps> = ({
         />
       ) : (
         <View style={styles.camera}>
-          <Text>
-            camera permission is not granted
-          </Text>
+          <Text>camera permission is not granted</Text>
         </View>
       )}
     </View>
@@ -95,9 +97,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     zIndex: 1000,
-    position: "absolute", 
+    position: 'absolute',
     left: 0,
-    top: 0, 
+    top: 0,
     right: 0,
     bottom: 0,
   },
@@ -111,8 +113,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
     width: 40,
     height: 40,
-    backgroundColor: "transparent",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
