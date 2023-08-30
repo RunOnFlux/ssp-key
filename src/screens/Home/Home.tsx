@@ -28,6 +28,7 @@ import HelpSection from '../../components/HelpSection/HelpSection';
 import Authentication from '../../components/Authentication/Authentication';
 import SettingsSection from '../../components/SettingsSection/SettingsSection';
 import SyncNeeded from '../../components/SyncNeeded/SyncNeeded';
+import Scanner from '../../components/Scanner/Scanner';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -89,6 +90,7 @@ function Home({ navigation }: Props) {
   const [actionToPerform, setActionToPerform] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncNeededModalOpen, setSyncNeededModalOpen] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   const {
@@ -332,7 +334,7 @@ function Home({ navigation }: Props) {
       // transaction
       // sign transaction
       if (!address || !redeemScript) {
-        // display error, we are not synced yet with wallet
+        displayMessage('error', 'Synchronisation with SSP Wallet needed.');
         console.log('not synced yet');
       } else {
         const rawTransactions = manualInput;
@@ -356,6 +358,36 @@ function Home({ navigation }: Props) {
   };
   const scanCode = () => {
     console.log('scan code');
+    setShowScanner(true);
+  };
+  const handleCancelScanner = () => {
+    setShowScanner(false);
+  };
+  const handleScannedData = (scannedData: string) => {
+    // check if input is xpub or transaction
+    if (scannedData.startsWith('xpub')) {
+      // xpub
+      const xpubw = scannedData;
+      handleSyncRequest(xpubw);
+    } else if (scannedData.startsWith('04')) {
+      // transaction
+      // sign transaction
+      if (!address || !redeemScript) {
+        displayMessage('error', 'Synchronisation with SSP Wallet needed.');
+        console.log('not synced yet');
+      } else {
+        const rawTransactions = scannedData;
+        handleTxRequest(rawTransactions);
+      }
+    } else {
+      setTimeout(() => {
+        displayMessage('error', 'Invalid Scanned Data');
+      }, 200);
+    }
+    setTimeout(() => {
+      setShowScanner(false);
+    });
+    console.log(scannedData);
   };
   const handleRefresh = async () => {
     try {
@@ -658,6 +690,12 @@ function Home({ navigation }: Props) {
         <Authentication
           actionStatus={handleAuthenticationOpen}
           type="sensitive"
+        />
+      )}
+      {showScanner && (
+        <Scanner
+          onRead={(data) => handleScannedData(data)}
+          onClose={handleCancelScanner}
         />
       )}
 
