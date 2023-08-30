@@ -13,7 +13,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
     await new Promise((resolve) =>
       setTimeout(() => {
         resolve(true);
-      }, 2000),
+      }, 500),
     );
     await setDefaultTheme({ theme: 'default', darkMode: null });
     navigation.reset({
