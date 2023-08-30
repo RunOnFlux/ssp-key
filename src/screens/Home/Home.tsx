@@ -361,7 +361,9 @@ function Home({ navigation }: Props) {
     setShowScanner(true);
   };
   const handleCancelScanner = () => {
-    setShowScanner(false);
+    setTimeout(() => {
+      setShowScanner(false);
+    }, 100);
   };
   const handleScannedData = (scannedData: string) => {
     // check if input is xpub or transaction

@@ -2,14 +2,21 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  PermissionsAndroid,
   Text,
   TouchableOpacity,
   Platform,
   StatusBar,
 } from 'react-native';
 import { Camera, CameraType } from 'react-native-camera-kit';
+import {
+  request,
+  check,
+  PERMISSIONS,
+  RESULTS,
+  openSettings,
+} from 'react-native-permissions';
 import Icon from 'react-native-vector-icons/Feather';
+import Toast from 'react-native-toast-message';
 import { useTheme } from 'ssp-key/src/hooks';
 
 interface QRScannerProps {
@@ -22,35 +29,104 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   const { Colors } = useTheme();
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
 
+  const displayMessage = (type: string, content: string) => {
+    Toast.show({
+      type,
+      text1: content,
+    });
+  };
+
   useEffect(() => {
     (async () => {
       try {
         if (Platform.OS === 'android') {
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.CAMERA,
-            {
-              title: 'Camera Permission',
-              message:
-                'This app needs access to your camera ' +
-                'so you can scan QR codes.',
-              buttonNeutral: 'Ask Me Later',
-              buttonNegative: 'Cancel',
-              buttonPositive: 'OK',
-            },
-          );
-          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-            setHasCameraPermission(true);
-          } else {
-            console.log('Camera permission denied');
+          const rationale = {
+            title: 'Camera Permission',
+            message: 'SSP Key needs access to your camera to scan QR codes.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          };
+          const cameraPermission = await check(PERMISSIONS.ANDROID.CAMERA);
+          if (cameraPermission === RESULTS.UNAVAILABLE) {
+            displayMessage('error', 'Camera is unavailable.');
+            setHasCameraPermission(false);
             onClose?.();
+          } else if (cameraPermission === RESULTS.DENIED) {
+            const cameraRequest = await request(
+              PERMISSIONS.ANDROID.CAMERA,
+              rationale,
+            );
+            if (cameraRequest === (RESULTS.GRANTED || RESULTS.LIMITED)) {
+              setHasCameraPermission(true);
+            } else {
+              displayMessage('error', 'Camera access denied.');
+              setHasCameraPermission(false);
+              onClose?.();
+            }
+          } else if (
+            cameraPermission === RESULTS.GRANTED ||
+            cameraPermission === RESULTS.LIMITED
+          ) {
+            setHasCameraPermission(true);
+          } else if (cameraPermission === RESULTS.BLOCKED) {
+            displayMessage(
+              'error',
+              'Camera access is denied. Please enable it first.',
+            );
+            openSettings().catch(() => console.warn('cannot open settings'));
+            onClose?.();
+          } else {
+            // treat as we need to request permissions
+            const cameraRequest = await request(
+              PERMISSIONS.ANDROID.CAMERA,
+              rationale,
+            );
+            if (cameraRequest === (RESULTS.GRANTED || RESULTS.LIMITED)) {
+              setHasCameraPermission(true);
+            } else {
+              displayMessage('error', 'Camera access denied.');
+              setHasCameraPermission(false);
+              onClose?.();
+            }
           }
         } else if (Platform.OS === 'ios') {
-          const status = await Camera.checkDeviceCameraAuthorizationStatus();
-          if (status === true) {
+          const cameraPermission = await check(PERMISSIONS.IOS.CAMERA);
+          if (cameraPermission === RESULTS.UNAVAILABLE) {
+            displayMessage('error', 'Camera is unavailable.');
+            setHasCameraPermission(false);
+            onClose?.();
+          } else if (cameraPermission === RESULTS.DENIED) {
+            const cameraRequest = await request(PERMISSIONS.IOS.CAMERA);
+            if (cameraRequest === (RESULTS.GRANTED || RESULTS.LIMITED)) {
+              setHasCameraPermission(true);
+            } else {
+              displayMessage('error', 'Camera access denied.');
+              setHasCameraPermission(false);
+              onClose?.();
+            }
+          } else if (
+            cameraPermission === RESULTS.GRANTED ||
+            cameraPermission === RESULTS.LIMITED
+          ) {
             setHasCameraPermission(true);
-          } else if (status === false) {
-            const newStatus = await Camera.requestDeviceCameraAuthorization();
-            setHasCameraPermission(newStatus === true);
+          } else if (cameraPermission === RESULTS.BLOCKED) {
+            displayMessage(
+              'error',
+              'Camera access is denied. Please enable it first.',
+            );
+            openSettings().catch(() => console.warn('cannot open settings'));
+            onClose?.();
+          } else {
+            // treat as we need to request permissions
+            const cameraRequest = await request(PERMISSIONS.IOS.CAMERA);
+            if (cameraRequest === (RESULTS.GRANTED || RESULTS.LIMITED)) {
+              setHasCameraPermission(true);
+            } else {
+              displayMessage('error', 'Camera access denied.');
+              setHasCameraPermission(false);
+              onClose?.();
+            }
           }
         }
       } catch (err) {
@@ -87,6 +163,7 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
           <Text>camera permission is not granted</Text>
         </View>
       )}
+      <Toast />
     </View>
   );
 };

@@ -10,9 +10,9 @@
     "test": "jest",
     "type-check": "tsc",
     "test:report": "jest --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --reporters=jest-junit --coverage",
-    "pod": "cd ios && RCT_NEW_ARCH_ENABLED=1 bundle exec pod install && cd ..",
-    "podprod": "cd ios && RCT_NEW_ARCH_ENABLED=1 NO_FLIPPER=1 bundle exec pod install && cd ..",
-    "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process' --yarn && patch-package"
+    "pod": "cd ios && RCT_NEW_ARCH_ENABLED=0 bundle exec pod install && cd ..",
+    "podprod": "cd ios && RCT_NEW_ARCH_ENABLED=0 NO_FLIPPER=1 bundle exec pod install && cd ..",
+    "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process' --yarn && patch-package && react-native setup-ios-permissions"
   },
   "dependencies": {
     "@react-native-masked-view/masked-view": "^0.2.9",
@@ -42,6 +42,7 @@
     "react-native-gesture-handler": "^2.12.1",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-mmkv": "^2.10.1",
+    "react-native-permissions": "^3.8.4",
     "react-native-popup-menu": "^0.16.1",
     "react-native-quick-base64": "^2.0.7",
     "react-native-quick-crypto": "^0.6.1",
@@ -113,5 +114,8 @@
     "_stream_duplex": "readable-stream/duplex",
     "_stream_passthrough": "readable-stream/passthrough",
     "stream": "stream-browserify"
-  }
+  },
+  "reactNativePermissionsIOS": [
+    "Camera"
+  ]
 }
