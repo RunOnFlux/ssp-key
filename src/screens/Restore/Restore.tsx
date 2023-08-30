@@ -210,6 +210,10 @@ function Restore({ navigation }: Props) {
     }
   };
 
+  const openScanner = () => {
+    setShowScanner(true);
+  };
+
   return (
     <KeyboardAwareScrollView
       extraScrollHeight={20}
@@ -338,9 +342,11 @@ function Restore({ navigation }: Props) {
             Gutters.regularBMargin,
             Gutters.smallTMargin,
           ]}
-          onPressIn={() => setShowScanner(true)}
+          onPressIn={openScanner}
         >
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>{t('home:scan_code')}</Text>
+          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+            {t('home:scan_code')}
+          </Text>
         </TouchableOpacity>
       </View>
       <Modal
@@ -463,7 +469,9 @@ function Restore({ navigation }: Props) {
         <Toast />
       </Modal>
       {!isModalOpen && <Toast />}
-      <Scanner visible={showScanner} onRead={console.log} onClose={()=>setShowScanner(false)}/>
+      {showScanner ? (
+        <Scanner onRead={console.log} onClose={() => setShowScanner(false)} />
+      ) : null}
     </KeyboardAwareScrollView>
   );
 }
