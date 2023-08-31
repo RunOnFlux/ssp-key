@@ -167,7 +167,7 @@ const Authentication = (props: {
                 ? 'Confirm with password.'
                 : props.type === 'sync'
                 ? 'Confirm with password.'
-                : 'Grant access with psasword.'}
+                : 'Grant access with password.'}
             </Text>
 
             {biometricsAvailable && (
