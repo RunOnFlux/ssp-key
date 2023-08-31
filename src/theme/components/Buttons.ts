@@ -19,7 +19,7 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
   const secondaryButton = {
     ...base,
     color: Colors.bluePrimary,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.secondaryButtonBackground,
     borderColor: Colors.bluePrimary,
   };
   const circle = {

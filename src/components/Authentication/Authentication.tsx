@@ -25,7 +25,7 @@ const Authentication = (props: {
   // focusability of inputs
   const textInputA = useRef<TextInput | null>(null);
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Common, Colors } = useTheme();
+  const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(false);
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
@@ -127,7 +127,7 @@ const Authentication = (props: {
       <KeyboardAwareScrollView
         enableOnAndroid={true}
         extraScrollHeight={20}
-        style={[Layout.fill, styles.modalBackdrop]}
+        style={[Layout.fill, Common.modalBackdrop]}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
@@ -135,7 +135,7 @@ const Authentication = (props: {
           Layout.fill,
         ]}
       >
-        <View style={styles.modalView}>
+        <View style={[Common.modalView, styles.modalView]}>
           <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
             {t('home:confirm_password_pin')}
           </Text>
@@ -180,13 +180,20 @@ const Authentication = (props: {
               />
             )}
             {!biometricsAvailable && <View style={[Gutters.smallMargin]} />}
-            <View style={styles.passwordSection}>
+            <View
+              style={[
+                Layout.rowCenter,
+                Common.inputWithButtonBgModalColors,
+                styles.inputWithButton,
+              ]}
+            >
               <TextInput
-                style={styles.input}
+                style={[Common.textInput, Common.textInputBgModal]}
                 autoComplete="new-password"
                 textContentType="password"
                 autoCapitalize="none"
                 placeholder="Set Key Password PIN"
+                placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
                 secureTextEntry={passwordVisibility ? false : true}
                 onChangeText={onChangePassword}
                 value={password}
@@ -196,7 +203,7 @@ const Authentication = (props: {
               />
               <TouchableOpacity
                 onPressIn={() => setPasswordVisibility(!passwordVisibility)}
-                style={styles.eyeIcon}
+                style={Common.inputIcon}
               >
                 <Icon
                   name={passwordVisibility ? 'eye' : 'eye-off'}
@@ -245,44 +252,14 @@ export default Authentication;
 
 const styles = StyleSheet.create({
   modalView: {
-    backgroundColor: 'white',
     marginTop: '50%',
-    borderRadius: 20,
-    padding: 20,
-    marginLeft: 30,
-    marginRight: 30,
     left: 0,
     right: 0,
-    textAlign: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
     height: 480,
     bottom: 40,
   },
-  modalBackdrop: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  eyeIcon: {
-    padding: 12,
-  },
-  passwordSection: {
+  inputWithButton: {
     marginTop: 30,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    borderRadius: 10,
-    backgroundColor: '#f6f6f6',
-  },
-  input: {
-    flex: 1,
-    padding: 12,
-    color: '#424242',
     width: '100%',
     borderRadius: 10,
   },

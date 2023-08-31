@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -37,11 +30,11 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
       onRequestClose={() => reject()}
     >
       <ScrollView
-        style={[Layout.fill, styles.modalBackdrop]}
+        style={[Layout.fill, Common.modalBackdrop]}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
-          styles.modalView,
+          Common.modalView,
         ]}
       >
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
@@ -114,23 +107,3 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
 };
 
 export default SyncNeeded;
-
-const styles = StyleSheet.create({
-  modalView: {
-    backgroundColor: 'white',
-    margin: 30,
-    marginTop: 60,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modalBackdrop: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-});

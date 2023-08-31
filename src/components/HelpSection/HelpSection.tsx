@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Modal,
   ScrollView,
   Linking,
@@ -45,11 +44,11 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
       onRequestClose={() => close()}
     >
       <ScrollView
-        style={[Layout.fill, styles.modalBackdrop]}
+        style={[Layout.fill, Common.modalBackdrop]}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
-          styles.modalView,
+          Common.modalView,
         ]}
       >
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
@@ -130,26 +129,3 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
 };
 
 export default HelpSection;
-
-const styles = StyleSheet.create({
-  modalView: {
-    backgroundColor: 'white',
-    margin: 30,
-    marginTop: 60,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modalBackdrop: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  poweredBy: {
-    marginBottom: -25,
-  },
-});

@@ -36,7 +36,7 @@ const SettingsSection = (props: {
   const [sspConfigRelay, setSspConfigRelay] = useState(SSPR);
   const [fluxNodeConfig, setFluxNodeConfig] = useState(FNC);
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Common, Colors } = useTheme();
+  const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
 
   const handleCancel = () => {
     console.log('Close');
@@ -118,13 +118,13 @@ const SettingsSection = (props: {
       <KeyboardAwareScrollView
         enableOnAndroid={true}
         extraScrollHeight={20}
-        style={[Layout.fill, styles.modalBackdrop]}
+        style={[Layout.fill, Common.modalBackdrop]}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
         ]}
       >
-        <View style={[Layout.fill, styles.modalView]}>
+        <View style={[Layout.fill, Common.modalView]}>
           <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
             {t('common:settings')}
           </Text>
@@ -164,11 +164,18 @@ const SettingsSection = (props: {
               <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
                 {t('home:ssp_relay_server')}
               </Text>
-              <View style={styles.passwordSection}>
+              <View
+                style={[
+                  Layout.rowCenter,
+                  Common.inputWithButtonBgModalColors,
+                  styles.inputWithButton,
+                ]}
+              >
                 <TextInput
-                  style={styles.input}
+                  style={[Common.textInput, Common.textInputBgModal]}
                   autoCapitalize="none"
                   placeholder="relay.ssp.runonflux.io"
+                  placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
                   onChangeText={onChangeSSPrelay}
                   value={sspConfigRelay}
                   autoCorrect={false}
@@ -177,7 +184,7 @@ const SettingsSection = (props: {
                 />
                 <TouchableOpacity
                   onPressIn={resetSSPRelay}
-                  style={styles.eyeIcon}
+                  style={Common.inputIcon}
                 >
                   <Icon name="x" size={20} color={Colors.bluePrimary} />
                 </TouchableOpacity>
@@ -187,11 +194,18 @@ const SettingsSection = (props: {
               <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
                 {t('home:flux_node_service')}
               </Text>
-              <View style={styles.passwordSection}>
+              <View
+                style={[
+                  Layout.rowCenter,
+                  Common.inputWithButtonBgModalColors,
+                  styles.inputWithButton,
+                ]}
+              >
                 <TextInput
-                  style={styles.input}
+                  style={[Common.textInput, Common.textInputBgModal]}
                   autoCapitalize="none"
                   placeholder="explorer.runonflux.io"
+                  placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
                   onChangeText={onChangeFluxNodeService}
                   value={fluxNodeConfig}
                   autoCorrect={false}
@@ -200,7 +214,7 @@ const SettingsSection = (props: {
                 />
                 <TouchableOpacity
                   onPressIn={resetFluxNodeService}
-                  style={styles.eyeIcon}
+                  style={Common.inputIcon}
                 >
                   <Icon name="x" size={20} color={Colors.bluePrimary} />
                 </TouchableOpacity>
@@ -242,40 +256,9 @@ const SettingsSection = (props: {
 export default SettingsSection;
 
 const styles = StyleSheet.create({
-  modalView: {
-    backgroundColor: 'white',
-    margin: 30,
-    marginTop: 60,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modalBackdrop: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  input: {
-    flex: 1,
-    padding: 12,
-    color: '#424242',
-    width: '100%',
-    borderRadius: 10,
-  },
-  eyeIcon: {
-    padding: 12,
-  },
-  passwordSection: {
+  inputWithButton: {
     marginTop: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
     width: '100%',
     borderRadius: 10,
-    backgroundColor: '#f6f6f6',
   },
 });

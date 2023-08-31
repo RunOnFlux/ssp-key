@@ -74,7 +74,8 @@ function Home({ navigation }: Props) {
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const dispatch = useAppDispatch();
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Images, Colors, Common } = useTheme();
+  const { darkMode, Fonts, Gutters, Layout, Images, Colors, Common } =
+    useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [isManuaInputlModalOpen, setIsManualInputModalOpen] = useState(false);
   const [manualInput, setManualInput] = useState('');
@@ -716,7 +717,7 @@ function Home({ navigation }: Props) {
         >
           <SafeAreaView style={[Layout.fill]}>
             <View>
-              <View style={[styles.modalMenu]}>
+              <View style={[Common.modalMenu]}>
                 <TouchableOpacity onPressIn={() => openManualInput()}>
                   <Text
                     style={[
@@ -791,11 +792,11 @@ function Home({ navigation }: Props) {
       >
         <KeyboardAwareScrollView
           extraScrollHeight={20}
-          style={[Layout.fill, styles.modalBackdrop]}
+          style={[Layout.fill, Common.modalBackdrop]}
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
-            styles.modalManualInput,
+            Common.modalView,
           ]}
         >
           <Text
@@ -826,9 +827,10 @@ function Home({ navigation }: Props) {
               <TextInput
                 multiline={true}
                 numberOfLines={6}
-                style={styles.inputArea}
+                style={[Common.inputArea, Common.inputAreaModalColors]}
                 autoCapitalize="none"
                 placeholder="Input your transaction to sign or xpub of your wallet to sync."
+                placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
                 secureTextEntry={false}
                 onChangeText={onChangeManualInput}
                 value={manualInput}
@@ -873,50 +875,10 @@ function Home({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  modalMenu: {
-    position: 'absolute',
-    right: 5,
-    width: 150,
-    backgroundColor: 'white',
-    marginTop: 60,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modalManualInput: {
-    backgroundColor: 'white',
-    margin: 30,
-    marginTop: 60,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modalBackdrop: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
   seedPhraseArea: {
     width: '100%',
     height: 200,
     marginTop: 20,
-  },
-  inputArea: {
-    flex: 1,
-    padding: 12,
-    backgroundColor: '#f6f6f6',
-    color: '#424242',
-    borderRadius: 10,
-    marginTop: 16,
   },
 });
 

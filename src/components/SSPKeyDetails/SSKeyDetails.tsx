@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -70,11 +63,11 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
       onRequestClose={() => close()}
     >
       <ScrollView
-        style={[Layout.fill, styles.modalBackdrop]}
+        style={[Layout.fill, Common.modalBackdrop]}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
-          styles.modalView,
+          Common.modalView,
         ]}
       >
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
@@ -90,10 +83,16 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
           ]}
         >
           <View>
-            <View style={[Gutters.regularTMargin, styles.passwordSection]}>
+            <View
+              style={[
+                Gutters.regularTMargin,
+                Layout.rowCenter,
+                Gutters.tinyRMargin,
+              ]}
+            >
               <TouchableOpacity
                 onPressIn={() => setMnemonicVisible(!mnemonicVisible)}
-                style={styles.eyeIcon}
+                style={Common.inputIcon}
               >
                 <Icon
                   name={mnemonicVisible ? 'eye' : 'eye-off'}
@@ -117,10 +116,10 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
             </View>
           </View>
           <View>
-            <View style={styles.passwordSection}>
+            <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
               <TouchableOpacity
                 onPressIn={() => setXpubVisible(!xpubVisible)}
-                style={styles.eyeIcon}
+                style={Common.inputIcon}
               >
                 <Icon
                   name={xpubVisible ? 'eye' : 'eye-off'}
@@ -142,10 +141,10 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
             </View>
           </View>
           <View>
-            <View style={styles.passwordSection}>
+            <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
               <TouchableOpacity
                 onPressIn={() => setXprivVisible(!xprivVisible)}
-                style={styles.eyeIcon}
+                style={Common.inputIcon}
               >
                 <Icon
                   name={xprivVisible ? 'eye' : 'eye-off'}
@@ -194,32 +193,3 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
 };
 
 export default SSPKeyDetails;
-
-const styles = StyleSheet.create({
-  modalView: {
-    backgroundColor: 'white',
-    margin: 30,
-    marginTop: 60,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modalBackdrop: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  eyeIcon: {
-    padding: 12,
-  },
-  passwordSection: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-});

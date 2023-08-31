@@ -54,7 +54,8 @@ function Restore({ navigation }: Props) {
   const [WSPbackedUp, setWSPbackedUp] = useState(false);
   const [wspWasShown, setWSPwasShown] = useState(false);
   const { t } = useTranslation(['cr', 'common']);
-  const { Common, Fonts, Gutters, Layout, Images, Colors } = useTheme();
+  const { darkMode, Common, Fonts, Gutters, Layout, Images, Colors } =
+    useTheme();
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -262,9 +263,10 @@ function Restore({ navigation }: Props) {
           <TextInput
             multiline={true}
             numberOfLines={4}
-            style={styles.inputArea}
+            style={[Common.inputArea, Common.inputAreaColors]}
             autoCapitalize="none"
             placeholder="Input your Mnemonic Key Seed Phrase"
+            placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
             secureTextEntry={false}
             onChangeText={onChangeMnemonic}
             value={mnemonic}
@@ -273,13 +275,20 @@ function Restore({ navigation }: Props) {
             onPressIn={() => seedInput.current?.focus()}
           />
         </View>
-        <View style={styles.passwordSection}>
+        <View
+          style={[
+            Layout.rowCenter,
+            Common.inputWithButtonBgColors,
+            styles.inputWithButton,
+          ]}
+        >
           <TextInput
-            style={styles.input}
+            style={[Common.textInput]}
             autoComplete="new-password"
             textContentType="password"
             autoCapitalize="none"
             placeholder="Set Key Password PIN"
+            placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
             secureTextEntry={passwordVisibility ? true : false}
             onChangeText={onChangePassword}
             value={password}
@@ -289,18 +298,25 @@ function Restore({ navigation }: Props) {
           />
           <TouchableOpacity
             onPressIn={handlePasswordVisibility}
-            style={styles.eyeIcon}
+            style={Common.inputIcon}
           >
             <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
           </TouchableOpacity>
         </View>
-        <View style={styles.passwordSection}>
+        <View
+          style={[
+            Layout.rowCenter,
+            Common.inputWithButtonBgColors,
+            styles.inputWithButton,
+          ]}
+        >
           <TextInput
-            style={styles.input}
+            style={[Common.textInput]}
             autoComplete="new-password"
             textContentType="password"
             autoCapitalize="none"
             placeholder="Confirm Key Password PIN"
+            placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
             secureTextEntry={passwordVisibilityConfirm ? true : false}
             onChangeText={onChangePasswordConfirm}
             value={passwordConfirm}
@@ -310,7 +326,7 @@ function Restore({ navigation }: Props) {
           />
           <TouchableOpacity
             onPressIn={handlePasswordVisibilityConfirm}
-            style={styles.eyeIcon}
+            style={Common.inputIcon}
           >
             <Icon
               name={rightIconConfirm}
@@ -338,11 +354,11 @@ function Restore({ navigation }: Props) {
         onRequestClose={() => handleCancel()}
       >
         <ScrollView
-          style={[Layout.fill, styles.modalBackdrop]}
+          style={[Layout.fill, Common.modalBackdrop]}
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
-            styles.modalView,
+            Common.modalView,
           ]}
         >
           <Text
@@ -456,54 +472,15 @@ function Restore({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  input: {
-    flex: 1,
-    padding: 12,
-    backgroundColor: '#fff',
-    color: '#424242',
-    borderRadius: 10,
-  },
-  inputArea: {
-    flex: 1,
-    padding: 12,
-    backgroundColor: '#fff',
-    color: '#424242',
-    borderRadius: 10,
-    marginTop: 16,
-  },
   seedPhraseArea: {
     width: '80%',
     height: 100,
   },
-  passwordSection: {
+  inputWithButton: {
     width: '80%',
     height: 50,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 10,
     marginTop: 16,
-  },
-  eyeIcon: {
-    padding: 12,
-  },
-  modalView: {
-    backgroundColor: 'white',
-    margin: 30,
-    marginTop: 60,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modalBackdrop: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   toggleStyle: {
     transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],

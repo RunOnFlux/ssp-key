@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Modal,
   ScrollView,
   Linking,
@@ -40,11 +39,11 @@ const SyncRequest = (props: {
       onRequestClose={() => close()}
     >
       <ScrollView
-        style={[Layout.fill, styles.modalBackdrop]}
+        style={[Layout.fill, Common.modalBackdrop]}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
-          styles.modalView,
+          Common.modalView,
         ]}
       >
         <View
@@ -104,23 +103,3 @@ const SyncRequest = (props: {
 };
 
 export default SyncRequest;
-
-const styles = StyleSheet.create({
-  modalView: {
-    backgroundColor: 'white',
-    margin: 30,
-    marginTop: 60,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modalBackdrop: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-});
