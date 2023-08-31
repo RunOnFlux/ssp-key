@@ -11,5 +11,15 @@
   "key_backup_text_2": "Keep your key seed backup safe and secure.",
   "key_backup_text_3": "Losing the key seed will result in the loss of access to your wallet.",
   "seed_phrase_backed_up": "I have backed up my key seed phrase in a secure location.",
-  "import_key_phrase": "Import Key Seed Phrase"
+  "import_key_phrase": "Import Key Seed Phrase",
+  "err_enter_seed": "Please enter your Key seed phrase",
+  "err_invalid_seed": "Key Seed Phrase is invalid. Key Seed Phrase consists of at least 12 words.",
+  "err_pins_no_match": "PINs do not match :(",
+  "err_pins_min_length": "PIN must be at least 4 characters",
+  "backup_needed": "You must backup your key seed phrase before you can synchronise a key.",
+  "seed_phrase_invalid": "Key seed phrase is invalid.",
+  "err_setting_key": "Something went wrong while setting up your Key.",
+  "set_key_pin": "Set Key Password PIN",
+  "confirm_key_pin": "Confirm Key Password PIN",
+  "input_mnemonic": "Input your Mnemonic Key Seed Phrase"
 }

@@ -101,9 +101,9 @@ function Create({ navigation }: Props) {
 
   const setupKey = () => {
     if (password !== passwordConfirm) {
-      displayMessage('error', 'PINs do not match :(');
+      displayMessage('error', t('cr:err_pins_no_match'));
     } else if (password.length < 4) {
-      displayMessage('error', 'PIN must be at least 4 characters');
+      displayMessage('error', t('cr:err_pins_min_length'));
     } else {
       generateMnemonicPhrase(256);
     }
@@ -127,10 +127,7 @@ function Create({ navigation }: Props) {
     if (WSPbackedUp && wspWasShown) {
       storeMnemonic(mnemonic);
     } else {
-      displayMessage(
-        'info',
-        'You must backup your key seed phrase before you can synchronise a key.',
-      );
+      displayMessage('info', t('cr:backup_needed'));
     }
   };
 
@@ -146,7 +143,7 @@ function Create({ navigation }: Props) {
 
   const storeMnemonic = (mnemonicPhrase: string) => {
     if (!mnemonicPhrase) {
-      displayMessage('error', 'Key seed phrase is invalid.');
+      displayMessage('error', t('cr:seed_phrase_invalid'));
       return;
     }
 
@@ -183,10 +180,7 @@ function Create({ navigation }: Props) {
       .catch((error) => {
         setIsLoading(false);
         dispatch(setSeedPhraseInitialState());
-        displayMessage(
-          'error',
-          'Code C1: Something went wrong while setting up your Key.',
-        );
+        displayMessage('error', t('cr:err_setting_key'));
         console.log(error);
       });
   };
@@ -251,7 +245,7 @@ function Create({ navigation }: Props) {
             autoComplete="new-password"
             textContentType="password"
             autoCapitalize="none"
-            placeholder="Set Key Password PIN"
+            placeholder={t('cr:set_key_pin')}
             placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
             secureTextEntry={passwordVisibility ? true : false}
             onChangeText={onChangePassword}
@@ -279,7 +273,7 @@ function Create({ navigation }: Props) {
             autoComplete="new-password"
             textContentType="password"
             autoCapitalize="none"
-            placeholder="Confirm Key Password PIN"
+            placeholder={t('cr:confirm_key_pin')}
             placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
             secureTextEntry={passwordVisibilityConfirm ? true : false}
             onChangeText={onChangePasswordConfirm}

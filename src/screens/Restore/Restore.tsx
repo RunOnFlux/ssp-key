@@ -95,21 +95,18 @@ function Restore({ navigation }: Props) {
   const setupImportKey = () => {
     const newSeedPhrase = mnemonic.trim();
     if (!newSeedPhrase) {
-      displayMessage('error', 'Please enter your Key seed phrase');
+      displayMessage('error', t('cr:err_enter_seed'));
       return;
     }
     const splittedSeed = newSeedPhrase.split(' ');
     if (splittedSeed.length < 12) {
-      displayMessage(
-        'error',
-        'Key Seed Phrase is invalid. Key Seed Phrase consists of at least 12 words.',
-      );
+      displayMessage('error', t('cr:err_invalid_seed'));
       return;
     }
     if (password !== passwordConfirm) {
-      displayMessage('error', 'PINs do not match :(');
+      displayMessage('error', t('cr:err_pins_no_match'));
     } else if (password.length < 4) {
-      displayMessage('error', 'PIN must be at least 4 characters');
+      displayMessage('error', t('cr:err_pins_min_length'));
     } else {
       setMnemonic(newSeedPhrase);
       showModal();
@@ -132,10 +129,7 @@ function Restore({ navigation }: Props) {
     if (WSPbackedUp && wspWasShown) {
       storeMnemonic(mnemonic.trim());
     } else {
-      displayMessage(
-        'info',
-        'You must backup your key seed phrase before you can synchronise a key.',
-      );
+      displayMessage('info', t('cr:backup_needed'));
     }
   };
 
@@ -151,7 +145,7 @@ function Restore({ navigation }: Props) {
 
   const storeMnemonic = (mnemonicPhrase: string) => {
     if (!mnemonicPhrase) {
-      displayMessage('error', 'Key seed phrase is invalid.');
+      displayMessage('error', t('cr:seed_phrase_invalid'));
       return;
     }
     // first clean up data
@@ -192,11 +186,7 @@ function Restore({ navigation }: Props) {
       .catch((error) => {
         setIsLoading(false);
         dispatch(setSeedPhraseInitialState());
-        displayMessage(
-          'error',
-          error.message ||
-            'Code C1: Something went wrong while setting up your Key.',
-        );
+        displayMessage('error', error.message || t('cr:err_setting_key'));
         console.log(error.message);
       });
   };
@@ -265,7 +255,7 @@ function Restore({ navigation }: Props) {
             numberOfLines={4}
             style={[Common.inputArea, Common.inputAreaColors]}
             autoCapitalize="none"
-            placeholder="Input your Mnemonic Key Seed Phrase"
+            placeholder={t('cr:input_mnemonic')}
             placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
             secureTextEntry={false}
             onChangeText={onChangeMnemonic}
@@ -287,7 +277,7 @@ function Restore({ navigation }: Props) {
             autoComplete="new-password"
             textContentType="password"
             autoCapitalize="none"
-            placeholder="Set Key Password PIN"
+            placeholder={t('cr:set_key_pin')}
             placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
             secureTextEntry={passwordVisibility ? true : false}
             onChangeText={onChangePassword}
@@ -315,7 +305,7 @@ function Restore({ navigation }: Props) {
             autoComplete="new-password"
             textContentType="password"
             autoCapitalize="none"
-            placeholder="Confirm Key Password PIN"
+            placeholder={t('cr:confirm_key_pin')}
             placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
             secureTextEntry={passwordVisibilityConfirm ? true : false}
             onChangeText={onChangePasswordConfirm}
