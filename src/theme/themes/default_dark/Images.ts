@@ -4,6 +4,6 @@
 
 export default function () {
   return {
-    logo: require('../../assets/images/tom_dark.png'),
+    logo: require('../../assets/images/splash_icon.png'),
   };
 }
