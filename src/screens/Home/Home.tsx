@@ -7,12 +7,9 @@ import {
   ScrollView,
   Image,
   Modal,
-  TextInput,
-  StyleSheet,
   SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Icon from 'react-native-vector-icons/Feather';
@@ -28,6 +25,7 @@ import HelpSection from '../../components/HelpSection/HelpSection';
 import Authentication from '../../components/Authentication/Authentication';
 import SettingsSection from '../../components/SettingsSection/SettingsSection';
 import SyncNeeded from '../../components/SyncNeeded/SyncNeeded';
+import ManualInput from '../../components/ManualInput/ManualInput';
 import Scanner from '../../components/Scanner/Scanner';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -70,15 +68,11 @@ type Props = {
 
 function Home({ navigation }: Props) {
   // focusability of inputs
-  const textInputA = useRef<TextInput | null>(null);
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const dispatch = useAppDispatch();
   const { t } = useTranslation(['home', 'common']);
-  const { darkMode, Fonts, Gutters, Layout, Images, Colors, Common } =
-    useTheme();
+  const { Fonts, Gutters, Layout, Images, Colors, Common } = useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
-  const [isManuaInputlModalOpen, setIsManualInputModalOpen] = useState(false);
-  const [manualInput, setManualInput] = useState('');
   const [rawTx, setRawTx] = useState('');
   const [syncReq, setSyncReq] = useState('');
   const [txid, setTxid] = useState('');
@@ -91,6 +85,7 @@ function Home({ navigation }: Props) {
   const [actionToPerform, setActionToPerform] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncNeededModalOpen, setSyncNeededModalOpen] = useState(false);
+  const [manualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
@@ -252,13 +247,6 @@ function Home({ navigation }: Props) {
       setSettingsMenuOpen(true);
     });
   };
-  const handleCancelManualInput = () => {
-    setIsManualInputModalOpen(false);
-    setManualInput('');
-  };
-  const onChangeManualInput = (text: string) => {
-    setManualInput(text);
-  };
   const postAction = (
     action: string,
     payload: string,
@@ -325,9 +313,12 @@ function Home({ navigation }: Props) {
     }
     console.log('tx request');
   };
-  const handleMnualInput = async () => {
-    // check if input is xpub or transaction
-    if (manualInput.startsWith('xpub')) {
+  const handleManualInput = async (manualInput: string) => {
+    if (!manualInput) {
+      return;
+    } else if (manualInput === 'cancel') {
+      // do not process
+    } else if (manualInput.startsWith('xpub')) {
       // xpub
       const xpubw = manualInput;
       handleSyncRequest(xpubw);
@@ -342,12 +333,9 @@ function Home({ navigation }: Props) {
         handleTxRequest(rawTransactions);
       }
     } else {
-      setTimeout(() => {
-        displayMessage('error', 'Invalid manual input');
-      }, 200);
+      displayMessage('error', 'Invalid manual input.');
     }
     setTimeout(() => {
-      setManualInput('');
       setIsManualInputModalOpen(false);
     });
   };
@@ -695,6 +683,7 @@ function Home({ navigation }: Props) {
           type="sensitive"
         />
       )}
+      {manualInputModalOpen && <ManualInput actionStatus={handleManualInput} />}
       {showScanner && (
         <Scanner
           onRead={(data) => handleScannedData(data)}
@@ -784,102 +773,9 @@ function Home({ navigation }: Props) {
         </TouchableWithoutFeedback>
         <Toast />
       </Modal>
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isManuaInputlModalOpen}
-        onRequestClose={() => handleCancelManualInput()}
-      >
-        <KeyboardAwareScrollView
-          extraScrollHeight={20}
-          style={[Layout.fill, Common.modalBackdrop]}
-          contentContainerStyle={[
-            Gutters.smallBPadding,
-            Layout.scrollSpaceBetween,
-            Common.modalView,
-          ]}
-        >
-          <Text
-            style={[Fonts.titleSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-          >
-            {t('home:manual_input')}
-          </Text>
-          <View
-            style={[
-              Layout.fill,
-              Layout.relative,
-              Layout.fullWidth,
-              Layout.alignItemsCenter,
-              Gutters.regularTMargin,
-            ]}
-          >
-            <Text
-              style={[
-                Fonts.textRegular,
-                Fonts.textCenter,
-                Fonts.textBold,
-                Gutters.tinyBMargin,
-              ]}
-            >
-              {t('home:sign_resync')}
-            </Text>
-            <View style={styles.seedPhraseArea}>
-              <TextInput
-                multiline={true}
-                numberOfLines={6}
-                style={[Common.inputArea, Common.inputAreaModalColors]}
-                autoCapitalize="none"
-                placeholder="Input your transaction to sign or xpub of your wallet to sync."
-                placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                secureTextEntry={false}
-                onChangeText={onChangeManualInput}
-                value={manualInput}
-                autoCorrect={false}
-                ref={textInputA}
-                onPressIn={() => textInputA.current?.focus()}
-              />
-            </View>
-          </View>
-          <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.rounded,
-                Common.button.bluePrimary,
-                Gutters.regularBMargin,
-                Gutters.smallTMargin,
-              ]}
-              onPressIn={() => handleMnualInput()}
-            >
-              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                {t('home:process_input')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPressIn={() => handleCancelManualInput()}>
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Fonts.textCenter,
-                ]}
-              >
-                {t('common:cancel')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAwareScrollView>
-        <Toast />
-      </Modal>
-      {!isManuaInputlModalOpen && !isMenuModalOpen && <Toast />}
+      {!isMenuModalOpen && <Toast />}
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  seedPhraseArea: {
-    width: '100%',
-    height: 200,
-    marginTop: 20,
-  },
-});
 
 export default Home;
