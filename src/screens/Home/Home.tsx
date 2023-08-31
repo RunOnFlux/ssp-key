@@ -3,11 +3,8 @@ import {
   View,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   ScrollView,
   Image,
-  Modal,
-  SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +23,7 @@ import Authentication from '../../components/Authentication/Authentication';
 import SettingsSection from '../../components/SettingsSection/SettingsSection';
 import SyncNeeded from '../../components/SyncNeeded/SyncNeeded';
 import ManualInput from '../../components/ManualInput/ManualInput';
+import MenuModal from '../../components/MenuModal/MenuModal';
 import Scanner from '../../components/Scanner/Scanner';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -339,6 +337,20 @@ function Home({ navigation }: Props) {
       setIsManualInputModalOpen(false);
     });
   };
+  const handleMenuModalAction = (status: string) => {
+    if (status === 'manualinput') {
+      openManualInput();
+    } else if (status === 'addressdetails') {
+      openAddressDetails();
+    } else if (status === 'sspkeydetails') {
+      openSSPKeyDetails();
+    } else if (status === 'menusettings') {
+      openMenuSettings();
+    } else if (status === 'restore') {
+      handleRestore();
+    }
+    setIsMenuModalOpen(false);
+  };
   const openHelp = () => {
     setHelpSectionModalOpen(true);
   };
@@ -540,7 +552,7 @@ function Home({ navigation }: Props) {
           >
             <Icon name="help-circle" size={22} color={Colors.textGray400} />
           </TouchableOpacity>
-          <TouchableOpacity onPressIn={() => openSettings()} style={[]}>
+          <TouchableOpacity onPressIn={() => openSettings()}>
             <Icon name="settings" size={22} color={Colors.textGray400} />
           </TouchableOpacity>
         </View>
@@ -684,96 +696,14 @@ function Home({ navigation }: Props) {
         />
       )}
       {manualInputModalOpen && <ManualInput actionStatus={handleManualInput} />}
+      {isMenuModalOpen && <MenuModal actionStatus={handleMenuModalAction} />}
       {showScanner && (
         <Scanner
           onRead={(data) => handleScannedData(data)}
           onClose={handleCancelScanner}
         />
       )}
-
-      <Modal
-        animationType="fade"
-        onRequestClose={() => {
-          setIsMenuModalOpen(false);
-        }}
-        transparent={true}
-        visible={isMenuModalOpen}
-      >
-        <TouchableWithoutFeedback
-          onPressIn={() => {
-            setIsMenuModalOpen(false);
-          }}
-        >
-          <SafeAreaView style={[Layout.fill]}>
-            <View>
-              <View style={[Common.modalMenu]}>
-                <TouchableOpacity onPressIn={() => openManualInput()}>
-                  <Text
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textBluePrimary,
-                      Fonts.textCenter,
-                      Gutters.tinyPadding,
-                    ]}
-                  >
-                    {t('home:manual_input')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPressIn={() => openAddressDetails()}>
-                  <Text
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textBluePrimary,
-                      Fonts.textCenter,
-                      Gutters.tinyPadding,
-                    ]}
-                  >
-                    {t('home:synced_ssp_address')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPressIn={() => openSSPKeyDetails()}>
-                  <Text
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textBluePrimary,
-                      Fonts.textCenter,
-                      Gutters.tinyPadding,
-                    ]}
-                  >
-                    {t('home:ssp_key_details')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPressIn={() => openMenuSettings()}>
-                  <Text
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textBluePrimary,
-                      Fonts.textCenter,
-                      Gutters.tinyPadding,
-                    ]}
-                  >
-                    {t('common:settings')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPressIn={() => handleRestore()}>
-                  <Text
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textBluePrimary,
-                      Fonts.textCenter,
-                      Gutters.tinyPadding,
-                    ]}
-                  >
-                    {t('common:restore')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </SafeAreaView>
-        </TouchableWithoutFeedback>
-        <Toast />
-      </Modal>
-      {!isMenuModalOpen && <Toast />}
+      <Toast />
     </ScrollView>
   );
 }

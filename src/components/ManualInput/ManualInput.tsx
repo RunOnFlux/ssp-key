@@ -11,9 +11,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
-const TransactionRequest = (props: {
-  actionStatus: (data: string) => void;
-}) => {
+const ManualInput = (props: { actionStatus: (data: string) => void }) => {
   const textInputA = useRef<TextInput | null>(null);
   const { t } = useTranslation(['home', 'common']);
   const { darkMode, Fonts, Gutters, Layout, Common } = useTheme();
@@ -115,7 +113,7 @@ const TransactionRequest = (props: {
   );
 };
 
-export default TransactionRequest;
+export default ManualInput;
 
 const styles = StyleSheet.create({
   seedPhraseArea: {
