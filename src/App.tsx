@@ -11,6 +11,7 @@ import './translations';
 import { btoa, atob } from 'react-native-quick-base64';
 import { Buffer } from 'buffer';
 import 'fastestsmallesttextencoderdecoder';
+import Toast from 'react-native-toast-message';
 
 if (!global.btoa) {
   global.btoa = btoa;
@@ -36,6 +37,7 @@ const App = () => (
     <PersistGate loading={null} persistor={persistor}>
       <ApplicationNavigator />
     </PersistGate>
+    <Toast />
   </Provider>
 );
 

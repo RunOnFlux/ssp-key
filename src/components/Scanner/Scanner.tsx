@@ -167,7 +167,6 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
           <Text>camera permission is not granted</Text>
         </View>
       )}
-      <Toast />
     </View>
   );
 };

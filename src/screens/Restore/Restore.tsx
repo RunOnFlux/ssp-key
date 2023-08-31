@@ -466,7 +466,6 @@ function Restore({ navigation }: Props) {
         </ScrollView>
         <Toast />
       </Modal>
-      {!isModalOpen && <Toast />}
     </KeyboardAwareScrollView>
   );
 }

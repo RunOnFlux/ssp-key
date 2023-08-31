@@ -111,7 +111,6 @@ const TransactionRequest = (props: {
       {authenticationOpen && (
         <Authentication actionStatus={handleAuthenticationOpen} type="sync" />
       )}
-      <Toast />
     </>
   );
 };

@@ -437,7 +437,6 @@ function Create({ navigation }: Props) {
         </ScrollView>
         <Toast />
       </Modal>
-      {!isModalOpen && <Toast />}
     </KeyboardAwareScrollView>
   );
 }

@@ -703,7 +703,6 @@ function Home({ navigation }: Props) {
           onClose={handleCancelScanner}
         />
       )}
-      <Toast />
     </ScrollView>
   );
 }
