@@ -27,7 +27,7 @@ jobs:
         uses: timheuer/base64-to-file@v1
         with:
           fileName: 'release.keystore'
-          fileDir: '/home/runner/work/ssp-key/ssp-key/android/app/'
+          fileDir: '/home/user/actions-runner/_work/ssp-key/ssp-key/android/app/'
           encodedString: ${{ secrets.ANDROID_SIGNING_KEY }}
       - name: Build Android APK Release
         run: |
