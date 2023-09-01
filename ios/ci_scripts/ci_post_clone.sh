@@ -11,7 +11,13 @@ brew install yarn
 
 # Install dependencies
 yarn
-gem install bundler:2.1.4
-bundle update --bundler
+which ruby
+ruby -v
+sudo gem install bundler:2.1.4
+which ruby
+ruby -v
+sudo bundle update --bundler
+which ruby
+ruby -v
 yarn bundleinstall
 yarn podprod
