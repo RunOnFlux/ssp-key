@@ -12,6 +12,7 @@
     "test:report": "jest --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --reporters=jest-junit --coverage",
     "pod": "cd ios && RCT_NEW_ARCH_ENABLED=0 bundle exec pod install && cd ..",
     "podprod": "cd ios && RCT_NEW_ARCH_ENABLED=0 NO_FLIPPER=1 bundle exec pod install && cd ..",
+    "bundleinstall": "cd ios && bundle install && cd ..",
     "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process' --yarn && patch-package && react-native setup-ios-permissions"
   },
   "dependencies": {
