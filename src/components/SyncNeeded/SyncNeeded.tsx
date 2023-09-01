@@ -58,12 +58,12 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
           <Text
             style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallTMargin]}
           >
-            SSP Key is a second authentication factor for your SSP Wallet.
+            {t('home:ssp_key_info')}
           </Text>
           <Text
             style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallTMargin]}
           >
-            Please scan QR code to synchronise your SSP Key first.
+            {t('home:sync_qr_needed')}
           </Text>
         </View>
         <View style={[Layout.justifyContentEnd]}>

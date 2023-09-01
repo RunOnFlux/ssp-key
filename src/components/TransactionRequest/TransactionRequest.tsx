@@ -48,7 +48,7 @@ const TransactionRequest = (props: {
       txInfo.amount === 'decodingError' ||
       txInfo.receiver === 'decodingError'
     ) {
-      displayMessage('error', 'Error decoding transaction. Rejected.');
+      displayMessage('error', t('home:err_tx_decode'));
       setTimeout(() => {
         reject();
       }, 500);
@@ -78,7 +78,10 @@ const TransactionRequest = (props: {
           {t('home:transaction_request')}
         </Text>
         <Text style={[Fonts.textSmall, Fonts.textCenter]}>
-          Sending {sendingAmount} FLUX to {receiverAddress}
+          {t('home:sending_request', {
+            amount: sendingAmount,
+            address: receiverAddress,
+          })}
         </Text>
       </View>
       <View style={[Layout.justifyContentEnd]}>

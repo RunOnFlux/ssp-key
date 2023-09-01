@@ -71,12 +71,12 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
                 Gutters.tinyTMargin,
               ]}
             >
-              Secure. Simple. Powerful.
+              {t('common:appName.moto')}
             </Text>
             <Text
               style={[Fonts.textSmall, Fonts.textCenter, Gutters.tinyTMargin]}
             >
-              Your Second Key Factor authentication for your SSP Wallet.
+              {t('home:ssp_help_about')}
             </Text>
           </View>
           <TouchableOpacity

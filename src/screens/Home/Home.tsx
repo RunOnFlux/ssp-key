@@ -214,7 +214,7 @@ function Home({ navigation }: Props) {
         setSyncReq('');
         console.log(error.message);
         setTimeout(() => {
-          displayMessage('error', 'Synchronisation failed. Try again later.');
+          displayMessage('error', t('home:err_sync_failed'));
         }, 200);
       });
   };
@@ -304,7 +304,7 @@ function Home({ navigation }: Props) {
         setTxid(ttxid);
       } catch (error) {
         console.log(error);
-        displayMessage('error', 'Transaction failed. Try again later.');
+        displayMessage('error', t('home:err_tx_failed'));
       }
     } catch (error) {
       console.log(error);
@@ -324,14 +324,14 @@ function Home({ navigation }: Props) {
       // transaction
       // sign transaction
       if (!address || !redeemScript) {
-        displayMessage('error', 'Synchronisation with SSP Wallet needed.');
+        displayMessage('error', t('home:err_sync_with_ssp_needed'));
         console.log('not synced yet');
       } else {
         const rawTransactions = manualInput;
         handleTxRequest(rawTransactions);
       }
     } else {
-      displayMessage('error', 'Invalid manual input.');
+      displayMessage('error', t('home:err_invalid_manual_input'));
     }
     setTimeout(() => {
       setIsManualInputModalOpen(false);
@@ -376,7 +376,7 @@ function Home({ navigation }: Props) {
       // transaction
       // sign transaction
       if (!address || !redeemScript) {
-        displayMessage('error', 'Synchronisation with SSP Wallet needed.');
+        displayMessage('error', t('home:err_sync_with_ssp_needed'));
         console.log('not synced yet');
       } else {
         const rawTransactions = scannedData;
@@ -384,7 +384,7 @@ function Home({ navigation }: Props) {
       }
     } else {
       setTimeout(() => {
-        displayMessage('error', 'Invalid Scanned Data');
+        displayMessage('error', t('home:err_invalid_scanned_data'));
       }, 200);
     }
     setTimeout(() => {
@@ -596,7 +596,7 @@ function Home({ navigation }: Props) {
                   Gutters.smallRMargin,
                 ]}
               >
-                Please scan QR code to synchronise your SSP Key first.
+                {t('home:sync_qr_needed')}
               </Text>
             )}
             {isRefreshing && (

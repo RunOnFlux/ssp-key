@@ -24,7 +24,7 @@ const Authentication = (props: {
 }) => {
   // focusability of inputs
   const textInputA = useRef<TextInput | null>(null);
-  const { t } = useTranslation(['home', 'common']);
+  const { t } = useTranslation(['home', 'common', 'cr']);
   const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(false);
@@ -55,11 +55,11 @@ const Authentication = (props: {
   }, []);
 
   const initiateFingerprint = () => {
-    let textForPrompt = 'Grant access to view senstivie SSP Key information.';
+    let textForPrompt = t('home:auth_sensitive_information');
     if (props.type === 'tx') {
-      textForPrompt = 'Confirm to sign and send transaction.';
+      textForPrompt = t('home:auth_confirm_sign_send');
     } else if (props.type === 'sync') {
-      textForPrompt = 'Confirm to sync SSP Wallet with SSP Key.';
+      textForPrompt = t('home:auth_confirm_sync');
     }
     console.log('Initiate Fingerprint');
     rnBiometrics
@@ -101,7 +101,7 @@ const Authentication = (props: {
       console.log('Grant Access');
       const storedPassword = await EncryptedStorage.getItem('ssp_key_pw');
       if (password !== storedPassword) {
-        displayMessage('error', 'Password PIN is incorrect');
+        displayMessage('error', t('home:err_auth_pw_incorrect'));
         return;
       }
       setPassword('');
@@ -109,7 +109,7 @@ const Authentication = (props: {
       props.actionStatus(true);
     } catch (error) {
       console.log(error);
-      displayMessage('error', 'Error checking password. Try again later.');
+      displayMessage('error', t('home:err_auth_pw_check'));
     }
   };
 
@@ -157,17 +157,17 @@ const Authentication = (props: {
               ]}
             >
               {props.type === 'tx'
-                ? 'You are about to sign and send transaction!'
+                ? t('home:auth_sign_tx')
                 : props.type === 'sync'
-                ? 'You are about to sync SSP Wallet with SSP Key!'
-                : 'You are about to access sensitive information!'}
+                ? t('home:auth_sync_ssp')
+                : t('home:auth_sensitive_inf')}
             </Text>
             <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
               {props.type === 'tx'
-                ? 'Confirm with password.'
+                ? t('home:auth_confirm_with_pw')
                 : props.type === 'sync'
-                ? 'Confirm with password.'
-                : 'Grant access with password.'}
+                ? t('home:auth_confirm_with_pw')
+                : t('home:auth_grant_access_pw')}
             </Text>
 
             {biometricsAvailable && (
@@ -192,7 +192,7 @@ const Authentication = (props: {
                 autoComplete="new-password"
                 textContentType="password"
                 autoCapitalize="none"
-                placeholder="Set Key Password PIN"
+                placeholder={t('cr:confirm_key_pin')}
                 placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
                 secureTextEntry={passwordVisibility ? false : true}
                 onChangeText={onChangePassword}

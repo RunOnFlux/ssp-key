@@ -59,8 +59,9 @@ const SyncRequest = (props: {
             Gutters.smallRMargin,
           ]}
         >
-          SSP Wallet would like to link and synchronise{' '}
-          {props.chain.toUpperCase()} chain to your SSP Key.
+          {t('home:ssp_sync_request', {
+            chain: props.chain.toUpperCase(),
+          })}
         </Text>
       </View>
       <View style={[Layout.justifyContentEnd]}>

@@ -75,7 +75,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
               numberOfLines={6}
               style={[Common.inputArea, Common.inputAreaModalColors]}
               autoCapitalize="none"
-              placeholder="Input your transaction to sign or xpub of your wallet to sync."
+              placeholder={t('home:manual_input_info')}
               placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
               secureTextEntry={false}
               onChangeText={onChangeManualInput}
