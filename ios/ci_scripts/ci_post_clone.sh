@@ -12,4 +12,5 @@ brew install yarn
 
 # Install dependencies
 yarn
+yarn bundleinstall
 yarn podprod
