@@ -1,9 +1,7 @@
 name: android-build-self
 on:
   push:
-    branches:
-      - master
-  # Allows you to run this workflow manually from the Actions tab
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -26,8 +24,8 @@ jobs:
         id: decode_keystore
         uses: timheuer/base64-to-file@v1
         with:
-          fileName: 'release.keystore'
-          fileDir: '/home/user/actions-runner/_work/ssp-key/ssp-key/android/app/'
+          fileName: "release.keystore"
+          fileDir: "/home/user/actions-runner/_work/ssp-key/ssp-key/android/app/"
           encodedString: ${{ secrets.ANDROID_SIGNING_KEY }}
       - name: Build Android APK Release
         run: |

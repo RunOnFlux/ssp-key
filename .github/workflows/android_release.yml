@@ -1,8 +1,9 @@
 name: android-build
 on:
-  # push:
-  #   branches:
-  #     - master
+  push:
+    # Pattern matched against refs/tags
+    tags:
+      - "**" # Push events to every tag including hierarchical tags like v1.0/beta
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -26,8 +27,8 @@ jobs:
         id: decode_keystore
         uses: timheuer/base64-to-file@v1
         with:
-          fileName: 'release.keystore'
-          fileDir: '/home/runner/work/ssp-key/ssp-key/android/app/'
+          fileName: "release.keystore"
+          fileDir: "/home/runner/work/ssp-key/ssp-key/android/app/"
           encodedString: ${{ secrets.ANDROID_SIGNING_KEY }}
       - name: Build Android APK Release
         run: |
