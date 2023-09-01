@@ -1,4 +1,4 @@
-name: react-native-android-build-apk
+name: android-build
 on:
   # push:
   #   branches:
