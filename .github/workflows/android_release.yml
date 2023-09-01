@@ -22,23 +22,22 @@ jobs:
       - name: Install npm dependencies
         run: |
           yarn
-      - name: Build Android ABB Release
-        run: |
-          cd android && ./gradlew bundleRelease
+      - name: Decode Keystore
+        id: decode_keystore
+        uses: timheuer/base64-to-file@v1
+        with:
+          fileName: 'keystore/ssp_keystore.jks'
+          encodedString: ${{ secrets.ANDROID_SIGNING_KEY }}
       - name: Build Android APK Release
         run: |
           cd android && ./gradlew assembleRelease
-      - name: Sign ABB Release
-        id: sign_aab
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: android/app/build/outputs/bundle/release
-          signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
-          alias: ${{ secrets.ANDROID_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Build Android ABB Release
+        run: |
+          cd android && ./gradlew bundleRelease
         env:
-          BUILD_TOOLS_VERSION: "33.0.2"
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
       - name: Sign APK Release
         id: sign_apk
         uses: r0adkll/sign-android-release@v1
