@@ -10,6 +10,7 @@ brew install yarn
 
 # Install dependencies
 yarn
+gem install bundler:2.1.4
 bundle update --bundler
 yarn bundleinstall
 yarn podprod
