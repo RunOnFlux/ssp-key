@@ -59,6 +59,7 @@ import {
 } from '../../store/flux';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
+import { useSocket } from 'ssp-key/src/hooks/useSocket';
 
 type Props = {
   navigation: any;
@@ -97,6 +98,8 @@ function Home({ navigation }: Props) {
     sspWalletIdentity,
   } = useAppSelector((state) => state.flux);
 
+  const { newTx, clearTx } = useSocket();
+
   useEffect(() => {
     if (alreadyMounted.current) {
       return;
@@ -119,6 +122,13 @@ function Home({ navigation }: Props) {
 
     checkXpubXpriv();
   });
+
+  useEffect(() => {
+    if(newTx) {
+      handleTxRequest(newTx);
+      clearTx?.();
+    }
+  }, [newTx, clearTx]);
 
   const checkXpubXpriv = () => {
     if (!xpubKey || !xprivKey) {
