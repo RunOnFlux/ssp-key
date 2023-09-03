@@ -17,8 +17,7 @@ export function loadSSPConfig() {
 loadSSPConfig();
 
 const ssp = {
-  // relay: 'relay.ssp.runonflux.io',
-  relay: 'espn-houston-stevens-boards.trycloudflare.com',
+  relay: 'relay.ssp.runonflux.io',
 };
 
 export function sspConfig() {
