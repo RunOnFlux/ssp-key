@@ -60,6 +60,7 @@ import {
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 import { useSocket } from 'ssp-key/src/hooks/useSocket';
+import { getFCMToken } from 'ssp-key/src/lib/fcmHelper';
 
 type Props = {
   navigation: any;
@@ -215,7 +216,9 @@ function Home({ navigation }: Props) {
           walletIdentity: generatedSspWalletIdentity,
           keyXpub: xpubKeyDecrypted,
           wkIdentity: generatedSspWalletKeyIdentity.address,
+          fcmSSPKeyToken: await getFCMToken(),
         };
+        console.log(syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
         setSyncSuccessOpen(true);

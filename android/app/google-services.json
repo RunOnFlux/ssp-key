@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "6895724098",
+    "project_id": "ssp-key-854d1",
+    "storage_bucket": "ssp-key-854d1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6895724098:android:451b57ce807071d4872fdb",
+        "android_client_info": {
+          "package_name": "io.runonflux.sspkey"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "6895724098-qnvn74mssos3pdj6oeicidnj1o3fvd40.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAi6lR7Kl7oXI9tS19lwii5EELCeHVtzPw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "6895724098-qnvn74mssos3pdj6oeicidnj1o3fvd40.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

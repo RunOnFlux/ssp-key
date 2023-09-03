@@ -2,86 +2,74 @@ import React, { createContext, useState, useEffect } from 'react';
 import io, { Socket } from 'socket.io-client';
 import { useAppSelector } from 'ssp-key/src/hooks';
 import { sspConfig } from '@storage/ssp';
-import { Vibration } from 'react-native';
-import notifee from '@notifee/react-native';
+import { Vibration, AppState } from 'react-native';
 
 interface SocketContextType {
   socket: Socket | null;
   newTx: string;
-  clearTx?:() => void;
+  clearTx?: () => void;
 }
 
 const defaultValue: SocketContextType = {
   socket: null,
-  newTx:''
+  newTx: '',
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-  const { sspWalletKeyIdentity } = useAppSelector((state) => state.flux);
+  const {
+    sspWalletKeyIdentity: wkIdentity,
+    sspWalletIdentity: walletIdentity,
+  } = useAppSelector((state) => state.flux);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [newTx, setNewTx] = useState('');
 
   useEffect(() => {
-    if (!sspWalletKeyIdentity) {
+    if (!wkIdentity) {
       return;
     }
 
-    const newSocket = io(
-      `https://${sspConfig().relay}`,
-      {
-        reconnectionAttempts: 3,
-        timeout: 10000,
-      },
-    );
+    const newSocket = io(`https://${sspConfig().relay}`, {
+      reconnectionAttempts: 100,
+      timeout: 10000,
+    });
 
     newSocket.on('connect_error', (error) => {
       console.error('Connection Error', error);
     });
 
-    newSocket.emit("join", {
-      id: sspWalletKeyIdentity
+    newSocket.emit('join', {
+      wkIdentity,
     });
 
-    newSocket.on("tx", ({tx}) => {
-      setNewTx(tx.payload);   
-      Vibration.vibrate();
-      displayNotification();
+    newSocket.on('tx', ({ tx }) => {
+      setNewTx(tx.payload);
     });
 
     setSocket(newSocket);
     return () => {
       newSocket.close();
     };
-  }, [sspWalletKeyIdentity]);
+  }, [wkIdentity]);
+
+  useEffect(() => {
+    if (socket) {
+      AppState.addEventListener('change', (state) => {
+        if (state == 'active') {
+          socket.emit('join', {
+            wkIdentity,
+          });
+        } else if (state == 'background') {
+          socket?.emit('leave', { wkIdentity });
+        }
+      });
+    }
+  }, [socket, wkIdentity]);
 
   const clearTx = () => {
     setNewTx('');
-  }
-
-  async function displayNotification() {
-    await notifee.requestPermission();
-    // Create a channel (required for Android)
-    const channelId = await notifee.createChannel({
-      id: 'default',
-      name: 'Default Channel',
-    });
-
-    // Display a notification
-    await notifee.displayNotification({
-      title: 'New transaction received',
-      body: 'Please confirm or reject if not initiated by you',
-      android: {
-        channelId,
-        // pressAction is needed if you want the notification to open the app when pressed
-        pressAction: {
-          id: 'default',
-        },
-      },
-    });
-  }
-
+  };
 
   return (
     <SocketContext.Provider value={{ socket, newTx: newTx, clearTx }}>
@@ -89,5 +77,3 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     </SocketContext.Provider>
   );
 };
-
-

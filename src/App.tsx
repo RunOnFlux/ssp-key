@@ -7,12 +7,12 @@ import { PersistGate } from 'redux-persist/lib/integration/react';
 import { store, persistor } from './store';
 import ApplicationNavigator from './navigators/Application';
 import './translations';
-import notifee, { AuthorizationStatus } from '@notifee/react-native';
 import { btoa, atob } from 'react-native-quick-base64';
 import { Buffer } from 'buffer';
 import 'fastestsmallesttextencoderdecoder';
 import Toast from 'react-native-toast-message';
 import { SocketProvider } from './contexts/SocketContext';
+import { notificationListener, requestUserPermission } from './lib/fcmHelper';
 
 if (!global.btoa) {
   global.btoa = btoa;
@@ -26,26 +26,12 @@ if (!global.Buffer) {
   global.Buffer = Buffer;
 }
 
+
 const App = () => {
 
   useEffect(() => {
-    (async()=>{
-      const settings =  await notifee.requestPermission();
-      if (settings.authorizationStatus === AuthorizationStatus.DENIED) {
-        console.log('User denied permissions request');
-      } else if (settings.authorizationStatus === AuthorizationStatus.AUTHORIZED) {
-         console.log('User granted permissions request');
-      } else if (settings.authorizationStatus === AuthorizationStatus.PROVISIONAL) {
-         console.log('User provisionally granted permissions request');
-      }
-    })();
-
-      notifee.onBackgroundEvent(async ({ type, detail }) => {
-        // Handle background events here
-        console.log("type ", type);
-        console.log("type ", detail);
-      });
-      
+    requestUserPermission();
+    notificationListener();
   }, []);
 
 
