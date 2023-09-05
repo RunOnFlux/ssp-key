@@ -26,14 +26,11 @@ if (!global.Buffer) {
   global.Buffer = Buffer;
 }
 
-
 const App = () => {
-
   useEffect(() => {
     requestUserPermission();
     notificationListener();
   }, []);
-
 
   return (
     <Provider store={store}>

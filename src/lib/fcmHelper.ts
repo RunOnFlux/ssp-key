@@ -44,7 +44,6 @@ export async function notificationListener() {
     });
 
   messaging().onMessage(onMessageReceived);
-
 }
 
 export async function onBackgroundMessageHandler() {
@@ -80,7 +79,7 @@ async function displayNotification(message: Record<string, string>) {
 
 export async function getFCMToken() {
   try {
-    let token = await EncryptedStorage.getItem('fcmtoken');
+    let token = await EncryptedStorage.getItem('fcmkeytoken');
 
     if (token) {
       return token;
@@ -88,10 +87,11 @@ export async function getFCMToken() {
 
     token = await messaging().getToken();
 
-    await EncryptedStorage.setItem('fcmtoken', token);
+    await EncryptedStorage.setItem('fcmkeytoken', token);
 
     return token;
   } catch (error) {
     console.error(error);
+    return null;
   }
 }

@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect } from 'react';
 import io, { Socket } from 'socket.io-client';
 import { useAppSelector } from 'ssp-key/src/hooks';
 import { sspConfig } from '@storage/ssp';
-import { Vibration, AppState } from 'react-native';
+import { AppState } from 'react-native';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -18,10 +18,9 @@ const defaultValue: SocketContextType = {
 export const SocketContext = createContext<SocketContextType>(defaultValue);
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-  const {
-    sspWalletKeyIdentity: wkIdentity,
-    sspWalletIdentity: walletIdentity,
-  } = useAppSelector((state) => state.flux);
+  const { sspWalletKeyIdentity: wkIdentity } = useAppSelector(
+    (state) => state.flux,
+  );
   const [socket, setSocket] = useState<Socket | null>(null);
   const [newTx, setNewTx] = useState('');
 
@@ -31,6 +30,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const newSocket = io(`https://${sspConfig().relay}`, {
+      path: '/v1/socket/key',
       reconnectionAttempts: 100,
       timeout: 10000,
     });
@@ -56,11 +56,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (socket) {
       AppState.addEventListener('change', (state) => {
-        if (state == 'active') {
+        if (state === 'active') {
           socket.emit('join', {
             wkIdentity,
           });
-        } else if (state == 'background') {
+        } else if (state === 'background') {
           socket?.emit('leave', { wkIdentity });
         }
       });

@@ -125,7 +125,7 @@ function Home({ navigation }: Props) {
   });
 
   useEffect(() => {
-    if(newTx) {
+    if (newTx) {
       handleTxRequest(newTx);
       clearTx?.();
     }
@@ -216,7 +216,7 @@ function Home({ navigation }: Props) {
           walletIdentity: generatedSspWalletIdentity,
           keyXpub: xpubKeyDecrypted,
           wkIdentity: generatedSspWalletKeyIdentity.address,
-          fcmSSPKeyToken: await getFCMToken(),
+          keyToken: await getFCMToken(),
         };
         console.log(syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
