@@ -411,7 +411,13 @@ function Restore({ navigation }: Props) {
               value={WSPbackedUp}
               style={styles.toggleStyle}
             />
-            <Text style={[Gutters.largeRPadding, Gutters.tinyBMargin]}>
+            <Text
+              style={[
+                Gutters.largeRPadding,
+                Gutters.tinyBMargin,
+                Fonts.textTiny,
+              ]}
+            >
               {t('cr:seed_phrase_backed_up')}
             </Text>
           </View>
