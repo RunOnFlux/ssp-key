@@ -25,6 +25,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [newTx, setNewTx] = useState('');
 
   useEffect(() => {
+    console.log('socket init');
     if (!wkIdentity) {
       return;
     }
@@ -43,7 +44,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       wkIdentity,
     });
 
-    newSocket.on('tx', ({ tx }) => {
+    newSocket.on('tx', (tx) => {
+      console.log('incoming tx');
+      console.log(tx);
       setNewTx(tx.payload);
     });
 
