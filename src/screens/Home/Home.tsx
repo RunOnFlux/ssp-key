@@ -129,7 +129,7 @@ function Home({ navigation }: Props) {
       handleTxRequest(newTx);
       clearTx?.();
     }
-  }, [newTx, clearTx]);
+  }, [newTx]);
 
   const checkXpubXpriv = () => {
     if (!xpubKey || !xprivKey) {

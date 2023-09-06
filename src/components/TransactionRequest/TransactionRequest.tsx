@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ const TransactionRequest = (props: {
   rawTx: string;
   actionStatus: (status: boolean) => void;
 }) => {
+  const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const { address } = useAppSelector((state) => state.flux);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -41,6 +42,10 @@ const TransactionRequest = (props: {
     }
   };
   useEffect(() => {
+    if (alreadyMounted.current) {
+      return;
+    }
+    alreadyMounted.current = true;
     const txInfo = decodeTransactionForApproval(props.rawTx, address);
     setSendingAmount(txInfo.amount);
     setReceiverAddress(txInfo.receiver);

@@ -23,6 +23,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   );
   const [socket, setSocket] = useState<Socket | null>(null);
   const [newTx, setNewTx] = useState('');
+  const [socketIdentiy, setSocketIdentity] = useState('');
 
   useEffect(() => {
     console.log('socket init');
@@ -39,6 +40,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     newSocket.on('connect_error', (error) => {
       console.error('Connection Error', error);
     });
+
+    // leave if identity changed
+    if (socketIdentiy) {
+      newSocket.emit('leave', { wkIdentity: socketIdentiy });
+    }
+    setSocketIdentity(wkIdentity);
 
     newSocket.emit('join', {
       wkIdentity,
