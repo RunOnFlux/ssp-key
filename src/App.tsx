@@ -1,7 +1,7 @@
 import 'react-native-reanimated';
 import 'react-native-gesture-handler';
 import 'react-native-quick-crypto';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/lib/integration/react';
 import { store, persistor } from './store';
@@ -27,10 +27,15 @@ if (!global.Buffer) {
 }
 
 const App = () => {
+  const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   useEffect(() => {
+    if (alreadyMounted.current) {
+      return;
+    }
+    alreadyMounted.current = true;
     requestUserPermission();
     notificationListener();
-  }, []);
+  });
 
   return (
     <Provider store={store}>
