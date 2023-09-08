@@ -1,6 +1,5 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
-
 buildscript {
     ext {
         buildToolsVersion = "33.0.0"
@@ -15,12 +14,10 @@ buildscript {
         google()
         mavenCentral()
     }
-
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        
         classpath("com.google.gms:google-services:4.3.15")
     }
 }
