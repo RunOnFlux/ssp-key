@@ -131,7 +131,7 @@ function Home({ navigation }: Props) {
     }
   }, [newTx]);
 
-  const checkXpubXpriv = () => {
+  const checkXpubXpriv = async () => {
     if (!xpubKey || !xprivKey) {
       // just a precaution to make sure xpub and xpriv are set. Should acutally never end up here
       getUniqueId()
@@ -158,6 +158,11 @@ function Home({ navigation }: Props) {
         .catch((error) => {
           console.log(error.message);
         });
+    } else {
+      const token = await getFCMToken();
+      if (token) {
+        postSyncToken(token, sspWalletKeyIdentity);
+      }
     }
   };
 
@@ -272,6 +277,21 @@ function Home({ navigation }: Props) {
     };
     axios
       .post(`https://${sspConfig().relay}/v1/action`, data)
+      .then((res) => {
+        console.log(res.data);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
+  const postSyncToken = async (token: string, wkIdentity: string) => {
+    // post fcm token tied to wkIdentity
+    const data = {
+      keyToken: token,
+      wkIdentity,
+    };
+    axios
+      .post(`https://${sspConfig().relay}/v1/token`, data)
       .then((res) => {
         console.log(res.data);
       })
