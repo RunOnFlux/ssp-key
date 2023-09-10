@@ -3,6 +3,7 @@ import messaging, {
 } from '@react-native-firebase/messaging';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import notifee from '@notifee/react-native';
+import { Platform } from 'react-native';
 
 export async function requestUserPermission() {
   const authStatus = await messaging().requestPermission();
@@ -13,7 +14,10 @@ export async function requestUserPermission() {
   if (enabled) {
     console.log('Authorization status:', authStatus);
   }
-  await messaging().registerDeviceForRemoteMessages();
+  if (Platform.OS === 'android') {
+    // on ios already autoregistered
+    await messaging().registerDeviceForRemoteMessages();
+  }
   await notifee.requestPermission();
 }
 
