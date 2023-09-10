@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "233280865272",
+    "project_id": "ssp-key",
+    "storage_bucket": "ssp-key.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:233280865272:android:c673b395b4f00b002d0c0d",
+        "android_client_info": {
+          "package_name": "io.runonflux.sspkey"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "233280865272-6jklevo64lju5ca9na8giuvq1cmk56ts.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAeUIIRZ0GMvYKqKdXw57XPFaj3kaFIf5E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "233280865272-6jklevo64lju5ca9na8giuvq1cmk56ts.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "233280865272-9kbr7a6gqophsi20ueoj6k5i5dr0jgpb.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "io.runonflux.sspkey",
+                "app_store_id": "6463717332"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

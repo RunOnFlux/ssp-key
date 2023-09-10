@@ -16,6 +16,9 @@
     "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process' --yarn && patch-package && react-native setup-ios-permissions"
   },
   "dependencies": {
+    "@notifee/react-native": "^7.8.0",
+    "@react-native-firebase/app": "^18.3.2",
+    "@react-native-firebase/messaging": "^18.3.2",
     "@react-native-masked-view/masked-view": "^0.2.9",
     "@react-navigation/bottom-tabs": "^6.5.8",
     "@react-navigation/native": "^6.1.7",
@@ -57,6 +60,7 @@
     "react-redux": "^8.1.2",
     "readable-stream": "^4.4.2",
     "redux-persist": "^6.0.0",
+    "socket.io-client": "^4.7.2",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5",
     "utxo-lib": "https://github.com/RunOnFlux/utxo-lib"
