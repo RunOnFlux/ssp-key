@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
 function PoweredByFlux() {
-  const { t } = useTranslation(['home', 'common']);
+  const { t } = useTranslation(['common']);
   const { Fonts, Layout } = useTheme();
 
   const openFlux = () => {
@@ -26,7 +26,7 @@ function PoweredByFlux() {
         <Text style={[Fonts.textSmall]}>{t('common:powered_by')} </Text>
         <TouchableOpacity onPressIn={() => openFlux()}>
           <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
-            {t('common:Flux')}
+            {t('common:flux')}
           </Text>
         </TouchableOpacity>
       </View>
