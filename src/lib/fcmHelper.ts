@@ -2,7 +2,7 @@ import messaging, {
   FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import notifee, { AndroidColor } from '@notifee/react-native';
+import notifee from '@notifee/react-native';
 import { AppState, Platform } from 'react-native';
 
 export async function requestUserPermission() {
@@ -23,9 +23,8 @@ export async function requestUserPermission() {
 
 export async function notificationListener() {
   notifee.onBackgroundEvent(async ({ type, detail }) => {
-    // console.log('type ', type);
-    // console.log('detail ', detail);
-
+    console.log('type ', type);
+    console.log('detail ', detail);
   });
 
   messaging().onNotificationOpenedApp((remoteMessage) => {
@@ -58,7 +57,6 @@ export async function onBackgroundMessageHandler() {
 async function onMessageReceived(
   message: FirebaseMessagingTypes.RemoteMessage,
 ) {
-  // await displayNotification((message?.notification as any) ?? {});
   if (AppState.currentState !== 'background') {
     await displayNotification((message?.notification as any) ?? {});
   }
