@@ -3,7 +3,7 @@ import messaging, {
 } from '@react-native-firebase/messaging';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import notifee from '@notifee/react-native';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 export async function requestUserPermission() {
   const authStatus = await messaging().requestPermission();
@@ -57,7 +57,9 @@ export async function onBackgroundMessageHandler() {
 async function onMessageReceived(
   message: FirebaseMessagingTypes.RemoteMessage,
 ) {
-  await displayNotification((message?.notification as any) ?? {});
+  if (AppState.currentState !== 'background') {
+    await displayNotification((message?.notification as any) ?? {});
+  }
 }
 
 async function displayNotification(message: Record<string, string>) {
