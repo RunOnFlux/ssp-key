@@ -33,7 +33,7 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
 
   const openDiscord = () => {
     console.log('Open Discord');
-    Linking.openURL('https://discord.io/runonflux');
+    Linking.openURL('https://discord.gg/runonflux');
   };
 
   return (
