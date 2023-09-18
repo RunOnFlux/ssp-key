@@ -10,6 +10,13 @@ interface SocketContextType {
   clearTx?: () => void;
 }
 
+interface serverResponse {
+  payload: string;
+  action: string;
+  wkIdentity: string;
+  chain: string;
+}
+
 const defaultValue: SocketContextType = {
   socket: null,
   newTx: '',
@@ -51,7 +58,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       wkIdentity,
     });
 
-    newSocket.on('tx', (tx) => {
+    newSocket.on('tx', (tx: serverResponse) => {
       console.log('incoming tx');
       console.log(tx);
       setNewTx(tx.payload);
