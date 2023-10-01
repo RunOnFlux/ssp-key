@@ -1,11 +1,12 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+import { wallets, wallet } from '../../types';
+
 export interface FluxState {
   xpubWallet: string;
   xpubKey: string;
   xprivKey: string;
-  address: string;
-  redeemScript: string;
+  wallets: wallets;
   sspWalletKeyIdentity: string;
   sspWalletIdentity: string;
 }
@@ -14,21 +15,37 @@ const initialState: FluxState = {
   xpubWallet: '', // encrypted
   xpubKey: '', // encrypted
   xprivKey: '', // encrypted
-  address: '',
-  redeemScript: '', // encrypted
+  wallets: {},
   sspWalletKeyIdentity: '',
   sspWalletIdentity: '',
+};
+
+const initialWalletState: wallet = {
+  address: '',
+  redeemScript: '',
 };
 
 const fluxSlice = createSlice({
   name: 'flux',
   initialState,
   reducers: {
-    setAddress: (state, action: PayloadAction<string>) => {
-      state.address = action.payload;
+    setAddress: (
+      state,
+      action: PayloadAction<{ wallet: string; data: string }>,
+    ) => {
+      state.wallets[action.payload.wallet] = state.wallets[
+        action.payload.wallet
+      ] || { ...initialWalletState };
+      state.wallets[action.payload.wallet].address = action.payload.data;
     },
-    setRedeemScript: (state, action: PayloadAction<string>) => {
-      state.redeemScript = action.payload;
+    setRedeemScript: (
+      state,
+      action: PayloadAction<{ wallet: string; data: string }>,
+    ) => {
+      state.wallets[action.payload.wallet] = state.wallets[
+        action.payload.wallet
+      ] || { ...initialWalletState };
+      state.wallets[action.payload.wallet].redeemScript = action.payload.data;
     },
     setXpubWallet: (state, action: PayloadAction<string>) => {
       state.xpubWallet = action.payload;
@@ -50,8 +67,7 @@ const fluxSlice = createSlice({
       state.xpubWallet = '';
       state.xpubKey = '';
       state.xprivKey = '';
-      state.address = '';
-      state.redeemScript = '';
+      state.wallets = {};
       state.sspWalletKeyIdentity = '';
       state.sspWalletIdentity = '';
     },

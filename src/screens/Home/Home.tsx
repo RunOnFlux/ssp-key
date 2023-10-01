@@ -90,14 +90,16 @@ function Home({ navigation }: Props) {
 
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   const {
-    address,
-    redeemScript,
+    wallets,
     xpubWallet,
     xpubKey,
     xprivKey,
     sspWalletKeyIdentity,
     sspWalletIdentity,
   } = useAppSelector((state) => state.flux);
+
+  const address = wallets['0-0'].address;
+  const redeemScript = wallets['0-0'].redeemScript;
 
   const { newTx, clearTx } = useSocket();
 
@@ -188,12 +190,14 @@ function Home({ navigation }: Props) {
           0,
           'flux',
         );
-        dispatch(setAddress(addrInfo.address));
+        dispatch(setAddress({ wallet: '0-0', data: addrInfo.address }));
         const encryptedReedemScript = CryptoJS.AES.encrypt(
           addrInfo.redeemScript,
           pwForEncryption,
         ).toString();
-        dispatch(setRedeemScript(encryptedReedemScript));
+        dispatch(
+          setRedeemScript({ wallet: '0-0', data: encryptedReedemScript }),
+        );
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
           suppliedXpubWallet,
           pwForEncryption,
@@ -267,12 +271,14 @@ function Home({ navigation }: Props) {
     action: string,
     payload: string,
     chain: string,
+    path: string,
     wkIdentity: string,
   ) => {
     const data = {
       action,
       payload,
       chain,
+      path,
       wkIdentity,
     };
     axios
@@ -333,7 +339,7 @@ function Home({ navigation }: Props) {
         console.log(ttxid);
         setRawTx('');
         // here tell ssp-relay that we are finished, rewrite the request
-        await postAction('txid', ttxid, 'flux', sspWalletKeyIdentity);
+        await postAction('txid', ttxid, 'flux', '0-0', sspWalletKeyIdentity);
         setTxid(ttxid);
       } catch (error) {
         console.log(error);
@@ -471,7 +477,13 @@ function Home({ navigation }: Props) {
         // reject
         const rtx = rawTx;
         setRawTx('');
-        await postAction('txrejected', rtx, 'flux', sspWalletKeyIdentity);
+        await postAction(
+          'txrejected',
+          rtx,
+          'flux',
+          '0-0',
+          sspWalletKeyIdentity,
+        );
       }
     } catch (error) {
       console.log(error);

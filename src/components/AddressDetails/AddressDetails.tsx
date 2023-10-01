@@ -11,16 +11,15 @@ import { useAppSelector } from '../../hooks';
 const CryptoJS = require('crypto-js');
 
 const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
-  // we have address, redeemScript, privateKey
-  const { address, redeemScript, xprivKey } = useAppSelector(
-    (state) => state.flux,
-  );
+  const { wallets, xprivKey } = useAppSelector((state) => state.flux);
   const [decryptedRedeemScript, setDecryptedRedeemScript] = useState('');
   const [decryptedPrivateKey, setDecryptedPrivateKey] = useState('');
   const [redeemScriptVisible, setRedeemScriptVisible] = useState(false);
   const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const address = wallets['0-0'].address;
+  const redeemScript = wallets['0-0'].redeemScript;
 
   useEffect(() => {
     getUniqueId()

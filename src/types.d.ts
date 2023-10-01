@@ -127,3 +127,10 @@ export type currencySSPRelay = Record<
     usd: number;
   }
 >;
+
+export interface wallet {
+  address: string;
+  redeemScript: string;
+}
+
+export type wallets = Record<string, wallet>;
