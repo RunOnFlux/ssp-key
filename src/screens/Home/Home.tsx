@@ -179,7 +179,7 @@ function Home({ navigation }: Props) {
   const generateAddresses = (suppliedXpubWallet: string) => {
     getUniqueId()
       .then(async (id) => {
-        // clean up password from encrypted storage
+        // get password from encrypted storage
         const password = await EncryptedStorage.getItem('ssp_key_pw');
         const pwForEncryption = id + password;
         const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
@@ -240,6 +240,29 @@ function Home({ navigation }: Props) {
           displayMessage('error', t('home:err_sync_failed'));
         }, 200);
       });
+  };
+
+  const generateAddressDetailsForSending = (
+    chain: string,
+    path: string,
+    decryptedXpubWallet: string,
+    decryptedXpubKey: string,
+  ) => {
+    const splittedDerPath = path.split('-');
+    const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
+    const addressIndex = Number(splittedDerPath[1]);
+    const addrInfo = generateMultisigAddress(
+      decryptedXpubWallet,
+      decryptedXpubKey,
+      typeIndex,
+      addressIndex,
+      chain,
+    );
+    const addrDetails = {
+      address: addrInfo.address,
+      redeemScript: addrInfo.redeemScript,
+    };
+    return addrDetails;
   };
 
   const openManualInput = () => {
@@ -324,20 +347,29 @@ function Home({ navigation }: Props) {
     derivationPath: string,
   ) => {
     try {
-      const utxos = await fetchUtxos(address, chain);
-      console.log(utxos);
       const id = await getUniqueId();
       const password = await EncryptedStorage.getItem('ssp_key_pw');
-
       const pwForEncryption = id + password;
+
+      const xpubk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
+      const xpubKeyDecrypted = xpubk.toString(CryptoJS.enc.Utf8);
+      const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
+      const xpubKeyWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
+
+      const addressDetails = generateAddressDetailsForSending(
+        chain,
+        derivationPath,
+        xpubKeyWalletDecrypted,
+        xpubKeyDecrypted,
+      );
+      const utxos = await fetchUtxos(addressDetails.address, chain);
+      console.log(utxos);
+
       const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
       const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-      const rds = CryptoJS.AES.decrypt(redeemScript, pwForEncryption);
-      const redeemScriptDecrypted = rds.toString(CryptoJS.enc.Utf8);
 
       const splittedDerPath = derivationPath.split('-');
       const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
-
       const addressIndex = Number(splittedDerPath[1]);
 
       const keyPair = generateAddressKeypair(
@@ -351,7 +383,7 @@ function Home({ navigation }: Props) {
           rawTransactions,
           chain,
           keyPair.privKey,
-          redeemScriptDecrypted,
+          addressDetails.redeemScript,
           utxos,
         );
         const finalTx = finaliseTransaction(signedTx, chain);
