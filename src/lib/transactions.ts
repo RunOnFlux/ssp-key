@@ -111,11 +111,7 @@ interface output {
   value: number;
 }
 
-export function decodeTransactionForApproval(
-  rawTx: string,
-  myAddress: string,
-  chain = 'flux',
-) {
+export function decodeTransactionForApproval(rawTx: string, chain: string) {
   try {
     const network = utxolib.networks[chain];
     const txhex = rawTx;
@@ -126,11 +122,17 @@ export function decodeTransactionForApproval(
     console.log(JSON.stringify(txb));
     let txReceiver = '';
     let amount = '0';
+    let senderAddress = '';
+    const scriptPubKey = utxolib.script.scriptHash.output.encode(
+      utxolib.crypto.hash160(txb.inputs[0].redeemScript),
+    );
+
+    senderAddress = utxolib.address.fromOutputScript(scriptPubKey, network);
     txb.tx.outs.forEach((out: output) => {
       if (out.value) {
         const address = utxolib.address.fromOutputScript(out.script, network);
         console.log(address);
-        if (address !== myAddress) {
+        if (address !== senderAddress) {
           txReceiver = address;
           amount = new BigNumber(out.value)
             .dividedBy(new BigNumber(1e8))

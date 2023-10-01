@@ -7,14 +7,12 @@ import Authentication from '../Authentication/Authentication';
 import { useTheme } from '../../hooks';
 import { decodeTransactionForApproval } from '../../lib/transactions';
 
-import { useAppSelector } from '../../hooks';
-
 const TransactionRequest = (props: {
   rawTx: string;
+  chain: string;
   actionStatus: (status: boolean) => void;
 }) => {
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
-  const { address } = useAppSelector((state) => state.flux);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [sendingAmount, setSendingAmount] = useState('');
@@ -46,7 +44,7 @@ const TransactionRequest = (props: {
       return;
     }
     alreadyMounted.current = true;
-    const txInfo = decodeTransactionForApproval(props.rawTx, address);
+    const txInfo = decodeTransactionForApproval(props.rawTx, props.chain);
     setSendingAmount(txInfo.amount);
     setReceiverAddress(txInfo.receiver);
     if (

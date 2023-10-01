@@ -74,6 +74,8 @@ function Home({ navigation }: Props) {
   const { Fonts, Gutters, Layout, Images, Colors, Common } = useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [rawTx, setRawTx] = useState('');
+  const [txChain, setTxChain] = useState('');
+  const [txPath, setTxPath] = useState('');
   const [syncReq, setSyncReq] = useState('');
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
@@ -114,8 +116,7 @@ function Home({ navigation }: Props) {
     }
 
     if (
-      !address ||
-      !redeemScript ||
+      !xpubKey ||
       !xpubWallet ||
       !sspWalletKeyIdentity ||
       !sspWalletIdentity
@@ -305,15 +306,25 @@ function Home({ navigation }: Props) {
         console.log(error);
       });
   };
-  const handleTxRequest = async (rawTransactions: string) => {
+  const handleTxRequest = async (
+    rawTransactions: string,
+    chain = 'flux',
+    path = '0-0',
+  ) => {
     setRawTx(rawTransactions);
+    setTxChain(chain);
+    setTxPath(path);
   };
   const handleSyncRequest = async (xpubw: string) => {
     setSyncReq(xpubw);
   };
-  const approveTransaction = async (rawTransactions: string) => {
+  const approveTransaction = async (
+    rawTransactions: string,
+    chain: string,
+    derivationPath: string,
+  ) => {
     try {
-      const utxos = await fetchUtxos(address, 'flux');
+      const utxos = await fetchUtxos(address, chain);
       console.log(utxos);
       const id = await getUniqueId();
       const password = await EncryptedStorage.getItem('ssp_key_pw');
@@ -324,22 +335,40 @@ function Home({ navigation }: Props) {
       const rds = CryptoJS.AES.decrypt(redeemScript, pwForEncryption);
       const redeemScriptDecrypted = rds.toString(CryptoJS.enc.Utf8);
 
-      const keyPair = generateAddressKeypair(xprivKeyDecrypted, 0, 0, 'flux');
+      const splittedDerPath = derivationPath.split('-');
+      const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
+
+      const addressIndex = Number(splittedDerPath[1]);
+
+      const keyPair = generateAddressKeypair(
+        xprivKeyDecrypted,
+        typeIndex,
+        addressIndex,
+        chain,
+      );
       try {
         const signedTx = await signTransaction(
           rawTransactions,
-          'flux',
+          chain,
           keyPair.privKey,
           redeemScriptDecrypted,
           utxos,
         );
-        const finalTx = finaliseTransaction(signedTx, 'flux');
+        const finalTx = finaliseTransaction(signedTx, chain);
         console.log(finalTx);
-        const ttxid = await broadcastTx(finalTx, 'flux');
+        const ttxid = await broadcastTx(finalTx, chain);
         console.log(ttxid);
         setRawTx('');
+        setTxChain('');
+        setTxPath('');
         // here tell ssp-relay that we are finished, rewrite the request
-        await postAction('txid', ttxid, 'flux', '0-0', sspWalletKeyIdentity);
+        await postAction(
+          'txid',
+          ttxid,
+          chain,
+          derivationPath,
+          sspWalletKeyIdentity,
+        );
         setTxid(ttxid);
       } catch (error) {
         console.log(error);
@@ -444,7 +473,11 @@ function Home({ navigation }: Props) {
         console.log('result', result.data);
         if (result.data.action === 'tx') {
           // only this action is valid for us
-          handleTxRequest(result.data.payload);
+          handleTxRequest(
+            result.data.payload,
+            result.data.chain,
+            result.data.path,
+          );
         }
       } else if (sspWalletIdentity) {
         // should not be possible?
@@ -472,11 +505,15 @@ function Home({ navigation }: Props) {
     try {
       if (status === true) {
         const rtx = rawTx;
-        await approveTransaction(rtx);
+        const rchain = txChain;
+        const rpath = txPath;
+        await approveTransaction(rtx, rchain, rpath);
       } else {
         // reject
         const rtx = rawTx;
         setRawTx('');
+        setTxChain('');
+        setTxPath('');
         await postAction(
           'txrejected',
           rtx,
@@ -700,6 +737,7 @@ function Home({ navigation }: Props) {
       {rawTx && (
         <TransactionRequest
           rawTx={rawTx}
+          chain={txChain}
           actionStatus={handleTransactionRequestAction}
         />
       )}
