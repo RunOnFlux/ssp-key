@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -18,13 +17,13 @@ import AddressDetails from '../../components/AddressDetails/AddressDetails';
 import SSPKeyDetails from '../../components/SSPKeyDetails/SSKeyDetails';
 import TxSent from '../../components/TxSent/TxSent';
 import SyncSuccess from '../../components/SyncSuccess/SyncSuccess';
-import HelpSection from '../../components/HelpSection/HelpSection';
 import Authentication from '../../components/Authentication/Authentication';
 import SettingsSection from '../../components/SettingsSection/SettingsSection';
 import SyncNeeded from '../../components/SyncNeeded/SyncNeeded';
 import ManualInput from '../../components/ManualInput/ManualInput';
 import MenuModal from '../../components/MenuModal/MenuModal';
 import Scanner from '../../components/Scanner/Scanner';
+import Navbar from '../../components/Navbar/Navbar';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -71,7 +70,7 @@ function Home({ navigation }: Props) {
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const dispatch = useAppDispatch();
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Images, Colors, Common } = useTheme();
+  const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [rawTx, setRawTx] = useState('');
   const [txChain, setTxChain] = useState('');
@@ -82,7 +81,6 @@ function Home({ navigation }: Props) {
   const [addrDetailsOpen, setAddrDetailsOpen] = useState(false);
   const [sspKeyDetailsOpen, setSSPKeyDetailsOpen] = useState(false);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
-  const [helpSectionModalOpen, setHelpSectionModalOpen] = useState(false);
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const [actionToPerform, setActionToPerform] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -448,9 +446,6 @@ function Home({ navigation }: Props) {
     }
     setIsMenuModalOpen(false);
   };
-  const openHelp = () => {
-    setHelpSectionModalOpen(true);
-  };
   const openSettings = () => {
     setIsMenuModalOpen(!isMenuModalOpen);
   };
@@ -595,11 +590,6 @@ function Home({ navigation }: Props) {
     setSettingsMenuOpen(false);
   };
 
-  const handleHelpModalAction = () => {
-    console.log('help modal close.');
-    setHelpSectionModalOpen(false);
-  };
-
   const handleSyncNeededModalAction = async (status: string) => {
     try {
       setSyncNeededModalOpen(false);
@@ -642,32 +632,7 @@ function Home({ navigation }: Props) {
         Layout.scrollSpaceBetween,
       ]}
     >
-      <View
-        style={[
-          Layout.row,
-          Layout.justifyContentBetween,
-          Layout.fullWidth,
-          Gutters.smallHPadding,
-          Gutters.tinyTMargin,
-        ]}
-      >
-        <Image
-          style={{ width: 35, height: 35 }}
-          source={Images.ssp.logo}
-          resizeMode={'contain'}
-        />
-        <View style={[Layout.row, Gutters.tinyTMargin]}>
-          <TouchableOpacity
-            onPressIn={() => openHelp()}
-            style={[Gutters.smallRMargin]}
-          >
-            <Icon name="help-circle" size={22} color={Colors.textGray400} />
-          </TouchableOpacity>
-          <TouchableOpacity onPressIn={() => openSettings()}>
-            <Icon name="settings" size={22} color={Colors.textGray400} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Navbar openSettingsTrigger={openSettings} />
       <Divider color={Colors.textGray200} />
       {!rawTx && !syncReq && (
         <>
@@ -798,9 +763,6 @@ function Home({ navigation }: Props) {
           actionStatus={handleSettingsModalAction}
           navigation={navigation}
         />
-      )}
-      {helpSectionModalOpen && (
-        <HelpSection actionStatus={handleHelpModalAction} />
       )}
       {syncNeededModalOpen && (
         <SyncNeeded actionStatus={handleSyncNeededModalAction} />
