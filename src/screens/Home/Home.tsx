@@ -99,8 +99,6 @@ function Home({ navigation }: Props) {
     sspWalletKeyIdentity,
     sspWalletIdentity,
   } = useAppSelector((state) => state.flux);
-  console.log(wallets);
-  console.log(wallets['0-0']);
 
   const { newTx, clearTx } = useSocket();
 
@@ -786,7 +784,11 @@ function Home({ navigation }: Props) {
         />
       )}
       {addrDetailsOpen && (
-        <AddressDetails actionStatus={handleAddrDetailsModalAction} />
+        <AddressDetails
+          chain="flux"
+          path="0-0"
+          actionStatus={handleAddrDetailsModalAction}
+        />
       )}
       {sspKeyDetailsOpen && (
         <SSPKeyDetails actionStatus={handleSSPKeyModalAction} />

@@ -5,19 +5,31 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import { generateAddressKeypair } from '../../lib/wallet';
+import {
+  generateAddressKeypair,
+  generateMultisigAddress,
+} from '../../lib/wallet';
 import { useAppSelector } from '../../hooks';
 
 const CryptoJS = require('crypto-js');
 
-const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
-  const { wallets, xprivKey } = useAppSelector((state) => state.flux);
+const AddressDetails = (props: {
+  chain: string;
+  path: string;
+  actionStatus: (status: boolean) => void;
+}) => {
+  const { xprivKey, xpubKey, xpubWallet } = useAppSelector(
+    (state) => state.flux,
+  );
   const [decryptedRedeemScript, setDecryptedRedeemScript] = useState('');
   const [decryptedPrivateKey, setDecryptedPrivateKey] = useState('');
+  const [address, setAddress] = useState('');
   const [redeemScriptVisible, setRedeemScriptVisible] = useState(false);
   const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const derivationPath = props.path;
+  const derivationChain = props.chain;
 
   useEffect(() => {
     getUniqueId()
@@ -28,21 +40,60 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
         const pwForEncryption = id + password;
         const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
         const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-        const rds = CryptoJS.AES.decrypt(
-          wallets['0-0']?.redeemScript,
-          pwForEncryption,
-        );
-        const redeemScriptDecrypted = rds.toString(CryptoJS.enc.Utf8);
-        setDecryptedRedeemScript(redeemScriptDecrypted);
+        const xpubk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
+        const xpubKeyDecrypted = xpubk.toString(CryptoJS.enc.Utf8);
+        const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
+        const xpubKeyWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
 
-        const keyPair = generateAddressKeypair(xprivKeyDecrypted, 0, 0, 'flux');
-        const pricateKey = keyPair.privKey;
-        setDecryptedPrivateKey(pricateKey);
+        const splittedDerPath = derivationPath.split('-');
+        const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
+        const addressIndex = Number(splittedDerPath[1]);
+
+        const keyPair = generateAddressKeypair(
+          xprivKeyDecrypted,
+          typeIndex,
+          addressIndex,
+          derivationChain,
+        );
+        const privateKey = keyPair.privKey;
+        setDecryptedPrivateKey(privateKey);
+
+        const addressDetails = generateAddressDetails(
+          derivationChain,
+          derivationPath,
+          xpubKeyWalletDecrypted,
+          xpubKeyDecrypted,
+        );
+        setDecryptedRedeemScript(addressDetails.redeemScript);
+        setAddress(addressDetails.address);
       })
       .catch((error) => {
         console.log(error.message);
       });
   }, []);
+
+  const generateAddressDetails = (
+    chain: string,
+    path: string,
+    decryptedXpubWallet: string,
+    decryptedXpubKey: string,
+  ) => {
+    const splittedDerPath = path.split('-');
+    const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
+    const addressIndex = Number(splittedDerPath[1]);
+    const addrInfo = generateMultisigAddress(
+      decryptedXpubWallet,
+      decryptedXpubKey,
+      typeIndex,
+      addressIndex,
+      chain,
+    );
+    const addrDetails = {
+      address: addrInfo.address,
+      redeemScript: addrInfo.redeemScript,
+    };
+    return addrDetails;
+  };
 
   const close = () => {
     console.log('Close');
@@ -88,7 +139,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
               selectable={true}
               style={[Fonts.textTiny, Fonts.textCenter, Gutters.smallMargin]}
             >
-              {wallets['0-0']?.address}
+              {address}
             </Text>
           </View>
           <View>
