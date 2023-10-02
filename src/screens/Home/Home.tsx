@@ -99,9 +99,8 @@ function Home({ navigation }: Props) {
     sspWalletKeyIdentity,
     sspWalletIdentity,
   } = useAppSelector((state) => state.flux);
-
-  const address = wallets['0-0'].address;
-  const redeemScript = wallets['0-0'].redeemScript;
+  console.log(wallets);
+  console.log(wallets['0-0']);
 
   const { newTx, clearTx } = useSocket();
 
@@ -423,7 +422,7 @@ function Home({ navigation }: Props) {
     } else if (manualInput.startsWith('04')) {
       // transaction
       // sign transaction
-      if (!address || !redeemScript) {
+      if (!wallets['0-0'] || !wallets['0-0'].address) {
         displayMessage('error', t('home:err_sync_with_ssp_needed'));
         console.log('not synced yet');
       } else {
@@ -475,7 +474,7 @@ function Home({ navigation }: Props) {
     } else if (scannedData.startsWith('04')) {
       // transaction
       // sign transaction
-      if (!address || !redeemScript) {
+      if (!wallets['0-0'] || !wallets['0-0'].address) {
         displayMessage('error', t('home:err_sync_with_ssp_needed'));
         console.log('not synced yet');
       } else {
@@ -687,8 +686,8 @@ function Home({ navigation }: Props) {
             <Text
               style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
             >
-              {!address ||
-              !redeemScript ||
+              {!wallets['0-0'] ||
+              !wallets['0-0'].address ||
               !xpubWallet ||
               !sspWalletKeyIdentity ||
               !sspWalletIdentity ? (
@@ -697,8 +696,8 @@ function Home({ navigation }: Props) {
                 t('home:no_pending_actions')
               )}
             </Text>
-            {(!address ||
-              !redeemScript ||
+            {(!wallets['0-0'] ||
+              !wallets['0-0'].address ||
               !xpubWallet ||
               !sspWalletKeyIdentity ||
               !sspWalletIdentity) && (
@@ -782,7 +781,7 @@ function Home({ navigation }: Props) {
       {txid && <TxSent txid={txid} actionStatus={handleTxSentModalAction} />}
       {syncSuccessOpen && (
         <SyncSuccess
-          address={address}
+          address={wallets['0-0'].address}
           actionStatus={handleSyncSuccessModalAction}
         />
       )}

@@ -18,8 +18,6 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
-  const address = wallets['0-0'].address;
-  const redeemScript = wallets['0-0'].redeemScript;
 
   useEffect(() => {
     getUniqueId()
@@ -30,7 +28,10 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
         const pwForEncryption = id + password;
         const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
         const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-        const rds = CryptoJS.AES.decrypt(redeemScript, pwForEncryption);
+        const rds = CryptoJS.AES.decrypt(
+          wallets['0-0']?.redeemScript,
+          pwForEncryption,
+        );
         const redeemScriptDecrypted = rds.toString(CryptoJS.enc.Utf8);
         setDecryptedRedeemScript(redeemScriptDecrypted);
 
@@ -87,7 +88,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
               selectable={true}
               style={[Fonts.textTiny, Fonts.textCenter, Gutters.smallMargin]}
             >
-              {address}
+              {wallets['0-0']?.address}
             </Text>
           </View>
           <View>
