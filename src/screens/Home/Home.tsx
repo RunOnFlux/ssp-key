@@ -123,11 +123,11 @@ function Home({ navigation }: Props) {
   });
 
   useEffect(() => {
-    if (newTx) {
+    if (newTx.rawTx) {
       handleTxRequest(newTx.rawTx, newTx.chain, newTx.path);
       clearTx?.();
     }
-  }, [newTx]);
+  }, [newTx.rawTx]);
 
   const checkXpubXpriv = async () => {
     if (!xpubKey || !xprivKey) {

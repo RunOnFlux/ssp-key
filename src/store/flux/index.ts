@@ -33,6 +33,7 @@ const fluxSlice = createSlice({
       state,
       action: PayloadAction<{ wallet: string; data: string }>,
     ) => {
+      state.wallets = state.wallets || {};
       state.wallets[action.payload.wallet] = state.wallets[
         action.payload.wallet
       ] || { ...initialWalletState };
@@ -42,6 +43,7 @@ const fluxSlice = createSlice({
       state,
       action: PayloadAction<{ wallet: string; data: string }>,
     ) => {
+      state.wallets = state.wallets || {};
       state.wallets[action.payload.wallet] = state.wallets[
         action.payload.wallet
       ] || { ...initialWalletState };

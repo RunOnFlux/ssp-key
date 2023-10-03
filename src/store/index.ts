@@ -11,6 +11,7 @@ import {
   REGISTER,
   Storage,
 } from 'redux-persist';
+import autoMergeLevel2 from 'redux-persist/lib/stateReconciler/autoMergeLevel2';
 import { MMKV } from 'react-native-mmkv';
 
 import theme from './theme';
@@ -42,9 +43,13 @@ export const reduxStorage: Storage = {
 const persistConfig = {
   key: 'root',
   storage: reduxStorage,
+  stateReconciler: autoMergeLevel2,
 };
 
-const persistedReducer = persistReducer(persistConfig, reducers);
+const persistedReducer = persistReducer<ReturnType<typeof reducers>>(
+  persistConfig,
+  reducers,
+);
 
 const store = configureStore({
   reducer: persistedReducer,
