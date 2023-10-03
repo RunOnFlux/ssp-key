@@ -124,7 +124,7 @@ function Home({ navigation }: Props) {
 
   useEffect(() => {
     if (newTx) {
-      handleTxRequest(newTx);
+      handleTxRequest(newTx.rawTx, newTx.chain, newTx.path);
       clearTx?.();
     }
   }, [newTx]);
@@ -535,14 +535,16 @@ function Home({ navigation }: Props) {
       } else {
         // reject
         const rtx = rawTx;
+        const rchain = txChain;
+        const rpath = txPath;
         setRawTx('');
         setTxChain('');
         setTxPath('');
         await postAction(
           'txrejected',
           rtx,
-          'flux',
-          '0-0',
+          rchain,
+          rpath,
           sspWalletKeyIdentity,
         );
       }

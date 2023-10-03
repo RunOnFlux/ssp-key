@@ -6,7 +6,7 @@ import { AppState } from 'react-native';
 
 interface SocketContextType {
   socket: Socket | null;
-  newTx: string;
+  newTx: adjustedServeResponseTx;
   clearTx?: () => void;
 }
 
@@ -15,11 +15,18 @@ interface serverResponse {
   action: string;
   wkIdentity: string;
   chain: string;
+  path: string;
+}
+
+interface adjustedServeResponseTx {
+  rawTx: string;
+  chain: string;
+  path: string;
 }
 
 const defaultValue: SocketContextType = {
   socket: null,
-  newTx: '',
+  newTx: {} as adjustedServeResponseTx,
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
@@ -29,7 +36,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     (state) => state.flux,
   );
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [newTx, setNewTx] = useState('');
+  const [newTx, setNewTx] = useState({} as adjustedServeResponseTx);
   const [socketIdentiy, setSocketIdentity] = useState('');
 
   useEffect(() => {
@@ -61,7 +68,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     newSocket.on('tx', (tx: serverResponse) => {
       console.log('incoming tx');
       console.log(tx);
-      setNewTx(tx.payload);
+      const adjustedTx = {
+        chain: tx.chain,
+        path: tx.path,
+        rawTx: tx.payload,
+      };
+      setNewTx(adjustedTx);
     });
 
     setSocket(newSocket);
@@ -85,7 +97,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   }, [socket, wkIdentity]);
 
   const clearTx = () => {
-    setNewTx('');
+    setNewTx({} as adjustedServeResponseTx);
   };
 
   return (
