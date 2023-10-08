@@ -26,7 +26,7 @@ import {
   getMasterXpub,
 } from '../../lib/wallet';
 
-import { setSeedPhrase, setSeedPhraseInitialState } from '../../store/ssp';
+import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
 import { setXpubKey, setXprivKey } from '../../store/flux';
 
 import { useAppDispatch } from '../../hooks';
@@ -179,7 +179,7 @@ function Create({ navigation }: Props) {
       })
       .catch((error) => {
         setIsLoading(false);
-        dispatch(setSeedPhraseInitialState());
+        dispatch(setSSPInitialState());
         displayMessage('error', t('cr:err_setting_key'));
         console.log(error);
       });

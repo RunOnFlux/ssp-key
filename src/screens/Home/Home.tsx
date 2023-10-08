@@ -53,9 +53,9 @@ import {
   setXpubWallet,
   setRedeemScript,
   setAddress,
-  setSspWalletKeyIdentity,
-  setsspWalletIdentity,
 } from '../../store/flux';
+
+import { setSspWalletKeyIdentity, setsspWalletIdentity } from '../../store/ssp';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 import { useSocket } from 'ssp-key/src/hooks/useSocket';
@@ -88,15 +88,11 @@ function Home({ navigation }: Props) {
   const [manualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
-  const { seedPhrase } = useAppSelector((state) => state.ssp);
-  const {
-    wallets,
-    xpubWallet,
-    xpubKey,
-    xprivKey,
-    sspWalletKeyIdentity,
-    sspWalletIdentity,
-  } = useAppSelector((state) => state.flux);
+  const { seedPhrase, sspWalletKeyIdentity, sspWalletIdentity } =
+    useAppSelector((state) => state.ssp);
+  const { wallets, xpubWallet, xpubKey, xprivKey } = useAppSelector(
+    (state) => state.flux,
+  );
 
   const { newTx, clearTx } = useSocket();
 
