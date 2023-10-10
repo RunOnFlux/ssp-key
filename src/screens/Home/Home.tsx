@@ -69,6 +69,11 @@ type Props = {
 function Home({ navigation }: Props) {
   // focusability of inputs
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
+  const { seedPhrase, sspWalletKeyIdentity, sspWalletIdentity, identityChain } =
+    useAppSelector((state) => state.ssp);
+  const { wallets, xpubWallet, xpubKey, xprivKey } = useAppSelector(
+    (state) => state.flux,
+  );
   const dispatch = useAppDispatch();
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -77,6 +82,7 @@ function Home({ navigation }: Props) {
   const [txChain, setTxChain] = useState('');
   const [txPath, setTxPath] = useState('');
   const [syncReq, setSyncReq] = useState('');
+  const [syncChain, setSyncChain] = useState<keyof cryptos>(identityChain);
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
   const [addrDetailsOpen, setAddrDetailsOpen] = useState(false);
@@ -88,12 +94,6 @@ function Home({ navigation }: Props) {
   const [syncNeededModalOpen, setSyncNeededModalOpen] = useState(false);
   const [manualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-
-  const { seedPhrase, sspWalletKeyIdentity, sspWalletIdentity, identityChain } =
-    useAppSelector((state) => state.ssp);
-  const { wallets, xpubWallet, xpubKey, xprivKey } = useAppSelector(
-    (state) => state.flux,
-  );
 
   const { newTx, clearTx } = useSocket();
 
@@ -168,7 +168,10 @@ function Home({ navigation }: Props) {
     });
   };
 
-  const generateAddresses = (suppliedXpubWallet: string) => {
+  const generateAddresses = (
+    suppliedXpubWallet: string,
+    chain: keyof cryptos,
+  ) => {
     getUniqueId()
       .then(async (id) => {
         // get password from encrypted storage
@@ -181,7 +184,7 @@ function Home({ navigation }: Props) {
           xpubKeyDecrypted,
           0,
           0,
-          'flux',
+          chain,
         );
         dispatch(setAddress({ wallet: '0-0', data: addrInfo.address }));
         const encryptedReedemScript = CryptoJS.AES.encrypt(
@@ -223,10 +226,12 @@ function Home({ navigation }: Props) {
         console.log(syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
+        setSyncChain(identityChain);
         setSyncSuccessOpen(true);
       })
       .catch((error) => {
         setSyncReq('');
+        setSyncChain(identityChain);
         console.log(error.message);
         setTimeout(() => {
           displayMessage('error', t('home:err_sync_failed'));
@@ -330,7 +335,8 @@ function Home({ navigation }: Props) {
     setTxChain(chain);
     setTxPath(path);
   };
-  const handleSyncRequest = async (xpubw: string) => {
+  const handleSyncRequest = async (xpubw: string, chain: keyof cryptos) => {
+    setSyncChain(chain);
     setSyncReq(xpubw);
   };
   const approveTransaction = async (
@@ -428,7 +434,7 @@ function Home({ navigation }: Props) {
       if (dataToProcess.startsWith('xpub')) {
         // xpub
         const xpubw = dataToProcess;
-        handleSyncRequest(xpubw);
+        handleSyncRequest(xpubw, chain);
       } else if (dataToProcess.startsWith('0')) {
         // transaction
         // sign transaction
@@ -474,20 +480,36 @@ function Home({ navigation }: Props) {
     }, 100);
   };
   const handleScannedData = (scannedData: string) => {
+    const splittedInput = scannedData.split(':');
+    let chain: keyof cryptos = identityChain;
+    let wallet = '0-0';
+    let dataToProcess = '';
+    if (splittedInput[1]) {
+      // all is default
+      chain = splittedInput[0] as keyof cryptos;
+      if (splittedInput[1].includes('-')) {
+        // wallet specifiedd
+        wallet = splittedInput[1];
+        dataToProcess = splittedInput[2];
+      } else {
+        // wallet default
+        dataToProcess = splittedInput[1];
+      }
+    }
     // check if input is xpub or transaction
-    if (scannedData.startsWith('xpub')) {
+    if (dataToProcess.startsWith('xpub')) {
       // xpub
       const xpubw = scannedData;
-      handleSyncRequest(xpubw);
-    } else if (scannedData.startsWith('04')) {
+      handleSyncRequest(xpubw, chain);
+    } else if (dataToProcess.startsWith('0')) {
       // transaction
       // sign transaction
       if (!wallets['0-0'] || !wallets['0-0'].address) {
         displayMessage('error', t('home:err_sync_with_ssp_needed'));
         console.log('not synced yet');
       } else {
-        const rawTransactions = scannedData;
-        handleTxRequest(rawTransactions);
+        const rawTransactions = dataToProcess;
+        handleTxRequest(rawTransactions, chain, wallet);
       }
     } else {
       setTimeout(() => {
@@ -572,10 +594,12 @@ function Home({ navigation }: Props) {
     try {
       if (status === true) {
         const xpubw = syncReq;
-        generateAddresses(xpubw);
+        const sChain = syncChain;
+        generateAddresses(xpubw, sChain);
       } else {
         // reject
         setSyncReq('');
+        setSyncChain(identityChain);
       }
     } catch (error) {
       console.log(error);
@@ -754,7 +778,7 @@ function Home({ navigation }: Props) {
       )}
       {syncReq && (
         <SyncRequest
-          chain="flux"
+          chain={syncChain}
           actionStatus={handleSynchronisationRequestAction}
         />
       )}
