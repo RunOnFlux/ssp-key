@@ -13,15 +13,26 @@ import {
 } from 'redux-persist';
 import autoMergeLevel2 from 'redux-persist/lib/stateReconciler/autoMergeLevel2';
 import { MMKV } from 'react-native-mmkv';
+import { cryptos } from '../types';
+
+// ********** Import chains **********
+import flux from './flux';
+import fluxTestnet from './fluxTestnet';
+
+const chains = {
+  flux,
+  fluxTestnet,
+};
+// ********** Import chains **********
 
 import theme from './theme';
 import ssp from './ssp';
-import flux from './flux';
 
 const reducers = combineReducers({
   theme,
   ssp,
-  flux,
+  flux: flux.reducer,
+  fluxTestnet: flux.reducer,
 });
 
 export const storage = new MMKV();
@@ -79,3 +90,37 @@ export { store, persistor };
 export type RootState = ReturnType<typeof store.getState>;
 // Inferred type: {posts: PostsState, comments: CommentsState, users: UsersState}
 export type AppDispatch = typeof store.dispatch;
+
+// Chain control functions
+export function setAddress(chain: keyof cryptos, wallet: string, data: string) {
+  store.dispatch(chains[chain].actions.setAddress({ wallet, data }));
+}
+export function setRedeemScript(
+  chain: keyof cryptos,
+  wallet: string,
+  data: string,
+) {
+  store.dispatch(chains[chain].actions.setRedeemScript({ wallet, data }));
+}
+export function setXpubWallet(chain: keyof cryptos, data: string) {
+  store.dispatch(chains[chain].actions.setXpubWallet(data));
+}
+export function setXpubKey(chain: keyof cryptos, data: string) {
+  store.dispatch(chains[chain].actions.setXpubKey(data));
+}
+export function setXpubWalletIdentity(data: string) {
+  store.dispatch(chains.flux.actions.setXpubWallet(data));
+}
+export function setXpubKeyIdentity(data: string) {
+  store.dispatch(chains.flux.actions.setXpubKey(data));
+}
+export function setChainInitialState(chain: keyof cryptos) {
+  store.dispatch(chains[chain].actions.setChainInitialState());
+}
+export function setInitialStateForAllChains() {
+  Object.keys(chains).forEach((chain: string) => {
+    store.dispatch(
+      chains[chain as keyof cryptos].actions.setChainInitialState(),
+    );
+  });
+}

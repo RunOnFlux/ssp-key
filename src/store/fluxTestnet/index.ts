@@ -22,7 +22,7 @@ const initialWalletState: wallet = {
 };
 
 const chainSlice = createSlice({
-  name: 'flux',
+  name: 'fluxTestnet',
   initialState,
   reducers: {
     setAddress: (

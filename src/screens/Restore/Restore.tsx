@@ -23,7 +23,11 @@ const CryptoJS = require('crypto-js');
 import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
 
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
-import { setXpubKey, setXprivKey, setFluxInitialState } from '../../store/flux';
+import {
+  setXpubKey,
+  setXprivKey,
+  setChainInitialState,
+} from '../../store/flux';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 
@@ -150,7 +154,7 @@ function Restore({ navigation }: Props) {
     }
     // first clean up data
     dispatch(setSSPInitialState());
-    dispatch(setFluxInitialState());
+    dispatch(setChainInitialState());
     setIsLoading(true);
 
     getUniqueId()
