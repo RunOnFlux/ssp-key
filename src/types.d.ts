@@ -134,3 +134,8 @@ export interface wallet {
 }
 
 export type wallets = Record<string, wallet>;
+
+export interface cryptos {
+  flux: number;
+  fluxTestnet: number;
+}

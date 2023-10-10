@@ -33,7 +33,7 @@ export const SocketContext = createContext<SocketContextType>(defaultValue);
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { sspWalletKeyIdentity: wkIdentity } = useAppSelector(
-    (state) => state.flux,
+    (state) => state.ssp,
   );
   const [socket, setSocket] = useState<Socket | null>(null);
   const [newTx, setNewTx] = useState({} as adjustedServeResponseTx);

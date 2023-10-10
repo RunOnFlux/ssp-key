@@ -29,6 +29,7 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
+import { cryptos } from '../../types';
 
 const CryptoJS = require('crypto-js');
 
@@ -88,7 +89,7 @@ function Home({ navigation }: Props) {
   const [manualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
-  const { seedPhrase, sspWalletKeyIdentity, sspWalletIdentity } =
+  const { seedPhrase, sspWalletKeyIdentity, sspWalletIdentity, identityChain } =
     useAppSelector((state) => state.ssp);
   const { wallets, xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state.flux,
@@ -407,26 +408,44 @@ function Home({ navigation }: Props) {
       return;
     } else if (manualInput === 'cancel') {
       // do not process
-    } else if (manualInput.startsWith('xpub')) {
-      // xpub
-      const xpubw = manualInput;
-      handleSyncRequest(xpubw);
-    } else if (manualInput.startsWith('04')) {
-      // transaction
-      // sign transaction
-      if (!wallets['0-0'] || !wallets['0-0'].address) {
-        displayMessage('error', t('home:err_sync_with_ssp_needed'));
-        console.log('not synced yet');
-      } else {
-        const rawTransactions = manualInput;
-        handleTxRequest(rawTransactions);
-      }
     } else {
-      displayMessage('error', t('home:err_invalid_manual_input'));
+      const splittedInput = manualInput.split(':');
+      let chain: keyof cryptos = identityChain;
+      let wallet = '0-0';
+      let dataToProcess = '';
+      if (splittedInput[1]) {
+        // all is default
+        chain = splittedInput[0] as keyof cryptos;
+        if (splittedInput[1].includes('-')) {
+          // wallet specifiedd
+          wallet = splittedInput[1];
+          dataToProcess = splittedInput[2];
+        } else {
+          // wallet default
+          dataToProcess = splittedInput[1];
+        }
+      }
+      if (dataToProcess.startsWith('xpub')) {
+        // xpub
+        const xpubw = dataToProcess;
+        handleSyncRequest(xpubw);
+      } else if (dataToProcess.startsWith('0')) {
+        // transaction
+        // sign transaction
+        if (!wallets['0-0'] || !wallets['0-0'].address) {
+          displayMessage('error', t('home:err_sync_with_ssp_needed'));
+          console.log('not synced yet');
+        } else {
+          const rawTransactions = dataToProcess;
+          handleTxRequest(rawTransactions, chain, wallet);
+        }
+      } else {
+        displayMessage('error', t('home:err_invalid_manual_input'));
+      }
+      setTimeout(() => {
+        setIsManualInputModalOpen(false);
+      });
     }
-    setTimeout(() => {
-      setIsManualInputModalOpen(false);
-    });
   };
   const handleMenuModalAction = (status: string) => {
     if (status === 'manualinput') {
