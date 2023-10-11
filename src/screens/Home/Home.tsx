@@ -493,6 +493,9 @@ function Home({ navigation }: Props) {
           // wallet default
           dataToProcess = splittedInput[1];
         }
+      } else {
+        // only data
+        dataToProcess = splittedInput[0];
       }
       if (dataToProcess.startsWith('xpub')) {
         // xpub
@@ -553,6 +556,9 @@ function Home({ navigation }: Props) {
         // wallet default
         dataToProcess = splittedInput[1];
       }
+    } else {
+      // only data
+      dataToProcess = splittedInput[0];
     }
     // check if input is xpub or transaction
     if (dataToProcess.startsWith('xpub')) {
