@@ -6,7 +6,7 @@ import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
 
 const SyncRequest = (props: {
-  chain: string; // if chain not provided, default to flux
+  chain: string;
   actionStatus: (status: boolean) => void;
 }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.

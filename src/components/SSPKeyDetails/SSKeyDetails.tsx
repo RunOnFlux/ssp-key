@@ -6,12 +6,17 @@ import { useTheme } from '../../hooks';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { useAppSelector } from '../../hooks';
+import { cryptos } from '../../types';
+
+import { blockchains } from '@storage/blockchains';
 
 const CryptoJS = require('crypto-js');
 
 const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
-  // ssp key seed phrase, flux xpriv, xpub
-  const { xpubKey, xprivKey } = useAppSelector((state) => state.flux);
+  // ssp key seed phrase, xpriv, xpub
+  const { identityChain } = useAppSelector((state) => state.ssp);
+  const [selectedChain] = useState<keyof cryptos>(identityChain);
+  const { xpubKey, xprivKey } = useAppSelector((state) => state[selectedChain]);
   const { seedPhrase } = useAppSelector((state) => state.ssp);
   const [decryptedXpub, setDecryptedXpub] = useState('');
   const [deryptedXpriv, setDecryptedXpriv] = useState('');
@@ -21,6 +26,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const [mnemonicVisible, setMnemonicVisible] = useState(false);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const blockchainConfig = blockchains[selectedChain];
 
   useEffect(() => {
     getUniqueId()
@@ -71,7 +77,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
         ]}
       >
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-          {t('home:flux_ssp_details')}
+          {t('home:chain_ssp_details', { symbol: blockchainConfig.symbol })}
         </Text>
         <View
           style={[
@@ -128,7 +134,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 />
               </TouchableOpacity>
               <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-                {t('home:flux_xpub')}:
+                {t('home:chain_xpub', { chain: blockchainConfig.name })}:
               </Text>
             </View>
             <View>
@@ -153,7 +159,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 />
               </TouchableOpacity>
               <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-                {t('home:flux_xpriv')}:
+                {t('home:chain_xpriv', { chain: blockchainConfig.name })}:
               </Text>
             </View>
             <View>

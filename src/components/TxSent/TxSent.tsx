@@ -12,8 +12,11 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { backends } from '@storage/backends';
 
-const SyncRequest = (props: {
-  txid: string; // if chain not provided, default to flux
+import { cryptos } from '../../types';
+
+const TxSent = (props: {
+  txid: string;
+  chain: keyof cryptos;
   actionStatus: (status: boolean) => void;
 }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
@@ -27,7 +30,7 @@ const SyncRequest = (props: {
 
   const openExplorer = () => {
     console.log('Open Explorer');
-    const backendConfig = backends().flux;
+    const backendConfig = backends()[props.chain];
     Linking.openURL(`https://${backendConfig.node}/tx/${props.txid}`);
   };
 
@@ -95,4 +98,4 @@ const SyncRequest = (props: {
   );
 };
 
-export default SyncRequest;
+export default TxSent;

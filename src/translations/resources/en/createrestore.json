@@ -21,5 +21,6 @@
   "err_setting_key": "Something went wrong while setting up your Key.",
   "set_key_pin": "Set Key Password PIN",
   "confirm_key_pin": "Confirm Key Password PIN",
-  "input_mnemonic": "Input your Mnemonic Key Seed Phrase"
+  "input_mnemonic": "Input your Mnemonic Key Seed Phrase",
+  "import_key": "Import Key"
 }

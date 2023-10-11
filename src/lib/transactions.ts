@@ -1,7 +1,12 @@
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import utxolib from 'utxo-lib';
-import { transacitonsInsight, transactionInsight, transaction } from '../types';
+import {
+  transacitonsInsight,
+  transactionInsight,
+  transaction,
+  cryptos,
+} from '../types';
 
 import { backends } from '@storage/backends';
 
@@ -84,7 +89,7 @@ function processTransaction(
 
 export async function fetchAddressTransactions(
   address: string,
-  chain = 'flux',
+  chain: keyof cryptos,
   from: number,
   to: number,
 ): Promise<transaction[]> {

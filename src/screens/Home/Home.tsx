@@ -31,6 +31,8 @@ import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
 import { cryptos } from '../../types';
 
+import { blockchains } from '@storage/blockchains';
+
 const CryptoJS = require('crypto-js');
 
 import {
@@ -72,14 +74,14 @@ function Home({ navigation }: Props) {
   const { seedPhrase, sspWalletKeyIdentity, sspWalletIdentity, identityChain } =
     useAppSelector((state) => state.ssp);
   const { wallets, xpubWallet, xpubKey, xprivKey } = useAppSelector(
-    (state) => state.flux,
+    (state) => state[identityChain],
   );
   const dispatch = useAppDispatch();
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [rawTx, setRawTx] = useState('');
-  const [txChain, setTxChain] = useState('');
+  const [txChain, setTxChain] = useState<keyof cryptos | ''>('');
   const [txPath, setTxPath] = useState('');
   const [syncReq, setSyncReq] = useState('');
   const [syncChain, setSyncChain] = useState<keyof cryptos>(identityChain);
@@ -96,6 +98,8 @@ function Home({ navigation }: Props) {
   const [showScanner, setShowScanner] = useState(false);
 
   const { newTx, clearTx } = useSocket();
+
+  const blockchainConfig = blockchains[identityChain];
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -137,8 +141,20 @@ function Home({ navigation }: Props) {
           const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
           const mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
           // generate master xpriv for flux
-          const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
-          const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
+          const xpriv = getMasterXpriv(
+            mnemonicPhrase,
+            48,
+            blockchainConfig.slip,
+            0,
+            blockchainConfig.scriptType,
+          ); // takes ~3 secs
+          const xpub = getMasterXpub(
+            mnemonicPhrase,
+            48,
+            blockchainConfig.slip,
+            0,
+            blockchainConfig.scriptType,
+          ); // takes ~3 secs
           const xprivBlob = CryptoJS.AES.encrypt(
             xpriv,
             pwForEncryption,
@@ -210,7 +226,6 @@ function Home({ navigation }: Props) {
         console.log(syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
-        setSyncChain(identityChain);
         setSyncSuccessOpen(true);
       })
       .catch((error) => {
@@ -278,7 +293,6 @@ function Home({ navigation }: Props) {
         console.log(syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
-        setSyncChain(identityChain);
         setSyncSuccessOpen(true);
       })
       .catch((error) => {
@@ -292,7 +306,7 @@ function Home({ navigation }: Props) {
   };
 
   const generateAddressDetailsForSending = (
-    chain: string,
+    chain: keyof cryptos,
     path: string,
     decryptedXpubWallet: string,
     decryptedXpubKey: string,
@@ -393,7 +407,7 @@ function Home({ navigation }: Props) {
   };
   const approveTransaction = async (
     rawTransactions: string,
-    chain: string,
+    chain: keyof cryptos,
     derivationPath: string,
   ) => {
     try {
@@ -441,7 +455,6 @@ function Home({ navigation }: Props) {
         const ttxid = await broadcastTx(finalTx, chain);
         console.log(ttxid);
         setRawTx('');
-        setTxChain('');
         setTxPath('');
         // here tell ssp-relay that we are finished, rewrite the request
         await postAction(
@@ -620,7 +633,7 @@ function Home({ navigation }: Props) {
     try {
       if (status === true) {
         const rtx = rawTx;
-        const rchain = txChain;
+        const rchain = txChain as keyof cryptos;
         const rpath = txPath;
         await approveTransaction(rtx, rchain, rpath);
       } else {
@@ -672,6 +685,7 @@ function Home({ navigation }: Props) {
   const handleSyncSuccessModalAction = () => {
     console.log('sync success modal close.');
     setSyncSuccessOpen(false);
+    setSyncChain(identityChain);
   };
 
   const handleAddrDetailsModalAction = () => {
@@ -822,7 +836,7 @@ function Home({ navigation }: Props) {
       {rawTx && (
         <TransactionRequest
           rawTx={rawTx}
-          chain={txChain}
+          chain={txChain as keyof cryptos}
           actionStatus={handleTransactionRequestAction}
         />
       )}
@@ -832,19 +846,22 @@ function Home({ navigation }: Props) {
           actionStatus={handleSynchronisationRequestAction}
         />
       )}
-      {txid && <TxSent txid={txid} actionStatus={handleTxSentModalAction} />}
+      {txid && (
+        <TxSent
+          txid={txid}
+          chain={txChain as keyof cryptos}
+          actionStatus={handleTxSentModalAction}
+        />
+      )}
       {syncSuccessOpen && (
         <SyncSuccess
+          chain={syncChain}
           address={wallets['0-0'].address}
           actionStatus={handleSyncSuccessModalAction}
         />
       )}
       {addrDetailsOpen && (
-        <AddressDetails
-          chain="flux"
-          path="0-0"
-          actionStatus={handleAddrDetailsModalAction}
-        />
+        <AddressDetails actionStatus={handleAddrDetailsModalAction} />
       )}
       {sspKeyDetailsOpen && (
         <SSPKeyDetails actionStatus={handleSSPKeyModalAction} />

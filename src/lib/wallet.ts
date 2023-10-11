@@ -3,7 +3,20 @@ import { Buffer } from 'buffer';
 import { HDKey } from '@scure/bip32';
 import * as bip39 from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
-import { keyPair, minHDKey, multisig, xPrivXpub } from '../types';
+import { keyPair, minHDKey, multisig, xPrivXpub, cryptos } from '../types';
+
+export function getScriptType(type: string): number {
+  switch (type) {
+    case 'p2sh':
+      return 0;
+    case 'p2sh-p2wsh':
+      return 1;
+    case 'p2wsh':
+      return 2;
+    default:
+      return 0;
+  }
+}
 
 function generatexPubxPriv(
   mnemonic: string,
@@ -12,24 +25,7 @@ function generatexPubxPriv(
   account = 0,
   type = 'p2sh',
 ): xPrivXpub {
-  let scriptType = 0;
-
-  switch (
-    type // p2sh is script type of 0' as per
-  ) {
-    case 'p2sh':
-      scriptType = 0;
-      break;
-    case 'p2sh-p2wsh':
-      scriptType = 0;
-      break;
-    case 'p2wsh':
-      scriptType = 2;
-      break;
-    default:
-      scriptType = 0;
-      break;
-  }
+  const scriptType = getScriptType(type);
 
   const seed = bip39.mnemonicToSeedSync(mnemonic);
   const masterKey = HDKey.fromMasterSeed(seed);
@@ -74,7 +70,7 @@ export function generateMultisigAddress(
   xpub2: string,
   typeIndex: 0 | 1 | 10,
   addressIndex: number,
-  chain = 'flux',
+  chain: keyof cryptos,
 ): multisig {
   const externalChain1 = HDKey.fromExtendedKey(xpub1);
   const externalChain2 = HDKey.fromExtendedKey(xpub2);
@@ -123,7 +119,7 @@ export function generateAddressKeypair(
   xpriv: string,
   typeIndex: 0 | 1,
   addressIndex: number,
-  chain = 'flux',
+  chain: keyof cryptos,
 ): keyPair {
   const externalChain = HDKey.fromExtendedKey(xpriv);
 
@@ -146,7 +142,10 @@ export function generateAddressKeypair(
 }
 
 // given xpub of our party, generate address of identity of xpub.
-export function generateIdentityAddress(xpub: string, chain = 'flux'): string {
+export function generateIdentityAddress(
+  xpub: string,
+  chain: keyof cryptos,
+): string {
   const typeIndex = 10; // identity index
   const addressIndex = 0; // identity index
 

@@ -11,14 +11,18 @@ import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { backends } from '@storage/backends';
+import { cryptos } from '../../types';
 
 const SyncRequest = (props: {
+  chain: keyof cryptos;
   address: string; // generated multisig address
   actionStatus: (status: boolean) => void;
 }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+
+  // todo here construct address 0-0 to show first wallet
 
   const close = () => {
     console.log('Close');
@@ -27,7 +31,7 @@ const SyncRequest = (props: {
 
   const openExplorer = () => {
     console.log('Open Explorer');
-    const backendConfig = backends().flux;
+    const backendConfig = backends()[props.chain];
     Linking.openURL(`https://${backendConfig.node}/address/${props.address}`);
   };
 

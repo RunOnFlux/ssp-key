@@ -18,6 +18,8 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { blockchains } from '@storage/blockchains';
+
 const CryptoJS = require('crypto-js');
 
 import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
@@ -43,7 +45,7 @@ function Restore({ navigation }: Props) {
   const passwordInputA = useRef<TextInput | null>(null);
   const passwordInputB = useRef<TextInput | null>(null);
   const dispatch = useAppDispatch();
-  const { seedPhrase } = useAppSelector((state) => state.ssp);
+  const { seedPhrase, identityChain } = useAppSelector((state) => state.ssp);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mnemonic, setMnemonic] = useState('');
@@ -60,6 +62,7 @@ function Restore({ navigation }: Props) {
   const { t } = useTranslation(['cr', 'common']);
   const { darkMode, Common, Fonts, Gutters, Layout, Images, Colors } =
     useTheme();
+  const blockchainConfig = blockchains[identityChain];
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -169,8 +172,20 @@ function Restore({ navigation }: Props) {
         // store in redux persist
         dispatch(setSeedPhrase(mnemonicBlob));
         // generate master xpriv for flux
-        const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
-        const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
+        const xpriv = getMasterXpriv(
+          mnemonicPhrase,
+          48,
+          blockchainConfig.slip,
+          0,
+          blockchainConfig.scriptType,
+        ); // takes ~3 secs
+        const xpub = getMasterXpub(
+          mnemonicPhrase,
+          48,
+          blockchainConfig.slip,
+          0,
+          blockchainConfig.scriptType,
+        ); // takes ~3 secs
         const xprivBlob = CryptoJS.AES.encrypt(
           xpriv,
           pwForEncryption,
@@ -338,7 +353,9 @@ function Restore({ navigation }: Props) {
           ]}
           onPressIn={() => setupImportKey()}
         >
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>Import Key</Text>
+          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+            {t('cr:import_key')}
+          </Text>
         </TouchableOpacity>
       </View>
       <Modal

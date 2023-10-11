@@ -10,17 +10,16 @@ import {
   generateMultisigAddress,
 } from '../../lib/wallet';
 import { useAppSelector } from '../../hooks';
+import { cryptos } from '../../types';
+
+import { blockchains } from '@storage/blockchains';
 
 const CryptoJS = require('crypto-js');
 
-const AddressDetails = (props: {
-  chain: string;
-  path: string;
-  actionStatus: (status: boolean) => void;
-}) => {
-  const { xprivKey, xpubKey, xpubWallet } = useAppSelector(
-    (state) => state.flux,
-  );
+const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
+  const { identityChain } = useAppSelector((state) => state.ssp);
+  const [selectedChain] = useState<keyof cryptos>(identityChain);
+  const [selectedPath] = useState('0-0');
   const [decryptedRedeemScript, setDecryptedRedeemScript] = useState('');
   const [decryptedPrivateKey, setDecryptedPrivateKey] = useState('');
   const [address, setAddress] = useState('');
@@ -28,8 +27,10 @@ const AddressDetails = (props: {
   const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
-  const derivationPath = props.path;
-  const derivationChain = props.chain;
+  const { xprivKey, xpubKey, xpubWallet } = useAppSelector(
+    (state) => state[selectedChain],
+  );
+  const blockchainConfig = blockchains[selectedChain];
 
   useEffect(() => {
     getUniqueId()
@@ -45,7 +46,7 @@ const AddressDetails = (props: {
         const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
         const xpubKeyWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
 
-        const splittedDerPath = derivationPath.split('-');
+        const splittedDerPath = selectedPath.split('-');
         const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
         const addressIndex = Number(splittedDerPath[1]);
 
@@ -53,14 +54,14 @@ const AddressDetails = (props: {
           xprivKeyDecrypted,
           typeIndex,
           addressIndex,
-          derivationChain,
+          selectedChain,
         );
         const privateKey = keyPair.privKey;
         setDecryptedPrivateKey(privateKey);
 
         const addressDetails = generateAddressDetails(
-          derivationChain,
-          derivationPath,
+          selectedChain,
+          selectedPath,
           xpubKeyWalletDecrypted,
           xpubKeyDecrypted,
         );
@@ -73,7 +74,7 @@ const AddressDetails = (props: {
   }, []);
 
   const generateAddressDetails = (
-    chain: string,
+    chain: keyof cryptos,
     path: string,
     decryptedXpubWallet: string,
     decryptedXpubKey: string,
@@ -120,7 +121,9 @@ const AddressDetails = (props: {
         ]}
       >
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-          {t('home:flux_addr_details')}
+          {t('home:chain_addr_details', {
+            symbol: blockchainConfig.symbol,
+          })}
         </Text>
         <View
           style={[

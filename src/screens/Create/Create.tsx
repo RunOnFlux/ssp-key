@@ -20,6 +20,8 @@ import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 const CryptoJS = require('crypto-js');
 
+import { blockchains } from '@storage/blockchains';
+
 import {
   generateMnemonic,
   getMasterXpriv,
@@ -29,7 +31,7 @@ import {
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
 import { setXpubKey, setXprivKey } from '../../store/flux';
 
-import { useAppDispatch } from '../../hooks';
+import { useAppDispatch, useAppSelector } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 
@@ -58,6 +60,8 @@ function Create({ navigation }: Props) {
   const { t } = useTranslation(['cr', 'common']);
   const { darkMode, Common, Fonts, Gutters, Layout, Images, Colors } =
     useTheme();
+  const { identityChain } = useAppSelector((state) => state.ssp);
+  const blockchainConfig = blockchains[identityChain];
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -159,8 +163,20 @@ function Create({ navigation }: Props) {
         // store in redux persist
         dispatch(setSeedPhrase(mnemonicBlob));
         // generate master xpriv for flux
-        const xpriv = getMasterXpriv(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
-        const xpub = getMasterXpub(mnemonicPhrase, 48, 19167, 0, 'p2sh'); // takes ~3 secs
+        const xpriv = getMasterXpriv(
+          mnemonicPhrase,
+          48,
+          blockchainConfig.slip,
+          0,
+          blockchainConfig.scriptType,
+        ); // takes ~3 secs
+        const xpub = getMasterXpub(
+          mnemonicPhrase,
+          48,
+          blockchainConfig.slip,
+          0,
+          blockchainConfig.scriptType,
+        ); // takes ~3 secs
         const xprivBlob = CryptoJS.AES.encrypt(
           xpriv,
           pwForEncryption,

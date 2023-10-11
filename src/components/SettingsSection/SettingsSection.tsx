@@ -19,6 +19,10 @@ import {
   loadBackendsConfig,
 } from '@storage/backends';
 import { sspConfig, sspConfigOriginal, loadSSPConfig } from '@storage/ssp';
+import { cryptos } from '../../types';
+import { useAppSelector } from '../../hooks';
+
+import { blockchains } from '@storage/blockchains';
 
 const backendsOriginalConfig = backendsOriginal();
 const originalConfig = sspConfigOriginal();
@@ -30,21 +34,24 @@ const SettingsSection = (props: {
   // focusability of inputs
   const textInputA = useRef<TextInput | null>(null);
   const textInputB = useRef<TextInput | null>(null);
-  const FNC = backends().flux.node;
+  const { identityChain } = useAppSelector((state) => state.ssp);
+  const [selectedChain] = useState<keyof cryptos>(identityChain);
+  const FNC = backends()[selectedChain].node;
   const SSPR = sspConfig().relay;
   console.log(SSPR);
   const [sspConfigRelay, setSspConfigRelay] = useState(SSPR);
-  const [fluxNodeConfig, setFluxNodeConfig] = useState(FNC);
+  const [chainNodeConfig, setChainNodeConfig] = useState(FNC);
   const { t } = useTranslation(['home', 'common']);
   const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
+  const blockchainConfig = blockchains[selectedChain];
 
   const handleCancel = () => {
     console.log('Close');
     if (SSPR !== sspConfigRelay) {
       setSspConfigRelay(SSPR);
     }
-    if (FNC !== fluxNodeConfig) {
-      setFluxNodeConfig(FNC);
+    if (FNC !== chainNodeConfig) {
+      setChainNodeConfig(FNC);
     }
     loadBackendsConfig();
     loadSSPConfig();
@@ -64,11 +71,11 @@ const SettingsSection = (props: {
       // workaround
       storage.set('sspConfig', JSON.stringify(originalConfig));
     }
-    // adjust flux node
-    if (backendsOriginalConfig.flux.node !== fluxNodeConfig) {
+    // adjust chain node
+    if (backendsOriginalConfig[selectedChain].node !== chainNodeConfig) {
       const backendsConfig = {
-        flux: {
-          node: fluxNodeConfig,
+        [selectedChain]: {
+          node: chainNodeConfig,
         },
       };
       storage.set('backends', JSON.stringify(backendsConfig));
@@ -95,17 +102,17 @@ const SettingsSection = (props: {
     setSspConfigRelay(originalConfig.relay);
   };
 
-  const resetFluxNodeService = () => {
-    console.log('Reset Flux Node Service');
-    setFluxNodeConfig(backendsOriginalConfig.flux.node);
+  const resetChainNodeService = () => {
+    console.log('Reset Chain Node Service');
+    setChainNodeConfig(backendsOriginalConfig[selectedChain].node);
   };
 
   const onChangeSSPrelay = (text: string) => {
     setSspConfigRelay(text);
   };
 
-  const onChangeFluxNodeService = (text: string) => {
-    setFluxNodeConfig(text);
+  const onChangeChainNodeService = (text: string) => {
+    setChainNodeConfig(text);
   };
 
   return (
@@ -174,7 +181,7 @@ const SettingsSection = (props: {
                 <TextInput
                   style={[Common.textInput, Common.textInputBgModal]}
                   autoCapitalize="none"
-                  placeholder="relay.ssp.runonflux.io"
+                  placeholder={originalConfig.relay}
                   placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
                   onChangeText={onChangeSSPrelay}
                   value={sspConfigRelay}
@@ -192,7 +199,7 @@ const SettingsSection = (props: {
             </View>
             <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
               <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-                {t('home:flux_node_service')}
+                {t('home:chain_node_service', { chain: blockchainConfig.name })}
               </Text>
               <View
                 style={[
@@ -204,16 +211,16 @@ const SettingsSection = (props: {
                 <TextInput
                   style={[Common.textInput, Common.textInputBgModal]}
                   autoCapitalize="none"
-                  placeholder="explorer.runonflux.io"
+                  placeholder={backendsOriginalConfig[selectedChain].node}
                   placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                  onChangeText={onChangeFluxNodeService}
-                  value={fluxNodeConfig}
+                  onChangeText={onChangeChainNodeService}
+                  value={chainNodeConfig}
                   autoCorrect={false}
                   ref={textInputB}
                   onPressIn={() => textInputB.current?.focus()}
                 />
                 <TouchableOpacity
-                  onPressIn={resetFluxNodeService}
+                  onPressIn={resetChainNodeService}
                   style={Common.inputIcon}
                 >
                   <Icon name="x" size={20} color={Colors.bluePrimary} />

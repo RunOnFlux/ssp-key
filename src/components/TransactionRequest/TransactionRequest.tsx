@@ -6,10 +6,13 @@ import Toast from 'react-native-toast-message';
 import Authentication from '../Authentication/Authentication';
 import { useTheme } from '../../hooks';
 import { decodeTransactionForApproval } from '../../lib/transactions';
+import { cryptos } from '../../types';
+
+import { blockchains } from '@storage/blockchains';
 
 const TransactionRequest = (props: {
   rawTx: string;
-  chain: string;
+  chain: keyof cryptos;
   actionStatus: (status: boolean) => void;
 }) => {
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
@@ -18,6 +21,7 @@ const TransactionRequest = (props: {
   const [sendingAmount, setSendingAmount] = useState('');
   const [receiverAddress, setReceiverAddress] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
+  const blockchainConfig = blockchains[props.chain];
 
   const approve = () => {
     console.log('Approve');
@@ -84,6 +88,7 @@ const TransactionRequest = (props: {
           {t('home:sending_request', {
             amount: sendingAmount,
             address: receiverAddress,
+            symbol: blockchainConfig.symbol,
           })}
         </Text>
       </View>
