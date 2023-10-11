@@ -32,7 +32,24 @@ const fluxTestnet = {
   logo: '/src/assets/flux.svg',
 };
 
+const rvn = {
+  id: 'rvn',
+  libid: 'ravencoin',
+  name: 'Ravencoin',
+  symbol: 'RVN',
+  decimals: 8,
+  node: backends().rvn.node,
+  slip: 175,
+  scriptType: 'p2sh',
+  messagePrefix: '\u0016Raven Signed Message:\n',
+  pubKeyHash: '3c',
+  scriptHash: '7a',
+  wif: '80',
+  logo: '/src/assets/rvn.svg',
+};
+
 export const blockchains = {
   flux,
   fluxTestnet,
+  rvn,
 };
