@@ -198,6 +198,9 @@ function Restore({ navigation }: Props) {
         setMnemonic('');
         setPassword('');
         setPasswordConfirm('');
+        setWSPwasShown(false);
+        setWSPbackedUp(false);
+        setMnemonicShow(false);
         navigation.navigate('Home');
       })
       .catch((error) => {

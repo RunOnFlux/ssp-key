@@ -31,7 +31,7 @@ const SyncSuccess = (props: {
   const [chainAddress, setChainAddress] = useState('');
 
   useEffect(() => {
-    generateAddress;
+    generateAddress();
   }, [xpubKey, xpubWallet]);
   // todo here construct address 0-0 to show first wallet
 
@@ -43,7 +43,7 @@ const SyncSuccess = (props: {
         const pwForEncryption = id + password;
         const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
         const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-        const xpw = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
+        const xpw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
         const xpubWalletDecrypted = xpw.toString(CryptoJS.enc.Utf8);
         const addrInfo = generateMultisigAddress(
           xpubWalletDecrypted,
