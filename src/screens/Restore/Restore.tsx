@@ -25,11 +25,9 @@ const CryptoJS = require('crypto-js');
 import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
 
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
-import {
-  setXpubKey,
-  setXprivKey,
-  setChainInitialState,
-} from '../../store/flux';
+import { setXpubKeyIdentity, setXprivKeyIdentity } from '../../store';
+
+import { setInitialStateForAllChains } from '../../store';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 
@@ -157,7 +155,7 @@ function Restore({ navigation }: Props) {
     }
     // first clean up data
     dispatch(setSSPInitialState());
-    dispatch(setChainInitialState());
+    setInitialStateForAllChains();
     setIsLoading(true);
 
     getUniqueId()
@@ -191,8 +189,8 @@ function Restore({ navigation }: Props) {
           pwForEncryption,
         ).toString();
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
-        dispatch(setXprivKey(xprivBlob));
-        dispatch(setXpubKey(xpubBlob));
+        setXprivKeyIdentity(xprivBlob);
+        setXpubKeyIdentity(xpubBlob);
         // In keychain plain password is stored (only password not id)
         await EncryptedStorage.setItem('ssp_key_pw', password);
         setIsModalOpen(false);

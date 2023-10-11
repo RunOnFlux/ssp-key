@@ -54,9 +54,8 @@ import {
   setXpubKey,
   setXprivKey,
   setXpubWallet,
-  setRedeemScript,
-  setAddress,
-} from '../../store/flux';
+  setXpubWalletIdentity,
+} from '../../store';
 
 import { setSspWalletKeyIdentity, setsspWalletIdentity } from '../../store/ssp';
 
@@ -73,7 +72,7 @@ function Home({ navigation }: Props) {
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const { seedPhrase, sspWalletKeyIdentity, sspWalletIdentity, identityChain } =
     useAppSelector((state) => state.ssp);
-  const { wallets, xpubWallet, xpubKey, xprivKey } = useAppSelector(
+  const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[identityChain],
   );
   const dispatch = useAppDispatch();
@@ -81,10 +80,9 @@ function Home({ navigation }: Props) {
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [rawTx, setRawTx] = useState('');
-  const [txChain, setTxChain] = useState<keyof cryptos | ''>('');
+  const [activeChain, setActiveChain] = useState<keyof cryptos>(identityChain);
   const [txPath, setTxPath] = useState('');
   const [syncReq, setSyncReq] = useState('');
-  const [syncChain, setSyncChain] = useState<keyof cryptos>(identityChain);
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
   const [addrDetailsOpen, setAddrDetailsOpen] = useState(false);
@@ -99,7 +97,7 @@ function Home({ navigation }: Props) {
 
   const { newTx, clearTx } = useSocket();
 
-  const blockchainConfig = blockchains[identityChain];
+  const blockchainConfig = blockchains[activeChain];
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -111,16 +109,12 @@ function Home({ navigation }: Props) {
       handleRefresh();
     }
 
-    if (
-      !xpubKey ||
-      !xpubWallet ||
-      !sspWalletKeyIdentity ||
-      !sspWalletIdentity
-    ) {
+    if (!sspWalletKeyIdentity || !sspWalletIdentity) {
       setSyncNeededModalOpen(true);
     }
 
     checkXpubXpriv();
+    checkFCMToken();
   });
 
   useEffect(() => {
@@ -129,6 +123,29 @@ function Home({ navigation }: Props) {
       clearTx?.();
     }
   }, [newTx.rawTx]);
+
+  useEffect(() => {
+    if (!xpubKey || !xpubWallet) {
+      if (rawTx) {
+        displayMessage('error', t('home:err_sync_with_ssp_needed'));
+        setRawTx('');
+        setActiveChain(identityChain);
+      }
+    }
+  }, [xpubKey, xpubWallet, rawTx]);
+
+  const checkFCMToken = async () => {
+    if (sspWalletKeyIdentity) {
+      try {
+        const token = await getFCMToken();
+        if (token) {
+          postSyncToken(token, sspWalletKeyIdentity);
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
 
   const checkXpubXpriv = async () => {
     if (!xpubKey || !xprivKey) {
@@ -163,17 +180,12 @@ function Home({ navigation }: Props) {
             xpub,
             pwForEncryption,
           ).toString();
-          dispatch(setXprivKey(xprivBlob));
-          dispatch(setXpubKey(xpubBlob));
+          setXprivKey(activeChain, xprivBlob);
+          setXpubKey(activeChain, xpubBlob);
         })
         .catch((error) => {
           console.log(error.message);
         });
-    } else {
-      const token = await getFCMToken();
-      if (token) {
-        postSyncToken(token, sspWalletKeyIdentity);
-      }
     }
   };
 
@@ -184,7 +196,7 @@ function Home({ navigation }: Props) {
     });
   };
 
-  const generateAddressesForSyncChain = (
+  const generateAddressesForactiveChain = (
     suppliedXpubWallet: string,
     chain: keyof cryptos,
   ) => {
@@ -202,19 +214,12 @@ function Home({ navigation }: Props) {
           0,
           chain,
         );
-        dispatch(setAddress({ wallet: '0-0', data: addrInfo.address }));
-        const encryptedReedemScript = CryptoJS.AES.encrypt(
-          addrInfo.redeemScript,
-          pwForEncryption,
-        ).toString();
-        dispatch(
-          setRedeemScript({ wallet: '0-0', data: encryptedReedemScript }),
-        );
+        CryptoJS.AES.encrypt(addrInfo.redeemScript, pwForEncryption).toString(); // just to test all is fine
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
           suppliedXpubWallet,
           pwForEncryption,
         ).toString();
-        dispatch(setXpubWallet(encryptedXpubWallet));
+        setXpubWallet(chain, encryptedXpubWallet);
         // tell ssp relay that we are synced, post data to ssp sync
         const syncData = {
           chain,
@@ -230,7 +235,7 @@ function Home({ navigation }: Props) {
       })
       .catch((error) => {
         setSyncReq('');
-        setSyncChain(identityChain);
+        setActiveChain(identityChain);
         console.log(error.message);
         setTimeout(() => {
           displayMessage('error', t('home:err_sync_failed'));
@@ -253,19 +258,12 @@ function Home({ navigation }: Props) {
           0,
           identityChain,
         );
-        dispatch(setAddress({ wallet: '0-0', data: addrInfo.address }));
-        const encryptedReedemScript = CryptoJS.AES.encrypt(
-          addrInfo.redeemScript,
-          pwForEncryption,
-        ).toString();
-        dispatch(
-          setRedeemScript({ wallet: '0-0', data: encryptedReedemScript }),
-        );
+        CryptoJS.AES.encrypt(addrInfo.redeemScript, pwForEncryption).toString(); // just to test all is ok
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
           suppliedXpubWallet,
           pwForEncryption,
         ).toString();
-        dispatch(setXpubWallet(encryptedXpubWallet));
+        setXpubWalletIdentity(encryptedXpubWallet);
         const generatedSspWalletKeyIdentity = generateMultisigAddress(
           suppliedXpubWallet,
           xpubKeyDecrypted,
@@ -297,7 +295,7 @@ function Home({ navigation }: Props) {
       })
       .catch((error) => {
         setSyncReq('');
-        setSyncChain(identityChain);
+        setActiveChain(identityChain);
         console.log(error.message);
         setTimeout(() => {
           displayMessage('error', t('home:err_sync_failed'));
@@ -398,11 +396,11 @@ function Home({ navigation }: Props) {
     path = '0-0',
   ) => {
     setRawTx(rawTransactions);
-    setTxChain(chain);
+    setActiveChain(chain);
     setTxPath(path);
   };
   const handleSyncRequest = async (xpubw: string, chain: keyof cryptos) => {
-    setSyncChain(chain);
+    setActiveChain(chain);
     setSyncReq(xpubw);
   };
   const approveTransaction = async (
@@ -503,14 +501,8 @@ function Home({ navigation }: Props) {
       } else if (dataToProcess.startsWith('0')) {
         // transaction
         // sign transaction
-        if (!wallets['0-0'] || !wallets['0-0'].address) {
-          // todo change to xpubkey, xpubwallet of the particular chain
-          displayMessage('error', t('home:err_sync_with_ssp_needed'));
-          console.log('not synced yet');
-        } else {
-          const rawTransactions = dataToProcess;
-          handleTxRequest(rawTransactions, chain, wallet);
-        }
+        const rawTransactions = dataToProcess;
+        handleTxRequest(rawTransactions, chain, wallet);
       } else {
         displayMessage('error', t('home:err_invalid_manual_input'));
       }
@@ -569,15 +561,8 @@ function Home({ navigation }: Props) {
       handleSyncRequest(xpubw, chain);
     } else if (dataToProcess.startsWith('0')) {
       // transaction
-      // sign transaction
-      if (!wallets['0-0'] || !wallets['0-0'].address) {
-        // todo change to xpubkey, xpubwallet of the particular chain
-        displayMessage('error', t('home:err_sync_with_ssp_needed'));
-        console.log('not synced yet');
-      } else {
-        const rawTransactions = dataToProcess;
-        handleTxRequest(rawTransactions, chain, wallet);
-      }
+      const rawTransactions = dataToProcess;
+      handleTxRequest(rawTransactions, chain, wallet);
     } else {
       setTimeout(() => {
         displayMessage('error', t('home:err_invalid_scanned_data'));
@@ -589,6 +574,7 @@ function Home({ navigation }: Props) {
     console.log(scannedData);
   };
   const handleRefresh = async () => {
+    // todo here can be a sync request too in the future?
     try {
       console.log('refresh');
       setIsRefreshing(true);
@@ -633,16 +619,16 @@ function Home({ navigation }: Props) {
     try {
       if (status === true) {
         const rtx = rawTx;
-        const rchain = txChain as keyof cryptos;
+        const rchain = activeChain as keyof cryptos;
         const rpath = txPath;
         await approveTransaction(rtx, rchain, rpath);
       } else {
         // reject
         const rtx = rawTx;
-        const rchain = txChain;
+        const rchain = activeChain;
         const rpath = txPath;
         setRawTx('');
-        setTxChain('');
+        setActiveChain(identityChain);
         setTxPath('');
         await postAction(
           'txrejected',
@@ -661,16 +647,16 @@ function Home({ navigation }: Props) {
     try {
       if (status === true) {
         const xpubw = syncReq;
-        const sChain = syncChain;
+        const sChain = activeChain;
         if (sChain === identityChain) {
           generateAddressesForSyncIdentity(xpubw);
         } else {
-          generateAddressesForSyncChain(xpubw, sChain);
+          generateAddressesForactiveChain(xpubw, sChain);
         }
       } else {
         // reject
         setSyncReq('');
-        setSyncChain(identityChain);
+        setActiveChain(identityChain);
       }
     } catch (error) {
       console.log(error);
@@ -685,7 +671,7 @@ function Home({ navigation }: Props) {
   const handleSyncSuccessModalAction = () => {
     console.log('sync success modal close.');
     setSyncSuccessOpen(false);
-    setSyncChain(identityChain);
+    setActiveChain(identityChain);
   };
 
   const handleAddrDetailsModalAction = () => {
@@ -762,13 +748,13 @@ function Home({ navigation }: Props) {
             <Text
               style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
             >
-              {!xpubWallet || !sspWalletKeyIdentity || !sspWalletIdentity ? (
+              {!sspWalletKeyIdentity || !sspWalletIdentity ? (
                 <>{t('home:sync_needed')}!</>
               ) : (
                 t('home:no_pending_actions')
               )}
             </Text>
-            {(!xpubWallet || !sspWalletKeyIdentity || !sspWalletIdentity) && (
+            {(!sspWalletKeyIdentity || !sspWalletIdentity) && (
               <Text
                 style={[
                   Fonts.textSmall,
@@ -833,29 +819,29 @@ function Home({ navigation }: Props) {
           </View>
         </>
       )}
-      {rawTx && (
+      {rawTx && xpubWallet && xpubKey && (
         <TransactionRequest
           rawTx={rawTx}
-          chain={txChain as keyof cryptos}
+          chain={activeChain as keyof cryptos}
           actionStatus={handleTransactionRequestAction}
         />
       )}
       {syncReq && (
         <SyncRequest
-          chain={syncChain}
+          chain={activeChain}
           actionStatus={handleSynchronisationRequestAction}
         />
       )}
       {txid && (
         <TxSent
           txid={txid}
-          chain={txChain as keyof cryptos}
+          chain={activeChain as keyof cryptos}
           actionStatus={handleTxSentModalAction}
         />
       )}
       {syncSuccessOpen && (
         <SyncSuccess
-          chain={syncChain}
+          chain={activeChain}
           actionStatus={handleSyncSuccessModalAction}
         />
       )}

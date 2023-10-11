@@ -92,27 +92,23 @@ export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
 // Chain control functions
-export function setAddress(chain: keyof cryptos, wallet: string, data: string) {
-  store.dispatch(chains[chain].actions.setAddress({ wallet, data }));
-}
-export function setRedeemScript(
-  chain: keyof cryptos,
-  wallet: string,
-  data: string,
-) {
-  store.dispatch(chains[chain].actions.setRedeemScript({ wallet, data }));
-}
 export function setXpubWallet(chain: keyof cryptos, data: string) {
   store.dispatch(chains[chain].actions.setXpubWallet(data));
 }
 export function setXpubKey(chain: keyof cryptos, data: string) {
   store.dispatch(chains[chain].actions.setXpubKey(data));
 }
+export function setXprivKey(chain: keyof cryptos, data: string) {
+  store.dispatch(chains[chain].actions.setXprivKey(data));
+}
 export function setXpubWalletIdentity(data: string) {
   store.dispatch(chains.flux.actions.setXpubWallet(data));
 }
 export function setXpubKeyIdentity(data: string) {
   store.dispatch(chains.flux.actions.setXpubKey(data));
+}
+export function setXprivKeyIdentity(data: string) {
+  store.dispatch(chains.flux.actions.setXprivKey(data));
 }
 export function setChainInitialState(chain: keyof cryptos) {
   store.dispatch(chains[chain].actions.setChainInitialState());

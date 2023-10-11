@@ -29,7 +29,8 @@ import {
 } from '../../lib/wallet';
 
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
-import { setXpubKey, setXprivKey } from '../../store/flux';
+import { setXpubKeyIdentity, setXprivKeyIdentity } from '../../store';
+import { setInitialStateForAllChains } from '../../store';
 
 import { useAppDispatch, useAppSelector } from '../../hooks';
 
@@ -182,8 +183,8 @@ function Create({ navigation }: Props) {
           pwForEncryption,
         ).toString();
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
-        dispatch(setXprivKey(xprivBlob));
-        dispatch(setXpubKey(xpubBlob));
+        setXprivKeyIdentity(xprivBlob);
+        setXpubKeyIdentity(xpubBlob);
         // In keychain plain password is stored (only password not id)
         await EncryptedStorage.setItem('ssp_key_pw', password);
         setIsModalOpen(false);
@@ -196,6 +197,7 @@ function Create({ navigation }: Props) {
       .catch((error) => {
         setIsLoading(false);
         dispatch(setSSPInitialState());
+        setInitialStateForAllChains();
         displayMessage('error', t('cr:err_setting_key'));
         console.log(error);
       });
