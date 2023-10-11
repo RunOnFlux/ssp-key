@@ -168,7 +168,7 @@ function Home({ navigation }: Props) {
     });
   };
 
-  const generateAddresses = (
+  const generateAddressesForSyncChain = (
     suppliedXpubWallet: string,
     chain: keyof cryptos,
   ) => {
@@ -199,12 +199,64 @@ function Home({ navigation }: Props) {
           pwForEncryption,
         ).toString();
         dispatch(setXpubWallet(encryptedXpubWallet));
+        // tell ssp relay that we are synced, post data to ssp sync
+        const syncData = {
+          chain,
+          walletIdentity: sspWalletIdentity,
+          keyXpub: xpubKeyDecrypted,
+          wkIdentity: sspWalletKeyIdentity,
+          keyToken: await getFCMToken(),
+        };
+        console.log(syncData);
+        await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
+        setSyncReq('');
+        setSyncChain(identityChain);
+        setSyncSuccessOpen(true);
+      })
+      .catch((error) => {
+        setSyncReq('');
+        setSyncChain(identityChain);
+        console.log(error.message);
+        setTimeout(() => {
+          displayMessage('error', t('home:err_sync_failed'));
+        }, 200);
+      });
+  };
+
+  const generateAddressesForSyncIdentity = (suppliedXpubWallet: string) => {
+    getUniqueId()
+      .then(async (id) => {
+        // get password from encrypted storage
+        const password = await EncryptedStorage.getItem('ssp_key_pw');
+        const pwForEncryption = id + password;
+        const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
+        const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+        const addrInfo = generateMultisigAddress(
+          suppliedXpubWallet,
+          xpubKeyDecrypted,
+          0,
+          0,
+          identityChain,
+        );
+        dispatch(setAddress({ wallet: '0-0', data: addrInfo.address }));
+        const encryptedReedemScript = CryptoJS.AES.encrypt(
+          addrInfo.redeemScript,
+          pwForEncryption,
+        ).toString();
+        dispatch(
+          setRedeemScript({ wallet: '0-0', data: encryptedReedemScript }),
+        );
+        const encryptedXpubWallet = CryptoJS.AES.encrypt(
+          suppliedXpubWallet,
+          pwForEncryption,
+        ).toString();
+        dispatch(setXpubWallet(encryptedXpubWallet));
         const generatedSspWalletKeyIdentity = generateMultisigAddress(
           suppliedXpubWallet,
           xpubKeyDecrypted,
           10,
           0,
-          'flux',
+          identityChain,
         );
         dispatch(
           setSspWalletKeyIdentity(generatedSspWalletKeyIdentity.address),
@@ -212,12 +264,12 @@ function Home({ navigation }: Props) {
         // generate ssp wallet identity
         const generatedSspWalletIdentity = generateIdentityAddress(
           suppliedXpubWallet,
-          'flux',
+          identityChain,
         );
         dispatch(setsspWalletIdentity(generatedSspWalletIdentity));
         // tell ssp relay that we are synced, post data to ssp sync
         const syncData = {
-          chain: 'flux',
+          chain: identityChain,
           walletIdentity: generatedSspWalletIdentity,
           keyXpub: xpubKeyDecrypted,
           wkIdentity: generatedSspWalletKeyIdentity.address,
@@ -328,7 +380,7 @@ function Home({ navigation }: Props) {
   };
   const handleTxRequest = async (
     rawTransactions: string,
-    chain = 'flux',
+    chain: keyof cryptos = identityChain,
     path = '0-0',
   ) => {
     setRawTx(rawTransactions);
@@ -439,6 +491,7 @@ function Home({ navigation }: Props) {
         // transaction
         // sign transaction
         if (!wallets['0-0'] || !wallets['0-0'].address) {
+          // todo change to xpubkey, xpubwallet of the particular chain
           displayMessage('error', t('home:err_sync_with_ssp_needed'));
           console.log('not synced yet');
         } else {
@@ -505,6 +558,7 @@ function Home({ navigation }: Props) {
       // transaction
       // sign transaction
       if (!wallets['0-0'] || !wallets['0-0'].address) {
+        // todo change to xpubkey, xpubwallet of the particular chain
         displayMessage('error', t('home:err_sync_with_ssp_needed'));
         console.log('not synced yet');
       } else {
@@ -595,7 +649,11 @@ function Home({ navigation }: Props) {
       if (status === true) {
         const xpubw = syncReq;
         const sChain = syncChain;
-        generateAddresses(xpubw, sChain);
+        if (sChain === identityChain) {
+          generateAddressesForSyncIdentity(xpubw);
+        } else {
+          generateAddressesForSyncChain(xpubw, sChain);
+        }
       } else {
         // reject
         setSyncReq('');
@@ -690,21 +748,13 @@ function Home({ navigation }: Props) {
             <Text
               style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
             >
-              {!wallets['0-0'] ||
-              !wallets['0-0'].address ||
-              !xpubWallet ||
-              !sspWalletKeyIdentity ||
-              !sspWalletIdentity ? (
+              {!xpubWallet || !sspWalletKeyIdentity || !sspWalletIdentity ? (
                 <>{t('home:sync_needed')}!</>
               ) : (
                 t('home:no_pending_actions')
               )}
             </Text>
-            {(!wallets['0-0'] ||
-              !wallets['0-0'].address ||
-              !xpubWallet ||
-              !sspWalletKeyIdentity ||
-              !sspWalletIdentity) && (
+            {(!xpubWallet || !sspWalletKeyIdentity || !sspWalletIdentity) && (
               <Text
                 style={[
                   Fonts.textSmall,

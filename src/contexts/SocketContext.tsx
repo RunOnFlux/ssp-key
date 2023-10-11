@@ -3,6 +3,7 @@ import io, { Socket } from 'socket.io-client';
 import { useAppSelector } from 'ssp-key/src/hooks';
 import { sspConfig } from '@storage/ssp';
 import { AppState } from 'react-native';
+import { cryptos } from '../types';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -14,13 +15,13 @@ interface serverResponse {
   payload: string;
   action: string;
   wkIdentity: string;
-  chain: string;
+  chain: keyof cryptos;
   path: string;
 }
 
 interface adjustedServeResponseTx {
   rawTx: string;
-  chain: string;
+  chain: keyof cryptos;
   path: string;
 }
 
