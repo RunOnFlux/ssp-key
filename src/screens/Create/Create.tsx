@@ -170,6 +170,7 @@ function Create({ navigation }: Props) {
           blockchainConfig.slip,
           0,
           blockchainConfig.scriptType,
+          identityChain,
         ); // takes ~3 secs
         const xpub = getMasterXpub(
           mnemonicPhrase,
@@ -177,6 +178,7 @@ function Create({ navigation }: Props) {
           blockchainConfig.slip,
           0,
           blockchainConfig.scriptType,
+          identityChain,
         ); // takes ~3 secs
         const xprivBlob = CryptoJS.AES.encrypt(
           xpriv,

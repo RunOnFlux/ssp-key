@@ -67,6 +67,8 @@ type Props = {
   navigation: any;
 };
 
+const xpubRegex = /^([xyYzZtuUvV]pub[1-9A-HJ-NP-Za-km-z]{79,108})$/;
+
 function Home({ navigation }: Props) {
   // focusability of inputs
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
@@ -96,8 +98,6 @@ function Home({ navigation }: Props) {
   );
 
   const { newTx, clearTx } = useSocket();
-
-  const blockchainConfig = blockchains[activeChain];
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -152,6 +152,9 @@ function Home({ navigation }: Props) {
   };
 
   const checkXpubXpriv = async () => {
+    // todo loading animation on chain sync approval
+    const chainToUse = activeChain as keyof cryptos;
+    const blockchainConfigToUse = blockchains[chainToUse];
     if (!xpubKey || !xprivKey) {
       // just a precaution to make sure xpub and xpriv are set. Should acutally never end up here
       getUniqueId()
@@ -161,20 +164,22 @@ function Home({ navigation }: Props) {
           const pwForEncryption = id + password;
           const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
           const mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
-          // generate master xpriv for flux
+          // generate master xpriv, xpub for chain
           const xpriv = getMasterXpriv(
             mnemonicPhrase,
             48,
-            blockchainConfig.slip,
+            blockchainConfigToUse.slip,
             0,
-            blockchainConfig.scriptType,
+            blockchainConfigToUse.scriptType,
+            chainToUse,
           ); // takes ~3 secs
           const xpub = getMasterXpub(
             mnemonicPhrase,
             48,
-            blockchainConfig.slip,
+            blockchainConfigToUse.slip,
             0,
-            blockchainConfig.scriptType,
+            blockchainConfigToUse.scriptType,
+            chainToUse,
           ); // takes ~3 secs
           const xprivBlob = CryptoJS.AES.encrypt(
             xpriv,
@@ -184,8 +189,8 @@ function Home({ navigation }: Props) {
             xpub,
             pwForEncryption,
           ).toString();
-          setXprivKey(activeChain, xprivBlob);
-          setXpubKey(activeChain, xpubBlob);
+          setXprivKey(chainToUse, xprivBlob);
+          setXpubKey(chainToUse, xpubBlob);
         })
         .catch((error) => {
           console.log(error.message);
@@ -504,7 +509,7 @@ function Home({ navigation }: Props) {
         // only data
         dataToProcess = splittedInput[0];
       }
-      if (dataToProcess.startsWith('xpub')) {
+      if (xpubRegex.test(dataToProcess)) {
         // xpub
         const xpubw = dataToProcess;
         handleSyncRequest(xpubw, chain);
@@ -568,7 +573,7 @@ function Home({ navigation }: Props) {
       dataToProcess = splittedInput[0];
     }
     // check if input is xpub or transaction
-    if (dataToProcess.startsWith('xpub')) {
+    if (xpubRegex.test(dataToProcess)) {
       // xpub
       const xpubw = scannedData;
       handleSyncRequest(xpubw, chain);

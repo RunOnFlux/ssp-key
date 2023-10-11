@@ -5,14 +5,20 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
 
+import { blockchains } from '@storage/blockchains';
+
+import { cryptos } from '../../types';
+
 const SyncRequest = (props: {
-  chain: string;
+  chain: keyof cryptos;
   actionStatus: (status: boolean) => void;
 }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
+
+  const blockchainConfig = blockchains[props.chain];
 
   const approve = () => {
     console.log('Approve');
@@ -60,7 +66,8 @@ const SyncRequest = (props: {
           ]}
         >
           {t('home:ssp_sync_request', {
-            chain: props.chain.toUpperCase(),
+            chain: blockchainConfig.name,
+            symbol: blockchainConfig.symbol,
           })}
         </Text>
       </View>
