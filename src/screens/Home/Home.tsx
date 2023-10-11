@@ -72,9 +72,6 @@ function Home({ navigation }: Props) {
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const { seedPhrase, sspWalletKeyIdentity, sspWalletIdentity, identityChain } =
     useAppSelector((state) => state.ssp);
-  const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
-    (state) => state[identityChain],
-  );
   const dispatch = useAppDispatch();
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -94,6 +91,9 @@ function Home({ navigation }: Props) {
   const [syncNeededModalOpen, setSyncNeededModalOpen] = useState(false);
   const [manualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
+    (state) => state[activeChain],
+  );
 
   const { newTx, clearTx } = useSocket();
 
@@ -116,6 +116,10 @@ function Home({ navigation }: Props) {
     checkXpubXpriv();
     checkFCMToken();
   });
+
+  useEffect(() => {
+    checkXpubXpriv();
+  }, [activeChain]);
 
   useEffect(() => {
     if (newTx.rawTx) {
@@ -196,7 +200,7 @@ function Home({ navigation }: Props) {
     });
   };
 
-  const generateAddressesForactiveChain = (
+  const generateAddressesForActiveChain = (
     suppliedXpubWallet: string,
     chain: keyof cryptos,
   ) => {
@@ -477,6 +481,9 @@ function Home({ navigation }: Props) {
       return;
     } else if (manualInput === 'cancel') {
       // do not process
+      setTimeout(() => {
+        setIsManualInputModalOpen(false);
+      });
     } else {
       const splittedInput = manualInput.split(':');
       let chain: keyof cryptos = identityChain;
@@ -657,7 +664,7 @@ function Home({ navigation }: Props) {
         if (sChain === identityChain) {
           generateAddressesForSyncIdentity(xpubw);
         } else {
-          generateAddressesForactiveChain(xpubw, sChain);
+          generateAddressesForActiveChain(xpubw, sChain);
         }
       } else {
         // reject
