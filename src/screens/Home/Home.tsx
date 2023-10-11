@@ -856,7 +856,6 @@ function Home({ navigation }: Props) {
       {syncSuccessOpen && (
         <SyncSuccess
           chain={syncChain}
-          address={wallets['0-0'].address}
           actionStatus={handleSyncSuccessModalAction}
         />
       )}

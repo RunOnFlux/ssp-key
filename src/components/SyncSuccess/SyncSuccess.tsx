@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,17 +12,53 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { backends } from '@storage/backends';
 import { cryptos } from '../../types';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import { getUniqueId } from 'react-native-device-info';
+import { generateMultisigAddress } from '../../lib/wallet';
 
-const SyncRequest = (props: {
+import { useAppSelector } from '../../hooks';
+
+const CryptoJS = require('crypto-js');
+
+const SyncSuccess = (props: {
   chain: keyof cryptos;
-  address: string; // generated multisig address
   actionStatus: (status: boolean) => void;
 }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const { xpubKey, xpubWallet } = useAppSelector((state) => state[props.chain]);
+  const [chainAddress, setChainAddress] = useState('');
 
+  useEffect(() => {
+    generateAddress;
+  }, [xpubKey, xpubWallet]);
   // todo here construct address 0-0 to show first wallet
+
+  const generateAddress = () => {
+    getUniqueId()
+      .then(async (id) => {
+        // get password from encrypted storage
+        const password = await EncryptedStorage.getItem('ssp_key_pw');
+        const pwForEncryption = id + password;
+        const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
+        const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+        const xpw = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
+        const xpubWalletDecrypted = xpw.toString(CryptoJS.enc.Utf8);
+        const addrInfo = generateMultisigAddress(
+          xpubWalletDecrypted,
+          xpubKeyDecrypted,
+          0,
+          0,
+          props.chain,
+        );
+        const address = addrInfo.address;
+        setChainAddress(address);
+      })
+      .catch((error) => {
+        console.log(error.message);
+      });
+  };
 
   const close = () => {
     console.log('Close');
@@ -32,7 +68,7 @@ const SyncRequest = (props: {
   const openExplorer = () => {
     console.log('Open Explorer');
     const backendConfig = backends()[props.chain];
-    Linking.openURL(`https://${backendConfig.node}/address/${props.address}`);
+    Linking.openURL(`https://${backendConfig.node}/address/${chainAddress}`);
   };
 
   return (
@@ -73,7 +109,7 @@ const SyncRequest = (props: {
           <Text
             style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallMargin]}
           >
-            {props.address}
+            {chainAddress}
           </Text>
           <Text style={[Fonts.textTiny, Fonts.textCenter]}>
             {t('home:double_check_address')}
@@ -106,4 +142,4 @@ const SyncRequest = (props: {
   );
 };
 
-export default SyncRequest;
+export default SyncSuccess;
