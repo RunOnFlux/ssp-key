@@ -2,6 +2,7 @@ import { backends } from './backends';
 
 const flux = {
   id: 'flux',
+  libid: 'flux',
   name: 'Flux',
   symbol: 'FLUX',
   decimals: 8,
@@ -17,6 +18,7 @@ const flux = {
 
 const fluxTestnet = {
   id: 'fluxTestnet',
+  libid: 'fluxtestnet',
   name: 'Testnet Flux',
   symbol: 'TEST-FLUX',
   decimals: 8,

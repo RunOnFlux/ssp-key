@@ -5,6 +5,11 @@ import BigNumber from 'bignumber.js';
 import { utxo, broadcastTxResult, cryptos } from '../types';
 
 import { backends } from '@storage/backends';
+import { blockchains } from '@storage/blockchains';
+
+export function getLibId(chain: keyof cryptos): string {
+  return blockchains[chain].libid;
+}
 
 export async function fetchUtxos(
   address: string,
@@ -33,7 +38,8 @@ export function finaliseTransaction(
   chain: keyof cryptos,
 ): string {
   try {
-    const network = utxolib.networks[chain];
+    const libID = getLibId(chain);
+    const network = utxolib.networks[libID];
     const txhex = rawTx;
     const txb = utxolib.TransactionBuilder.fromTransaction(
       utxolib.Transaction.fromHex(txhex, network),
@@ -61,7 +67,8 @@ export function signTransaction(
   utxos: utxo[], // same or bi gger set than was used to construct the tx
 ): string {
   try {
-    const network = utxolib.networks[chain];
+    const libID = getLibId(chain);
+    const network = utxolib.networks[libID];
     const txhex = rawTx;
     const hashType = utxolib.Transaction.SIGHASH_ALL;
     const keyPair = utxolib.ECPair.fromWIF(privateKey, network);
@@ -105,7 +112,8 @@ export function buildUnsignedRawTx(
   message: string,
 ): string {
   try {
-    const network = utxolib.networks[chain];
+    const libID = getLibId(chain);
+    const network = utxolib.networks[libID];
     const txb = new utxolib.TransactionBuilder(network, fee);
     txb.setVersion(4);
     txb.setVersionGroupId(0x892f2085);
