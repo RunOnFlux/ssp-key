@@ -223,7 +223,10 @@ function Home({ navigation }: Props) {
           0,
           chain,
         );
-        CryptoJS.AES.encrypt(addrInfo.redeemScript, pwForEncryption).toString(); // just to test all is fine
+        CryptoJS.AES.encrypt(
+          addrInfo.redeemScript || addrInfo.witnessScript,
+          pwForEncryption,
+        ).toString(); // just to test all is fine
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
           suppliedXpubWallet,
           pwForEncryption,
@@ -267,7 +270,10 @@ function Home({ navigation }: Props) {
           0,
           identityChain,
         );
-        CryptoJS.AES.encrypt(addrInfo.redeemScript, pwForEncryption).toString(); // just to test all is ok
+        CryptoJS.AES.encrypt(
+          addrInfo.redeemScript || addrInfo.witnessScript,
+          pwForEncryption,
+        ).toString(); // just to test all is ok
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
           suppliedXpubWallet,
           pwForEncryption,
@@ -331,6 +337,7 @@ function Home({ navigation }: Props) {
     const addrDetails = {
       address: addrInfo.address,
       redeemScript: addrInfo.redeemScript,
+      witnessScript: addrInfo.witnessScript,
     };
     return addrDetails;
   };
@@ -454,7 +461,7 @@ function Home({ navigation }: Props) {
           rawTransactions,
           chain,
           keyPair.privKey,
-          addressDetails.redeemScript,
+          addressDetails.redeemScript ?? '',
           utxos,
         );
         const finalTx = finaliseTransaction(signedTx, chain);

@@ -95,7 +95,10 @@ export function generateMultisigAddress(
   addressIndex: number,
   chain: keyof cryptos,
 ): multisig {
+  const libID = getLibId(chain);
+  const network = utxolib.networks[libID];
   const bipParams = blockchains[chain].bip32;
+  const type = blockchains[chain].scriptType;
   const externalChain1 = HDKey.fromExtendedKey(xpub1, bipParams);
   const externalChain2 = HDKey.fromExtendedKey(xpub2, bipParams);
 
@@ -117,26 +120,60 @@ export function generateMultisigAddress(
     Buffer.from(hex, 'hex'),
   );
 
-  const redeemScript: Uint8Array = utxolib.script.multisig.output.encode(
-    2,
-    publicKeysBuffer,
-  );
-  const scriptPubKey = utxolib.script.scriptHash.output.encode(
-    utxolib.crypto.hash160(redeemScript),
-  );
+  if (type === 'p2wsh') {
+    const witnessScript = utxolib.script.multisig.output.encode(
+      2,
+      publicKeysBuffer,
+    );
+    const scriptPubKey = utxolib.script.witnessScriptHash.output.encode(
+      utxolib.crypto.sha256(witnessScript),
+    );
+    const address = utxolib.address.fromOutputScript(scriptPubKey, network);
+    const witnessScriptHex: string = Buffer.from(witnessScript).toString('hex');
+    return {
+      address,
+      witnessScript: witnessScriptHex,
+    };
+  } else if (type === 'p2sh-p2wsh') {
+    const witnessScript = utxolib.script.multisig.output.encode(
+      2,
+      publicKeysBuffer,
+    );
+    const redeemScript = utxolib.script.witnessScriptHash.output.encode(
+      utxolib.crypto.sha256(witnessScript),
+    );
+    const scriptPubKey = utxolib.script.scriptHash.output.encode(
+      utxolib.crypto.hash160(redeemScript),
+    );
+    const address = utxolib.address.fromOutputScript(scriptPubKey, network);
+    const witnessScriptHex: string = Buffer.from(witnessScript).toString('hex');
+    const redeemScriptHex: string = Buffer.from(redeemScript).toString('hex');
+    return {
+      address,
+      redeemScript: redeemScriptHex,
+      witnessScript: witnessScriptHex,
+    };
+  } else {
+    // p2sh
+    const redeemScript: Uint8Array = utxolib.script.multisig.output.encode(
+      2,
+      publicKeysBuffer,
+    );
+    const scriptPubKey = utxolib.script.scriptHash.output.encode(
+      utxolib.crypto.hash160(redeemScript),
+    );
 
-  const libID = getLibId(chain);
-  const network = utxolib.networks[libID];
-  const address: string = utxolib.address.fromOutputScript(
-    scriptPubKey,
-    network,
-  );
+    const address: string = utxolib.address.fromOutputScript(
+      scriptPubKey,
+      network,
+    );
 
-  const redeemScriptHex: string = Buffer.from(redeemScript).toString('hex');
-  return {
-    address,
-    redeemScript: redeemScriptHex,
-  };
+    const redeemScriptHex: string = Buffer.from(redeemScript).toString('hex');
+    return {
+      address,
+      redeemScript: redeemScriptHex,
+    };
+  }
 }
 
 // given xpriv of our party, generate keypair consisting of privateKey in WIF format and public key belonging to it

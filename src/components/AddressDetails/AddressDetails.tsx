@@ -65,7 +65,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
           xpubKeyWalletDecrypted,
           xpubKeyDecrypted,
         );
-        setDecryptedRedeemScript(addressDetails.redeemScript);
+        setDecryptedRedeemScript(addressDetails.redeemScript ?? '');
         setAddress(addressDetails.address);
       })
       .catch((error) => {
@@ -92,6 +92,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
     const addrDetails = {
       address: addrInfo.address,
       redeemScript: addrInfo.redeemScript,
+      witnessScript: addrInfo.witnessScript,
     };
     return addrDetails;
   };
