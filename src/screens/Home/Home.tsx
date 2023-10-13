@@ -462,6 +462,7 @@ function Home({ navigation }: Props) {
           chain,
           keyPair.privKey,
           addressDetails.redeemScript ?? '',
+          addressDetails.witnessScript ?? '',
           utxos,
         );
         const finalTx = finaliseTransaction(signedTx, chain);
