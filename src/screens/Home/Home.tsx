@@ -67,7 +67,7 @@ type Props = {
   navigation: any;
 };
 
-const xpubRegex = /^([xyYzZtuUvV]pub[1-9A-HJ-NP-Za-km-z]{79,108})$/;
+const xpubRegex = /^([a-zA-Z]{2}ub[1-9A-HJ-NP-Za-km-z]{79,140})$/; // xpub start is the most usual, but can also be Ltub
 
 function Home({ navigation }: Props) {
   // focusability of inputs
