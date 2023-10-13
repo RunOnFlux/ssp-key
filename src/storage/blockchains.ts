@@ -1,8 +1,8 @@
 import { backends } from './backends';
 
-import fluxLogo from '/src/assets/flux.svg';
-import rvnLogo from '/src/assets/rvn.svg';
-import ltcLogo from '/src/assets/ltc.svg';
+const fluxLogo = '/src/assets/flux.svg';
+const rvnLogo = '/src/assets/rvn.svg';
+const ltcLogo = '/src/assets/ltc.svg';
 
 const flux = {
   id: 'flux',
