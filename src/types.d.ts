@@ -30,8 +30,18 @@ export interface utxo {
   satoshis: string;
 }
 
+export interface blockbookUtxo {
+  txid: string;
+  vout: number;
+  value: string;
+}
+
 export interface broadcastTxResult {
   txid: string;
+}
+
+export interface blockbookBroadcastTxResult {
+  result: string;
 }
 
 export interface balance {
@@ -48,6 +58,13 @@ export interface balanceInsight {
   txApperances: number;
 }
 
+export interface balanceBlockbook {
+  address: string;
+  balance: string;
+  unconfirmedBalance: string;
+  txs: number;
+}
+
 export interface vin {
   txid: string;
   vout: number;
@@ -62,6 +79,17 @@ export interface vin {
   value: number;
 }
 
+export interface vinBlockbook {
+  txid: string;
+  sequence: number;
+  n: number;
+  addresses: string[];
+  isAddress: boolean;
+  isOwn: boolean;
+  value: string;
+  hex: string;
+}
+
 export interface vout {
   value: string;
   n: number;
@@ -71,6 +99,15 @@ export interface vout {
     addresses: string[];
     type: string;
   };
+}
+
+export interface voutBlockbook {
+  value: string;
+  n: number;
+  hex: string;
+  addresses: string[];
+  isAddress: boolean;
+  isOwn: boolean;
 }
 export interface transactionInsight {
   txid: string;
@@ -96,6 +133,44 @@ export interface transacitonsInsight {
   items: transactionInsight[];
 }
 
+export interface transactionBlockbook {
+  txid: string;
+  version: number;
+  locktime: number;
+  blockhash: string;
+  blockHeight: number;
+  confirmations: number;
+  blockTime: number;
+  size: number;
+  blockTime: number;
+  value: string;
+  valueIn: string;
+  fees: string;
+  hex: string;
+  vin: vinBlockbook[];
+  vout: voutBlockbook[];
+}
+
+export interface transacitonsBlockbook {
+  page: number;
+  totalPages: number;
+  itemsOnPage: number;
+  address: string;
+  balance: string;
+  unconfirmedBalance: string;
+  transactions: transactionBlockbook[];
+}
+
+export interface wallet {
+  address: string;
+  redeemScript: string;
+  balance: string;
+  unconfirmedBalance: string;
+  transactions: transaction[];
+}
+
+export type wallets = Record<string, wallet>;
+export type generatedWallets = Record<string, string>;
 export interface transaction {
   txid: string;
   fee: string;
@@ -106,11 +181,24 @@ export interface transaction {
   message: string;
 }
 
+export interface pendingTransaction {
+  amount: string; // satoshis
+  createdAt: string;
+  expireAt: string;
+  payload: string;
+}
+
 export interface getInfoInsight {
   info: {
     version: number;
     blocks: number;
     testnet: boolean;
+  };
+}
+
+export interface getInfoBlockbook {
+  blockbook: {
+    bestHeight: number;
   };
 }
 
@@ -121,22 +209,71 @@ export interface syncSSPRelay {
   wkIdentity: string;
 }
 
-export type currencySSPRelay = Record<
-  string,
-  {
-    usd: number;
-  }
->;
-
-export interface wallet {
-  address: string;
-  redeemScript: string;
+export interface actionSSPRelay {
+  payload: string;
+  action: string;
+  createdAt: string;
+  expireAt: string;
 }
 
-export type wallets = Record<string, wallet>;
+export interface currency {
+  EUR: number;
+  AUD: number;
+  TRY: number;
+  TWD: number;
+  RUB: number;
+  MMK: number;
+  MXN: number;
+  MYR: number;
+  CNY: number;
+  PKR: number;
+  PLN: number;
+  THB: number;
+  PHP: number;
+  ARS: number;
+  SAR: number;
+  DKK: number;
+  SGD: number;
+  AED: number;
+  USD: number;
+  CLP: number;
+  ILS: number;
+  NZD: number;
+  HKD: number;
+  XDR: number;
+  KWD: number;
+  BDT: number;
+  GBP: number;
+  SEK: number;
+  IDR: number;
+  CHF: number;
+  JPY: number;
+  XAU: number;
+  BMD: number;
+  ZAR: number;
+  HUF: number;
+  BRL: number;
+  KRW: number;
+  LKR: number;
+  NOK: number;
+  INR: number;
+  VEF: number;
+  CAD: number;
+  VND: number;
+  XAG: number;
+  CZK: number;
+  BHD: number;
+  UAH: number;
+}
 
 export interface cryptos {
   flux: number;
   fluxTestnet: number;
   rvn: number;
+  ltc: number;
+}
+
+export interface currencySSPRelay {
+  fiat: currency;
+  crypto: cryptos;
 }

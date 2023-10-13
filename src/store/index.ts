@@ -18,12 +18,14 @@ import { cryptos } from '../types';
 // ********** Import chains **********
 import flux from './flux';
 import fluxTestnet from './fluxTestnet';
-import rvn from './fluxTestnet';
+import rvn from './rvn';
+import ltc from './ltc';
 
 const chains = {
   flux,
   fluxTestnet,
   rvn,
+  ltc,
 };
 // ********** Import chains **********
 
@@ -36,6 +38,7 @@ const reducers = combineReducers({
   flux: flux.reducer,
   fluxTestnet: fluxTestnet.reducer,
   rvn: rvn.reducer,
+  ltc: ltc.reducer,
 });
 
 export const storage = new MMKV();

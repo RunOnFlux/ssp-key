@@ -17,6 +17,10 @@ declare module '@storage/blockchains' {
       public: number;
       private: number;
     };
+    txVersion: number;
+    txGroupID: number;
+    backend: string;
+    bech32: string;
   }
   type blockchains = Record<string, Blockchain>;
   let blockchains: blockchains;

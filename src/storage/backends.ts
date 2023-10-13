@@ -18,7 +18,7 @@ export function loadBackendsConfig() {
 loadBackendsConfig();
 
 const flux = {
-  node: 'explorer.runonflux.io',
+  node: 'blockbook.runonflux.io',
 };
 const fluxTestnet = {
   node: 'testnet.runonflux.io',
@@ -26,12 +26,16 @@ const fluxTestnet = {
 const rvn = {
   node: 'api.ravencoin.org',
 };
+const ltc = {
+  node: 'blockbooklitecoin.app.runonflux.io',
+};
 
 export function backends() {
   return {
     flux: localForgeBackends?.flux || flux,
     fluxTestnet: localForgeBackends?.fluxTestnet || fluxTestnet,
     rvn: localForgeBackends?.rvn || rvn,
+    ltc: localForgeBackends?.ltc || ltc,
   };
 }
 
@@ -40,5 +44,6 @@ export function backendsOriginal() {
     flux,
     fluxTestnet,
     rvn,
+    ltc,
   };
 }

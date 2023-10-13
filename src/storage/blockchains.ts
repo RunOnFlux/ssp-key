@@ -1,5 +1,9 @@
 import { backends } from './backends';
 
+import fluxLogo from '/src/assets/flux.svg';
+import rvnLogo from '/src/assets/rvn.svg';
+import ltcLogo from '/src/assets/ltc.svg';
+
 const flux = {
   id: 'flux',
   libid: 'flux',
@@ -13,11 +17,14 @@ const flux = {
   pubKeyHash: '1cb8',
   scriptHash: '1cbd',
   wif: '80',
-  logo: '/src/assets/flux.svg',
+  logo: fluxLogo,
   bip32: {
     public: 0x0488b21e,
     private: 0x0488ade4,
   },
+  txVersion: 4,
+  txGroupID: 0x892f2085,
+  backend: 'blockbook',
 };
 
 const fluxTestnet = {
@@ -33,11 +40,14 @@ const fluxTestnet = {
   pubKeyHash: '1d25',
   scriptHash: '1cba',
   wif: 'ef',
-  logo: '/src/assets/flux.svg',
+  logo: fluxLogo,
   bip32: {
     public: 0x043587cf,
     private: 0x04358394,
   },
+  txVersion: 4,
+  txGroupID: 0x892f2085,
+  backend: 'insight',
 };
 
 const rvn = {
@@ -53,15 +63,39 @@ const rvn = {
   pubKeyHash: '3c',
   scriptHash: '7a',
   wif: '80',
-  logo: '/src/assets/rvn.svg',
+  logo: rvnLogo,
   bip32: {
     public: 0x0488b21e,
     private: 0x0488ade4,
   },
+  backend: 'blockbook',
+};
+
+const ltc = {
+  id: 'ltc',
+  libid: 'litecoin',
+  name: 'Litecoin',
+  symbol: 'LTC',
+  decimals: 8,
+  node: backends().ltc.node,
+  slip: 2, // all testnets have 1
+  scriptType: 'p2wsh',
+  messagePrefix: '\u0019Litecoin Signed Message:\n',
+  pubKeyHash: '30',
+  scriptHash: '32',
+  wif: 'b0',
+  logo: ltcLogo,
+  bip32: {
+    public: 0x019da462,
+    private: 0x019d9cfe,
+  },
+  backend: 'blockbook',
+  bech32: 'ltc',
 };
 
 export const blockchains = {
   flux,
   fluxTestnet,
   rvn,
+  ltc,
 };
