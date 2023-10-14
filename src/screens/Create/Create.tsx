@@ -247,7 +247,7 @@ function Create({ navigation }: Props) {
       >
         <Image
           style={{ width: 80, height: 160 }}
-          source={Images.ssp.logo}
+          source={darkMode ? Images.ssp.logoWhite : Images.ssp.logoBlack}
           resizeMode={'contain'}
         />
         <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>

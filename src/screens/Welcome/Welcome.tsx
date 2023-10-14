@@ -10,7 +10,7 @@ type Props = {
 
 function Welcome({ navigation }: Props) {
   const { t } = useTranslation(['welcome']);
-  const { Common, Fonts, Gutters, Layout, Images } = useTheme();
+  const { darkMode, Common, Fonts, Gutters, Layout, Images } = useTheme();
 
   return (
     <ScrollView
@@ -34,7 +34,7 @@ function Welcome({ navigation }: Props) {
       >
         <Image
           style={{ width: 120, height: 200 }}
-          source={Images.ssp.logo}
+          source={darkMode ? Images.ssp.logoWhite : Images.ssp.logoBlack}
           resizeMode={'contain'}
         />
         <Text style={[Fonts.titleRegular, Gutters.tinyBMargin]}>

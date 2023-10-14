@@ -4,6 +4,6 @@
 
 export default function () {
   return {
-    logo: require('../../assets/images/splash_icon.png'),
+    logo: require('../../assets/images/ssp-logo-black.png'),
   };
 }

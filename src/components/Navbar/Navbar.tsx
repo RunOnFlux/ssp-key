@@ -6,7 +6,7 @@ import { useTheme } from '../../hooks';
 import HelpSection from '../../components/HelpSection/HelpSection';
 
 function PoweredByFlux(props: { openSettingsTrigger: () => void }) {
-  const { Gutters, Layout, Images, Colors } = useTheme();
+  const { darkMode, Gutters, Layout, Images, Colors } = useTheme();
   const [helpSectionModalOpen, setHelpSectionModalOpen] = useState(false);
   const openHelp = () => {
     setHelpSectionModalOpen(true);
@@ -31,7 +31,7 @@ function PoweredByFlux(props: { openSettingsTrigger: () => void }) {
       >
         <Image
           style={{ width: 35, height: 35 }}
-          source={Images.ssp.logo}
+          source={darkMode ? Images.ssp.logoWhite : Images.ssp.logoBlack}
           resizeMode={'contain'}
         />
         <View style={[Layout.row, Gutters.tinyTMargin]}>
