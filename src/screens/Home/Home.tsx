@@ -584,7 +584,7 @@ function Home({ navigation }: Props) {
     // check if input is xpub or transaction
     if (xpubRegex.test(dataToProcess)) {
       // xpub
-      const xpubw = scannedData;
+      const xpubw = dataToProcess;
       handleSyncRequest(xpubw, chain);
     } else if (dataToProcess.startsWith('0')) {
       // transaction
