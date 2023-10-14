@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
@@ -13,6 +13,7 @@ import { blockchains } from '@storage/blockchains';
 const TransactionRequest = (props: {
   rawTx: string;
   chain: keyof cryptos;
+  activityStatus: boolean;
   actionStatus: (status: boolean) => void;
 }) => {
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
@@ -100,13 +101,23 @@ const TransactionRequest = (props: {
             Gutters.regularBMargin,
             Gutters.smallTMargin,
           ]}
+          disabled={authenticationOpen || props.activityStatus}
           onPressIn={() => openAuthentication()}
         >
+          {(authenticationOpen || props.activityStatus) && (
+            <ActivityIndicator
+              size={'large'}
+              style={[{ position: 'absolute' }]}
+            />
+          )}
           <Text style={[Fonts.textRegular, Fonts.textWhite]}>
             {t('home:approve_transaction')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPressIn={() => reject()}>
+        <TouchableOpacity
+          disabled={authenticationOpen || props.activityStatus}
+          onPressIn={() => reject()}
+        >
           <Text
             style={[
               Fonts.textSmall,

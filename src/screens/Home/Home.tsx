@@ -96,6 +96,7 @@ function Home({ navigation }: Props) {
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
+  const [activityStatus, setActivityStatus] = useState(false);
 
   const { newTx, clearTx } = useSocket();
 
@@ -248,7 +249,7 @@ function Home({ navigation }: Props) {
       .catch((error) => {
         setSyncReq('');
         setActiveChain(identityChain);
-        console.log(error.message);
+        console.log(error);
         setTimeout(() => {
           displayMessage('error', t('home:err_sync_failed'));
         }, 200);
@@ -643,6 +644,7 @@ function Home({ navigation }: Props) {
 
   const handleTransactionRequestAction = async (status: boolean) => {
     try {
+      setActivityStatus(true);
       if (status === true) {
         const rtx = rawTx;
         const rchain = activeChain as keyof cryptos;
@@ -666,11 +668,14 @@ function Home({ navigation }: Props) {
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setActivityStatus(false);
     }
   };
 
   const handleSynchronisationRequestAction = (status: boolean) => {
     try {
+      setActivityStatus(true);
       if (status === true) {
         const xpubw = syncReq;
         const sChain = activeChain;
@@ -686,6 +691,8 @@ function Home({ navigation }: Props) {
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setActivityStatus(false);
     }
   };
 
@@ -849,12 +856,14 @@ function Home({ navigation }: Props) {
         <TransactionRequest
           rawTx={rawTx}
           chain={activeChain as keyof cryptos}
+          activityStatus={activityStatus}
           actionStatus={handleTransactionRequestAction}
         />
       )}
       {syncReq && (
         <SyncRequest
           chain={activeChain}
+          activityStatus={activityStatus}
           actionStatus={handleSynchronisationRequestAction}
         />
       )}

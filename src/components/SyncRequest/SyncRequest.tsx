@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -11,6 +11,7 @@ import { cryptos } from '../../types';
 
 const SyncRequest = (props: {
   chain: keyof cryptos;
+  activityStatus: boolean;
   actionStatus: (status: boolean) => void;
 }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
@@ -79,13 +80,23 @@ const SyncRequest = (props: {
             Gutters.regularBMargin,
             Gutters.smallTMargin,
           ]}
+          disabled={authenticationOpen || props.activityStatus}
           onPressIn={() => openAuthentication()}
         >
+          {(authenticationOpen || props.activityStatus) && (
+            <ActivityIndicator
+              size={'large'}
+              style={[{ position: 'absolute' }]}
+            />
+          )}
           <Text style={[Fonts.textRegular, Fonts.textWhite]}>
             {t('home:approve_sync')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPressIn={() => reject()}>
+        <TouchableOpacity
+          disabled={authenticationOpen || props.activityStatus}
+          onPressIn={() => reject()}
+        >
           <Text
             style={[
               Fonts.textSmall,
