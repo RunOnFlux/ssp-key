@@ -24,7 +24,7 @@ const fluxTestnet = {
   node: 'testnet.runonflux.io',
 };
 const rvn = {
-  node: 'api.ravencoin.org',
+  node: 'blockbookravencoin.app.runonflux.io',
 };
 const ltc = {
   node: 'blockbooklitecoin.app.runonflux.io',
