@@ -6,7 +6,7 @@
     <item>
         <bitmap
             android:gravity="center"
-            android:src="@drawable/ssp-logo-text-white"
+            android:src="@drawable/ssp_logo_text_white"
         />
     </item>
 
