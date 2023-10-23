@@ -8,4 +8,8 @@ mmkv storage is data are encrypted with cryptojs library where salt and iv are r
 password consist of DeviceInfo.getUniqueID(); + users input of password/pin 
 For more information about unique id refer to <https://reactnativeexample.com/device-information-for-react-native-ios-and-android/#getuniqueid>
 
-<https://github.com/mrousavy/react-native-vision-camera/issues/1662>
+SSP Wallet is built using React 18, Typescript and requires Node 16+. Dev me out with yarn dev now!
+
+More about SSP at: https://github.com/RunOnFlux/ssp-wallet/blob/master/README.md
+
+By using SSP you agree with SSP Diclaimer <https://github.com/RunOnFlux/ssp-key/blob/master/DISCLAIMER.md>
