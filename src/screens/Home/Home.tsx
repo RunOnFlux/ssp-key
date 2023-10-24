@@ -628,6 +628,8 @@ function Home({ navigation }: Props) {
         );
         console.log('result', result.data);
       } else {
+        // here open sync needed modal
+        setSyncNeededModalOpen(true);
         console.log('no wallet synced yet');
       }
     } catch (error) {

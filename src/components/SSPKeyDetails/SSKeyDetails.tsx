@@ -70,6 +70,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
     >
       <ScrollView
         style={[Layout.fill, Common.modalBackdrop]}
+        contentInset={{ bottom: 80 }}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,

@@ -32,6 +32,7 @@ import { setInitialStateForAllChains } from '../../store';
 import { useAppSelector, useAppDispatch } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
+import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 
 type Props = {
   navigation: any;
@@ -261,6 +262,7 @@ function Restore({ navigation }: Props) {
           Layout.fullWidth,
           Layout.justifyContentCenter,
           Layout.alignItemsCenter,
+          Gutters.largeBMargin,
         ]}
       >
         <Image
@@ -369,6 +371,7 @@ function Restore({ navigation }: Props) {
       >
         <ScrollView
           style={[Layout.fill, Common.modalBackdrop]}
+          contentInset={{ bottom: 80 }}
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
@@ -486,6 +489,7 @@ function Restore({ navigation }: Props) {
         </ScrollView>
         <Toast />
       </Modal>
+      <PoweredByFlux />
     </KeyboardAwareScrollView>
   );
 }

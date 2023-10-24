@@ -8,7 +8,6 @@ import {
   Linking,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import PoweredByFlux from '../PoweredByFlux/PoweredByFlux';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
@@ -45,6 +44,7 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
     >
       <ScrollView
         style={[Layout.fill, Common.modalBackdrop]}
+        contentInset={{ bottom: 80 }}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
@@ -102,7 +102,6 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
           </TouchableOpacity>
         </View>
         <View style={[Layout.justifyContentEnd]}>
-          <PoweredByFlux />
           <TouchableOpacity
             style={[
               Common.button.outlineRounded,

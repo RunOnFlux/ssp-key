@@ -41,6 +41,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
       <KeyboardAwareScrollView
         extraScrollHeight={20}
         style={[Layout.fill, Common.modalBackdrop]}
+        contentInset={{ bottom: 80 }}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,

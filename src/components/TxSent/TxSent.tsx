@@ -43,6 +43,7 @@ const TxSent = (props: {
     >
       <ScrollView
         style={[Layout.fill, Common.modalBackdrop]}
+        contentInset={{ bottom: 80 }}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,

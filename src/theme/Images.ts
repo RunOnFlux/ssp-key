@@ -7,6 +7,8 @@ export default function ({}: ThemeVariables) {
       logoWhite: require('../assets/ssp-logo-white.png'),
       logoTextBlack: require('../assets/ssp-logo-text-black.png'),
       logoTextWhite: require('../assets/ssp-logo-text-white.png'),
+      poweredByDark: require('../assets/powered_by_dark.png'),
+      poweredByLight: require('../assets/powered_by_light.png'),
     },
   };
 }

@@ -128,6 +128,7 @@ const Authentication = (props: {
         enableOnAndroid={true}
         extraScrollHeight={20}
         style={[Layout.fill, Common.modalBackdrop]}
+        contentInset={{ bottom: 80 }}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
