@@ -16,6 +16,7 @@ export GEM_HOME=$HOME/gems
 export PATH="$GEM_HOME/bin:$PATH"
 
 echo ">>> INSTALL BUNDLER"
+gem update --system 3.2.3
 gem install bundler --install-dir $GEM_HOME
 
 # Install dependencies
