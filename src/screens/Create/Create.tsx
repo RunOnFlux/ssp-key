@@ -36,6 +36,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
+import CreationSteps from 'ssp-key/src/components/CreationSteps/CreationSteps';
 
 type Props = {
   navigation: any;
@@ -213,7 +214,6 @@ function Create({ navigation }: Props) {
       contentContainerStyle={[
         Layout.fullSize,
         Layout.fill,
-        Layout.colCenter,
         Layout.scrollSpaceBetween,
       ]}
     >
@@ -235,6 +235,9 @@ function Create({ navigation }: Props) {
             {t('common:back')}
           </Text>
         </TouchableOpacity>
+      </View>
+      <View style={[Gutters.smallTMargin, Gutters.regularHMargin]}>
+        <CreationSteps step={1} isImport={false} />
       </View>
       <View
         style={[
@@ -353,6 +356,9 @@ function Create({ navigation }: Props) {
           >
             {t('cr:key_backup')}
           </Text>
+          <View style={[Gutters.smallBMargin]}>
+            <CreationSteps step={2} isImport={false} />
+          </View>
           <Text
             style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
           >

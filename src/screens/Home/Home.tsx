@@ -30,7 +30,6 @@ import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
 import { cryptos } from '../../types';
-
 import { blockchains } from '@storage/blockchains';
 
 const CryptoJS = require('crypto-js');
@@ -836,7 +835,6 @@ function Home({ navigation }: Props) {
               style={[
                 Common.button.outlineRounded,
                 Common.button.secondaryButton,
-                Layout.fullWidth,
                 Gutters.smallBMargin,
               ]}
               onPressIn={() => scanCode()}

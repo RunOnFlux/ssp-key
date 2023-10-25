@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import CreationSteps from 'ssp-key/src/components/CreationSteps/CreationSteps';
 
 const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
@@ -41,6 +42,9 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
         <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
           {t('common:appName.full')}
         </Text>
+        <View style={[Gutters.smallTMargin]}>
+          <CreationSteps step={3} isImport={false} />
+        </View>
         <View
           style={[
             Layout.fill,

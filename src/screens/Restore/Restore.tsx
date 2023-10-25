@@ -33,6 +33,7 @@ import { useAppSelector, useAppDispatch } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
+import CreationSteps from 'ssp-key/src/components/CreationSteps/CreationSteps';
 
 type Props = {
   navigation: any;
@@ -229,7 +230,6 @@ function Restore({ navigation }: Props) {
       contentContainerStyle={[
         Layout.fullSize,
         Layout.fill,
-        Layout.colCenter,
         Layout.scrollSpaceBetween,
       ]}
     >
@@ -254,6 +254,15 @@ function Restore({ navigation }: Props) {
             {t('common:back')}
           </Text>
         </TouchableOpacity>
+      </View>
+      <View
+        style={[
+          Gutters.smallTMargin,
+          Gutters.regularBMargin,
+          Gutters.regularHMargin,
+        ]}
+      >
+        <CreationSteps step={1} isImport={true} />
       </View>
       <View
         style={[
@@ -353,7 +362,7 @@ function Restore({ navigation }: Props) {
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
-            Gutters.regularBMargin,
+            Gutters.largeBMargin,
             Gutters.smallTMargin,
           ]}
           onPressIn={() => setupImportKey()}
@@ -383,6 +392,9 @@ function Restore({ navigation }: Props) {
           >
             {t('cr:key_backup')}
           </Text>
+          <View style={[Gutters.smallBMargin]}>
+            <CreationSteps step={2} isImport={true} />
+          </View>
           <Text
             style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
           >
