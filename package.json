@@ -30,7 +30,7 @@
     "axios": "^1.4.0",
     "bignumber.js": "^9.1.1",
     "buffer": "^6.0.3",
-    "crypto-js": "^4.1.1",
+    "crypto-js": "^4.2.0",
     "events": "^3.3.0",
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "i18next": "^23.4.5",
