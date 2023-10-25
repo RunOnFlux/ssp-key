@@ -17,7 +17,8 @@ export PATH="$GEM_HOME/bin:$PATH"
 
 echo ">>> INSTALL BUNDLER"
 gem install bundler --install-dir $GEM_HOME
-gem install cocoapods --install-dir $GEM_HOME
+gem install json -v '2.6.3' --install-dir $GEM_HOME
+gem install ffi -v '1.16.3' --install-dir $GEM_HOME
 
 # Install dependencies
 yarn
