@@ -4,7 +4,7 @@ export NODE_OPTIONS=--max_old_space_size=8192
 
 # Install CocoaPods and yarn using Homebrew.
 brew install cocoapods
-brew install ruby
+brew install ruby@2.7
 brew install node@18
 brew link node@18
 brew install yarn
@@ -16,6 +16,7 @@ export GEM_HOME=$HOME/gems
 export PATH="$GEM_HOME/bin:$PATH"
 
 echo ">>> INSTALL BUNDLER"
+ruby -v
 gem install bundler --install-dir $GEM_HOME
 gem install json -v '2.6.3' --install-dir $GEM_HOME
 gem install ffi -v '1.16.3' --install-dir $GEM_HOME
