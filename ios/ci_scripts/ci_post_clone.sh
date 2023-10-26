@@ -23,6 +23,11 @@ rbenv init
 rbenv install 2.7.8
 rbenv global 2.7.8
 rbenv local 2.7.8
+rbenv init
+eval "$(rbenv init -)"
+source ~/.bash_profile
+eval "$(rbenv init -)"
+eval "$(rbenv init -)"
 ruby -v
 gem install bundler --install-dir $GEM_HOME
 gem install json -v '2.6.3' --install-dir $GEM_HOME
