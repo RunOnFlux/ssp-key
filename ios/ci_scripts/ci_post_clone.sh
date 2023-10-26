@@ -4,7 +4,7 @@ export NODE_OPTIONS=--max_old_space_size=8192
 
 # Install CocoaPods and yarn using Homebrew.
 brew install cocoapods
-brew install ruby
+brew install rbenv ruby-build
 brew install node@18
 brew link node@18
 brew install yarn
@@ -16,7 +16,12 @@ export GEM_HOME=$HOME/gems
 export PATH="$GEM_HOME/bin:$PATH"
 
 echo ">>> INSTALL BUNDLER"
-gem update --system 3.2.3
+ruby -v
+rbenv init
+rbenv install 2.7.8
+rbenv global 2.7.8
+eval "$(rbenv init -)"
+ruby -v
 gem install bundler --install-dir $GEM_HOME
 
 # Install dependencies
