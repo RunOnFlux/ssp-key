@@ -58,5 +58,10 @@
   "auth_sync_ssp": "You are about to sync SSP Wallet with SSP Key!",
   "auth_sensitive_inf": "You are about to access sensitive information!",
   "auth_confirm_with_pw": "Confirm with password.",
-  "auth_grant_access_pw": "Grant access with password."
+  "auth_grant_access_pw": "Grant access with password.",
+  "select_wallet": "Select Wallet",
+  "select_chain": "Select Chain",
+  "selected_chain": "Selected Chain",
+  "selected_chain_wallet":"Selected Chain and Wallet",
+  "chain_not_synced_scan": "Chain Not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it."
 }

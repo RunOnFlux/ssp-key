@@ -16,5 +16,7 @@
   "help": "Help",
   "save": "Save",
   "confirm": "Confirm",
-  "ask_me_later": "Ask me later"
+  "ask_me_later": "Ask me later",
+  "chain": "Chain",
+  "wallet": "Wallet"
 }
