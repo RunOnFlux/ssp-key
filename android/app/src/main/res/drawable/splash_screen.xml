@@ -3,9 +3,9 @@
 
     <item android:drawable="@color/splashscreen_bg"/>
 
-    <item>
+    <item android:gravity="center" android:width="150dp" android:height="250dp">
         <bitmap
-            android:gravity="center"
+            android:gravity="fill_horizontal|fill_vertical"
             android:src="@drawable/ssp_logo_text_white"
         />
     </item>
