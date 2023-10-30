@@ -79,6 +79,10 @@ async function displayNotification(message: Record<string, string>) {
       pressAction: {
         id: 'default',
       },
+      // Reference the name created (Optional, defaults to 'ic_launcher')
+      smallIcon: 'ic_stat_name',
+      // Set color of icon (Optional, defaults to white)
+      color: '#131314',
     },
   });
 }
