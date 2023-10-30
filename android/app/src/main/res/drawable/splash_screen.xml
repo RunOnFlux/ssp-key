@@ -4,12 +4,10 @@
     <item android:drawable="@color/splashscreen_bg"/>
 
     <item>
-        <inset xmlns:android="http://schemas.android.com/apk/res/android"
-            android:drawable="@drawable/ssp_logo_text_white"
-            android:insetLeft="220dp"
-            android:insetRight="220dp"
-            android:insetTop="180dp"
-            android:insetBottom="180dp"/>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/ssp_logo_text_white"
+        />
     </item>
 
 </layer-list>
