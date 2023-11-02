@@ -31,6 +31,11 @@ export default function ({ FontSize, Colors }: ThemeVariables) {
     textUppercase: {
       textTransform: 'uppercase',
     },
+    titleTiny: {
+      fontSize: FontSize.tiny * 1.25,
+      fontWeight: 'bold',
+      color: Colors.textGray800,
+    },
     titleSmall: {
       fontSize: FontSize.small * 1.5,
       fontWeight: 'bold',

@@ -5,7 +5,7 @@ import { useTheme } from '../../hooks';
 
 import HelpSection from '../../components/HelpSection/HelpSection';
 
-function PoweredByFlux(props: { openSettingsTrigger: () => void }) {
+function Navbar(props: { openSettingsTrigger: () => void }) {
   const { darkMode, Gutters, Layout, Images, Colors } = useTheme();
   const [helpSectionModalOpen, setHelpSectionModalOpen] = useState(false);
   const openHelp = () => {
@@ -53,4 +53,4 @@ function PoweredByFlux(props: { openSettingsTrigger: () => void }) {
   );
 }
 
-export default PoweredByFlux;
+export default Navbar;

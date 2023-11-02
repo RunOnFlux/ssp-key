@@ -34,6 +34,7 @@ import { useAppSelector, useAppDispatch } from '../../hooks';
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from 'ssp-key/src/components/CreationSteps/CreationSteps';
+// import Headerbar from 'ssp-key/src/components/Headerbar/Headerbar';
 
 type Props = {
   navigation: any;
@@ -255,6 +256,12 @@ function Restore({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
       </View>
+      {/* <Headerbar
+        headerText={t('cr:import_key_phrase')}
+        backNavigation={seedPhrase ? 'Home' : 'Welcome'}
+        navigation={navigation}
+      />
+      <Divider color={Colors.textGray200} /> */}
       <View
         style={[
           Gutters.smallTMargin,
@@ -371,6 +378,16 @@ function Restore({ navigation }: Props) {
             {t('cr:import_key')}
           </Text>
         </TouchableOpacity>
+        {/* <TouchableOpacity
+          style={[Gutters.largeBMargin]}
+          onPressIn={() => navigateBack()}
+        >
+          <Text
+            style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
+          >
+            {t('common:cancel')}
+          </Text>
+        </TouchableOpacity> */}
       </View>
       <Modal
         animationType="fade"
