@@ -909,13 +909,13 @@ function Home({ navigation }: Props) {
           <ManualInput actionStatus={handleManualInput} />
         )}
         {isMenuModalOpen && <MenuModal actionStatus={handleMenuModalAction} />}
-        {showScanner && (
-          <Scanner
-            onRead={(data) => handleScannedData(data)}
-            onClose={handleCancelScanner}
-          />
-        )}
       </View>
+      {showScanner && (
+        <Scanner
+          onRead={(data) => handleScannedData(data)}
+          onClose={handleCancelScanner}
+        />
+      )}
       <PoweredByFlux />
     </ScrollView>
   );
