@@ -30,7 +30,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
     <View style={[Layout.fill, Layout.colCenter, Gutters.largeTMargin]}>
       <Brand />
       <ActivityIndicator size={'large'} style={[Gutters.largeVMargin]} />
-      <PoweredByFlux />
+      <PoweredByFlux isClickeable={true} />
     </View>
   );
 };

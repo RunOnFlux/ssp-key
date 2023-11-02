@@ -64,7 +64,7 @@ function Welcome({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
       </View>
-      <PoweredByFlux />
+      <PoweredByFlux isClickeable={true} />
     </ScrollView>
   );
 }

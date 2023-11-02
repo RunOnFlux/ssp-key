@@ -4,7 +4,11 @@ import { View, TouchableOpacity, Linking, Image } from 'react-native';
 // import { changeTheme, ThemeState } from '../../store/theme';
 import { useTheme } from '../../hooks';
 
-function PoweredByFlux() {
+type Props = {
+  isClickeable?: boolean;
+};
+
+const PoweredByFlux = ({ isClickeable }: Props) => {
   const { darkMode: isDark, Images, Layout, NavigationColors } = useTheme();
 
   const openFlux = () => {
@@ -20,12 +24,8 @@ function PoweredByFlux() {
     <>
       <View
         style={[
-          Layout.fill,
-          Layout.relative,
           Layout.fullWidth,
-          Layout.justifyContentCenter,
           Layout.alignItemsCenter,
-          Layout.row,
           Layout.absolute,
           Layout.bottom0,
           {
@@ -43,18 +43,31 @@ function PoweredByFlux() {
           },
         ]}
       >
-        <TouchableOpacity onPressIn={() => openFlux()}>
+        {isClickeable && (
+          <TouchableOpacity onPressIn={() => openFlux()}>
+            <Image
+              testID={'powered-by-flux-img'}
+              style={{ height: 18, width: 130 }}
+              source={
+                isDark ? Images.ssp.poweredByLight : Images.ssp.poweredByDark
+              }
+            />
+          </TouchableOpacity>
+        )}
+        {!isClickeable && (
           <Image
             testID={'powered-by-flux-img'}
-            style={{ height: 18, width: 128 }}
+            style={{ height: 18, width: 130 }}
             source={
               isDark ? Images.ssp.poweredByLight : Images.ssp.poweredByDark
             }
           />
-        </TouchableOpacity>
+        )}
       </View>
     </>
   );
-}
+};
+
+PoweredByFlux.defaultProps = { isClickeable: false };
 
 export default PoweredByFlux;

@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import Divider from '../../components/Divider/Divider';
 import TransactionRequest from '../../components/TransactionRequest/TransactionRequest';
+import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import SyncRequest from '../../components/SyncRequest/SyncRequest';
 import AddressDetails from '../../components/AddressDetails/AddressDetails';
 import SSPKeyDetails from '../../components/SSPKeyDetails/SSKeyDetails';
@@ -767,148 +768,155 @@ function Home({ navigation }: Props) {
     >
       <Navbar openSettingsTrigger={openSettings} />
       <Divider color={Colors.textGray200} />
-      {!rawTx && !syncReq && (
-        <>
-          <View
-            style={[
-              Layout.fill,
-              Layout.relative,
-              Layout.fullWidth,
-              Layout.justifyContentCenter,
-              Layout.alignItemsCenter,
-            ]}
-          >
-            <Icon name="key" size={60} color={Colors.textGray400} />
-            <Text
-              style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
+      <View
+        style={[Gutters.largeBMargin, Gutters.largeBPadding, Layout.colCenter]}
+      >
+        {!rawTx && !syncReq && (
+          <>
+            <View
+              style={[
+                Layout.fill,
+                Layout.relative,
+                Layout.fullWidth,
+                Layout.justifyContentCenter,
+                Layout.alignItemsCenter,
+              ]}
             >
-              {!sspWalletKeyIdentity || !sspWalletIdentity ? (
-                <>{t('home:sync_needed')}!</>
-              ) : (
-                t('home:no_pending_actions')
-              )}
-            </Text>
-            {(!sspWalletKeyIdentity || !sspWalletIdentity) && (
+              <Icon name="key" size={60} color={Colors.textGray400} />
               <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textCenter,
-                  Gutters.smallLMargin,
-                  Gutters.smallRMargin,
-                ]}
+                style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
               >
-                {t('home:sync_qr_needed')}
+                {!sspWalletKeyIdentity || !sspWalletIdentity ? (
+                  <>{t('home:sync_needed')}!</>
+                ) : (
+                  t('home:no_pending_actions')
+                )}
               </Text>
-            )}
-            {isRefreshing && (
-              <ActivityIndicator
-                size={'large'}
-                style={[Layout.row, Gutters.regularTMargin, { height: 30 }]}
-              />
-            )}
-            {!isRefreshing && (
-              <TouchableOpacity
-                onPressIn={() => handleRefresh()}
-                style={[Layout.row, Gutters.regularTMargin, { height: 30 }]}
-              >
-                <IconB
-                  name="gesture-tap"
-                  size={30}
-                  color={Colors.bluePrimary}
-                />
+              {(!sspWalletKeyIdentity || !sspWalletIdentity) && (
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBold,
-                    Fonts.textBluePrimary,
-                    Gutters.tinyTMargin,
-                    Gutters.tinyLMargin,
+                    Fonts.textCenter,
+                    Gutters.smallLMargin,
+                    Gutters.smallRMargin,
                   ]}
                 >
-                  {t('common:refresh')}
+                  {t('home:sync_qr_needed')}
+                </Text>
+              )}
+              {isRefreshing && (
+                <ActivityIndicator
+                  size={'large'}
+                  style={[Layout.row, Gutters.regularTMargin, { height: 30 }]}
+                />
+              )}
+              {!isRefreshing && (
+                <TouchableOpacity
+                  onPressIn={() => handleRefresh()}
+                  style={[Layout.row, Gutters.regularTMargin, { height: 30 }]}
+                >
+                  <IconB
+                    name="gesture-tap"
+                    size={30}
+                    color={Colors.bluePrimary}
+                  />
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBold,
+                      Fonts.textBluePrimary,
+                      Gutters.tinyTMargin,
+                      Gutters.tinyLMargin,
+                    ]}
+                  >
+                    {t('common:refresh')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View>
+              <TouchableOpacity
+                style={[
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                  Gutters.smallBMargin,
+                ]}
+                onPressIn={() => scanCode()}
+              >
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Gutters.regularHPadding,
+                  ]}
+                >
+                  {t('home:scan_code')}
                 </Text>
               </TouchableOpacity>
-            )}
-          </View>
-          <View>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
-                Gutters.smallBMargin,
-              ]}
-              onPressIn={() => scanCode()}
-            >
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Gutters.regularHPadding,
-                ]}
-              >
-                {t('home:scan_code')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
-      {rawTx && xpubWallet && xpubKey && (
-        <TransactionRequest
-          rawTx={rawTx}
-          chain={activeChain as keyof cryptos}
-          activityStatus={activityStatus}
-          actionStatus={handleTransactionRequestAction}
-        />
-      )}
-      {syncReq && (
-        <SyncRequest
-          chain={activeChain}
-          activityStatus={activityStatus}
-          actionStatus={handleSynchronisationRequestAction}
-        />
-      )}
-      {txid && (
-        <TxSent
-          txid={txid}
-          chain={activeChain as keyof cryptos}
-          actionStatus={handleTxSentModalAction}
-        />
-      )}
-      {syncSuccessOpen && (
-        <SyncSuccess
-          chain={activeChain}
-          actionStatus={handleSyncSuccessModalAction}
-        />
-      )}
-      {addrDetailsOpen && (
-        <AddressDetails actionStatus={handleAddrDetailsModalAction} />
-      )}
-      {sspKeyDetailsOpen && (
-        <SSPKeyDetails actionStatus={handleSSPKeyModalAction} />
-      )}
-      {settingsMenuOpen && (
-        <SettingsSection
-          actionStatus={handleSettingsModalAction}
-          navigation={navigation}
-        />
-      )}
-      {syncNeededModalOpen && (
-        <SyncNeeded actionStatus={handleSyncNeededModalAction} />
-      )}
-      {authenticationOpen && (
-        <Authentication
-          actionStatus={handleAuthenticationOpen}
-          type="sensitive"
-        />
-      )}
-      {manualInputModalOpen && <ManualInput actionStatus={handleManualInput} />}
-      {isMenuModalOpen && <MenuModal actionStatus={handleMenuModalAction} />}
-      {showScanner && (
-        <Scanner
-          onRead={(data) => handleScannedData(data)}
-          onClose={handleCancelScanner}
-        />
-      )}
+            </View>
+          </>
+        )}
+        {rawTx && xpubWallet && xpubKey && (
+          <TransactionRequest
+            rawTx={rawTx}
+            chain={activeChain as keyof cryptos}
+            activityStatus={activityStatus}
+            actionStatus={handleTransactionRequestAction}
+          />
+        )}
+        {syncReq && (
+          <SyncRequest
+            chain={activeChain}
+            activityStatus={activityStatus}
+            actionStatus={handleSynchronisationRequestAction}
+          />
+        )}
+        {txid && (
+          <TxSent
+            txid={txid}
+            chain={activeChain as keyof cryptos}
+            actionStatus={handleTxSentModalAction}
+          />
+        )}
+        {syncSuccessOpen && (
+          <SyncSuccess
+            chain={activeChain}
+            actionStatus={handleSyncSuccessModalAction}
+          />
+        )}
+        {addrDetailsOpen && (
+          <AddressDetails actionStatus={handleAddrDetailsModalAction} />
+        )}
+        {sspKeyDetailsOpen && (
+          <SSPKeyDetails actionStatus={handleSSPKeyModalAction} />
+        )}
+        {settingsMenuOpen && (
+          <SettingsSection
+            actionStatus={handleSettingsModalAction}
+            navigation={navigation}
+          />
+        )}
+        {syncNeededModalOpen && (
+          <SyncNeeded actionStatus={handleSyncNeededModalAction} />
+        )}
+        {authenticationOpen && (
+          <Authentication
+            actionStatus={handleAuthenticationOpen}
+            type="sensitive"
+          />
+        )}
+        {manualInputModalOpen && (
+          <ManualInput actionStatus={handleManualInput} />
+        )}
+        {isMenuModalOpen && <MenuModal actionStatus={handleMenuModalAction} />}
+        {showScanner && (
+          <Scanner
+            onRead={(data) => handleScannedData(data)}
+            onClose={handleCancelScanner}
+          />
+        )}
+      </View>
+      <PoweredByFlux />
     </ScrollView>
   );
 }

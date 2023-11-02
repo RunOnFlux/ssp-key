@@ -6,6 +6,7 @@ import {
   Modal,
   ScrollView,
   Linking,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +14,8 @@ import { useTheme } from '../../hooks';
 
 const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Common, Colors } = useTheme();
+  const { Fonts, Gutters, Layout, Common, Colors, darkMode, Images } =
+    useTheme();
 
   const close = () => {
     console.log('Close');
@@ -33,6 +35,10 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
   const openDiscord = () => {
     console.log('Open Discord');
     Linking.openURL('https://discord.gg/runonflux');
+  };
+
+  const openFlux = () => {
+    Linking.openURL('https://runonflux.io');
   };
 
   return (
@@ -99,6 +105,18 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
           >
             <Icon name={'discord'} size={30} color={Colors.bluePrimary} />
             <Text style={[Fonts.textSmall, Fonts.textCenter]}>Discord</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[Gutters.regularVPadding]}
+            onPressIn={() => openFlux()}
+          >
+            <Image
+              testID={'powered-by-flux-img'}
+              style={{ height: 24, width: 173 }}
+              source={
+                darkMode ? Images.ssp.poweredByLight : Images.ssp.poweredByDark
+              }
+            />
           </TouchableOpacity>
         </View>
         <View style={[Layout.justifyContentEnd]}>
