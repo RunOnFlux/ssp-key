@@ -279,6 +279,9 @@ function Restore({ navigation }: Props) {
           Layout.justifyContentCenter,
           Layout.alignItemsCenter,
           Gutters.largeBMargin,
+          {
+            overflow: 'hidden',
+          },
         ]}
       >
         <Image

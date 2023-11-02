@@ -247,6 +247,9 @@ function Create({ navigation }: Props) {
           Layout.justifyContentCenter,
           Layout.alignItemsCenter,
           Gutters.largeBMargin,
+          {
+            overflow: 'hidden',
+          },
         ]}
       >
         <Image
