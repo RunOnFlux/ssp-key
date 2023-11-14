@@ -1,12 +1,12 @@
 import { backends } from './backends';
 
-import fluxLogo from '/src/assets/flux.svg';
-import fluxTestnetLogo from '/src/assets/fluxTestnet.svg';
-import rvnLogo from '/src/assets/rvn.svg';
-import ltcLogo from '/src/assets/ltc.svg';
-import btcLogo from '/src/assets/btc.svg';
-import btcTestnetLogo from '/src/assets/btcTestnet.svg';
-import btcSignetLogo from '/src/assets/btcSignet.svg';
+const fluxLogo = '/src/assets/flux.svg';
+const fluxTestnetLogo = '/src/assets/fluxTestnet.svg';
+const rvnLogo = '/src/assets/rvn.svg';
+const ltcLogo = '/src/assets/ltc.svg';
+const btcLogo = '/src/assets/btc.svg';
+const btcTestnetLogo = '/src/assets/btcTestnet.svg';
+const btcSignetLogo = '/src/assets/btcSignet.svg';
 
 const flux = {
   id: 'flux',
