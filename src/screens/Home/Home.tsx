@@ -39,7 +39,8 @@ import {
   getMasterXpriv,
   getMasterXpub,
   generateMultisigAddress,
-  generateIdentityAddress,
+  generateInternalIdentityAddress,
+  generateExternalIdentityAddress,
   generateAddressKeypair,
 } from '../../lib/wallet';
 
@@ -57,7 +58,12 @@ import {
   setXpubWalletIdentity,
 } from '../../store';
 
-import { setSspWalletKeyIdentity, setsspWalletIdentity } from '../../store/ssp';
+import {
+  setSspWalletKeyInternalIdentity,
+  setSspWalletInternalIdentity,
+  setSspWalletKeyExternalIdentity,
+  setSspWalletExternalIdentity,
+} from '../../store/ssp';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 import { useSocket } from 'ssp-key/src/hooks/useSocket';
@@ -72,8 +78,12 @@ const xpubRegex = /^([a-zA-Z]{2}ub[1-9A-HJ-NP-Za-km-z]{79,140})$/; // xpub start
 function Home({ navigation }: Props) {
   // focusability of inputs
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
-  const { seedPhrase, sspWalletKeyIdentity, sspWalletIdentity, identityChain } =
-    useAppSelector((state) => state.ssp);
+  const {
+    seedPhrase,
+    sspWalletKeyInternalIdentity,
+    sspWalletInternalIdentity,
+    identityChain,
+  } = useAppSelector((state) => state.ssp);
   const dispatch = useAppDispatch();
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -105,12 +115,12 @@ function Home({ navigation }: Props) {
       return;
     }
     alreadyMounted.current = true;
-    if (sspWalletKeyIdentity) {
+    if (sspWalletKeyInternalIdentity) {
       // get some pending request on W-K identity
       handleRefresh();
     }
 
-    if (!sspWalletKeyIdentity || !sspWalletIdentity) {
+    if (!sspWalletKeyInternalIdentity || !sspWalletInternalIdentity) {
       setSyncNeededModalOpen(true);
     }
 
@@ -140,11 +150,11 @@ function Home({ navigation }: Props) {
   }, [xpubKey, xpubWallet, rawTx]);
 
   const checkFCMToken = async () => {
-    if (sspWalletKeyIdentity) {
+    if (sspWalletKeyInternalIdentity) {
       try {
         const token = await getFCMToken();
         if (token) {
-          postSyncToken(token, sspWalletKeyIdentity);
+          postSyncToken(token, sspWalletKeyInternalIdentity);
         }
       } catch (error) {
         console.log(error);
@@ -236,9 +246,9 @@ function Home({ navigation }: Props) {
         // tell ssp relay that we are synced, post data to ssp sync
         const syncData = {
           chain,
-          walletIdentity: sspWalletIdentity,
+          walletIdentity: sspWalletInternalIdentity,
           keyXpub: xpubKeyDecrypted,
-          wkIdentity: sspWalletKeyIdentity,
+          wkIdentity: sspWalletKeyInternalIdentity,
           keyToken: await getFCMToken(),
         };
         console.log(syncData);
@@ -280,7 +290,7 @@ function Home({ navigation }: Props) {
           pwForEncryption,
         ).toString();
         setXpubWalletIdentity(encryptedXpubWallet);
-        const generatedSspWalletKeyIdentity = generateMultisigAddress(
+        const generatedSspWalletKeyInternalIdentity = generateMultisigAddress(
           suppliedXpubWallet,
           xpubKeyDecrypted,
           10,
@@ -288,20 +298,39 @@ function Home({ navigation }: Props) {
           identityChain,
         );
         dispatch(
-          setSspWalletKeyIdentity(generatedSspWalletKeyIdentity.address),
+          setSspWalletKeyInternalIdentity(
+            generatedSspWalletKeyInternalIdentity.address,
+          ),
         );
-        // generate ssp wallet identity
-        const generatedSspWalletIdentity = generateIdentityAddress(
+        const generatedSspWalletKeyExternalIdentity = generateMultisigAddress(
           suppliedXpubWallet,
+          xpubKeyDecrypted,
+          11,
+          0,
           identityChain,
         );
-        dispatch(setsspWalletIdentity(generatedSspWalletIdentity));
+        dispatch(
+          setSspWalletKeyExternalIdentity(
+            generatedSspWalletKeyExternalIdentity.address,
+          ),
+        );
+        // generate ssp wallet identity
+        const generatedSspWalletInternalIdentity =
+          generateInternalIdentityAddress(suppliedXpubWallet, identityChain);
+        dispatch(
+          setSspWalletInternalIdentity(generatedSspWalletInternalIdentity),
+        );
+        const generatedSspWalletExternalIdentity =
+          generateExternalIdentityAddress(suppliedXpubWallet, identityChain);
+        dispatch(
+          setSspWalletExternalIdentity(generatedSspWalletExternalIdentity),
+        );
         // tell ssp relay that we are synced, post data to ssp sync
         const syncData = {
           chain: identityChain,
-          walletIdentity: generatedSspWalletIdentity,
+          walletIdentity: generatedSspWalletInternalIdentity,
           keyXpub: xpubKeyDecrypted,
-          wkIdentity: generatedSspWalletKeyIdentity.address,
+          wkIdentity: generatedSspWalletKeyInternalIdentity.address,
           keyToken: await getFCMToken(),
         };
         console.log(syncData);
@@ -478,7 +507,7 @@ function Home({ navigation }: Props) {
           ttxid,
           chain,
           derivationPath,
-          sspWalletKeyIdentity,
+          sspWalletKeyInternalIdentity,
         );
         setTxid(ttxid);
       } catch (error) {
@@ -605,11 +634,13 @@ function Home({ navigation }: Props) {
     try {
       console.log('refresh');
       setIsRefreshing(true);
-      if (sspWalletKeyIdentity) {
+      if (sspWalletKeyInternalIdentity) {
         // get some pending request on W-K identity
-        console.log(sspWalletKeyIdentity);
+        console.log(sspWalletKeyInternalIdentity);
         const result = await axios.get(
-          `https://${sspConfig().relay}/v1/action/${sspWalletKeyIdentity}`,
+          `https://${
+            sspConfig().relay
+          }/v1/action/${sspWalletKeyInternalIdentity}`,
         );
         console.log('result', result.data);
         if (result.data.action === 'tx') {
@@ -620,11 +651,11 @@ function Home({ navigation }: Props) {
             result.data.path,
           );
         }
-      } else if (sspWalletIdentity) {
+      } else if (sspWalletInternalIdentity) {
         // should not be possible?
         // get some pending request on W identity
         const result = await axios.get(
-          `https://${sspConfig().relay}/v1/action/${sspWalletIdentity}`,
+          `https://${sspConfig().relay}/v1/action/${sspWalletInternalIdentity}`,
         );
         console.log('result', result.data);
       } else {
@@ -665,7 +696,7 @@ function Home({ navigation }: Props) {
           rtx,
           rchain,
           rpath,
-          sspWalletKeyIdentity,
+          sspWalletKeyInternalIdentity,
         );
       }
     } catch (error) {
@@ -786,13 +817,14 @@ function Home({ navigation }: Props) {
               <Text
                 style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
               >
-                {!sspWalletKeyIdentity || !sspWalletIdentity ? (
+                {!sspWalletKeyInternalIdentity || !sspWalletInternalIdentity ? (
                   <>{t('home:sync_needed')}!</>
                 ) : (
                   t('home:no_pending_actions')
                 )}
               </Text>
-              {(!sspWalletKeyIdentity || !sspWalletIdentity) && (
+              {(!sspWalletKeyInternalIdentity ||
+                !sspWalletInternalIdentity) && (
                 <Text
                   style={[
                     Fonts.textSmall,

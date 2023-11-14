@@ -2,15 +2,19 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface seedPhraseState {
   seedPhrase: string;
-  sspWalletKeyIdentity: string;
-  sspWalletIdentity: string;
+  sspWalletKeyInternalIdentity: string;
+  sspWalletInternalIdentity: string;
+  sspWalletKeyExternalIdentity: string;
+  sspWalletExternalIdentity: string;
   identityChain: 'flux';
 }
 
 const initialStateSeedPhrase: seedPhraseState = {
   seedPhrase: '',
-  sspWalletKeyIdentity: '',
-  sspWalletIdentity: '',
+  sspWalletKeyInternalIdentity: '',
+  sspWalletInternalIdentity: '',
+  sspWalletKeyExternalIdentity: '',
+  sspWalletExternalIdentity: '',
   identityChain: 'flux',
 };
 
@@ -21,24 +25,36 @@ const seedPhraseSlice = createSlice({
     setSeedPhrase: (state, action: PayloadAction<string>) => {
       state.seedPhrase = action.payload;
     },
-    setSspWalletKeyIdentity: (state, action: PayloadAction<string>) => {
-      state.sspWalletKeyIdentity = action.payload;
+    // internal for ssp communication
+    setSspWalletKeyInternalIdentity: (state, action: PayloadAction<string>) => {
+      state.sspWalletKeyInternalIdentity = action.payload;
     },
-    setsspWalletIdentity: (state, action: PayloadAction<string>) => {
-      state.sspWalletIdentity = action.payload;
+    setSspWalletInternalIdentity: (state, action: PayloadAction<string>) => {
+      state.sspWalletInternalIdentity = action.payload;
+    },
+    // external for logging into services
+    setSspWalletKeyExternalIdentity: (state, action: PayloadAction<string>) => {
+      state.sspWalletKeyExternalIdentity = action.payload;
+    },
+    setSspWalletExternalIdentity: (state, action: PayloadAction<string>) => {
+      state.sspWalletExternalIdentity = action.payload;
     },
     setSSPInitialState: (state) => {
       state.seedPhrase = '';
-      state.sspWalletKeyIdentity = '';
-      state.sspWalletIdentity = '';
+      state.sspWalletKeyInternalIdentity = '';
+      state.sspWalletInternalIdentity = '';
+      state.sspWalletKeyExternalIdentity = '';
+      state.sspWalletExternalIdentity = '';
     },
   },
 });
 
 export const {
   setSeedPhrase,
-  setSspWalletKeyIdentity,
-  setsspWalletIdentity,
+  setSspWalletKeyInternalIdentity,
+  setSspWalletInternalIdentity,
+  setSspWalletKeyExternalIdentity,
+  setSspWalletExternalIdentity,
   setSSPInitialState,
 } = seedPhraseSlice.actions;
 
