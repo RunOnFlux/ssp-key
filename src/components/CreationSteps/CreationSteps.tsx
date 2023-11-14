@@ -1,5 +1,5 @@
 import React from 'react';
-import StepIndicator from 'react-native-step-indicator';
+import StepIndicator from '@runonflux/react-native-step-indicator';
 import Icon from 'react-native-vector-icons/Feather';
 import { Text, TextStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
