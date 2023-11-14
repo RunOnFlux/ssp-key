@@ -29,6 +29,15 @@ const rvn = {
 const ltc = {
   node: 'blockbooklitecoin.app.runonflux.io',
 };
+const btc = {
+  node: 'blockbookbitcoin.app.runonflux.io',
+};
+const btcTestnet = {
+  node: 'blockbookbitcointestnet.app.runonflux.io',
+};
+const btcSignet = {
+  node: 'blockbookbitcoinsignet.app.runonflux.io',
+};
 
 export function backends() {
   return {
@@ -36,6 +45,9 @@ export function backends() {
     fluxTestnet: localForgeBackends?.fluxTestnet || fluxTestnet,
     rvn: localForgeBackends?.rvn || rvn,
     ltc: localForgeBackends?.ltc || ltc,
+    btc: localForgeBackends?.btc || btc,
+    btcTestnet: localForgeBackends?.btcTestnet || btcTestnet,
+    btcSignet: localForgeBackends?.btcSignet || btcSignet,
   };
 }
 
@@ -45,5 +57,8 @@ export function backendsOriginal() {
     fluxTestnet,
     rvn,
     ltc,
+    btc,
+    btcTestnet,
+    btcSignet,
   };
 }

@@ -20,12 +20,18 @@ import flux from './flux';
 import fluxTestnet from './fluxTestnet';
 import rvn from './rvn';
 import ltc from './ltc';
+import btc from './btc';
+import btcTestnet from './btcTestnet';
+import btcSignet from './btcSignet';
 
 const chains = {
   flux,
   fluxTestnet,
   rvn,
   ltc,
+  btc,
+  btcTestnet,
+  btcSignet,
 };
 // ********** Import chains **********
 
@@ -39,6 +45,9 @@ const reducers = combineReducers({
   fluxTestnet: fluxTestnet.reducer,
   rvn: rvn.reducer,
   ltc: ltc.reducer,
+  btc: btc.reducer,
+  btcTestnet: btcTestnet.reducer,
+  btcSignet: btcSignet.reducer,
 });
 
 export const storage = new MMKV();
