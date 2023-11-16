@@ -40,7 +40,6 @@ import {
   getMasterXpub,
   generateMultisigAddress,
   generateInternalIdentityAddress,
-  generateExternalIdentityAddress,
   generateAddressKeypair,
 } from '../../lib/wallet';
 
@@ -61,8 +60,6 @@ import {
 import {
   setSspWalletKeyInternalIdentity,
   setSspWalletInternalIdentity,
-  setSspWalletKeyExternalIdentity,
-  setSspWalletExternalIdentity,
 } from '../../store/ssp';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
@@ -302,28 +299,11 @@ function Home({ navigation }: Props) {
             generatedSspWalletKeyInternalIdentity.address,
           ),
         );
-        const generatedSspWalletKeyExternalIdentity = generateMultisigAddress(
-          suppliedXpubWallet,
-          xpubKeyDecrypted,
-          11,
-          0,
-          identityChain,
-        );
-        dispatch(
-          setSspWalletKeyExternalIdentity(
-            generatedSspWalletKeyExternalIdentity.address,
-          ),
-        );
         // generate ssp wallet identity
         const generatedSspWalletInternalIdentity =
           generateInternalIdentityAddress(suppliedXpubWallet, identityChain);
         dispatch(
           setSspWalletInternalIdentity(generatedSspWalletInternalIdentity),
-        );
-        const generatedSspWalletExternalIdentity =
-          generateExternalIdentityAddress(suppliedXpubWallet, identityChain);
-        dispatch(
-          setSspWalletExternalIdentity(generatedSspWalletExternalIdentity),
         );
         // tell ssp relay that we are synced, post data to ssp sync
         const syncData = {
