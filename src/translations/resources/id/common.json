@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "full": "SSP Key",
+    "initials": "SSPKey",
+    "moto": "Aman. Sederhana. Kuat."
+  },
+  "back": "Kembali",
+  "cancel": "Batal",
+  "key_seed_phrase": "Kunci Frasa Benih",
+  "refresh": "Segarkan",
+  "settings": "Pengaturan",
+  "restore": "Pulihkan",
+  "flux": "Flux",
+  "powered_by": "Dipersembahkan oleh",
+  "ok": "OK",
+  "help": "Bantuan",
+  "save": "Simpan",
+  "confirm": "Konfirmasi",
+  "ask_me_later": "Tanya lagi nanti",
+  "chain": "Chain",
+  "wallet": "Dompet"
+}
