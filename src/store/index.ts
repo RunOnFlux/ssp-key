@@ -21,6 +21,7 @@ import fluxTestnet from './fluxTestnet';
 import rvn from './rvn';
 import ltc from './ltc';
 import btc from './btc';
+import doge from './doge';
 import btcTestnet from './btcTestnet';
 import btcSignet from './btcSignet';
 
@@ -30,6 +31,7 @@ const chains = {
   rvn,
   ltc,
   btc,
+  doge,
   btcTestnet,
   btcSignet,
 };
@@ -46,6 +48,7 @@ const reducers = combineReducers({
   rvn: rvn.reducer,
   ltc: ltc.reducer,
   btc: btc.reducer,
+  doge: doge.reducer,
   btcTestnet: btcTestnet.reducer,
   btcSignet: btcSignet.reducer,
 });
