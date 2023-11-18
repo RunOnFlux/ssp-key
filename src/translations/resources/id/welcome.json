@@ -1,0 +1,7 @@
+{
+  "title": "$t(common:appName.full)",
+  "subtitle": "$t(common:appName.moto)",
+  "description": "Kunci untuk Dompet SSP bertanda tangan ganda Anda.",
+  "synchronise_key": "Sinkronkan Kunci!",
+  "restore_key": "Pulihkan Kunci"
+}
