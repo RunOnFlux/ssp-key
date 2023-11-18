@@ -160,15 +160,15 @@ const Authentication = (props: {
               {props.type === 'tx'
                 ? t('home:auth_sign_tx')
                 : props.type === 'sync'
-                ? t('home:auth_sync_ssp')
-                : t('home:auth_sensitive_inf')}
+                  ? t('home:auth_sync_ssp')
+                  : t('home:auth_sensitive_inf')}
             </Text>
             <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
               {props.type === 'tx'
                 ? t('home:auth_confirm_with_pw')
                 : props.type === 'sync'
-                ? t('home:auth_confirm_with_pw')
-                : t('home:auth_grant_access_pw')}
+                  ? t('home:auth_confirm_with_pw')
+                  : t('home:auth_grant_access_pw')}
             </Text>
 
             {biometricsAvailable && (
