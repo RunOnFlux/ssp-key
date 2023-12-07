@@ -4,14 +4,14 @@ export interface seedPhraseState {
   seedPhrase: string;
   sspWalletKeyInternalIdentity: string;
   sspWalletInternalIdentity: string;
-  identityChain: 'flux';
+  identityChain: 'btc';
 }
 
 const initialStateSeedPhrase: seedPhraseState = {
   seedPhrase: '',
   sspWalletKeyInternalIdentity: '',
   sspWalletInternalIdentity: '',
-  identityChain: 'flux',
+  identityChain: 'btc',
 };
 
 const seedPhraseSlice = createSlice({
