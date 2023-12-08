@@ -120,13 +120,13 @@ export function setXprivKey(chain: keyof cryptos, data: string) {
   store.dispatch(chains[chain].actions.setXprivKey(data));
 }
 export function setXpubWalletIdentity(data: string) {
-  store.dispatch(chains.flux.actions.setXpubWallet(data));
+  store.dispatch(chains.btc.actions.setXpubWallet(data));
 }
 export function setXpubKeyIdentity(data: string) {
-  store.dispatch(chains.flux.actions.setXpubKey(data));
+  store.dispatch(chains.btc.actions.setXpubKey(data));
 }
 export function setXprivKeyIdentity(data: string) {
-  store.dispatch(chains.flux.actions.setXprivKey(data));
+  store.dispatch(chains.btc.actions.setXprivKey(data));
 }
 export function setChainInitialState(chain: keyof cryptos) {
   store.dispatch(chains[chain].actions.setChainInitialState());
