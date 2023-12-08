@@ -211,7 +211,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 {address}
               </Text>
             </View>
-            {decryptedRedeemScript ?? (
+            {decryptedRedeemScript && (
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
@@ -248,7 +248,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 </View>
               </View>
             )}
-            {decryptedWitnessScript ?? (
+            {decryptedWitnessScript && (
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
