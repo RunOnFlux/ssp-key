@@ -165,7 +165,7 @@ function Create({ navigation }: Props) {
         ).toString();
         // store in redux persist
         dispatch(setSeedPhrase(mnemonicBlob));
-        // generate master xpriv for flux
+        // generate master xpriv for btc
         const xpriv = getMasterXpriv(
           mnemonicPhrase,
           48,
