@@ -11,7 +11,7 @@ import {
   REGISTER,
   Storage,
 } from 'redux-persist';
-import autoMergeLevel2 from 'redux-persist/lib/stateReconciler/autoMergeLevel2';
+import autoMergeLevel2 from 'redux-persist/lib/stateReconciler/autoMergeLevel2'; // here we need to be careful with updates to our initial state!
 import { MMKV } from 'react-native-mmkv';
 import { cryptos } from '../types';
 
