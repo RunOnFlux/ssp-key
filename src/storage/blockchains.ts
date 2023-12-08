@@ -186,8 +186,8 @@ const btcSignet = {
 };
 
 export const blockchains = {
-  flux,
   btc,
+  flux,
   doge,
   ltc,
   rvn,
