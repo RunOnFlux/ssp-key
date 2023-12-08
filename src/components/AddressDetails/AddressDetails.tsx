@@ -26,9 +26,11 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const [selectedPath, setSelectedPath] = useState('0-0');
   const [selectedWallet, setSelectedWallet] = useState('0');
   const [decryptedRedeemScript, setDecryptedRedeemScript] = useState('');
+  const [decryptedWitnessScript, setDecryptedWitnessScript] = useState('');
   const [decryptedPrivateKey, setDecryptedPrivateKey] = useState('');
   const [address, setAddress] = useState('');
   const [redeemScriptVisible, setRedeemScriptVisible] = useState(false);
+  const [witnessScriptVisible, setWitnessScriptVisible] = useState(false);
   const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -76,11 +78,13 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
           xpubKeyDecrypted,
         );
         setDecryptedRedeemScript(addressDetails.redeemScript ?? '');
+        setDecryptedWitnessScript(addressDetails.witnessScript ?? '');
         setAddress(addressDetails.address);
       })
       .catch((error) => {
         console.log(error);
         setDecryptedRedeemScript(t('home:chain_not_synced_scan'));
+        setDecryptedWitnessScript(t('home:chain_not_synced_scan'));
         setAddress(t('home:chain_not_synced_scan'));
         setDecryptedPrivateKey(t('home:chain_not_synced_scan'));
       });
@@ -114,8 +118,10 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
     console.log('Close');
     setPrivateKeyVisible(false);
     setRedeemScriptVisible(false);
+    setWitnessScriptVisible(false);
     setDecryptedPrivateKey('');
     setDecryptedRedeemScript('');
+    setDecryptedWitnessScript('');
     props.actionStatus(false);
   };
 
@@ -205,39 +211,80 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 {address}
               </Text>
             </View>
-            <View>
-              <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                <TouchableOpacity
-                  onPressIn={() => setRedeemScriptVisible(!redeemScriptVisible)}
-                  style={Common.inputIcon}
-                >
-                  <Icon
-                    name={redeemScriptVisible ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={Colors.bluePrimary}
-                  />
-                </TouchableOpacity>
-                <Text
-                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                >
-                  {t('home:wallet_redeem_script')}:
-                </Text>
-              </View>
+            {decryptedRedeemScript ?? (
               <View>
-                <Text
-                  selectable={true}
-                  style={[
-                    Fonts.textTiny,
-                    Fonts.textCenter,
-                    Gutters.smallMargin,
-                  ]}
-                >
-                  {redeemScriptVisible
-                    ? decryptedRedeemScript
-                    : '*** *** *** *** *** ***'}
-                </Text>
+                <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
+                  <TouchableOpacity
+                    onPressIn={() =>
+                      setRedeemScriptVisible(!redeemScriptVisible)
+                    }
+                    style={Common.inputIcon}
+                  >
+                    <Icon
+                      name={redeemScriptVisible ? 'eye' : 'eye-off'}
+                      size={20}
+                      color={Colors.bluePrimary}
+                    />
+                  </TouchableOpacity>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:wallet_redeem_script')}:
+                  </Text>
+                </View>
+                <View>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textTiny,
+                      Fonts.textCenter,
+                      Gutters.smallMargin,
+                    ]}
+                  >
+                    {redeemScriptVisible
+                      ? decryptedRedeemScript
+                      : '*** *** *** *** *** ***'}
+                  </Text>
+                </View>
               </View>
-            </View>
+            )}
+            {decryptedWitnessScript ?? (
+              <View>
+                <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
+                  <TouchableOpacity
+                    onPressIn={() =>
+                      setWitnessScriptVisible(!witnessScriptVisible)
+                    }
+                    style={Common.inputIcon}
+                  >
+                    <Icon
+                      name={witnessScriptVisible ? 'eye' : 'eye-off'}
+                      size={20}
+                      color={Colors.bluePrimary}
+                    />
+                  </TouchableOpacity>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:wallet_witness_script')}:
+                  </Text>
+                </View>
+                <View>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textTiny,
+                      Fonts.textCenter,
+                      Gutters.smallMargin,
+                    ]}
+                  >
+                    {witnessScriptVisible
+                      ? decryptedWitnessScript
+                      : '*** *** *** *** *** ***'}
+                  </Text>
+                </View>
+              </View>
+            )}
             <View>
               <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                 <TouchableOpacity

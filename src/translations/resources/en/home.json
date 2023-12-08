@@ -19,6 +19,7 @@
   "chain_addr_details": "{{symbol}} Address Details (BIP-48)",
   "wallet_address": "Wallet Address",
   "wallet_redeem_script": "Wallet Redeem Script",
+  "wallet_witness_script": "Wallet Witness Script",
   "wallet_private_key": "Wallet Private Key",
   "ssp_key_mnemonic": "SSP Key Mnemonic Seed Phrase",
   "chain_xpub": "{{chain}} Extended Public Key",
