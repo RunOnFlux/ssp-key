@@ -26,7 +26,6 @@ interface QRScannerProps {
 }
 
 const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
-  StatusBar.setHidden(true);
   const { Colors } = useTheme();
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const { t } = useTranslation(['home', 'common']);
@@ -144,6 +143,7 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar hidden />
       <TouchableOpacity style={styles.backButton} onPress={onClose}>
         <Icon name="chevron-left" size={32} color={Colors.white} />
       </TouchableOpacity>
