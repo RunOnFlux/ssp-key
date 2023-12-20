@@ -21,11 +21,11 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
 
     console.log(deviceLanguage); // en_US
     await i18n.changeLanguage(deviceLanguage.split('_')[0].split('-')[0]); // use system language
-    // await new Promise((resolve) =>
-    //   setTimeout(() => {
-    //     resolve(true);
-    //   }, 500),
-    // );
+    await new Promise((resolve) =>
+      setTimeout(() => {
+        resolve(true);
+      }, 500),
+    );
     await setDefaultTheme({ theme: 'default', darkMode: null });
     navigation.reset({
       index: 0,
