@@ -7,6 +7,7 @@ import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import { setDefaultTheme } from '../../store/theme';
 import { ApplicationScreenProps } from '../../../@types/navigation';
 
+// do we need this page? todo reevaluate to move to app and go straight to MainNavigator
 const Startup = ({ navigation }: ApplicationScreenProps) => {
   const { i18n } = useTranslation();
   const { Layout, Gutters } = useTheme();
@@ -20,11 +21,11 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
 
     console.log(deviceLanguage); // en_US
     await i18n.changeLanguage(deviceLanguage.split('_')[0].split('-')[0]); // use system language
-    await new Promise((resolve) =>
-      setTimeout(() => {
-        resolve(true);
-      }, 500),
-    );
+    // await new Promise((resolve) =>
+    //   setTimeout(() => {
+    //     resolve(true);
+    //   }, 500),
+    // );
     await setDefaultTheme({ theme: 'default', darkMode: null });
     navigation.reset({
       index: 0,
