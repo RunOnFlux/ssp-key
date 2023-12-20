@@ -71,10 +71,12 @@ const Authentication = (props: {
         const { success } = resultObject;
 
         if (success) {
-          console.log('successful biometrics provided');
-          setPassword('');
-          setPasswordVisibility(false);
-          props.actionStatus(true);
+          setTimeout(() => {
+            console.log('successful biometrics provided');
+            setPassword('');
+            setPasswordVisibility(false);
+            props.actionStatus(true);
+          }, 50);
         } else {
           console.log('user cancelled biometric prompt');
         }
@@ -178,7 +180,7 @@ const Authentication = (props: {
                 size={50}
                 color={Colors.bluePrimary}
                 style={[Fonts.textCenter, Gutters.regularTMargin]}
-                onPress={() => initiateFingerprint()}
+                onPressIn={() => initiateFingerprint()}
               />
             )}
             {!biometricsAvailable && <View style={[Gutters.smallMargin]} />}
