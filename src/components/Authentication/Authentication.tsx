@@ -31,6 +31,7 @@ const Authentication = (props: {
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
 
   useEffect(() => {
+    console.log('entered auth');
     rnBiometrics.isSensorAvailable().then((resultObject) => {
       const { available, biometryType } = resultObject;
 
