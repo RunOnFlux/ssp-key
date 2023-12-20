@@ -5,8 +5,8 @@ export NODE_OPTIONS=--max_old_space_size=8192
 # Install CocoaPods and yarn using Homebrew.
 brew install cocoapods
 brew install rbenv ruby-build
-brew install node@18
-brew link node@18
+brew install node@20
+brew link node@20
 brew install yarn
 
 echo ">>> SETUP ENVIRONMENT"

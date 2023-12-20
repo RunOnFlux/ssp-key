@@ -84,7 +84,7 @@ export function signTransaction(
   privateKey: string,
   redeemScript: string,
   witnessScript: string,
-  utxos: utxo[], // same or bi gger set than was used to construct the tx
+  utxos: utxo[], // same or bigger set than was used to construct the tx
 ): string {
   try {
     const libID = getLibId(chain);

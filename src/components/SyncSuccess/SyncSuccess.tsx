@@ -33,7 +33,6 @@ const SyncSuccess = (props: {
   useEffect(() => {
     generateAddress();
   }, [xpubKey, xpubWallet]);
-  // todo here construct address 0-0 to show first wallet
 
   const generateAddress = () => {
     getUniqueId()
