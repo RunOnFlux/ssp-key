@@ -31,6 +31,7 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
       onRequestClose={() => reject()}
     >
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         style={[Layout.fill, Common.modalBackdrop]}
         contentInset={{ bottom: 80 }}
         contentContainerStyle={[

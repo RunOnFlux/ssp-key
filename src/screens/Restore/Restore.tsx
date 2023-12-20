@@ -399,6 +399,7 @@ function Restore({ navigation }: Props) {
         onRequestClose={() => handleCancel()}
       >
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           style={[Layout.fill, Common.modalBackdrop]}
           contentInset={{ bottom: 80 }}
           contentContainerStyle={[

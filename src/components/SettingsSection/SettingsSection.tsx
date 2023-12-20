@@ -319,6 +319,7 @@ const SettingsSection = (props: {
         onRequestClose={() => setIsChainSelectOpen(false)}
       >
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           style={[Layout.fill, Common.modalBackdrop]}
           contentInset={{ bottom: 80 }}
           contentContainerStyle={[

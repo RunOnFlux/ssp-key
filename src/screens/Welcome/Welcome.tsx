@@ -14,6 +14,7 @@ function Welcome({ navigation }: Props) {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       style={Layout.fill}
       contentContainerStyle={[
         Layout.fullSize,

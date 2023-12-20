@@ -139,7 +139,7 @@ function Home({ navigation }: Props) {
   useEffect(() => {
     if (!xpubKey || !xpubWallet) {
       if (rawTx) {
-        displayMessage('error', t('home:err_sync_with_ssp_needed'));
+        displayMessage('error', t('home:err_sync_with_ssp_needed'), 10000);
         setRawTx('');
         setActiveChain(identityChain);
       }
@@ -206,10 +206,15 @@ function Home({ navigation }: Props) {
     }
   };
 
-  const displayMessage = (type: string, content: string) => {
+  const displayMessage = (
+    type: string,
+    content: string,
+    visibilityTime?: number,
+  ) => {
     Toast.show({
       type,
       text1: content,
+      visibilityTime: visibilityTime,
     });
   };
 
@@ -769,6 +774,7 @@ function Home({ navigation }: Props) {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       style={Layout.fill}
       contentContainerStyle={[
         Layout.fullSize,

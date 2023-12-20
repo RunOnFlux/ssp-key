@@ -131,6 +131,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
         onRequestClose={() => close()}
       >
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           style={[Layout.fill, Common.modalBackdrop]}
           contentInset={{ bottom: 80 }}
           contentContainerStyle={[
@@ -311,6 +312,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
         onRequestClose={() => setIsChainSelectOpen(false)}
       >
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           style={[Layout.fill, Common.modalBackdrop]}
           contentInset={{ bottom: 80 }}
           contentContainerStyle={[
