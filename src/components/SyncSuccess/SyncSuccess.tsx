@@ -78,7 +78,7 @@ const SyncSuccess = (props: {
       onRequestClose={() => close()}
     >
       <ScrollView
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
         style={[Layout.fill, Common.modalBackdrop]}
         contentInset={{ bottom: 80 }}
         contentContainerStyle={[

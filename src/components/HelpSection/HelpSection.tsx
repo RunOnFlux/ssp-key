@@ -24,7 +24,7 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
 
   const openWebsite = () => {
     console.log('Open Discord');
-    Linking.openURL('https://runonflux.io');
+    Linking.openURL('https://sspwallet.io');
   };
 
   const openSupport = () => {
@@ -49,7 +49,7 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
       onRequestClose={() => close()}
     >
       <ScrollView
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
         style={[Layout.fill, Common.modalBackdrop]}
         contentInset={{ bottom: 80 }}
         contentContainerStyle={[

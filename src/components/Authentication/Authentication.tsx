@@ -38,15 +38,23 @@ const Authentication = (props: {
       if (available && biometryType === BiometryTypes.TouchID) {
         console.log('TouchID is supported');
         setBiometricsAvailable(true);
-        initiateFingerprint();
+        // keep timeout
+        // iOS freezes if we call biometrics right away
+        setTimeout(() => {
+          initiateFingerprint();
+        }, 250);
       } else if (available && biometryType === BiometryTypes.FaceID) {
         console.log('FaceID is supported');
         setBiometricsAvailable(true);
-        initiateFingerprint();
+        setTimeout(() => {
+          initiateFingerprint();
+        }, 250);
       } else if (available && biometryType === BiometryTypes.Biometrics) {
         console.log('Biometrics is supported');
         setBiometricsAvailable(true);
-        initiateFingerprint();
+        setTimeout(() => {
+          initiateFingerprint();
+        }, 250);
       } else {
         // here we show fallback mechanism if none of the above succeed
         console.log('Biometrics not supported');
@@ -76,7 +84,7 @@ const Authentication = (props: {
             setPassword('');
             setPasswordVisibility(false);
             props.actionStatus(true);
-          }, 50);
+          }, 250);
         } else {
           console.log('user cancelled biometric prompt');
         }
@@ -180,7 +188,7 @@ const Authentication = (props: {
                 size={50}
                 color={Colors.bluePrimary}
                 style={[Fonts.textCenter, Gutters.regularTMargin]}
-                onPressIn={() => initiateFingerprint()}
+                onPress={() => initiateFingerprint()}
               />
             )}
             {!biometricsAvailable && <View style={[Gutters.smallMargin]} />}

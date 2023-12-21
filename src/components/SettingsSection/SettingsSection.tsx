@@ -191,6 +191,7 @@ const SettingsSection = (props: {
                       Fonts.textTiny,
                       Fonts.textBluePrimary,
                       Gutters.tinyVPadding,
+                      Gutters.tinyHPadding,
                     ]}
                   >
                     {t('home:change_pw_restore')}
@@ -319,7 +320,7 @@ const SettingsSection = (props: {
         onRequestClose={() => setIsChainSelectOpen(false)}
       >
         <ScrollView
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}
           contentInset={{ bottom: 80 }}
           contentContainerStyle={[
