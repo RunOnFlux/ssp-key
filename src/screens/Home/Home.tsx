@@ -1,11 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Icon from 'react-native-vector-icons/Feather';
@@ -773,16 +767,7 @@ function Home({ navigation }: Props) {
   };
 
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="always"
-      style={Layout.fill}
-      contentContainerStyle={[
-        Layout.fullSize,
-        Layout.fill,
-        Layout.colCenter,
-        Layout.scrollSpaceBetween,
-      ]}
-    >
+    <View style={[Layout.fill, Layout.colCenter, Layout.scrollSpaceBetween]}>
       <Navbar openSettingsTrigger={openSettings} />
       <Divider color={Colors.textGray200} />
       <View
@@ -825,13 +810,13 @@ function Home({ navigation }: Props) {
               {isRefreshing && (
                 <ActivityIndicator
                   size={'large'}
-                  style={[Layout.row, Gutters.regularTMargin, { height: 30 }]}
+                  style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
                 />
               )}
               {!isRefreshing && (
                 <TouchableOpacity
                   onPressIn={() => handleRefresh()}
-                  style={[Layout.row, Gutters.regularTMargin, { height: 30 }]}
+                  style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
                 >
                   <IconB
                     name="gesture-tap"
@@ -935,7 +920,7 @@ function Home({ navigation }: Props) {
         />
       )}
       <PoweredByFlux />
-    </ScrollView>
+    </View>
   );
 }
 

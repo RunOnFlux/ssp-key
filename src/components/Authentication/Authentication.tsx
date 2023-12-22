@@ -84,7 +84,7 @@ const Authentication = (props: {
             setPassword('');
             setPasswordVisibility(false);
             props.actionStatus(true);
-          }, 250);
+          }, 450);
         } else {
           console.log('user cancelled biometric prompt');
         }
@@ -136,15 +136,12 @@ const Authentication = (props: {
       onRequestClose={() => close()}
     >
       <KeyboardAwareScrollView
-        enableOnAndroid={true}
         extraScrollHeight={20}
         style={[Layout.fill, Common.modalBackdrop]}
         contentInset={{ bottom: 80 }}
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
-          Layout.fullWidth,
-          Layout.fill,
         ]}
       >
         <View style={[Common.modalView, styles.modalView]}>
@@ -264,7 +261,6 @@ export default Authentication;
 
 const styles = StyleSheet.create({
   modalView: {
-    marginTop: '50%',
     left: 0,
     right: 0,
     height: 480,

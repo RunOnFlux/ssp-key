@@ -37,75 +37,80 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
-          Common.modalView,
         ]}
       >
-        <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-          {t('common:appName.full')}
-        </Text>
-        <View style={[Gutters.smallTMargin]}>
-          <CreationSteps step={3} isImport={false} />
-        </View>
-        <View
-          style={[
-            Layout.fill,
-            Layout.relative,
-            Layout.fullWidth,
-            Layout.justifyContentCenter,
-            Layout.alignItemsCenter,
-          ]}
-        >
-          <Icon name="link" size={60} color={Colors.textGray400} />
-          <Text
-            style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
-          >
-            {t('home:sync_needed')}
+        <View style={[Common.modalView]}>
+          <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+            {t('common:appName.full')}
           </Text>
-          <Text
-            style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallTMargin]}
-          >
-            {t('home:ssp_key_info')}
-          </Text>
-          <Text
-            style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallTMargin]}
-          >
-            {t('home:sync_qr_needed')}
-          </Text>
-        </View>
-        <View style={[Layout.justifyContentEnd]}>
-          <TouchableOpacity
+          <View style={[Gutters.smallTMargin]}>
+            <CreationSteps step={3} isImport={false} />
+          </View>
+          <View
             style={[
-              Common.button.rounded,
-              Common.button.bluePrimary,
-              Gutters.regularBMargin,
-              Gutters.smallTMargin,
-            ]}
-            onPressIn={() => scanCode()}
-          >
-            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-              {t('home:scan_code')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              Common.button.outlineRounded,
-              Common.button.secondaryButton,
+              Layout.fill,
+              Layout.relative,
               Layout.fullWidth,
-              Gutters.regularBMargin,
+              Layout.justifyContentCenter,
+              Layout.alignItemsCenter,
             ]}
-            onPressIn={() => manualInput()}
           >
-            <Text style={[Fonts.textRegular, Fonts.textBluePrimary]}>
-              {t('home:manual_input')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPressIn={() => reject()}>
+            <Icon name="link" size={60} color={Colors.textGray400} />
             <Text
-              style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
+              style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
             >
-              {t('common:cancel')}
+              {t('home:sync_needed')}
             </Text>
-          </TouchableOpacity>
+            <Text
+              style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallTMargin]}
+            >
+              {t('home:ssp_key_info')}
+            </Text>
+            <Text
+              style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallTMargin]}
+            >
+              {t('home:sync_qr_needed')}
+            </Text>
+          </View>
+          <View style={[Layout.justifyContentEnd]}>
+            <TouchableOpacity
+              style={[
+                Common.button.rounded,
+                Common.button.bluePrimary,
+                Gutters.regularBMargin,
+                Gutters.smallTMargin,
+              ]}
+              onPressIn={() => scanCode()}
+            >
+              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                {t('home:scan_code')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                Common.button.outlineRounded,
+                Common.button.secondaryButton,
+                Layout.fullWidth,
+                Gutters.regularBMargin,
+              ]}
+              onPressIn={() => manualInput()}
+            >
+              <Text style={[Fonts.textRegular, Fonts.textBluePrimary]}>
+                {t('home:manual_input')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPressIn={() => reject()}>
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textBluePrimary,
+                  Fonts.textCenter,
+                ]}
+              >
+                {t('common:cancel')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </Modal>

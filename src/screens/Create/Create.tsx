@@ -352,119 +352,120 @@ function Create({ navigation }: Props) {
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
-            Common.modalView,
           ]}
         >
-          <Text
-            style={[Fonts.titleSmall, Gutters.smallBMargin, Fonts.textCenter]}
-          >
-            {t('cr:key_backup')}
-          </Text>
-          <View style={[Gutters.smallBMargin]}>
-            <CreationSteps step={2} isImport={false} />
-          </View>
-          <Text
-            style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-          >
-            {t('cr:key_backup_text_1')}
-          </Text>
-          <Text
-            style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-          >
-            {t('cr:key_backup_text_2')}
-          </Text>
-          <Text
-            style={[Fonts.textSmall, Gutters.smallBMargin, Fonts.textCenter]}
-          >
-            {t('cr:key_backup_text_3')}
-          </Text>
-          <Divider color={Colors.textGray200} />
-          <Text
-            style={[
-              Fonts.textItalic,
-              Fonts.textBold,
-              Fonts.textSmall,
-              Fonts.textCenter,
-              Gutters.tinyBMargin,
-            ]}
-            selectable={true}
-          >
-            {mnemonicShow
-              ? mnemonic
-              : '*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***'}
-          </Text>
-          <View style={[Gutters.tinyBMargin]}>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.dashed,
-                Common.button.secondaryButton,
-              ]}
-              onPressIn={() => {
-                setMnemonicShow(!mnemonicShow);
-                setWSPwasShown(true);
-              }}
+          <View style={[Common.modalView]}>
+            <Text
+              style={[Fonts.titleSmall, Gutters.smallBMargin, Fonts.textCenter]}
             >
-              <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
-                {mnemonicShow ? t('cr:hide_mnemonic') : t('cr:show_mnemonic')}{' '}
-                {t('common:key_seed_phrase')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <Divider color={Colors.textGray200} />
-          <View style={[Layout.row, Gutters.smallTMargin]}>
-            <Switch
-              onValueChange={onChangeWSP}
-              value={WSPbackedUp}
-              style={styles.toggleStyle}
-            />
+              {t('cr:key_backup')}
+            </Text>
+            <View style={[Gutters.smallBMargin]}>
+              <CreationSteps step={2} isImport={false} />
+            </View>
+            <Text
+              style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
+            >
+              {t('cr:key_backup_text_1')}
+            </Text>
+            <Text
+              style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
+            >
+              {t('cr:key_backup_text_2')}
+            </Text>
+            <Text
+              style={[Fonts.textSmall, Gutters.smallBMargin, Fonts.textCenter]}
+            >
+              {t('cr:key_backup_text_3')}
+            </Text>
+            <Divider color={Colors.textGray200} />
             <Text
               style={[
-                Gutters.largeRPadding,
+                Fonts.textItalic,
+                Fonts.textBold,
+                Fonts.textSmall,
+                Fonts.textCenter,
                 Gutters.tinyBMargin,
-                Fonts.textTiny,
               ]}
+              selectable={true}
             >
-              {t('cr:seed_phrase_backed_up')}
+              {mnemonicShow
+                ? mnemonic
+                : '*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***'}
             </Text>
-          </View>
-          <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.rounded,
-                Common.button.bluePrimary,
-                Gutters.regularBMargin,
-                Gutters.smallTMargin,
-              ]}
-              disabled={isLoading}
-              onPressIn={() => handleOk()}
-            >
-              {isLoading && (
-                <ActivityIndicator
-                  size={'large'}
-                  style={[Gutters.largeVMargin]}
-                />
-              )}
-              {!isLoading && (
-                <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                  {t('cr:setup_key')}
+            <View style={[Gutters.tinyBMargin]}>
+              <TouchableOpacity
+                style={[
+                  Common.button.outlineRounded,
+                  Common.button.dashed,
+                  Common.button.secondaryButton,
+                ]}
+                onPressIn={() => {
+                  setMnemonicShow(!mnemonicShow);
+                  setWSPwasShown(true);
+                }}
+              >
+                <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
+                  {mnemonicShow ? t('cr:hide_mnemonic') : t('cr:show_mnemonic')}{' '}
+                  {t('common:key_seed_phrase')}
                 </Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              disabled={isLoading}
-              onPressIn={() => handleCancel()}
-            >
+              </TouchableOpacity>
+            </View>
+            <Divider color={Colors.textGray200} />
+            <View style={[Layout.row, Gutters.smallTMargin]}>
+              <Switch
+                onValueChange={onChangeWSP}
+                value={WSPbackedUp}
+                style={styles.toggleStyle}
+              />
               <Text
                 style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Fonts.textCenter,
+                  Gutters.largeRPadding,
+                  Gutters.tinyBMargin,
+                  Fonts.textTiny,
                 ]}
               >
-                {t('common:cancel')}
+                {t('cr:seed_phrase_backed_up')}
               </Text>
-            </TouchableOpacity>
+            </View>
+            <View style={[Layout.justifyContentEnd]}>
+              <TouchableOpacity
+                style={[
+                  Common.button.rounded,
+                  Common.button.bluePrimary,
+                  Gutters.regularBMargin,
+                  Gutters.smallTMargin,
+                ]}
+                disabled={isLoading}
+                onPressIn={() => handleOk()}
+              >
+                {isLoading && (
+                  <ActivityIndicator
+                    size={'large'}
+                    style={[Gutters.largeVMargin]}
+                  />
+                )}
+                {!isLoading && (
+                  <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                    {t('cr:setup_key')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                disabled={isLoading}
+                onPressIn={() => handleCancel()}
+              >
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Fonts.textCenter,
+                  ]}
+                >
+                  {t('common:cancel')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
         <Toast />

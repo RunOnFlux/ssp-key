@@ -137,171 +137,172 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
-            Common.modalView,
           ]}
         >
-          <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-            {t('home:chain_ssp_details', { symbol: blockchainConfig.symbol })}
-          </Text>
-          <View style={[Gutters.regularTMargin, Layout.colCenter]}>
-            <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-              {t('home:selected_chain')}:
+          <View style={[Common.modalView]}>
+            <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+              {t('home:chain_ssp_details', { symbol: blockchainConfig.symbol })}
             </Text>
-            <Text
-              selectable={true}
-              style={[Fonts.textTiny, Fonts.textCenter, Gutters.smallMargin]}
-            >
-              {blockchainConfig.name} ({blockchainConfig.symbol})
-            </Text>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
-              ]}
-              onPressIn={() => openChainSelect()}
-            >
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Gutters.regularHPadding,
-                ]}
-              >
-                {t('home:select_chain')}
+            <View style={[Gutters.regularTMargin, Layout.colCenter]}>
+              <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
+                {t('home:selected_chain')}:
               </Text>
-            </TouchableOpacity>
-          </View>
-          <View
-            style={[
-              Layout.fill,
-              Layout.relative,
-              Layout.fullWidth,
-              Layout.alignItemsCenter,
-              Gutters.regularTMargin,
-            ]}
-          >
-            <View>
-              <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                <TouchableOpacity
-                  onPressIn={() => setXpubVisible(!xpubVisible)}
-                  style={Common.inputIcon}
-                >
-                  <Icon
-                    name={xpubVisible ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={Colors.bluePrimary}
-                  />
-                </TouchableOpacity>
+              <Text
+                selectable={true}
+                style={[Fonts.textTiny, Fonts.textCenter, Gutters.smallMargin]}
+              >
+                {blockchainConfig.name} ({blockchainConfig.symbol})
+              </Text>
+              <TouchableOpacity
+                style={[
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                ]}
+                onPressIn={() => openChainSelect()}
+              >
                 <Text
-                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                >
-                  {t('home:chain_xpub', { chain: blockchainConfig.name })}:
-                </Text>
-              </View>
-              <View>
-                {activityLoading && <ActivityIndicator size={'large'} />}
-                {!activityLoading && (
-                  <Text
-                    selectable={true}
-                    style={[
-                      Fonts.textTiny,
-                      Fonts.textCenter,
-                      Gutters.smallMargin,
-                    ]}
-                  >
-                    {xpubVisible ? decryptedXpub : '*** *** *** *** *** ***'}
-                  </Text>
-                )}
-              </View>
-            </View>
-            <View>
-              <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                <TouchableOpacity
-                  onPressIn={() => setXprivVisible(!xprivVisible)}
-                  style={Common.inputIcon}
-                >
-                  <Icon
-                    name={xprivVisible ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={Colors.bluePrimary}
-                  />
-                </TouchableOpacity>
-                <Text
-                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                >
-                  {t('home:chain_xpriv', { chain: blockchainConfig.name })}:
-                </Text>
-              </View>
-              <View>
-                {activityLoading && <ActivityIndicator size={'large'} />}
-                {!activityLoading && (
-                  <Text
-                    selectable={true}
-                    style={[
-                      Fonts.textTiny,
-                      Fonts.textCenter,
-                      Gutters.smallMargin,
-                    ]}
-                  >
-                    {xprivVisible ? deryptedXpriv : '*** *** *** *** *** ***'}
-                  </Text>
-                )}
-              </View>
-            </View>
-            <View>
-              <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                <TouchableOpacity
-                  onPressIn={() => setMnemonicVisible(!mnemonicVisible)}
-                  style={Common.inputIcon}
-                >
-                  <Icon
-                    name={mnemonicVisible ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={Colors.bluePrimary}
-                  />
-                </TouchableOpacity>
-                <Text
-                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                >
-                  {t('home:ssp_key_mnemonic')}:
-                </Text>
-              </View>
-              <View>
-                <Text
-                  selectable={true}
                   style={[
-                    Fonts.textTiny,
-                    Fonts.textCenter,
-                    Gutters.smallMargin,
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Gutters.regularHPadding,
                   ]}
                 >
-                  {mnemonicVisible
-                    ? decryptedMnemonic
-                    : '*** *** *** *** *** ***'}
+                  {t('home:select_chain')}
                 </Text>
+              </TouchableOpacity>
+            </View>
+            <View
+              style={[
+                Layout.fill,
+                Layout.relative,
+                Layout.fullWidth,
+                Layout.alignItemsCenter,
+                Gutters.regularTMargin,
+              ]}
+            >
+              <View>
+                <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
+                  <TouchableOpacity
+                    onPressIn={() => setXpubVisible(!xpubVisible)}
+                    style={Common.inputIcon}
+                  >
+                    <Icon
+                      name={xpubVisible ? 'eye' : 'eye-off'}
+                      size={20}
+                      color={Colors.bluePrimary}
+                    />
+                  </TouchableOpacity>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:chain_xpub', { chain: blockchainConfig.name })}:
+                  </Text>
+                </View>
+                <View>
+                  {activityLoading && <ActivityIndicator size={'large'} />}
+                  {!activityLoading && (
+                    <Text
+                      selectable={true}
+                      style={[
+                        Fonts.textTiny,
+                        Fonts.textCenter,
+                        Gutters.smallMargin,
+                      ]}
+                    >
+                      {xpubVisible ? decryptedXpub : '*** *** *** *** *** ***'}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <View>
+                <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
+                  <TouchableOpacity
+                    onPressIn={() => setXprivVisible(!xprivVisible)}
+                    style={Common.inputIcon}
+                  >
+                    <Icon
+                      name={xprivVisible ? 'eye' : 'eye-off'}
+                      size={20}
+                      color={Colors.bluePrimary}
+                    />
+                  </TouchableOpacity>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:chain_xpriv', { chain: blockchainConfig.name })}:
+                  </Text>
+                </View>
+                <View>
+                  {activityLoading && <ActivityIndicator size={'large'} />}
+                  {!activityLoading && (
+                    <Text
+                      selectable={true}
+                      style={[
+                        Fonts.textTiny,
+                        Fonts.textCenter,
+                        Gutters.smallMargin,
+                      ]}
+                    >
+                      {xprivVisible ? deryptedXpriv : '*** *** *** *** *** ***'}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <View>
+                <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
+                  <TouchableOpacity
+                    onPressIn={() => setMnemonicVisible(!mnemonicVisible)}
+                    style={Common.inputIcon}
+                  >
+                    <Icon
+                      name={mnemonicVisible ? 'eye' : 'eye-off'}
+                      size={20}
+                      color={Colors.bluePrimary}
+                    />
+                  </TouchableOpacity>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:ssp_key_mnemonic')}:
+                  </Text>
+                </View>
+                <View>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textTiny,
+                      Fonts.textCenter,
+                      Gutters.smallMargin,
+                    ]}
+                  >
+                    {mnemonicVisible
+                      ? decryptedMnemonic
+                      : '*** *** *** *** *** ***'}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
-          <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
-                Layout.fullWidth,
-                Gutters.largeTMargin,
-              ]}
-              onPressIn={() => close()}
-            >
-              <Text
+            <View style={[Layout.justifyContentEnd]}>
+              <TouchableOpacity
                 style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Gutters.regularHPadding,
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                  Layout.fullWidth,
+                  Gutters.largeTMargin,
                 ]}
+                onPressIn={() => close()}
               >
-                {t('common:ok')}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Gutters.regularHPadding,
+                  ]}
+                >
+                  {t('common:ok')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </Modal>
@@ -318,48 +319,49 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
-            Common.modalView,
           ]}
         >
-          <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-            {t('home:select_chain')}
-          </Text>
-          <View style={[Gutters.regularTMargin]}>
-            <Picker
-              selectedValue={selectedChain}
-              onValueChange={(itemValue) => {
-                setSelectedChain(itemValue);
-              }}
-            >
-              {Object.keys(blockchains).map((key) => (
-                <Picker.Item
-                  label={blockchains[key].name}
-                  value={key}
-                  key={key}
-                />
-              ))}
-            </Picker>
-          </View>
-          <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
-                Layout.fullWidth,
-                Gutters.regularTMargin,
-              ]}
-              onPressIn={() => closeChainSelect()}
-            >
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Gutters.regularHPadding,
-                ]}
+          <View style={[Common.modalView]}>
+            <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+              {t('home:select_chain')}
+            </Text>
+            <View style={[Gutters.regularTMargin]}>
+              <Picker
+                selectedValue={selectedChain}
+                onValueChange={(itemValue) => {
+                  setSelectedChain(itemValue);
+                }}
               >
-                {t('common:ok')}
-              </Text>
-            </TouchableOpacity>
+                {Object.keys(blockchains).map((key) => (
+                  <Picker.Item
+                    label={blockchains[key].name}
+                    value={key}
+                    key={key}
+                  />
+                ))}
+              </Picker>
+            </View>
+            <View style={[Layout.justifyContentEnd]}>
+              <TouchableOpacity
+                style={[
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                  Layout.fullWidth,
+                  Gutters.regularTMargin,
+                ]}
+                onPressIn={() => closeChainSelect()}
+              >
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Gutters.regularHPadding,
+                  ]}
+                >
+                  {t('common:ok')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </Modal>

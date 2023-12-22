@@ -150,7 +150,6 @@ const SettingsSection = (props: {
         onRequestClose={() => handleCancel()}
       >
         <KeyboardAwareScrollView
-          enableOnAndroid={true}
           extraScrollHeight={20}
           style={[Layout.fill, Common.modalBackdrop]}
           contentInset={{ bottom: 80 }}
@@ -326,46 +325,47 @@ const SettingsSection = (props: {
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
-            Common.modalView,
           ]}
         >
-          <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-            {t('home:select_chain')}
-          </Text>
-          <View style={[Gutters.regularTMargin]}>
-            <Picker
-              selectedValue={selectedChain}
-              onValueChange={(itemValue) => setSelectedChain(itemValue)}
-            >
-              {Object.keys(blockchains).map((key) => (
-                <Picker.Item
-                  label={blockchains[key].name}
-                  value={key}
-                  key={key}
-                />
-              ))}
-            </Picker>
-          </View>
-          <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
-                Layout.fullWidth,
-                Gutters.regularTMargin,
-              ]}
-              onPressIn={() => closeChainSelect()}
-            >
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Gutters.regularHPadding,
-                ]}
+          <View style={[Common.modalView]}>
+            <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+              {t('home:select_chain')}
+            </Text>
+            <View style={[Gutters.regularTMargin]}>
+              <Picker
+                selectedValue={selectedChain}
+                onValueChange={(itemValue) => setSelectedChain(itemValue)}
               >
-                {t('common:ok')}
-              </Text>
-            </TouchableOpacity>
+                {Object.keys(blockchains).map((key) => (
+                  <Picker.Item
+                    label={blockchains[key].name}
+                    value={key}
+                    key={key}
+                  />
+                ))}
+              </Picker>
+            </View>
+            <View style={[Layout.justifyContentEnd]}>
+              <TouchableOpacity
+                style={[
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                  Layout.fullWidth,
+                  Gutters.regularTMargin,
+                ]}
+                onPressIn={() => closeChainSelect()}
+              >
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Gutters.regularHPadding,
+                  ]}
+                >
+                  {t('common:ok')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </Modal>

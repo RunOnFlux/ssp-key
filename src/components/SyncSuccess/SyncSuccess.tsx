@@ -84,59 +84,64 @@ const SyncSuccess = (props: {
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
-          Common.modalView,
         ]}
       >
-        <View
-          style={[
-            Layout.fill,
-            Layout.relative,
-            Layout.fullWidth,
-            Layout.justifyContentCenter,
-            Layout.alignItemsCenter,
-          ]}
-        >
-          <Icon name="check-circle" size={60} color={Colors.textGray400} />
-          <Text
+        <View style={[Common.modalView]}>
+          <View
             style={[
-              Fonts.textBold,
-              Fonts.textRegular,
-              Gutters.smallMargin,
-              Fonts.textCenter,
+              Layout.fill,
+              Layout.relative,
+              Layout.fullWidth,
+              Layout.justifyContentCenter,
+              Layout.alignItemsCenter,
             ]}
           >
-            {t('home:sync_success')}
-          </Text>
-          <Text
-            style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallMargin]}
-          >
-            {chainAddress}
-          </Text>
-          <Text style={[Fonts.textTiny, Fonts.textCenter]}>
-            {t('home:double_check_address')}
-          </Text>
-        </View>
-        <View style={[Layout.justifyContentEnd]}>
-          <TouchableOpacity
-            style={[
-              Common.button.rounded,
-              Common.button.bluePrimary,
-              Gutters.regularBMargin,
-              Gutters.smallTMargin,
-            ]}
-            onPressIn={() => openExplorer()}
-          >
-            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-              {t('home:show_in_explorer')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPressIn={() => close()}>
+            <Icon name="check-circle" size={60} color={Colors.textGray400} />
             <Text
-              style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
+              style={[
+                Fonts.textBold,
+                Fonts.textRegular,
+                Gutters.smallMargin,
+                Fonts.textCenter,
+              ]}
             >
-              {t('home:close')}
+              {t('home:sync_success')}
             </Text>
-          </TouchableOpacity>
+            <Text
+              style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallMargin]}
+            >
+              {chainAddress}
+            </Text>
+            <Text style={[Fonts.textTiny, Fonts.textCenter]}>
+              {t('home:double_check_address')}
+            </Text>
+          </View>
+          <View style={[Layout.justifyContentEnd]}>
+            <TouchableOpacity
+              style={[
+                Common.button.rounded,
+                Common.button.bluePrimary,
+                Gutters.regularBMargin,
+                Gutters.smallTMargin,
+              ]}
+              onPressIn={() => openExplorer()}
+            >
+              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                {t('home:show_in_explorer')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPressIn={() => close()}>
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textBluePrimary,
+                  Fonts.textCenter,
+                ]}
+              >
+                {t('home:close')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </Modal>

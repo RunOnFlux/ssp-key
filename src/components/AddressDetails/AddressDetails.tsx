@@ -156,155 +156,58 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
-            Common.modalView,
           ]}
         >
-          <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-            {t('home:chain_addr_details', {
-              symbol: blockchainConfig.symbol,
-            })}
-          </Text>
-          <View style={[Gutters.regularTMargin, Layout.colCenter]}>
-            <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-              {t('home:selected_chain_wallet')}:
+          <View style={[Common.modalView]}>
+            <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+              {t('home:chain_addr_details', {
+                symbol: blockchainConfig.symbol,
+              })}
             </Text>
-            <Text
-              selectable={true}
-              style={[Fonts.textTiny, Fonts.textCenter, Gutters.smallMargin]}
-            >
-              {blockchainConfig.name} - {t('common:wallet')} {selectedWallet}
-            </Text>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
-              ]}
-              onPressIn={() => openChainSelect()}
-            >
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Gutters.regularHPadding,
-                ]}
-              >
-                {t('home:select_chain')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <View
-            style={[
-              Layout.fill,
-              Layout.relative,
-              Layout.fullWidth,
-              Layout.alignItemsCenter,
-              Gutters.regularTMargin,
-            ]}
-          >
-            <View style={[Gutters.regularTMargin]}>
+            <View style={[Gutters.regularTMargin, Layout.colCenter]}>
               <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-                {t('home:wallet_address')}:
+                {t('home:selected_chain_wallet')}:
               </Text>
               <Text
                 selectable={true}
                 style={[Fonts.textTiny, Fonts.textCenter, Gutters.smallMargin]}
               >
-                {address}
+                {blockchainConfig.name} - {t('common:wallet')}{' '}
+                {selectedWallet + 1}
               </Text>
-            </View>
-            {decryptedRedeemScript && (
-              <View>
-                <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                  <TouchableOpacity
-                    onPressIn={() =>
-                      setRedeemScriptVisible(!redeemScriptVisible)
-                    }
-                    style={Common.inputIcon}
-                  >
-                    <Icon
-                      name={redeemScriptVisible ? 'eye' : 'eye-off'}
-                      size={20}
-                      color={Colors.bluePrimary}
-                    />
-                  </TouchableOpacity>
-                  <Text
-                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                  >
-                    {t('home:wallet_redeem_script')}:
-                  </Text>
-                </View>
-                <View>
-                  <Text
-                    selectable={true}
-                    style={[
-                      Fonts.textTiny,
-                      Fonts.textCenter,
-                      Gutters.smallMargin,
-                    ]}
-                  >
-                    {redeemScriptVisible
-                      ? decryptedRedeemScript
-                      : '*** *** *** *** *** ***'}
-                  </Text>
-                </View>
-              </View>
-            )}
-            {decryptedWitnessScript && (
-              <View>
-                <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                  <TouchableOpacity
-                    onPressIn={() =>
-                      setWitnessScriptVisible(!witnessScriptVisible)
-                    }
-                    style={Common.inputIcon}
-                  >
-                    <Icon
-                      name={witnessScriptVisible ? 'eye' : 'eye-off'}
-                      size={20}
-                      color={Colors.bluePrimary}
-                    />
-                  </TouchableOpacity>
-                  <Text
-                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                  >
-                    {t('home:wallet_witness_script')}:
-                  </Text>
-                </View>
-                <View>
-                  <Text
-                    selectable={true}
-                    style={[
-                      Fonts.textTiny,
-                      Fonts.textCenter,
-                      Gutters.smallMargin,
-                    ]}
-                  >
-                    {witnessScriptVisible
-                      ? decryptedWitnessScript
-                      : '*** *** *** *** *** ***'}
-                  </Text>
-                </View>
-              </View>
-            )}
-            <View>
-              <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                <TouchableOpacity
-                  onPressIn={() => setPrivateKeyVisible(!privateKeyVisible)}
-                  style={Common.inputIcon}
+              <TouchableOpacity
+                style={[
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                ]}
+                onPressIn={() => openChainSelect()}
+              >
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Gutters.regularHPadding,
+                  ]}
                 >
-                  <Icon
-                    name={privateKeyVisible ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={Colors.bluePrimary}
-                  />
-                </TouchableOpacity>
+                  {t('home:select_chain')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View
+              style={[
+                Layout.fill,
+                Layout.relative,
+                Layout.fullWidth,
+                Layout.alignItemsCenter,
+                Gutters.regularTMargin,
+              ]}
+            >
+              <View style={[Gutters.regularTMargin]}>
                 <Text
                   style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
                 >
-                  {t('home:wallet_private_key')}:
+                  {t('home:wallet_address')}:
                 </Text>
-              </View>
-              <View>
                 <Text
                   selectable={true}
                   style={[
@@ -313,33 +216,146 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     Gutters.smallMargin,
                   ]}
                 >
-                  {privateKeyVisible
-                    ? decryptedPrivateKey
-                    : '*** *** *** *** *** ***'}
+                  {address}
                 </Text>
               </View>
+              {decryptedRedeemScript && (
+                <View>
+                  <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
+                    <TouchableOpacity
+                      onPressIn={() =>
+                        setRedeemScriptVisible(!redeemScriptVisible)
+                      }
+                      style={Common.inputIcon}
+                    >
+                      <Icon
+                        name={redeemScriptVisible ? 'eye' : 'eye-off'}
+                        size={20}
+                        color={Colors.bluePrimary}
+                      />
+                    </TouchableOpacity>
+                    <Text
+                      style={[
+                        Fonts.textBold,
+                        Fonts.textSmall,
+                        Fonts.textCenter,
+                      ]}
+                    >
+                      {t('home:wallet_redeem_script')}:
+                    </Text>
+                  </View>
+                  <View>
+                    <Text
+                      selectable={true}
+                      style={[
+                        Fonts.textTiny,
+                        Fonts.textCenter,
+                        Gutters.smallMargin,
+                      ]}
+                    >
+                      {redeemScriptVisible
+                        ? decryptedRedeemScript
+                        : '*** *** *** *** *** ***'}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              {decryptedWitnessScript && (
+                <View>
+                  <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
+                    <TouchableOpacity
+                      onPressIn={() =>
+                        setWitnessScriptVisible(!witnessScriptVisible)
+                      }
+                      style={Common.inputIcon}
+                    >
+                      <Icon
+                        name={witnessScriptVisible ? 'eye' : 'eye-off'}
+                        size={20}
+                        color={Colors.bluePrimary}
+                      />
+                    </TouchableOpacity>
+                    <Text
+                      style={[
+                        Fonts.textBold,
+                        Fonts.textSmall,
+                        Fonts.textCenter,
+                      ]}
+                    >
+                      {t('home:wallet_witness_script')}:
+                    </Text>
+                  </View>
+                  <View>
+                    <Text
+                      selectable={true}
+                      style={[
+                        Fonts.textTiny,
+                        Fonts.textCenter,
+                        Gutters.smallMargin,
+                      ]}
+                    >
+                      {witnessScriptVisible
+                        ? decryptedWitnessScript
+                        : '*** *** *** *** *** ***'}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              <View>
+                <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
+                  <TouchableOpacity
+                    onPressIn={() => setPrivateKeyVisible(!privateKeyVisible)}
+                    style={Common.inputIcon}
+                  >
+                    <Icon
+                      name={privateKeyVisible ? 'eye' : 'eye-off'}
+                      size={20}
+                      color={Colors.bluePrimary}
+                    />
+                  </TouchableOpacity>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:wallet_private_key')}:
+                  </Text>
+                </View>
+                <View>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textTiny,
+                      Fonts.textCenter,
+                      Gutters.smallMargin,
+                    ]}
+                  >
+                    {privateKeyVisible
+                      ? decryptedPrivateKey
+                      : '*** *** *** *** *** ***'}
+                  </Text>
+                </View>
+              </View>
             </View>
-          </View>
-          <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
-                Layout.fullWidth,
-                Gutters.regularTMargin,
-              ]}
-              onPressIn={() => close()}
-            >
-              <Text
+            <View style={[Layout.justifyContentEnd]}>
+              <TouchableOpacity
                 style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Gutters.regularHPadding,
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                  Layout.fullWidth,
+                  Gutters.regularTMargin,
                 ]}
+                onPressIn={() => close()}
               >
-                {t('common:ok')}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Gutters.regularHPadding,
+                  ]}
+                >
+                  {t('common:ok')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </Modal>
@@ -356,54 +372,55 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
-            Common.modalView,
           ]}
         >
-          <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-            {t('home:select_chain')}
-          </Text>
-          <View style={[Gutters.regularTMargin]}>
-            <Picker
-              selectedValue={selectedChain}
-              onValueChange={(itemValue) => setSelectedChain(itemValue)}
-            >
-              {Object.keys(blockchains).map((key) => (
-                <Picker.Item
-                  label={blockchains[key].name}
-                  value={key}
-                  key={key}
-                />
-              ))}
-            </Picker>
-            <Picker
-              selectedValue={selectedWallet}
-              onValueChange={(itemValue) => setSelectedWallet(itemValue)}
-            >
-              {[...Array(1000)].map((e, i) => (
-                <Picker.Item label={`Wallet ${i}`} value={i - 1} key={i} />
-              ))}
-            </Picker>
-          </View>
-          <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
-                Layout.fullWidth,
-                Gutters.regularTMargin,
-              ]}
-              onPressIn={() => closeChainSelect()}
-            >
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Gutters.regularHPadding,
-                ]}
+          <View style={[Common.modalView]}>
+            <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+              {t('home:select_chain')}
+            </Text>
+            <View style={[Gutters.regularTMargin]}>
+              <Picker
+                selectedValue={selectedChain}
+                onValueChange={(itemValue) => setSelectedChain(itemValue)}
               >
-                {t('common:ok')}
-              </Text>
-            </TouchableOpacity>
+                {Object.keys(blockchains).map((key) => (
+                  <Picker.Item
+                    label={blockchains[key].name}
+                    value={key}
+                    key={key}
+                  />
+                ))}
+              </Picker>
+              <Picker
+                selectedValue={selectedWallet}
+                onValueChange={(itemValue) => setSelectedWallet(itemValue)}
+              >
+                {[...Array(1000)].map((e, i) => (
+                  <Picker.Item label={`Wallet ${i + 1}`} value={i} key={i} />
+                ))}
+              </Picker>
+            </View>
+            <View style={[Layout.justifyContentEnd]}>
+              <TouchableOpacity
+                style={[
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                  Layout.fullWidth,
+                  Gutters.regularTMargin,
+                ]}
+                onPressIn={() => closeChainSelect()}
+              >
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Gutters.regularHPadding,
+                  ]}
+                >
+                  {t('common:ok')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </Modal>
