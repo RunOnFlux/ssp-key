@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { blockchains } from '@storage/blockchains';
@@ -64,6 +65,7 @@ function Restore({ navigation }: Props) {
   const { darkMode, Common, Fonts, Gutters, Layout, Images, Colors } =
     useTheme();
   const blockchainConfig = blockchains[identityChain];
+  const keyboardVisible = useKeyboardVisible();
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -225,15 +227,7 @@ function Restore({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAwareScrollView
-      extraScrollHeight={20}
-      style={Layout.fill}
-      contentContainerStyle={[
-        Layout.fullSize,
-        Layout.fill,
-        Layout.scrollSpaceBetween,
-      ]}
-    >
+    <View style={[Layout.fullSize, Layout.fill, Layout.scrollSpaceBetween]}>
       <View
         style={[
           Layout.row,
@@ -271,117 +265,114 @@ function Restore({ navigation }: Props) {
       >
         <CreationSteps step={1} isImport={true} />
       </View>
-      <View
-        style={[
-          Layout.fill,
-          Layout.relative,
-          Layout.fullWidth,
-          Layout.justifyContentCenter,
-          Layout.alignItemsCenter,
-          Gutters.largeBMargin,
-          {
-            overflow: 'hidden',
-          },
-        ]}
-      >
-        <Image
-          style={{ width: 80, height: 160 }}
-          source={darkMode ? Images.ssp.logoWhite : Images.ssp.logoBlack}
-          resizeMode={'contain'}
-        />
-        <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
-          {t('cr:import_key_phrase')}
-        </Text>
-        <View style={styles.seedPhraseArea}>
-          <TextInput
-            multiline={true}
-            numberOfLines={4}
-            style={[Common.inputArea, Common.inputAreaColors]}
-            autoCapitalize="none"
-            placeholder={t('cr:input_mnemonic')}
-            placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-            secureTextEntry={false}
-            onChangeText={onChangeMnemonic}
-            value={mnemonic}
-            autoCorrect={false}
-            ref={seedInput}
-            onPressIn={() => seedInput.current?.focus()}
-          />
-        </View>
+      <KeyboardAwareScrollView extraScrollHeight={20}>
         <View
           style={[
-            Layout.rowCenter,
-            Common.inputWithButtonBgColors,
-            styles.inputWithButton,
+            Layout.fill,
+            Layout.relative,
+            Layout.fullWidth,
+            Layout.justifyContentCenter,
+            Layout.alignItemsCenter,
           ]}
         >
-          <TextInput
-            style={[Common.textInput]}
-            autoComplete="new-password"
-            textContentType="password"
-            autoCapitalize="none"
-            placeholder={t('cr:set_key_pin')}
-            placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-            secureTextEntry={passwordVisibility ? true : false}
-            onChangeText={onChangePassword}
-            value={password}
-            autoCorrect={false}
-            ref={passwordInputA}
-            onPressIn={() => passwordInputA.current?.focus()}
+          <Image
+            style={{ width: 80, height: 160 }}
+            source={darkMode ? Images.ssp.logoWhite : Images.ssp.logoBlack}
+            resizeMode={'contain'}
           />
-          <TouchableOpacity
-            onPressIn={handlePasswordVisibility}
-            style={Common.inputIcon}
-          >
-            <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
-          </TouchableOpacity>
-        </View>
-        <View
-          style={[
-            Layout.rowCenter,
-            Common.inputWithButtonBgColors,
-            styles.inputWithButton,
-          ]}
-        >
-          <TextInput
-            style={[Common.textInput]}
-            autoComplete="new-password"
-            textContentType="password"
-            autoCapitalize="none"
-            placeholder={t('cr:confirm_key_pin')}
-            placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-            secureTextEntry={passwordVisibilityConfirm ? true : false}
-            onChangeText={onChangePasswordConfirm}
-            value={passwordConfirm}
-            autoCorrect={false}
-            ref={passwordInputB}
-            onPressIn={() => passwordInputB.current?.focus()}
-          />
-          <TouchableOpacity
-            onPressIn={handlePasswordVisibilityConfirm}
-            style={Common.inputIcon}
-          >
-            <Icon
-              name={rightIconConfirm}
-              size={20}
-              color={Colors.bluePrimary}
-            />
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity
-          style={[
-            Common.button.rounded,
-            Common.button.bluePrimary,
-            Gutters.largeBMargin,
-            Gutters.smallTMargin,
-          ]}
-          onPressIn={() => setupImportKey()}
-        >
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('cr:import_key')}
+          <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
+            {t('cr:import_key_phrase')}
           </Text>
-        </TouchableOpacity>
-        {/* <TouchableOpacity
+          <View style={styles.seedPhraseArea}>
+            <TextInput
+              multiline={true}
+              numberOfLines={4}
+              style={[Common.inputArea, Common.inputAreaColors]}
+              autoCapitalize="none"
+              placeholder={t('cr:input_mnemonic')}
+              placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+              secureTextEntry={false}
+              onChangeText={onChangeMnemonic}
+              value={mnemonic}
+              autoCorrect={false}
+              ref={seedInput}
+              onPressIn={() => seedInput.current?.focus()}
+            />
+          </View>
+          <View
+            style={[
+              Layout.rowCenter,
+              Common.inputWithButtonBgColors,
+              styles.inputWithButton,
+            ]}
+          >
+            <TextInput
+              style={[Common.textInput]}
+              autoComplete="new-password"
+              textContentType="password"
+              autoCapitalize="none"
+              placeholder={t('cr:set_key_pin')}
+              placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+              secureTextEntry={passwordVisibility ? true : false}
+              onChangeText={onChangePassword}
+              value={password}
+              autoCorrect={false}
+              ref={passwordInputA}
+              onPressIn={() => passwordInputA.current?.focus()}
+            />
+            <TouchableOpacity
+              onPressIn={handlePasswordVisibility}
+              style={Common.inputIcon}
+            >
+              <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
+            </TouchableOpacity>
+          </View>
+          <View
+            style={[
+              Layout.rowCenter,
+              Common.inputWithButtonBgColors,
+              styles.inputWithButton,
+            ]}
+          >
+            <TextInput
+              style={[Common.textInput]}
+              autoComplete="new-password"
+              textContentType="password"
+              autoCapitalize="none"
+              placeholder={t('cr:confirm_key_pin')}
+              placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+              secureTextEntry={passwordVisibilityConfirm ? true : false}
+              onChangeText={onChangePasswordConfirm}
+              value={passwordConfirm}
+              autoCorrect={false}
+              ref={passwordInputB}
+              onPressIn={() => passwordInputB.current?.focus()}
+            />
+            <TouchableOpacity
+              onPressIn={handlePasswordVisibilityConfirm}
+              style={Common.inputIcon}
+            >
+              <Icon
+                name={rightIconConfirm}
+                size={20}
+                color={Colors.bluePrimary}
+              />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[
+              Common.button.rounded,
+              Common.button.bluePrimary,
+              Gutters.largeBMargin,
+              Gutters.smallTMargin,
+            ]}
+            onPressIn={() => setupImportKey()}
+          >
+            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+              {t('cr:import_key')}
+            </Text>
+          </TouchableOpacity>
+          {/* <TouchableOpacity
           style={[Gutters.largeBMargin]}
           onPressIn={() => navigateBack()}
         >
@@ -391,7 +382,8 @@ function Restore({ navigation }: Props) {
             {t('common:cancel')}
           </Text>
         </TouchableOpacity> */}
-      </View>
+        </View>
+      </KeyboardAwareScrollView>
       <Modal
         animationType="fade"
         transparent={true}
@@ -523,8 +515,8 @@ function Restore({ navigation }: Props) {
         </ScrollView>
         <Toast />
       </Modal>
-      <PoweredByFlux />
-    </KeyboardAwareScrollView>
+      {!keyboardVisible && <PoweredByFlux />}
+    </View>
   );
 }
 
