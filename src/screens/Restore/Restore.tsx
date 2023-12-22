@@ -23,7 +23,11 @@ import { blockchains } from '@storage/blockchains';
 
 const CryptoJS = require('crypto-js');
 
-import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
+import {
+  getMasterXpriv,
+  getMasterXpub,
+  validateMnemonic,
+} from '../../lib/wallet';
 
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
 import { setXpubKeyIdentity, setXprivKeyIdentity } from '../../store';
@@ -110,6 +114,11 @@ function Restore({ navigation }: Props) {
     }
     const splittedSeed = newSeedPhrase.split(' ');
     if (splittedSeed.length < 12) {
+      displayMessage('error', t('cr:err_invalid_seed'));
+      return;
+    }
+    const isValid = validateMnemonic(newSeedPhrase);
+    if (!isValid) {
       displayMessage('error', t('cr:err_invalid_seed'));
       return;
     }
