@@ -84,7 +84,7 @@ const Authentication = (props: {
             setPassword('');
             setPasswordVisibility(false);
             props.actionStatus(true);
-          }, 450);
+          }, 250);
         } else {
           console.log('user cancelled biometric prompt');
         }

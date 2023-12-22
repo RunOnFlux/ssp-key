@@ -326,9 +326,10 @@ const SettingsSection = (props: {
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
+            Layout.justifyContentCenter,
           ]}
         >
-          <View style={[Layout.fill, Common.modalView]}>
+          <View style={[Common.modalView]}>
             <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
               {t('home:select_chain')}
             </Text>
@@ -336,10 +337,12 @@ const SettingsSection = (props: {
               <Picker
                 selectedValue={selectedChain}
                 onValueChange={(itemValue) => setSelectedChain(itemValue)}
+                mode="dropdown"
               >
                 {Object.keys(blockchains).map((key) => (
                   <Picker.Item
                     label={blockchains[key].name}
+                    color={Colors.textInput}
                     value={key}
                     key={key}
                   />

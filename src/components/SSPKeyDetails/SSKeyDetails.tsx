@@ -332,9 +332,11 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 onValueChange={(itemValue) => {
                   setSelectedChain(itemValue);
                 }}
+                mode="dropdown"
               >
                 {Object.keys(blockchains).map((key) => (
                   <Picker.Item
+                    color={Colors.textInput}
                     label={blockchains[key].name}
                     value={key}
                     key={key}

@@ -383,9 +383,11 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <Picker
                 selectedValue={selectedChain}
                 onValueChange={(itemValue) => setSelectedChain(itemValue)}
+                mode="dropdown"
               >
                 {Object.keys(blockchains).map((key) => (
                   <Picker.Item
+                    color={Colors.textInput}
                     label={blockchains[key].name}
                     value={key}
                     key={key}
@@ -395,9 +397,15 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <Picker
                 selectedValue={selectedWallet}
                 onValueChange={(itemValue) => setSelectedWallet(itemValue)}
+                mode="dropdown"
               >
                 {[...Array(1000)].map((e, i) => (
-                  <Picker.Item label={`Wallet ${i + 1}`} value={i} key={i} />
+                  <Picker.Item
+                    color={Colors.textInput}
+                    label={`Wallet ${i + 1}`}
+                    value={i}
+                    key={i}
+                  />
                 ))}
               </Picker>
             </View>
