@@ -139,7 +139,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
             Layout.scrollSpaceBetween,
           ]}
         >
-          <View style={[Common.modalView]}>
+          <View style={[Layout.fill, Common.modalView]}>
             <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
               {t('home:chain_ssp_details', { symbol: blockchainConfig.symbol })}
             </Text>
@@ -319,6 +319,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
           contentContainerStyle={[
             Gutters.smallBPadding,
             Layout.scrollSpaceBetween,
+            Layout.justifyContentCenter,
           ]}
         >
           <View style={[Common.modalView]}>

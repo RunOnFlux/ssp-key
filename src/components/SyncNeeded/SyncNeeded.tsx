@@ -39,7 +39,7 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
           Layout.scrollSpaceBetween,
         ]}
       >
-        <View style={[Common.modalView]}>
+        <View style={[Layout.fill, Common.modalView]}>
           <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
             {t('common:appName.full')}
           </Text>

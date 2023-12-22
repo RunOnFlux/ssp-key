@@ -142,6 +142,7 @@ const Authentication = (props: {
         contentContainerStyle={[
           Gutters.smallBPadding,
           Layout.scrollSpaceBetween,
+          Layout.justifyContentCenter,
         ]}
       >
         <View style={[Common.modalView, styles.modalView]}>
@@ -261,6 +262,7 @@ export default Authentication;
 
 const styles = StyleSheet.create({
   modalView: {
+    justifyContent: 'center',
     left: 0,
     right: 0,
     height: 480,

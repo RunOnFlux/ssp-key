@@ -86,7 +86,7 @@ const SyncSuccess = (props: {
           Layout.scrollSpaceBetween,
         ]}
       >
-        <View style={[Common.modalView]}>
+        <View style={[Layout.fill, Common.modalView]}>
           <View
             style={[
               Layout.fill,

@@ -327,7 +327,7 @@ const SettingsSection = (props: {
             Layout.scrollSpaceBetween,
           ]}
         >
-          <View style={[Common.modalView]}>
+          <View style={[Layout.fill, Common.modalView]}>
             <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
               {t('home:select_chain')}
             </Text>

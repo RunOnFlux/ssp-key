@@ -347,7 +347,7 @@ function Create({ navigation }: Props) {
             Layout.scrollSpaceBetween,
           ]}
         >
-          <View style={[Common.modalView]}>
+          <View style={[Layout.fill, Common.modalView]}>
             <Text
               style={[Fonts.titleSmall, Gutters.smallBMargin, Fonts.textCenter]}
             >
