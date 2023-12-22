@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
-import { View, Image, TouchableOpacity } from 'react-native';
+import { View, Image, Pressable } from 'react-native';
 import { useTheme } from '../../hooks';
 
 import HelpSection from '../../components/HelpSection/HelpSection';
@@ -35,15 +35,15 @@ function Navbar(props: { openSettingsTrigger: () => void }) {
           resizeMode={'contain'}
         />
         <View style={[Layout.row, Gutters.tinyTMargin]}>
-          <TouchableOpacity
+          <Pressable
             onPressIn={() => openHelp()}
             style={[Gutters.smallRMargin]}
           >
             <Icon name="help-circle" size={22} color={Colors.textGray400} />
-          </TouchableOpacity>
-          <TouchableOpacity onPressIn={() => openSettings()}>
+          </Pressable>
+          <Pressable onPressIn={() => openSettings()}>
             <Icon name="settings" size={22} color={Colors.textGray400} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
       {helpSectionModalOpen && (
