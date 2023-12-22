@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Icon from 'react-native-vector-icons/Feather';
@@ -829,7 +829,7 @@ function Home({ navigation }: Props) {
                   />
                 )}
                 {!isRefreshing && (
-                  <Pressable
+                  <TouchableOpacity
                     onPressIn={() => handleRefresh()}
                     style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
                   >
@@ -849,11 +849,11 @@ function Home({ navigation }: Props) {
                     >
                       {t('common:refresh')}
                     </Text>
-                  </Pressable>
+                  </TouchableOpacity>
                 )}
               </View>
               <View>
-                <Pressable
+                <TouchableOpacity
                   style={[
                     Common.button.outlineRounded,
                     Common.button.secondaryButton,
@@ -870,7 +870,7 @@ function Home({ navigation }: Props) {
                   >
                     {t('home:scan_code')}
                   </Text>
-                </Pressable>
+                </TouchableOpacity>
               </View>
             </>
           )}
