@@ -233,7 +233,10 @@ function Create({ navigation }: Props) {
       <View style={[Gutters.smallTMargin, Gutters.regularHMargin]}>
         <CreationSteps step={1} isImport={false} />
       </View>
-      <KeyboardAwareScrollView extraScrollHeight={20}>
+      <KeyboardAwareScrollView
+        keyboardShouldPersistTaps="always"
+        extraScrollHeight={20}
+      >
         <View
           style={[
             Layout.fill,

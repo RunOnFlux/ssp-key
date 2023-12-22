@@ -772,8 +772,9 @@ function Home({ navigation }: Props) {
       <Navbar openSettingsTrigger={openSettings} />
       <Divider color={Colors.textGray200} />
       <KeyboardAwareScrollView
-        contentContainerStyle={[Layout.fullWidth, Layout.scrollSpaceBetween]}
+        keyboardShouldPersistTaps="always"
         extraScrollHeight={20}
+        contentContainerStyle={[Layout.fullWidth, Layout.scrollSpaceBetween]}
       >
         <View
           style={[

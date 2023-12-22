@@ -265,7 +265,10 @@ function Restore({ navigation }: Props) {
       >
         <CreationSteps step={1} isImport={true} />
       </View>
-      <KeyboardAwareScrollView extraScrollHeight={20}>
+      <KeyboardAwareScrollView
+        keyboardShouldPersistTaps="always"
+        extraScrollHeight={20}
+      >
         <View
           style={[
             Layout.fill,

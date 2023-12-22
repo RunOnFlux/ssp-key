@@ -136,6 +136,7 @@ const Authentication = (props: {
       onRequestClose={() => close()}
     >
       <KeyboardAwareScrollView
+        keyboardShouldPersistTaps="always"
         extraScrollHeight={20}
         style={[Layout.fill, Common.modalBackdrop]}
         contentInset={{ bottom: 80 }}

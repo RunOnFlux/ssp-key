@@ -150,6 +150,7 @@ const SettingsSection = (props: {
         onRequestClose={() => handleCancel()}
       >
         <KeyboardAwareScrollView
+          keyboardShouldPersistTaps="always"
           extraScrollHeight={20}
           style={[Layout.fill, Common.modalBackdrop]}
           contentInset={{ bottom: 80 }}

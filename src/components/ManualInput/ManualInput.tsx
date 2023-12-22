@@ -39,6 +39,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
       onRequestClose={() => handleCancel()}
     >
       <KeyboardAwareScrollView
+        keyboardShouldPersistTaps="always"
         extraScrollHeight={20}
         style={[Layout.fill, Common.modalBackdrop]}
         contentInset={{ bottom: 80 }}
