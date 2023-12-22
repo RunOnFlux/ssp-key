@@ -273,6 +273,7 @@ function Restore({ navigation }: Props) {
             Layout.fullWidth,
             Layout.justifyContentCenter,
             Layout.alignItemsCenter,
+            Gutters.largeBMargin,
           ]}
         >
           <Image
@@ -363,7 +364,7 @@ function Restore({ navigation }: Props) {
             style={[
               Common.button.rounded,
               Common.button.bluePrimary,
-              Gutters.largeBMargin,
+              Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
             onPressIn={() => setupImportKey()}

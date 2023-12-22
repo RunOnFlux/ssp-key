@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 const CryptoJS = require('crypto-js');
@@ -65,6 +66,7 @@ function Create({ navigation }: Props) {
     useTheme();
   const { identityChain } = useAppSelector((state) => state.ssp);
   const blockchainConfig = blockchains[identityChain];
+  const keyboardVisible = useKeyboardVisible();
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -208,15 +210,7 @@ function Create({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAwareScrollView
-      extraScrollHeight={20}
-      style={Layout.fill}
-      contentContainerStyle={[
-        Layout.fullSize,
-        Layout.fill,
-        Layout.scrollSpaceBetween,
-      ]}
-    >
+    <View style={[Layout.fullSize, Layout.fill, Layout.scrollSpaceBetween]}>
       <View
         style={[Layout.fullWidth, Gutters.smallTMargin, Gutters.smallHPadding]}
       >
@@ -239,106 +233,105 @@ function Create({ navigation }: Props) {
       <View style={[Gutters.smallTMargin, Gutters.regularHMargin]}>
         <CreationSteps step={1} isImport={false} />
       </View>
-      <View
-        style={[
-          Layout.fill,
-          Layout.relative,
-          Layout.fullWidth,
-          Layout.justifyContentCenter,
-          Layout.alignItemsCenter,
-          Gutters.largeBMargin,
-          {
-            overflow: 'hidden',
-          },
-        ]}
-      >
-        <Image
-          style={{ width: 80, height: 160 }}
-          source={darkMode ? Images.ssp.logoWhite : Images.ssp.logoBlack}
-          resizeMode={'contain'}
-        />
-        <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
-          {t('cr:secure_key')}
-        </Text>
+      <KeyboardAwareScrollView extraScrollHeight={20}>
         <View
           style={[
-            Layout.rowCenter,
-            Common.inputWithButtonBgColors,
-            styles.inputWithButton,
+            Layout.fill,
+            Layout.relative,
+            Layout.fullWidth,
+            Layout.justifyContentCenter,
+            Layout.alignItemsCenter,
+            Gutters.largeBMargin,
           ]}
         >
-          <TextInput
-            style={[Common.textInput]}
-            autoComplete="new-password"
-            textContentType="password"
-            autoCapitalize="none"
-            placeholder={t('cr:set_key_pin')}
-            placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-            secureTextEntry={passwordVisibility ? true : false}
-            onChangeText={onChangePassword}
-            value={password}
-            autoCorrect={false}
-            ref={passwordInputA}
-            onPressIn={() => passwordInputA.current?.focus()}
+          <Image
+            style={{ width: 80, height: 160 }}
+            source={darkMode ? Images.ssp.logoWhite : Images.ssp.logoBlack}
+            resizeMode={'contain'}
           />
-          <TouchableOpacity
-            onPressIn={handlePasswordVisibility}
-            style={Common.inputIcon}
+          <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
+            {t('cr:secure_key')}
+          </Text>
+          <View
+            style={[
+              Layout.rowCenter,
+              Common.inputWithButtonBgColors,
+              styles.inputWithButton,
+            ]}
           >
-            <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
-          </TouchableOpacity>
-        </View>
-        <View
-          style={[
-            Layout.rowCenter,
-            Common.inputWithButtonBgColors,
-            styles.inputWithButton,
-          ]}
-        >
-          <TextInput
-            style={[Common.textInput]}
-            autoComplete="new-password"
-            textContentType="password"
-            autoCapitalize="none"
-            placeholder={t('cr:confirm_key_pin')}
-            placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-            secureTextEntry={passwordVisibilityConfirm ? true : false}
-            onChangeText={onChangePasswordConfirm}
-            value={passwordConfirm}
-            autoCorrect={false}
-            ref={passwordInputB}
-            onPressIn={() => passwordInputB.current?.focus()}
-          />
-          <TouchableOpacity
-            onPressIn={handlePasswordVisibilityConfirm}
-            style={Common.inputIcon}
-          >
-            <Icon
-              name={rightIconConfirm}
-              size={20}
-              color={Colors.bluePrimary}
+            <TextInput
+              style={[Common.textInput]}
+              autoComplete="new-password"
+              textContentType="password"
+              autoCapitalize="none"
+              placeholder={t('cr:set_key_pin')}
+              placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+              secureTextEntry={passwordVisibility ? true : false}
+              onChangeText={onChangePassword}
+              value={password}
+              autoCorrect={false}
+              ref={passwordInputA}
+              onPressIn={() => passwordInputA.current?.focus()}
             />
+            <TouchableOpacity
+              onPressIn={handlePasswordVisibility}
+              style={Common.inputIcon}
+            >
+              <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
+            </TouchableOpacity>
+          </View>
+          <View
+            style={[
+              Layout.rowCenter,
+              Common.inputWithButtonBgColors,
+              styles.inputWithButton,
+            ]}
+          >
+            <TextInput
+              style={[Common.textInput]}
+              autoComplete="new-password"
+              textContentType="password"
+              autoCapitalize="none"
+              placeholder={t('cr:confirm_key_pin')}
+              placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+              secureTextEntry={passwordVisibilityConfirm ? true : false}
+              onChangeText={onChangePasswordConfirm}
+              value={passwordConfirm}
+              autoCorrect={false}
+              ref={passwordInputB}
+              onPressIn={() => passwordInputB.current?.focus()}
+            />
+            <TouchableOpacity
+              onPressIn={handlePasswordVisibilityConfirm}
+              style={Common.inputIcon}
+            >
+              <Icon
+                name={rightIconConfirm}
+                size={20}
+                color={Colors.bluePrimary}
+              />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[
+              Common.button.rounded,
+              Common.button.bluePrimary,
+              Gutters.regularBMargin,
+              Gutters.smallTMargin,
+            ]}
+            onPressIn={() => setupKey()}
+          >
+            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+              {t('cr:setup_key')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPressIn={() => navigation.navigate('Restore')}>
+            <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
+              {t('cr:restore_key')}
+            </Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[
-            Common.button.rounded,
-            Common.button.bluePrimary,
-            Gutters.regularBMargin,
-            Gutters.smallTMargin,
-          ]}
-          onPressIn={() => setupKey()}
-        >
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('cr:setup_key')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPressIn={() => navigation.navigate('Restore')}>
-          <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
-            {t('cr:restore_key')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      </KeyboardAwareScrollView>
       <Modal
         animationType="fade"
         transparent={true}
@@ -470,8 +463,8 @@ function Create({ navigation }: Props) {
         </ScrollView>
         <Toast />
       </Modal>
-      <PoweredByFlux />
-    </KeyboardAwareScrollView>
+      {!keyboardVisible && <PoweredByFlux />}
+    </View>
   );
 }
 
