@@ -435,6 +435,8 @@ function Home({ navigation }: Props) {
     derivationPath: string,
   ) => {
     try {
+      console.log('tx request');
+      // todo enable spinner here
       const id = await getUniqueId();
       const password = await EncryptedStorage.getItem('ssp_key_pw');
       const pwForEncryption = id + password;
@@ -466,38 +468,35 @@ function Home({ navigation }: Props) {
         addressIndex,
         chain,
       );
-      try {
-        const signedTx = await signTransaction(
-          rawTransactions,
-          chain,
-          keyPair.privKey,
-          addressDetails.redeemScript ?? '',
-          addressDetails.witnessScript ?? '',
-          utxos,
-        );
-        const finalTx = finaliseTransaction(signedTx, chain);
-        console.log(finalTx);
-        const ttxid = await broadcastTx(finalTx, chain);
-        console.log(ttxid);
-        setRawTx('');
-        setTxPath('');
-        // here tell ssp-relay that we are finished, rewrite the request
-        await postAction(
-          'txid',
-          ttxid,
-          chain,
-          derivationPath,
-          sspWalletKeyInternalIdentity,
-        );
-        setTxid(ttxid);
-      } catch (error) {
-        console.log(error);
-        displayMessage('error', t('home:err_tx_failed'));
-      }
+      const signedTx = await signTransaction(
+        rawTransactions,
+        chain,
+        keyPair.privKey,
+        addressDetails.redeemScript ?? '',
+        addressDetails.witnessScript ?? '',
+        utxos,
+      );
+      const finalTx = finaliseTransaction(signedTx, chain);
+      console.log(finalTx);
+      const ttxid = await broadcastTx(finalTx, chain);
+      console.log(ttxid);
+      setRawTx('');
+      setTxPath('');
+      // here tell ssp-relay that we are finished, rewrite the request
+      await postAction(
+        'txid',
+        ttxid,
+        chain,
+        derivationPath,
+        sspWalletKeyInternalIdentity,
+      );
+      setTxid(ttxid);
     } catch (error) {
+      displayMessage('error', t('home:err_tx_failed'));
       console.log(error);
+    } finally {
+      console.log('all done. todo Disable spinner');
     }
-    console.log('tx request');
   };
   const handleManualInput = async (manualInput: string) => {
     if (!manualInput) {
