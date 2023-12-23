@@ -81,7 +81,7 @@ const SyncRequest = (props: {
             Gutters.smallTMargin,
           ]}
           disabled={authenticationOpen || props.activityStatus}
-          onPress={() => openAuthentication()}
+          onPressIn={() => openAuthentication()}
         >
           {(authenticationOpen || props.activityStatus) && (
             <ActivityIndicator
@@ -95,7 +95,7 @@ const SyncRequest = (props: {
         </TouchableOpacity>
         <TouchableOpacity
           disabled={authenticationOpen || props.activityStatus}
-          onPress={() => reject()}
+          onPressIn={() => reject()}
         >
           <Text
             style={[

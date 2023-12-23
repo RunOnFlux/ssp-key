@@ -830,7 +830,7 @@ function Home({ navigation }: Props) {
                 )}
                 {!isRefreshing && (
                   <TouchableOpacity
-                    onPress={() => handleRefresh()}
+                    onPressIn={() => handleRefresh()}
                     style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
                   >
                     <IconB
@@ -859,7 +859,7 @@ function Home({ navigation }: Props) {
                     Common.button.secondaryButton,
                     Gutters.smallBMargin,
                   ]}
-                  onPress={() => scanCode()}
+                  onPressIn={() => scanCode()}
                 >
                   <Text
                     style={[

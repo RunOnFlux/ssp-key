@@ -102,7 +102,7 @@ const TransactionRequest = (props: {
             Gutters.smallTMargin,
           ]}
           disabled={authenticationOpen || props.activityStatus}
-          onPress={() => openAuthentication()}
+          onPressIn={() => openAuthentication()}
         >
           {(authenticationOpen || props.activityStatus) && (
             <ActivityIndicator
@@ -116,7 +116,7 @@ const TransactionRequest = (props: {
         </TouchableOpacity>
         <TouchableOpacity
           disabled={authenticationOpen || props.activityStatus}
-          onPress={() => reject()}
+          onPressIn={() => reject()}
         >
           <Text
             style={[

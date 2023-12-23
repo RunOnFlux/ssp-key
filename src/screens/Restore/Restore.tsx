@@ -246,7 +246,7 @@ function Restore({ navigation }: Props) {
           Gutters.smallHPadding,
         ]}
       >
-        <TouchableOpacity onPress={() => navigateBack()} style={[Layout.row]}>
+        <TouchableOpacity onPressIn={() => navigateBack()} style={[Layout.row]}>
           <Icon name="chevron-left" size={20} color={Colors.bluePrimary} />
           <Text
             style={[
@@ -334,7 +334,7 @@ function Restore({ navigation }: Props) {
               onPressIn={() => passwordInputA.current?.focus()}
             />
             <TouchableOpacity
-              onPress={handlePasswordVisibility}
+              onPressIn={handlePasswordVisibility}
               style={Common.inputIcon}
             >
               <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
@@ -362,7 +362,7 @@ function Restore({ navigation }: Props) {
               onPressIn={() => passwordInputB.current?.focus()}
             />
             <TouchableOpacity
-              onPress={handlePasswordVisibilityConfirm}
+              onPressIn={handlePasswordVisibilityConfirm}
               style={Common.inputIcon}
             >
               <Icon
@@ -379,7 +379,7 @@ function Restore({ navigation }: Props) {
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
-            onPress={() => setupImportKey()}
+            onPressIn={() => setupImportKey()}
           >
             <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {t('cr:import_key')}
@@ -387,7 +387,7 @@ function Restore({ navigation }: Props) {
           </TouchableOpacity>
           {/* <TouchableOpacity
           style={[Gutters.largeBMargin]}
-          onPress={() => navigateBack()}
+          onPressIn={() => navigateBack()}
         >
           <Text
             style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
