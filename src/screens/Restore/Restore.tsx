@@ -246,7 +246,7 @@ function Restore({ navigation }: Props) {
           Gutters.smallHPadding,
         ]}
       >
-        <TouchableOpacity onPressIn={() => navigateBack()} style={[Layout.row]}>
+        <TouchableOpacity onPress={() => navigateBack()} style={[Layout.row]}>
           <Icon name="chevron-left" size={20} color={Colors.bluePrimary} />
           <Text
             style={[
@@ -334,7 +334,7 @@ function Restore({ navigation }: Props) {
               onPressIn={() => passwordInputA.current?.focus()}
             />
             <TouchableOpacity
-              onPressIn={handlePasswordVisibility}
+              onPress={handlePasswordVisibility}
               style={Common.inputIcon}
             >
               <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
@@ -362,7 +362,7 @@ function Restore({ navigation }: Props) {
               onPressIn={() => passwordInputB.current?.focus()}
             />
             <TouchableOpacity
-              onPressIn={handlePasswordVisibilityConfirm}
+              onPress={handlePasswordVisibilityConfirm}
               style={Common.inputIcon}
             >
               <Icon
@@ -379,7 +379,7 @@ function Restore({ navigation }: Props) {
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
-            onPressIn={() => setupImportKey()}
+            onPress={() => setupImportKey()}
           >
             <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {t('cr:import_key')}
@@ -387,7 +387,7 @@ function Restore({ navigation }: Props) {
           </TouchableOpacity>
           {/* <TouchableOpacity
           style={[Gutters.largeBMargin]}
-          onPressIn={() => navigateBack()}
+          onPress={() => navigateBack()}
         >
           <Text
             style={[Fonts.textSmall, Fonts.textBluePrimary, Fonts.textCenter]}
@@ -471,7 +471,7 @@ function Restore({ navigation }: Props) {
                     Common.button.dashed,
                     Common.button.secondaryButton,
                   ]}
-                  onPressIn={() => {
+                  onPress={() => {
                     setMnemonicShow(!mnemonicShow);
                     setWSPwasShown(true);
                   }}
@@ -523,7 +523,7 @@ function Restore({ navigation }: Props) {
                   Gutters.smallTMargin,
                 ]}
                 disabled={isLoading}
-                onPressIn={() => handleOk()}
+                onPress={() => handleOk()}
               >
                 {isLoading && (
                   <ActivityIndicator
@@ -539,7 +539,7 @@ function Restore({ navigation }: Props) {
               </TouchableOpacity>
               <TouchableOpacity
                 disabled={isLoading}
-                onPressIn={() => handleCancel()}
+                onPress={() => handleCancel()}
               >
                 <Text
                   style={[

@@ -213,7 +213,7 @@ const Authentication = (props: {
                 onPressIn={() => textInputA.current?.focus()}
               />
               <TouchableOpacity
-                onPressIn={() => setPasswordVisibility(!passwordVisibility)}
+                onPress={() => setPasswordVisibility(!passwordVisibility)}
                 style={Common.inputIcon}
               >
                 <Icon
@@ -232,7 +232,7 @@ const Authentication = (props: {
                 Gutters.regularBMargin,
                 Gutters.smallTMargin,
               ]}
-              onPressIn={() => grantAccess()}
+              onPress={() => grantAccess()}
             >
               <Text style={[Fonts.textRegular, Fonts.textWhite]}>
                 {props.type === 'sensitive'
@@ -240,7 +240,7 @@ const Authentication = (props: {
                   : t('common:confirm')}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPressIn={() => close()}>
+            <TouchableOpacity onPress={() => close()}>
               <Text
                 style={[
                   Fonts.textSmall,

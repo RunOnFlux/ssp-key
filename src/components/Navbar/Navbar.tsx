@@ -36,19 +36,20 @@ function Navbar(props: { openSettingsTrigger: () => void }) {
         />
         <View style={[Layout.row, Gutters.tinyTMargin]}>
           <TouchableOpacity
-            onPressIn={() => openHelp()}
+            onPress={() => openHelp()}
             style={[Gutters.smallRMargin]}
           >
             <Icon name="help-circle" size={22} color={Colors.textGray400} />
           </TouchableOpacity>
-          <TouchableOpacity onPressIn={() => openSettings()}>
+          <TouchableOpacity onPress={() => openSettings()}>
             <Icon name="settings" size={22} color={Colors.textGray400} />
           </TouchableOpacity>
         </View>
+        <HelpSection
+          actionStatus={handleHelpModalAction}
+          visible={helpSectionModalOpen}
+        />
       </View>
-      {helpSectionModalOpen && (
-        <HelpSection actionStatus={handleHelpModalAction} />
-      )}
     </>
   );
 }

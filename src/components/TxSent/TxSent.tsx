@@ -82,13 +82,13 @@ const TxSent = (props: {
                 Gutters.regularBMargin,
                 Gutters.smallTMargin,
               ]}
-              onPressIn={() => openExplorer()}
+              onPress={() => openExplorer()}
             >
               <Text style={[Fonts.textRegular, Fonts.textWhite]}>
                 {t('home:show_in_explorer')}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPressIn={() => close()}>
+            <TouchableOpacity onPress={() => close()}>
               <Text
                 style={[
                   Fonts.textSmall,

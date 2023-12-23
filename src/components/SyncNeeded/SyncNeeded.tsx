@@ -80,7 +80,7 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
                 Gutters.regularBMargin,
                 Gutters.smallTMargin,
               ]}
-              onPressIn={() => scanCode()}
+              onPress={() => scanCode()}
             >
               <Text style={[Fonts.textRegular, Fonts.textWhite]}>
                 {t('home:scan_code')}
@@ -93,13 +93,13 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
                 Layout.fullWidth,
                 Gutters.regularBMargin,
               ]}
-              onPressIn={() => manualInput()}
+              onPress={() => manualInput()}
             >
               <Text style={[Fonts.textRegular, Fonts.textBluePrimary]}>
                 {t('home:manual_input')}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPressIn={() => reject()}>
+            <TouchableOpacity onPress={() => reject()}>
               <Text
                 style={[
                   Fonts.textSmall,

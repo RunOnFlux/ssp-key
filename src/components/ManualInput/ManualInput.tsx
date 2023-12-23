@@ -98,13 +98,13 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                 Gutters.regularBMargin,
                 Gutters.smallTMargin,
               ]}
-              onPressIn={() => handleMnualInput()}
+              onPress={() => handleMnualInput()}
             >
               <Text style={[Fonts.textRegular, Fonts.textWhite]}>
                 {t('home:process_input')}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPressIn={() => handleCancel()}>
+            <TouchableOpacity onPress={() => handleCancel()}>
               <Text
                 style={[
                   Fonts.textSmall,

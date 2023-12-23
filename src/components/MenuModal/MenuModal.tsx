@@ -43,14 +43,14 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
       visible={true}
     >
       <TouchableWithoutFeedback
-        onPressIn={() => {
+        onPress={() => {
           handleCancel();
         }}
       >
         <SafeAreaView style={[Layout.fill]}>
           <View>
             <View style={[Common.modalMenu]}>
-              <TouchableOpacity onPressIn={() => openManualInput()}>
+              <TouchableOpacity onPress={() => openManualInput()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -62,7 +62,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                   {t('home:manual_input')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPressIn={() => openAddressDetails()}>
+              <TouchableOpacity onPress={() => openAddressDetails()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -74,7 +74,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                   {t('home:synced_ssp_address')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPressIn={() => openSSPKeyDetails()}>
+              <TouchableOpacity onPress={() => openSSPKeyDetails()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -86,7 +86,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                   {t('home:ssp_key_details')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPressIn={() => openMenuSettings()}>
+              <TouchableOpacity onPress={() => openMenuSettings()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -98,7 +98,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                   {t('common:settings')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPressIn={() => handleRestore()}>
+              <TouchableOpacity onPress={() => handleRestore()}>
                 <Text
                   style={[
                     Fonts.textSmall,

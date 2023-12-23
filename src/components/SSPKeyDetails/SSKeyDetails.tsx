@@ -158,7 +158,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                   Common.button.outlineRounded,
                   Common.button.secondaryButton,
                 ]}
-                onPressIn={() => openChainSelect()}
+                onPress={() => openChainSelect()}
               >
                 <Text
                   style={[
@@ -183,7 +183,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
-                    onPressIn={() => setXpubVisible(!xpubVisible)}
+                    onPress={() => setXpubVisible(!xpubVisible)}
                     style={Common.inputIcon}
                   >
                     <Icon
@@ -217,7 +217,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
-                    onPressIn={() => setXprivVisible(!xprivVisible)}
+                    onPress={() => setXprivVisible(!xprivVisible)}
                     style={Common.inputIcon}
                   >
                     <Icon
@@ -251,7 +251,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
-                    onPressIn={() => setMnemonicVisible(!mnemonicVisible)}
+                    onPress={() => setMnemonicVisible(!mnemonicVisible)}
                     style={Common.inputIcon}
                   >
                     <Icon
@@ -290,7 +290,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                   Layout.fullWidth,
                   Gutters.largeTMargin,
                 ]}
-                onPressIn={() => close()}
+                onPress={() => close()}
               >
                 <Text
                   style={[
@@ -352,7 +352,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                   Layout.fullWidth,
                   Gutters.regularTMargin,
                 ]}
-                onPressIn={() => closeChainSelect()}
+                onPress={() => closeChainSelect()}
               >
                 <Text
                   style={[

@@ -184,7 +184,7 @@ const SettingsSection = (props: {
                     Common.button.secondaryButton,
                     Gutters.smallTMargin,
                   ]}
-                  onPressIn={() => handleRestore()}
+                  onPress={() => handleRestore()}
                 >
                   <Text
                     style={[
@@ -223,7 +223,7 @@ const SettingsSection = (props: {
                     onPressIn={() => textInputA.current?.focus()}
                   />
                   <TouchableOpacity
-                    onPressIn={resetSSPRelay}
+                    onPress={resetSSPRelay}
                     style={Common.inputIcon}
                   >
                     <Icon name="x" size={20} color={Colors.bluePrimary} />
@@ -257,7 +257,7 @@ const SettingsSection = (props: {
                     onPressIn={() => textInputB.current?.focus()}
                   />
                   <TouchableOpacity
-                    onPressIn={resetChainNodeService}
+                    onPress={resetChainNodeService}
                     style={Common.inputIcon}
                   >
                     <Icon name="x" size={20} color={Colors.bluePrimary} />
@@ -269,7 +269,7 @@ const SettingsSection = (props: {
                       Common.button.outlineRounded,
                       Common.button.secondaryButton,
                     ]}
-                    onPressIn={() => openChainSelect()}
+                    onPress={() => openChainSelect()}
                   >
                     <Text
                       style={[
@@ -292,13 +292,13 @@ const SettingsSection = (props: {
                   Gutters.regularBMargin,
                   Gutters.largeTMargin,
                 ]}
-                onPressIn={() => handleSave()}
+                onPress={() => handleSave()}
               >
                 <Text style={[Fonts.textRegular, Fonts.textWhite]}>
                   {t('common:save')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPressIn={() => handleCancel()}>
+              <TouchableOpacity onPress={() => handleCancel()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -357,7 +357,7 @@ const SettingsSection = (props: {
                   Layout.fullWidth,
                   Gutters.regularTMargin,
                 ]}
-                onPressIn={() => closeChainSelect()}
+                onPress={() => closeChainSelect()}
               >
                 <Text
                   style={[

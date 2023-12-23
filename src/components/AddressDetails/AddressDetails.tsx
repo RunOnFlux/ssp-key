@@ -180,7 +180,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                   Common.button.outlineRounded,
                   Common.button.secondaryButton,
                 ]}
-                onPressIn={() => openChainSelect()}
+                onPress={() => openChainSelect()}
               >
                 <Text
                   style={[
@@ -223,7 +223,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <View>
                   <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                     <TouchableOpacity
-                      onPressIn={() =>
+                      onPress={() =>
                         setRedeemScriptVisible(!redeemScriptVisible)
                       }
                       style={Common.inputIcon}
@@ -264,7 +264,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <View>
                   <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                     <TouchableOpacity
-                      onPressIn={() =>
+                      onPress={() =>
                         setWitnessScriptVisible(!witnessScriptVisible)
                       }
                       style={Common.inputIcon}
@@ -304,7 +304,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
-                    onPressIn={() => setPrivateKeyVisible(!privateKeyVisible)}
+                    onPress={() => setPrivateKeyVisible(!privateKeyVisible)}
                     style={Common.inputIcon}
                   >
                     <Icon
@@ -343,7 +343,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                   Layout.fullWidth,
                   Gutters.regularTMargin,
                 ]}
-                onPressIn={() => close()}
+                onPress={() => close()}
               >
                 <Text
                   style={[
@@ -417,7 +417,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                   Layout.fullWidth,
                   Gutters.regularTMargin,
                 ]}
-                onPressIn={() => closeChainSelect()}
+                onPress={() => closeChainSelect()}
               >
                 <Text
                   style={[

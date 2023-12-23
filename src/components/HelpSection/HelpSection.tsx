@@ -12,7 +12,10 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
-const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
+const HelpSection = (props: {
+  actionStatus: (status: boolean) => void;
+  visible: boolean;
+}) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Common, Colors, darkMode, Images } =
     useTheme();
@@ -45,7 +48,7 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
     <Modal
       animationType="fade"
       transparent={true}
-      visible={true}
+      visible={props.visible}
       onRequestClose={() => close()}
     >
       <ScrollView
@@ -87,21 +90,21 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
               </Text>
             </View>
             <TouchableOpacity
-              onPressIn={openWebsite}
+              onPress={openWebsite}
               style={[Layout.center, Gutters.smallVPadding]}
             >
               <Icon name={'web'} size={30} color={Colors.bluePrimary} />
               <Text style={[Fonts.textSmall, Fonts.textCenter]}>Website</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPressIn={openSupport}
+              onPress={openSupport}
               style={[Layout.center, Gutters.tinyVPadding]}
             >
               <Icon name={'help'} size={30} color={Colors.bluePrimary} />
               <Text style={[Fonts.textSmall, Fonts.textCenter]}>Support</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPressIn={openDiscord}
+              onPress={openDiscord}
               style={[Layout.center, Gutters.smallVPadding]}
             >
               <Icon name={'discord'} size={30} color={Colors.bluePrimary} />
@@ -109,7 +112,7 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={[Gutters.regularVPadding]}
-              onPressIn={() => openFlux()}
+              onPress={() => openFlux()}
             >
               <Image
                 testID={'powered-by-flux-img'}
@@ -130,7 +133,7 @@ const HelpSection = (props: { actionStatus: (status: boolean) => void }) => {
                 Layout.fullWidth,
                 Gutters.regularTMargin,
               ]}
-              onPressIn={() => close()}
+              onPress={() => close()}
             >
               <Text
                 style={[

@@ -53,13 +53,13 @@ function Welcome({ navigation }: Props) {
             Common.button.bluePrimary,
             Gutters.regularBMargin,
           ]}
-          onPressIn={() => navigation.navigate('Create')}
+          onPress={() => navigation.navigate('Create')}
         >
           <Text style={[Fonts.textRegular, Fonts.textWhite]}>
             {t('welcome:synchronise_key')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPressIn={() => navigation.navigate('Restore')}>
+        <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
           <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
             {t('welcome:restore_key')}
           </Text>

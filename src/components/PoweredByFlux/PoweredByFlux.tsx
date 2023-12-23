@@ -44,7 +44,7 @@ const PoweredByFlux = ({ isClickeable }: Props) => {
         ]}
       >
         {isClickeable && (
-          <TouchableOpacity onPressIn={() => openFlux()}>
+          <TouchableOpacity onPress={() => openFlux()}>
             <Image
               testID={'powered-by-flux-img'}
               style={{ height: 18, width: 130 }}
