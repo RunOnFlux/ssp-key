@@ -99,6 +99,7 @@ function Home({ navigation }: Props) {
     (state) => state[activeChain],
   );
   const [activityStatus, setActivityStatus] = useState(false);
+  const [submittingTransaction, setSubmittingTransaction] = useState(false);
 
   const { newTx, clearTx } = useSocket();
 
@@ -436,7 +437,7 @@ function Home({ navigation }: Props) {
   ) => {
     try {
       console.log('tx request');
-      // todo enable spinner here
+      setSubmittingTransaction(true);
       const id = await getUniqueId();
       const password = await EncryptedStorage.getItem('ssp_key_pw');
       const pwForEncryption = id + password;
@@ -495,7 +496,7 @@ function Home({ navigation }: Props) {
       displayMessage('error', t('home:err_tx_failed'));
       console.log(error);
     } finally {
-      console.log('all done. todo Disable spinner');
+      setSubmittingTransaction(false);
     }
   };
   const handleManualInput = async (manualInput: string) => {
@@ -782,7 +783,29 @@ function Home({ navigation }: Props) {
             Layout.colCenter,
           ]}
         >
-          {!rawTx && !syncReq && (
+          {submittingTransaction && (
+            <View
+              style={[
+                Layout.fill,
+                Layout.relative,
+                Layout.fullWidth,
+                Layout.justifyContentCenter,
+                Layout.alignItemsCenter,
+              ]}
+            >
+              <Icon name="send" size={60} color={Colors.textGray400} />
+              <Text
+                style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
+              >
+                {t('home:submitting_transaction')}
+              </Text>
+              <ActivityIndicator
+                size={'large'}
+                style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
+              />
+            </View>
+          )}
+          {!submittingTransaction && !rawTx && !syncReq && (
             <>
               <View
                 style={[
@@ -873,7 +896,7 @@ function Home({ navigation }: Props) {
               </View>
             </>
           )}
-          {rawTx && xpubWallet && xpubKey && (
+          {!submittingTransaction && rawTx && xpubWallet && xpubKey && (
             <TransactionRequest
               rawTx={rawTx}
               chain={activeChain as keyof cryptos}
