@@ -16,24 +16,17 @@ import { MMKV } from 'react-native-mmkv';
 import { cryptos } from '../types';
 
 // ********** Import chains **********
-import flux from './flux';
-import fluxTestnet from './fluxTestnet';
-import rvn from './rvn';
-import ltc from './ltc';
-import btc from './btc';
-import doge from './doge';
-import btcTestnet from './btcTestnet';
-import btcSignet from './btcSignet';
+import chainSliceBase from './chainSliceBase';
 
 const chains = {
-  flux,
-  fluxTestnet,
-  rvn,
-  ltc,
-  btc,
-  doge,
-  btcTestnet,
-  btcSignet,
+  flux: chainSliceBase('flux'),
+  fluxTestnet: chainSliceBase('fluxTestnet'),
+  rvn: chainSliceBase('rvn'),
+  ltc: chainSliceBase('ltc'),
+  btc: chainSliceBase('btc'),
+  doge: chainSliceBase('doge'),
+  btcTestnet: chainSliceBase('btcTestnet'),
+  btcSignet: chainSliceBase('btcSignet'),
 };
 // ********** Import chains **********
 
@@ -43,14 +36,15 @@ import ssp from './ssp';
 const reducers = combineReducers({
   theme,
   ssp,
-  flux: flux.reducer,
-  fluxTestnet: fluxTestnet.reducer,
-  rvn: rvn.reducer,
-  ltc: ltc.reducer,
-  btc: btc.reducer,
-  doge: doge.reducer,
-  btcTestnet: btcTestnet.reducer,
-  btcSignet: btcSignet.reducer,
+  // === IMPORT CHAINS ===
+  flux: chains.flux.reducer,
+  fluxTestnet: chains.fluxTestnet.reducer,
+  rvn: chains.rvn.reducer,
+  ltc: chains.ltc.reducer,
+  btc: chains.btc.reducer,
+  doge: chains.doge.reducer,
+  btcTestnet: chains.btcTestnet.reducer,
+  btcSignet: chains.btcSignet.reducer,
 });
 
 export const storage = new MMKV();
