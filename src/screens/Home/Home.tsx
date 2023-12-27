@@ -58,8 +58,8 @@ import {
 } from '../../store/ssp';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
-import { useSocket } from 'ssp-key/src/hooks/useSocket';
-import { getFCMToken } from 'ssp-key/src/lib/fcmHelper';
+import { useSocket } from '../../hooks/useSocket';
+import { getFCMToken } from '../../lib/fcmHelper';
 
 type Props = {
   navigation: any;

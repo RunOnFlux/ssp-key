@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import io, { Socket } from 'socket.io-client';
-import { useAppSelector } from 'ssp-key/src/hooks';
+import { useAppSelector } from '../hooks';
 import { sspConfig } from '@storage/ssp';
 import { AppState } from 'react-native';
 import { cryptos } from '../types';

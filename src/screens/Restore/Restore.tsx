@@ -38,8 +38,8 @@ import { useAppSelector, useAppDispatch } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
-import CreationSteps from 'ssp-key/src/components/CreationSteps/CreationSteps';
-// import Headerbar from 'ssp-key/src/components/Headerbar/Headerbar';
+import CreationSteps from '../../components/CreationSteps/CreationSteps';
+// import Headerbar from '../../components/Headerbar/Headerbar';
 
 type Props = {
   navigation: any;

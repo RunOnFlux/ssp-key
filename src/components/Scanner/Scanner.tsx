@@ -18,7 +18,7 @@ import {
 } from 'react-native-permissions';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
-import { useTheme } from 'ssp-key/src/hooks';
+import { useTheme } from '../../hooks';
 
 interface QRScannerProps {
   onRead: (data: string) => void;

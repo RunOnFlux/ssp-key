@@ -37,7 +37,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
-import CreationSteps from 'ssp-key/src/components/CreationSteps/CreationSteps';
+import CreationSteps from '../../components/CreationSteps/CreationSteps';
 
 type Props = {
   navigation: any;
