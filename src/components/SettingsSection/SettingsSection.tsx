@@ -337,7 +337,6 @@ const SettingsSection = (props: {
               <Picker
                 selectedValue={selectedChain}
                 onValueChange={(itemValue) => setSelectedChain(itemValue)}
-                mode="dropdown"
               >
                 {Object.keys(blockchains).map((key) => (
                   <Picker.Item
