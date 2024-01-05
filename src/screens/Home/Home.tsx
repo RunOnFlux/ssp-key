@@ -59,7 +59,7 @@ import {
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 import { useSocket } from 'ssp-key/src/hooks/useSocket';
-import { getFCMToken } from 'ssp-key/src/lib/fcmHelper';
+import { getFCMToken, refreshFCMToken } from 'ssp-key/src/lib/fcmHelper';
 
 type Props = {
   navigation: any;
@@ -145,6 +145,7 @@ function Home({ navigation }: Props) {
   const checkFCMToken = async () => {
     if (sspWalletKeyInternalIdentity) {
       try {
+        await refreshFCMToken();
         const token = await getFCMToken();
         if (token) {
           postSyncToken(token, sspWalletKeyInternalIdentity);

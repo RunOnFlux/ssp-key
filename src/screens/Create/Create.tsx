@@ -165,6 +165,7 @@ function Create({ navigation }: Props) {
           mnemonicPhrase,
           pwForEncryption,
         ).toString();
+        await EncryptedStorage.clear();
         // store in redux persist
         dispatch(setSeedPhrase(mnemonicBlob));
         // generate master xpriv for btc
