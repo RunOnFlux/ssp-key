@@ -49,7 +49,14 @@ const TransactionRequest = (props: {
       return;
     }
     alreadyMounted.current = true;
+    if (!props.rawTx || !props.chain) {
+      return;
+    }
+    console.log('Transaction Request');
+    console.log(props.rawTx);
+    console.log(props.chain);
     const txInfo = decodeTransactionForApproval(props.rawTx, props.chain);
+    console.log(txInfo);
     setSendingAmount(txInfo.amount);
     setReceiverAddress(txInfo.receiver);
     if (
@@ -61,7 +68,6 @@ const TransactionRequest = (props: {
         reject();
       }, 500);
     }
-    console.log(txInfo);
   });
   const displayMessage = (type: string, content: string) => {
     Toast.show({

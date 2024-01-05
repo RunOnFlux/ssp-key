@@ -419,11 +419,11 @@ function Home({ navigation }: Props) {
   };
   const handleTxRequest = async (
     rawTransactions: string,
-    chain: keyof cryptos = identityChain,
-    path = '0-0',
+    chain: keyof cryptos,
+    path: string,
   ) => {
-    setRawTx(rawTransactions);
     setActiveChain(chain);
+    setRawTx(rawTransactions);
     setTxPath(path);
   };
   const handleSyncRequest = async (xpubw: string, chain: keyof cryptos) => {
