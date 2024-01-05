@@ -16,7 +16,7 @@ const TransactionRequest = (props: {
   activityStatus: boolean;
   actionStatus: (status: boolean) => void;
 }) => {
-  const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
+  const alreadyRunning = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [sendingAmount, setSendingAmount] = useState('');
@@ -45,10 +45,10 @@ const TransactionRequest = (props: {
     }
   };
   useEffect(() => {
-    if (alreadyMounted.current) {
+    if (alreadyRunning.current) {
       return;
     }
-    alreadyMounted.current = true;
+    alreadyRunning.current = true;
     if (!props.rawTx || !props.chain) {
       return;
     }
@@ -68,7 +68,8 @@ const TransactionRequest = (props: {
         reject();
       }, 500);
     }
-  });
+    alreadyRunning.current = false;
+  }, [props.rawTx, props.chain]);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
       type,
