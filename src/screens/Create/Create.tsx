@@ -38,6 +38,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from 'ssp-key/src/components/CreationSteps/CreationSteps';
+import ToastNotif from 'ssp-key/src/components/Toast/Toast';
 
 type Props = {
   navigation: any;
@@ -493,7 +494,7 @@ function Create({ navigation }: Props) {
             </View>
           </View>
         </ScrollView>
-        <Toast />
+        <ToastNotif />
       </Modal>
       {!keyboardVisible && <PoweredByFlux />}
     </View>

@@ -20,6 +20,7 @@ import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { blockchains } from '@storage/blockchains';
+import ToastNotif from '../../components/Toast/Toast';
 
 const CryptoJS = require('crypto-js');
 
@@ -554,7 +555,7 @@ function Restore({ navigation }: Props) {
             </View>
           </View>
         </ScrollView>
-        <Toast />
+        <ToastNotif />
       </Modal>
       {!keyboardVisible && <PoweredByFlux />}
     </View>

@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { useTheme } from '../../hooks';
+import ToastNotif from '../Toast/Toast';
 
 const rnBiometrics = new ReactNativeBiometrics();
 
@@ -254,7 +255,7 @@ const Authentication = (props: {
           </View>
         </View>
       </KeyboardAwareScrollView>
-      <Toast />
+      <ToastNotif />
     </Modal>
   );
 };
