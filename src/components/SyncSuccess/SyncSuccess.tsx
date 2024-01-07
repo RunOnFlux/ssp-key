@@ -14,6 +14,7 @@ import { backends } from '@storage/backends';
 import { cryptos } from '../../types';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { getUniqueId } from 'react-native-device-info';
+import Toast from 'react-native-toast-message';
 import { generateMultisigAddress } from '../../lib/wallet';
 
 import { useAppSelector } from '../../hooks';
@@ -33,6 +34,18 @@ const SyncSuccess = (props: {
   useEffect(() => {
     generateAddress();
   }, [xpubKey, xpubWallet]);
+
+  const displayMessage = (
+    type: string,
+    content: string,
+    visibilityTime?: number,
+  ) => {
+    Toast.show({
+      type,
+      text1: content,
+      visibilityTime: visibilityTime,
+    });
+  };
 
   const generateAddress = () => {
     getUniqueId()
@@ -55,6 +68,9 @@ const SyncSuccess = (props: {
         setChainAddress(address);
       })
       .catch((error) => {
+        setTimeout(() => {
+          displayMessage('error', t('home:err_generate_address'));
+        }, 200);
         console.log(error.message);
       });
   };

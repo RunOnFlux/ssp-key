@@ -233,6 +233,9 @@ function Home({ navigation }: Props) {
           0,
           chain,
         );
+        if (!addrInfo || !addrInfo.address) {
+          throw new Error('Could not generate multisig address');
+        }
         CryptoJS.AES.encrypt(
           addrInfo.redeemScript || addrInfo.witnessScript,
           pwForEncryption,
@@ -280,6 +283,9 @@ function Home({ navigation }: Props) {
           0,
           identityChain,
         );
+        if (!addrInfo || !addrInfo.address) {
+          throw new Error('Could not generate multisig address');
+        }
         CryptoJS.AES.encrypt(
           addrInfo.redeemScript || addrInfo.witnessScript,
           pwForEncryption,
@@ -296,6 +302,14 @@ function Home({ navigation }: Props) {
           0,
           identityChain,
         );
+        if (
+          !generatedSspWalletKeyInternalIdentity ||
+          !generatedSspWalletKeyInternalIdentity.address
+        ) {
+          throw new Error(
+            'Could not generate SSP Wallet Key internal identity',
+          );
+        }
         dispatch(
           setSspWalletKeyInternalIdentity(
             generatedSspWalletKeyInternalIdentity.address,
@@ -304,6 +318,9 @@ function Home({ navigation }: Props) {
         // generate ssp wallet identity
         const generatedSspWalletInternalIdentity =
           generateInternalIdentityAddress(suppliedXpubWallet, identityChain);
+        if (!generatedSspWalletInternalIdentity) {
+          throw new Error('Could not generate SSP Wallet internal identity');
+        }
         dispatch(
           setSspWalletInternalIdentity(generatedSspWalletInternalIdentity),
         );
