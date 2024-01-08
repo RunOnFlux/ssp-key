@@ -20,30 +20,76 @@ export function getLibId(chain: keyof cryptos): string {
 export async function fetchUtxos(
   address: string,
   chain: string,
-  confirmedOnly = true,
+  confirmationMode = 0, // use confirmed utxos if replace by fee is wanted. unconfirmed if standard tx, both for ssp key for fetching all utxps
+  onlyConfirmed = true, // must have > 0 confirmations
 ): Promise<utxo[]> {
   try {
     const backendConfig = backends()[chain];
     if (blockchains[chain].backend === 'blockbook') {
-      const url = `https://${backendConfig.node}/api/v2/utxo/${address}?confirmed=${confirmedOnly}`;
-      const { data } = await axios.get<blockbookUtxo[]>(url);
-      const fetchedUtxos = data;
-      const utxos = fetchedUtxos.map((x) => ({
-        txid: x.txid,
-        vout: x.vout,
-        scriptPubKey: '', // that is fine, not needed
-        satoshis: x.value,
-      }));
-      return utxos;
+      if (confirmationMode === 1) {
+        const url = `https://${backendConfig.node}/api/v2/utxo/${address}?confirmed=true`;
+        const { data } = await axios.get<blockbookUtxo[]>(url);
+        const fetchedUtxos = data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: '', // that is fine, not needed
+          satoshis: x.value,
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      } else if (confirmationMode === 2) {
+        const url = `https://${backendConfig.node}/api/v2/utxo/${address}?confirmed=true`;
+        const urlB = `https://${backendConfig.node}/api/v2/utxo/${address}`;
+        const { data } = await axios.get<blockbookUtxo[]>(url);
+        const responseB = await axios.get<blockbookUtxo[]>(urlB);
+        const dataB = responseB.data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const fetchedUtxos = data
+          .filter((x) => (onlyConfirmed ? x.confirmations > 0 : true))
+          .concat(dataB);
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: '', // that is fine, not needed
+          satoshis: x.value,
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      } else {
+        const url = `https://${backendConfig.node}/api/v2/utxo/${address}`;
+        const { data } = await axios.get<blockbookUtxo[]>(url);
+        const fetchedUtxos = data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: '', // that is fine, not needed
+          satoshis: x.value,
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      }
     } else {
       const url = `https://${backendConfig.node}/api/addr/${address}/utxo`;
       const { data } = await axios.get<utxo[]>(url);
-      const fetchedUtxos = data;
+      const fetchedUtxos = data.filter((x) =>
+        onlyConfirmed ? x.confirmations > 0 : true,
+      );
       const utxos = fetchedUtxos.map((x) => ({
         txid: x.txid,
         vout: x.vout,
         scriptPubKey: x.scriptPubKey,
         satoshis: x.satoshis.toString(),
+        confirmations: x.confirmations,
+        coinbase: x.coinbase || false,
       }));
       return utxos;
     }

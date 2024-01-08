@@ -471,7 +471,7 @@ function Home({ navigation }: Props) {
         xpubKeyWalletDecrypted,
         xpubKeyDecrypted,
       );
-      const utxos = await fetchUtxos(addressDetails.address, chain, false);
+      const utxos = await fetchUtxos(addressDetails.address, chain, 2); // in ssp key, we want to fetch both confirmed and unconfirmed utxos
       console.log(utxos);
 
       const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
