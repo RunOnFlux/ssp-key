@@ -20,11 +20,12 @@ export function getLibId(chain: keyof cryptos): string {
 export async function fetchUtxos(
   address: string,
   chain: string,
+  confirmedOnly = true,
 ): Promise<utxo[]> {
   try {
     const backendConfig = backends()[chain];
     if (blockchains[chain].backend === 'blockbook') {
-      const url = `https://${backendConfig.node}/api/v2/utxo/${address}`;
+      const url = `https://${backendConfig.node}/api/v2/utxo/${address}?confirmed=${confirmedOnly}`;
       const { data } = await axios.get<blockbookUtxo[]>(url);
       const fetchedUtxos = data;
       const utxos = fetchedUtxos.map((x) => ({
