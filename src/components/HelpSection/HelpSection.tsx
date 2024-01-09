@@ -26,12 +26,12 @@ const HelpSection = (props: {
   };
 
   const openWebsite = () => {
-    console.log('Open Discord');
+    console.log('Open Website');
     Linking.openURL('https://sspwallet.io');
   };
 
   const openSupport = () => {
-    console.log('Open Discord');
+    console.log('Open Support');
     Linking.openURL('https://support.runonflux.io');
   };
 
