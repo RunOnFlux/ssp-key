@@ -198,6 +198,15 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     {t('home:chain_xpub', { chain: blockchainConfig.name })}:
                   </Text>
                 </View>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Fonts.textJustify,
+                  ]}
+                >
+                  {t('home:chain_xpub_desc', { chain: blockchainConfig.name })}
+                </Text>
                 <View>
                   {activityLoading && <ActivityIndicator size={'large'} />}
                   {!activityLoading && (
@@ -232,6 +241,15 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     {t('home:chain_xpriv', { chain: blockchainConfig.name })}:
                   </Text>
                 </View>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Fonts.textJustify,
+                  ]}
+                >
+                  {t('home:chain_xpriv_desc', { chain: blockchainConfig.name })}
+                </Text>
                 <View>
                   {activityLoading && <ActivityIndicator size={'large'} />}
                   {!activityLoading && (
@@ -266,6 +284,15 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     {t('home:ssp_key_mnemonic')}:
                   </Text>
                 </View>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Fonts.textJustify,
+                  ]}
+                >
+                  {t('home:ssp_key_mnemonic_desc')}
+                </Text>
                 <View>
                   <Text
                     selectable={true}

@@ -202,11 +202,25 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 Gutters.regularTMargin,
               ]}
             >
-              <View style={[Gutters.regularTMargin]}>
+              <View>
                 <Text
-                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  style={[
+                    Fonts.textBold,
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.tinyBMargin,
+                  ]}
                 >
                   {t('home:wallet_address')}:
+                </Text>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Fonts.textJustify,
+                  ]}
+                >
+                  {t('home:wallet_address_desc')}
                 </Text>
                 <Text
                   selectable={true}
@@ -244,6 +258,15 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                       {t('home:wallet_redeem_script')}:
                     </Text>
                   </View>
+                  <Text
+                    style={[
+                      Fonts.textTinyTiny,
+                      Fonts.textLight,
+                      Fonts.textJustify,
+                    ]}
+                  >
+                    {t('home:wallet_redeem_script_desc')}
+                  </Text>
                   <View>
                     <Text
                       selectable={true}
@@ -285,6 +308,15 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                       {t('home:wallet_witness_script')}:
                     </Text>
                   </View>
+                  <Text
+                    style={[
+                      Fonts.textTinyTiny,
+                      Fonts.textLight,
+                      Fonts.textJustify,
+                    ]}
+                  >
+                    {t('home:wallet_witness_script_desc')}
+                  </Text>
                   <View>
                     <Text
                       selectable={true}
@@ -319,6 +351,15 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     {t('home:wallet_private_key')}:
                   </Text>
                 </View>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Fonts.textJustify,
+                  ]}
+                >
+                  {t('home:wallet_priv_key_desc')}
+                </Text>
                 <View>
                   <Text
                     selectable={true}

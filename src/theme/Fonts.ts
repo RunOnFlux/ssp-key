@@ -6,6 +6,10 @@ import { ThemeVariables } from '../../@types/theme';
 
 export default function ({ FontSize, Colors }: ThemeVariables) {
   return StyleSheet.create({
+    textTinyTiny: {
+      fontSize: FontSize.tinytiny,
+      color: Colors.textGray400,
+    },
     textTiny: {
       fontSize: FontSize.tiny,
       color: Colors.textGray400,

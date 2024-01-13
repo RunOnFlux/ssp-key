@@ -19,7 +19,7 @@
   "chain_addr_details": "{{simbol}} Detail Alamat (BIP-48)",
   "wallet_address": "Alamat Dompet",
   "wallet_redeem_script": "Skrip Penukaran Dompet",
-  "wallet_private_key": "Kunci Pribadi Dompet",
+  "wallet_private_key": "Kunci Pribadi",
   "ssp_key_mnemonic": "Frasa Biji Mnemonik Kunci SSP",
   "chain_xpub": "{{chain}} Kunci Publik yang Diperpanjang",
   "chain_xpriv": "{{chain}} Kunci Privat yang Diperpanjang",
