@@ -21,6 +21,8 @@ const TransactionRequest = (props: {
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [sendingAmount, setSendingAmount] = useState('');
   const [receiverAddress, setReceiverAddress] = useState('');
+  const [senderAddress, setSenderAddress] = useState('');
+  const [fee, setFee] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
 
@@ -59,9 +61,13 @@ const TransactionRequest = (props: {
     console.log(txInfo);
     setSendingAmount(txInfo.amount);
     setReceiverAddress(txInfo.receiver);
+    setSenderAddress(txInfo.sender);
+    setFee(txInfo.fee);
+    console.log(fee);
     if (
       txInfo.amount === 'decodingError' ||
-      txInfo.receiver === 'decodingError'
+      txInfo.receiver === 'decodingError' ||
+      txInfo.sender === 'decodingError'
     ) {
       displayMessage('error', t('home:err_tx_decode'));
       setTimeout(() => {
@@ -89,16 +95,41 @@ const TransactionRequest = (props: {
         ]}
       >
         <Icon name="send" size={60} color={Colors.textGray400} />
-        <Text style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}>
+        <Text
+          style={[
+            Fonts.textBold,
+            Fonts.textRegular,
+            Gutters.smallMargin,
+            Gutters.regularBMargin,
+          ]}
+        >
           {t('home:transaction_request')}
         </Text>
-        <Text style={[Fonts.textSmall, Fonts.textCenter]}>
-          {t('home:sending_request', {
-            amount: sendingAmount,
-            address: receiverAddress,
-            symbol: blockchainConfig.symbol,
-          })}
+        <Text>
+          <Text style={[Fonts.textSmall, Fonts.textCenter]}>
+            {t('home:sending')}
+          </Text>
+          <Text style={[Fonts.textSmall, Fonts.textBold, Fonts.textCenter]}>
+            {' ' + sendingAmount + ' ' + blockchainConfig.symbol + ' '}
+          </Text>
+          <Text style={[Fonts.textSmall, Fonts.textCenter]}>
+            {t('home:to')}
+          </Text>
         </Text>
+        <Text style={[Fonts.textTiny, Fonts.textBold, Fonts.textCenter]}>
+          {receiverAddress}
+        </Text>
+        <Text
+          style={[Fonts.textTinyTiny, Fonts.textCenter, Gutters.smallTMargin]}
+        >
+          {t('home:from')}
+        </Text>
+        <Text style={[Fonts.textTinyTiny, Fonts.textCenter]}>
+          {senderAddress}
+        </Text>
+        {/* <Text style={[Fonts.textTinyTiny, Fonts.textCenter]}>
+          {t('home:blockchain_fee', { fee, symbol: blockchainConfig.symbol })}
+        </Text> */}
       </View>
       <View style={[Layout.justifyContentEnd]}>
         <TouchableOpacity
