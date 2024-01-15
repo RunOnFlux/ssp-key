@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import utxolib from '@runonflux/utxo-lib';
-import { cryptos } from '../types';
+import { cryptos, utxo } from '../types';
 
 import { blockchains } from '@storage/blockchains';
 
@@ -15,6 +15,7 @@ interface output {
 export function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
+  utxos: utxo[],
 ) {
   try {
     const libID = getLibId(chain);
@@ -79,6 +80,13 @@ export function decodeTransactionForApproval(
           .dividedBy(new BigNumber(10 ** decimals))
           .toFixed();
       }
+    }
+
+    if (utxos && utxos.length) {
+      // utxos were supplied, we can calculate fee
+      utxos.forEach((u) => {
+        totalInputsAmount = totalInputsAmount.plus(new BigNumber(u.satoshis));
+      });
     }
 
     const fee = totalOutputsAmount

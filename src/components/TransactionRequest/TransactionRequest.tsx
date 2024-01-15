@@ -6,13 +6,14 @@ import Toast from 'react-native-toast-message';
 import Authentication from '../Authentication/Authentication';
 import { useTheme } from '../../hooks';
 import { decodeTransactionForApproval } from '../../lib/transactions';
-import { cryptos } from '../../types';
+import { cryptos, utxo } from '../../types';
 
 import { blockchains } from '@storage/blockchains';
 
 const TransactionRequest = (props: {
   rawTx: string;
   chain: keyof cryptos;
+  utxos: utxo[];
   activityStatus: boolean;
   actionStatus: (status: boolean) => void;
 }) => {
@@ -57,12 +58,18 @@ const TransactionRequest = (props: {
     console.log('Transaction Request');
     console.log(props.rawTx);
     console.log(props.chain);
-    const txInfo = decodeTransactionForApproval(props.rawTx, props.chain);
+    const txInfo = decodeTransactionForApproval(
+      props.rawTx,
+      props.chain,
+      props.utxos,
+    );
     console.log(txInfo);
     setSendingAmount(txInfo.amount);
     setReceiverAddress(txInfo.receiver);
     setSenderAddress(txInfo.sender);
-    setFee(txInfo.fee);
+    if (props.utxos && props.utxos.length) {
+      setFee(txInfo.fee);
+    }
     console.log(fee);
     if (
       txInfo.amount === 'decodingError' ||
@@ -127,9 +134,11 @@ const TransactionRequest = (props: {
         <Text style={[Fonts.textTinyTiny, Fonts.textCenter]}>
           {senderAddress}
         </Text>
-        {/* <Text style={[Fonts.textTinyTiny, Fonts.textCenter]}>
-          {t('home:blockchain_fee', { fee, symbol: blockchainConfig.symbol })}
-        </Text> */}
+        {fee && (
+          <Text style={[Fonts.textTinyTiny, Fonts.textCenter]}>
+            {t('home:blockchain_fee', { fee, symbol: blockchainConfig.symbol })}
+          </Text>
+        )}
       </View>
       <View style={[Layout.justifyContentEnd]}>
         <TouchableOpacity

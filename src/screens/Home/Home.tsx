@@ -25,7 +25,7 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
-import { cryptos } from '../../types';
+import { cryptos, utxo } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
 const CryptoJS = require('crypto-js');
@@ -83,6 +83,7 @@ function Home({ navigation }: Props) {
   const [rawTx, setRawTx] = useState('');
   const [activeChain, setActiveChain] = useState<keyof cryptos>(identityChain);
   const [txPath, setTxPath] = useState('');
+  const [txUtxos, setTxUtxos] = useState<utxo[]>([]);
   const [syncReq, setSyncReq] = useState('');
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
@@ -127,7 +128,7 @@ function Home({ navigation }: Props) {
 
   useEffect(() => {
     if (newTx.rawTx) {
-      handleTxRequest(newTx.rawTx, newTx.chain, newTx.path);
+      handleTxRequest(newTx.rawTx, newTx.chain, newTx.path, newTx.utxos);
       clearTx?.();
     }
   }, [newTx.rawTx]);
@@ -439,8 +440,12 @@ function Home({ navigation }: Props) {
     rawTransactions: string,
     chain: keyof cryptos,
     path: string,
+    utxos: utxo[] = [],
   ) => {
     setActiveChain(chain);
+    if (utxos) {
+      setTxUtxos(utxos);
+    }
     setRawTx(rawTransactions);
     setTxPath(path);
   };
@@ -452,6 +457,7 @@ function Home({ navigation }: Props) {
     rawTransactions: string,
     chain: keyof cryptos,
     derivationPath: string,
+    suggestedUtxos: utxo[],
   ) => {
     try {
       console.log('tx request');
@@ -471,8 +477,11 @@ function Home({ navigation }: Props) {
         xpubKeyWalletDecrypted,
         xpubKeyDecrypted,
       );
-      const utxos = await fetchUtxos(addressDetails.address, chain, 2); // in ssp key, we want to fetch both confirmed and unconfirmed utxos
-      console.log(utxos);
+      let utxos = suggestedUtxos;
+      // if utxos are not provided, fetch them
+      if (!(suggestedUtxos && suggestedUtxos.length > 0)) {
+        utxos = await fetchUtxos(addressDetails.address, chain, 2); // in ssp key, we want to fetch both confirmed and unconfirmed utxos
+      }
 
       const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
       const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
@@ -501,6 +510,7 @@ function Home({ navigation }: Props) {
       console.log(ttxid);
       setRawTx('');
       setTxPath('');
+      setTxUtxos([]);
       // here tell ssp-relay that we are finished, rewrite the request
       await postAction(
         'txid',
@@ -647,6 +657,7 @@ function Home({ navigation }: Props) {
             result.data.payload,
             result.data.chain,
             result.data.path,
+            result.data.utxos,
           );
         }
       } else if (sspWalletInternalIdentity) {
@@ -680,7 +691,8 @@ function Home({ navigation }: Props) {
         const rtx = rawTx;
         const rchain = activeChain as keyof cryptos;
         const rpath = txPath;
-        await approveTransaction(rtx, rchain, rpath);
+        const rUtxos = txUtxos;
+        await approveTransaction(rtx, rchain, rpath, rUtxos);
       } else {
         // reject
         const rtx = rawTx;
@@ -689,6 +701,7 @@ function Home({ navigation }: Props) {
         setRawTx('');
         setActiveChain(identityChain);
         setTxPath('');
+        setTxUtxos([]);
         await postAction(
           'txrejected',
           rtx,
@@ -918,6 +931,7 @@ function Home({ navigation }: Props) {
             <TransactionRequest
               rawTx={rawTx}
               chain={activeChain as keyof cryptos}
+              utxos={txUtxos}
               activityStatus={activityStatus}
               actionStatus={handleTransactionRequestAction}
             />

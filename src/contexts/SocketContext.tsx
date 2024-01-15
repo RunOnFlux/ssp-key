@@ -3,7 +3,7 @@ import io, { Socket } from 'socket.io-client';
 import { useAppSelector } from 'ssp-key/src/hooks';
 import { sspConfig } from '@storage/ssp';
 import { AppState } from 'react-native';
-import { cryptos } from '../types';
+import { cryptos, utxo } from '../types';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -17,12 +17,14 @@ interface serverResponse {
   wkIdentity: string;
   chain: keyof cryptos;
   path: string;
+  utxos: utxo[];
 }
 
 interface adjustedServeResponseTx {
   rawTx: string;
   chain: keyof cryptos;
   path: string;
+  utxos: utxo[];
 }
 
 const defaultValue: SocketContextType = {
@@ -73,6 +75,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         chain: tx.chain,
         path: tx.path,
         rawTx: tx.payload,
+        utxos: tx.utxos,
       };
       setNewTx(adjustedTx);
     });
