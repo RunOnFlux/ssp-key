@@ -89,11 +89,15 @@ export function decodeTransactionForApproval(
       });
     }
 
-    const fee = totalOutputsAmount
-      .minus(totalInputsAmount)
+    const fee = totalInputsAmount
+      .minus(totalOutputsAmount)
       .dividedBy(10 ** decimals)
       .toFixed();
     // calculate fee
+    if (+fee < 0) {
+      // fee is negative, something is wrong. Reject.
+      throw new Error('Unexpected negative fee. Transaction Rejected.');
+    }
     const txInfo = {
       sender: senderAddress,
       receiver: txReceiver,
