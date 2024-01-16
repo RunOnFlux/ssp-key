@@ -78,20 +78,57 @@ export async function fetchUtxos(
         return utxos;
       }
     } else {
-      const url = `https://${backendConfig.node}/api/addr/${address}/utxo`;
-      const { data } = await axios.get<utxo[]>(url);
-      const fetchedUtxos = data.filter((x) =>
-        onlyConfirmed ? x.confirmations > 0 : true,
-      );
-      const utxos = fetchedUtxos.map((x) => ({
-        txid: x.txid,
-        vout: x.vout,
-        scriptPubKey: x.scriptPubKey,
-        satoshis: x.satoshis.toString(),
-        confirmations: x.confirmations,
-        coinbase: x.coinbase || false,
-      }));
-      return utxos;
+      if (confirmationMode === 1) {
+        const url = `https://${backendConfig.node}/api/addrs/${address}/unspent`;
+        const { data } = await axios.get<utxo[]>(url);
+        const fetchedUtxos = data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: x.scriptPubKey,
+          satoshis: x.satoshis.toString(),
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      } else if (confirmationMode === 2) {
+        const url = `https://${backendConfig.node}/api/addrs/${address}/unspent`;
+        const urlB = `https://${backendConfig.node}/api/addrs/${address}/utxo`;
+        const { data } = await axios.get<utxo[]>(url);
+        const responseB = await axios.get<utxo[]>(urlB);
+        const dataB = responseB.data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const fetchedUtxos = data
+          .filter((x) => (onlyConfirmed ? x.confirmations > 0 : true))
+          .concat(dataB);
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: x.scriptPubKey,
+          satoshis: x.satoshis.toString(),
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      } else {
+        const url = `https://${backendConfig.node}/api/addrs/${address}/utxo`;
+        const { data } = await axios.get<utxo[]>(url);
+        const fetchedUtxos = data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: x.scriptPubKey,
+          satoshis: x.satoshis.toString(),
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      }
     }
   } catch (e) {
     console.log(e);
