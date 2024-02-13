@@ -528,48 +528,60 @@ function Home({ navigation }: Props) {
     }
   };
   const handleManualInput = async (manualInput: string) => {
-    if (!manualInput) {
-      return;
-    } else if (manualInput === 'cancel') {
-      // do not process
-      setTimeout(() => {
-        setIsManualInputModalOpen(false);
-      });
-    } else {
-      const splittedInput = manualInput.split(':');
-      let chain: keyof cryptos = identityChain;
-      let wallet = '0-0';
-      let dataToProcess = '';
-      if (splittedInput[1]) {
-        // all is default
-        chain = splittedInput[0] as keyof cryptos;
-        if (splittedInput[1].includes('-')) {
-          // wallet specifiedd
-          wallet = splittedInput[1];
-          dataToProcess = splittedInput[2];
+    try {
+      if (!manualInput) {
+        return;
+      } else if (manualInput === 'cancel') {
+        // do not process
+        setTimeout(() => {
+          setIsManualInputModalOpen(false);
+        });
+      } else {
+        const splittedInput = manualInput.split(':');
+        let chain: keyof cryptos = identityChain;
+        let wallet = '0-0';
+        let dataToProcess = '';
+        if (splittedInput[1]) {
+          // all is default
+          chain = splittedInput[0] as keyof cryptos;
+          if (splittedInput[1].includes('-')) {
+            // wallet specifiedd
+            wallet = splittedInput[1];
+            dataToProcess = splittedInput[2];
+          } else {
+            // wallet default
+            dataToProcess = splittedInput[1];
+          }
         } else {
-          // wallet default
-          dataToProcess = splittedInput[1];
+          // only data
+          dataToProcess = splittedInput[0];
         }
-      } else {
-        // only data
-        dataToProcess = splittedInput[0];
+        if (!dataToProcess || !blockchains[chain]) {
+          displayMessage('error', t('home:err_invalid_manual_input'));
+        } else {
+          if (xpubRegex.test(dataToProcess)) {
+            // xpub
+            const xpubw = dataToProcess;
+            handleSyncRequest(xpubw, chain);
+            setTimeout(() => {
+              setIsManualInputModalOpen(false);
+            });
+          } else if (dataToProcess.startsWith('0')) {
+            // transaction
+            // sign transaction
+            const rawTransactions = dataToProcess;
+            handleTxRequest(rawTransactions, chain, wallet);
+            setTimeout(() => {
+              setIsManualInputModalOpen(false);
+            });
+          } else {
+            displayMessage('error', t('home:err_invalid_manual_input'));
+          }
+        }
       }
-      if (xpubRegex.test(dataToProcess)) {
-        // xpub
-        const xpubw = dataToProcess;
-        handleSyncRequest(xpubw, chain);
-      } else if (dataToProcess.startsWith('0')) {
-        // transaction
-        // sign transaction
-        const rawTransactions = dataToProcess;
-        handleTxRequest(rawTransactions, chain, wallet);
-      } else {
-        displayMessage('error', t('home:err_invalid_manual_input'));
-      }
-      setTimeout(() => {
-        setIsManualInputModalOpen(false);
-      });
+    } catch (error) {
+      console.log(error);
+      displayMessage('error', t('home:err_invalid_manual_input'));
     }
   };
   const handleMenuModalAction = (status: string) => {
@@ -599,43 +611,60 @@ function Home({ navigation }: Props) {
     }, 100);
   };
   const handleScannedData = (scannedData: string) => {
-    const splittedInput = scannedData.split(':');
-    let chain: keyof cryptos = identityChain;
-    let wallet = '0-0';
-    let dataToProcess = '';
-    if (splittedInput[1]) {
-      // all is default
-      chain = splittedInput[0] as keyof cryptos;
-      if (splittedInput[1].includes('-')) {
-        // wallet specifiedd
-        wallet = splittedInput[1];
-        dataToProcess = splittedInput[2];
+    try {
+      // https://apps.apple.com/us/app/ssp-key/id6463717332
+      const splittedInput = scannedData.split(':');
+      let chain: keyof cryptos = identityChain;
+      let wallet = '0-0';
+      let dataToProcess = '';
+      if (splittedInput[1]) {
+        // all is default
+        chain = splittedInput[0] as keyof cryptos;
+        if (splittedInput[1].includes('-')) {
+          // wallet specifiedd
+          wallet = splittedInput[1];
+          dataToProcess = splittedInput[2];
+        } else {
+          // wallet default
+          dataToProcess = splittedInput[1];
+        }
       } else {
-        // wallet default
-        dataToProcess = splittedInput[1];
+        // only data
+        dataToProcess = splittedInput[0];
       }
-    } else {
-      // only data
-      dataToProcess = splittedInput[0];
-    }
-    // check if input is xpub or transaction
-    if (xpubRegex.test(dataToProcess)) {
-      // xpub
-      const xpubw = dataToProcess;
-      handleSyncRequest(xpubw, chain);
-    } else if (dataToProcess.startsWith('0')) {
-      // transaction
-      const rawTransactions = dataToProcess;
-      handleTxRequest(rawTransactions, chain, wallet);
-    } else {
+      if (!dataToProcess || !blockchains[chain]) {
+        setTimeout(() => {
+          displayMessage('error', t('home:err_invalid_scanned_data'));
+        }, 200);
+      } else {
+        // check if input is xpub or transaction
+        if (xpubRegex.test(dataToProcess)) {
+          // xpub
+          const xpubw = dataToProcess;
+          handleSyncRequest(xpubw, chain);
+        } else if (dataToProcess.startsWith('0')) {
+          // transaction
+          const rawTransactions = dataToProcess;
+          handleTxRequest(rawTransactions, chain, wallet);
+        } else {
+          setTimeout(() => {
+            displayMessage('error', t('home:err_invalid_scanned_data'));
+          }, 200);
+        }
+      }
+      setTimeout(() => {
+        setShowScanner(false);
+      });
+      console.log(scannedData);
+    } catch (error) {
+      console.log(error);
       setTimeout(() => {
         displayMessage('error', t('home:err_invalid_scanned_data'));
       }, 200);
+      setTimeout(() => {
+        setShowScanner(false);
+      });
     }
-    setTimeout(() => {
-      setShowScanner(false);
-    });
-    console.log(scannedData);
   };
   const handleRefresh = async () => {
     // todo here can be a sync request too in the future?
