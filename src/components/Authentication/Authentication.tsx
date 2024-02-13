@@ -6,8 +6,10 @@ import {
   StyleSheet,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Icon from 'react-native-vector-icons/Feather';
 import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics';
@@ -136,125 +138,126 @@ const Authentication = (props: {
       visible={true}
       onRequestClose={() => close()}
     >
-      <KeyboardAwareScrollView
-        keyboardShouldPersistTaps="always"
-        extraScrollHeight={20}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[Layout.fill, Common.modalBackdrop]}
-        contentInset={{ bottom: 80 }}
-        contentContainerStyle={[
-          Gutters.smallBPadding,
-          Layout.scrollSpaceBetween,
-          Layout.justifyContentCenter,
-        ]}
       >
-        <View style={[Common.modalView, styles.modalView]}>
-          <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-            {t('home:confirm_password_pin')}
-          </Text>
-          <View
-            style={[
-              Layout.fill,
-              Layout.relative,
-              Layout.fullWidth,
-              Layout.alignItemsCenter,
-              Gutters.smallTMargin,
-            ]}
-          >
-            <Text
+        <ScrollView
+          contentContainerStyle={[
+            Gutters.smallBPadding,
+            Layout.scrollSpaceBetween,
+            Layout.justifyContentCenter,
+          ]}
+        >
+          <View style={[Common.modalView, styles.modalView]}>
+            <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+              {t('home:confirm_password_pin')}
+            </Text>
+            <View
               style={[
-                Fonts.textBold,
-                Fonts.textSmall,
-                Fonts.textCenter,
+                Layout.fill,
+                Layout.relative,
+                Layout.fullWidth,
+                Layout.alignItemsCenter,
                 Gutters.smallTMargin,
               ]}
             >
-              {props.type === 'tx'
-                ? t('home:auth_sign_tx')
-                : props.type === 'sync'
-                  ? t('home:auth_sync_ssp')
-                  : t('home:auth_sensitive_inf')}
-            </Text>
-            <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-              {props.type === 'tx'
-                ? t('home:auth_confirm_with_pw')
-                : props.type === 'sync'
-                  ? t('home:auth_confirm_with_pw')
-                  : t('home:auth_grant_access_pw')}
-            </Text>
-
-            {biometricsAvailable && (
-              <IconB
-                name="fingerprint"
-                size={50}
-                color={Colors.bluePrimary}
-                style={[Fonts.textCenter, Gutters.regularTMargin]}
-                onPress={() => initiateFingerprint()}
-              />
-            )}
-            {!biometricsAvailable && <View style={[Gutters.smallMargin]} />}
-            <View
-              style={[
-                Layout.rowCenter,
-                Common.inputWithButtonBgModalColors,
-                styles.inputWithButton,
-              ]}
-            >
-              <TextInput
-                style={[Common.textInput, Common.textInputBgModal]}
-                autoComplete="new-password"
-                textContentType="password"
-                autoCapitalize="none"
-                placeholder={t('cr:confirm_key_pin')}
-                placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                secureTextEntry={passwordVisibility ? false : true}
-                onChangeText={onChangePassword}
-                value={password}
-                autoCorrect={false}
-                ref={textInputA}
-                onPressIn={() => textInputA.current?.focus()}
-              />
-              <TouchableOpacity
-                onPress={() => setPasswordVisibility(!passwordVisibility)}
-                style={Common.inputIcon}
+              <Text
+                style={[
+                  Fonts.textBold,
+                  Fonts.textSmall,
+                  Fonts.textCenter,
+                  Gutters.smallTMargin,
+                ]}
               >
-                <Icon
-                  name={passwordVisibility ? 'eye' : 'eye-off'}
-                  size={20}
+                {props.type === 'tx'
+                  ? t('home:auth_sign_tx')
+                  : props.type === 'sync'
+                    ? t('home:auth_sync_ssp')
+                    : t('home:auth_sensitive_inf')}
+              </Text>
+              <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
+                {props.type === 'tx'
+                  ? t('home:auth_confirm_with_pw')
+                  : props.type === 'sync'
+                    ? t('home:auth_confirm_with_pw')
+                    : t('home:auth_grant_access_pw')}
+              </Text>
+
+              {biometricsAvailable && (
+                <IconB
+                  name="fingerprint"
+                  size={50}
                   color={Colors.bluePrimary}
+                  style={[Fonts.textCenter, Gutters.regularTMargin]}
+                  onPress={() => initiateFingerprint()}
                 />
+              )}
+              {!biometricsAvailable && <View style={[Gutters.smallMargin]} />}
+              <View
+                style={[
+                  Layout.rowCenter,
+                  Common.inputWithButtonBgModalColors,
+                  styles.inputWithButton,
+                ]}
+              >
+                <TextInput
+                  style={[Common.textInput, Common.textInputBgModal]}
+                  autoComplete="new-password"
+                  textContentType="password"
+                  autoCapitalize="none"
+                  placeholder={t('cr:confirm_key_pin')}
+                  placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                  secureTextEntry={passwordVisibility ? false : true}
+                  onChangeText={onChangePassword}
+                  value={password}
+                  autoCorrect={false}
+                  ref={textInputA}
+                  onPressIn={() => textInputA.current?.focus()}
+                />
+                <TouchableOpacity
+                  onPress={() => setPasswordVisibility(!passwordVisibility)}
+                  style={Common.inputIcon}
+                >
+                  <Icon
+                    name={passwordVisibility ? 'eye' : 'eye-off'}
+                    size={20}
+                    color={Colors.bluePrimary}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={[Layout.justifyContentEnd]}>
+              <TouchableOpacity
+                style={[
+                  Common.button.rounded,
+                  Common.button.bluePrimary,
+                  Gutters.regularBMargin,
+                  Gutters.smallTMargin,
+                ]}
+                onPress={() => grantAccess()}
+              >
+                <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                  {props.type === 'sensitive'
+                    ? t('home:grant_access')
+                    : t('common:confirm')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => close()}>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Fonts.textCenter,
+                  ]}
+                >
+                  {t('common:cancel')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
-          <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.rounded,
-                Common.button.bluePrimary,
-                Gutters.regularBMargin,
-                Gutters.smallTMargin,
-              ]}
-              onPress={() => grantAccess()}
-            >
-              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                {props.type === 'sensitive'
-                  ? t('home:grant_access')
-                  : t('common:confirm')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => close()}>
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Fonts.textCenter,
-                ]}
-              >
-                {t('common:cancel')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAwareScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <ToastNotif />
     </Modal>
   );
