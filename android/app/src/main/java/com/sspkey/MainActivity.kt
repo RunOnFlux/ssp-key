@@ -1,6 +1,5 @@
 package com.runonflux.sspkey
 
-import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -20,9 +19,4 @@ class MainActivity : ReactActivity() {
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
-  
-  override fun onCreate(savedInstance: Bundle?) {
-      super.onCreate(savedInstance)
-      setTheme(com.runonflux.sspkey.R.style.AppTheme)
-  }
 }
