@@ -113,10 +113,6 @@ android {
         }
     }
 
-    // buildFeatures {
-    //     buildConfig = true
-    // }
-
     // TODO this is not ideal.
     packagingOptions {
         pickFirst '**/libcrypto.so'
