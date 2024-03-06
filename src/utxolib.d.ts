@@ -40,9 +40,20 @@ declare module '@runonflux/utxo-lib' {
       outs: output[];
     };
   }
-  type networks = Record<string, object>;
+  interface network {
+    messagePrefix: string;
+    bech32: string;
+    bip32: {
+      public: number;
+      private: number;
+    };
+    pubKeyHash: string;
+    scriptHash: string;
+    wif: string;
+  }
+  type networks = Record<string, network>;
   let address: {
-    fromOutputScript: (scriptPubKey: Uint8Array, network: object) => string;
+    fromOutputScript: (scriptPubKey: Uint8Array, network: network) => string;
   };
   let script: {
     multisig: {
@@ -72,38 +83,38 @@ declare module '@runonflux/utxo-lib' {
     sha256: (witnessScript: Uint8Array) => Buffer;
   };
   let HDNode: {
-    fromBase58: (xpubxpriv: string, network: object) => minHDKey;
+    fromBase58: (xpubxpriv: string, network: network) => minHDKey;
   };
   let Transaction: {
-    fromHex: (txhex: string, network: object) => object;
+    fromHex: (txhex: string, network: network) => object;
     SIGHASH_ALL: number;
   };
   // Other methods/properties...
   // Replace 'any' with the appropriate type // Define the constructor signature and any other methods/properties
   type TransactionBuilder = new (
-    network: object,
+    network: network,
     fee: string,
   ) => {
     setVersion: (version: number) => void;
     setVersionGroupId: (versionGroupId: number) => void;
     addInput: (txid: string, vout: number) => void;
     addOutput: (address: string, satoshis: number) => void;
-    fromTransaction: (tx: object, network: object) => txBuilder;
+    fromTransaction: (tx: object, network: network) => txBuilder;
     buildIncomplete: () => builtTx;
   };
   let TransactionBuilder: {
-    fromTransaction: (tx: object, network: object) => txBuilder;
+    fromTransaction: (tx: object, network: network) => txBuilder;
   } & TransactionBuilder;
   let ECPair: {
     fromWIF: (
       privateKey: string,
-      network: object,
+      network: network,
     ) => {
       sign: (hash: Buffer) => Buffer;
     };
     fromPublicKeyBuffer: (
       publicKeyBuffer: Buffer,
-      network?: object,
+      network?: network,
     ) => {
       getAddress: () => string;
     };

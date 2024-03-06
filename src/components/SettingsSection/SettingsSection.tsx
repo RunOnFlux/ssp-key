@@ -7,8 +7,9 @@ import {
   Modal,
   TextInput,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
@@ -149,169 +150,170 @@ const SettingsSection = (props: {
         visible={isMainModalOpen}
         onRequestClose={() => handleCancel()}
       >
-        <KeyboardAwareScrollView
-          keyboardShouldPersistTaps="always"
-          extraScrollHeight={20}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={[Layout.fill, Common.modalBackdrop]}
-          contentInset={{ bottom: 80 }}
-          contentContainerStyle={[
-            Gutters.smallBPadding,
-            Layout.scrollSpaceBetween,
-          ]}
         >
-          <View style={[Layout.fill, Common.modalView]}>
-            <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-              {t('common:settings')}
-            </Text>
-            <View
-              style={[
-                Layout.fill,
-                Layout.relative,
-                Layout.fullWidth,
-                Layout.alignItemsCenter,
-                Gutters.regularTMargin,
-              ]}
-            >
-              <View style={[Gutters.smallBMargin]}>
-                <Text
-                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                >
-                  {t('home:change_pw')}
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    Common.button.outlineRounded,
-                    Common.button.secondaryButton,
-                    Gutters.smallTMargin,
-                  ]}
-                  onPress={() => handleRestore()}
-                >
+          <ScrollView
+            contentContainerStyle={[
+              Gutters.smallBPadding,
+              Layout.scrollSpaceBetween,
+            ]}
+          >
+            <View style={[Layout.fill, Common.modalView]}>
+              <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+                {t('common:settings')}
+              </Text>
+              <View
+                style={[
+                  Layout.fill,
+                  Layout.relative,
+                  Layout.fullWidth,
+                  Layout.alignItemsCenter,
+                  Gutters.regularTMargin,
+                ]}
+              >
+                <View style={[Gutters.smallBMargin]}>
                   <Text
-                    style={[
-                      Fonts.textTiny,
-                      Fonts.textBluePrimary,
-                      Gutters.tinyVPadding,
-                      Gutters.tinyHPadding,
-                    ]}
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
                   >
-                    {t('home:change_pw_restore')}
+                    {t('home:change_pw')}
                   </Text>
-                </TouchableOpacity>
-              </View>
-              <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
-                <Text
-                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                >
-                  {t('home:ssp_relay_server')}
-                </Text>
-                <View
-                  style={[
-                    Layout.rowCenter,
-                    Common.inputWithButtonBgModalColors,
-                    styles.inputWithButton,
-                  ]}
-                >
-                  <TextInput
-                    style={[Common.textInput, Common.textInputBgModal]}
-                    autoCapitalize="none"
-                    placeholder={originalConfig.relay}
-                    placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                    onChangeText={onChangeSSPrelay}
-                    value={sspConfigRelay}
-                    autoCorrect={false}
-                    ref={textInputA}
-                    onPressIn={() => textInputA.current?.focus()}
-                  />
-                  <TouchableOpacity
-                    onPress={resetSSPRelay}
-                    style={Common.inputIcon}
-                  >
-                    <Icon name="x" size={20} color={Colors.bluePrimary} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
-                <Text
-                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                >
-                  {t('home:chain_node_service', {
-                    chain: blockchainConfig.name,
-                  })}
-                </Text>
-                <View
-                  style={[
-                    Layout.rowCenter,
-                    Common.inputWithButtonBgModalColors,
-                    styles.inputWithButton,
-                  ]}
-                >
-                  <TextInput
-                    style={[Common.textInput, Common.textInputBgModal]}
-                    autoCapitalize="none"
-                    placeholder={backendsOriginalConfig[selectedChain].node}
-                    placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                    onChangeText={onChangeChainNodeService}
-                    value={chainNodeConfig}
-                    autoCorrect={false}
-                    ref={textInputB}
-                    onPressIn={() => textInputB.current?.focus()}
-                  />
-                  <TouchableOpacity
-                    onPress={resetChainNodeService}
-                    style={Common.inputIcon}
-                  >
-                    <Icon name="x" size={20} color={Colors.bluePrimary} />
-                  </TouchableOpacity>
-                </View>
-                <View style={[Gutters.tinyTMargin, Layout.colCenter]}>
                   <TouchableOpacity
                     style={[
                       Common.button.outlineRounded,
                       Common.button.secondaryButton,
+                      Gutters.smallTMargin,
                     ]}
-                    onPress={() => openChainSelect()}
+                    onPress={() => handleRestore()}
                   >
                     <Text
                       style={[
-                        Fonts.textSmall,
+                        Fonts.textTiny,
                         Fonts.textBluePrimary,
-                        Gutters.regularHPadding,
+                        Gutters.tinyVPadding,
+                        Gutters.tinyHPadding,
                       ]}
                     >
-                      {t('home:select_chain')}
+                      {t('home:change_pw_restore')}
                     </Text>
                   </TouchableOpacity>
                 </View>
+                <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:ssp_relay_server')}
+                  </Text>
+                  <View
+                    style={[
+                      Layout.rowCenter,
+                      Common.inputWithButtonBgModalColors,
+                      styles.inputWithButton,
+                    ]}
+                  >
+                    <TextInput
+                      style={[Common.textInput, Common.textInputBgModal]}
+                      autoCapitalize="none"
+                      placeholder={originalConfig.relay}
+                      placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                      onChangeText={onChangeSSPrelay}
+                      value={sspConfigRelay}
+                      autoCorrect={false}
+                      ref={textInputA}
+                      onPressIn={() => textInputA.current?.focus()}
+                    />
+                    <TouchableOpacity
+                      onPress={resetSSPRelay}
+                      style={Common.inputIcon}
+                    >
+                      <Icon name="x" size={20} color={Colors.bluePrimary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:chain_node_service', {
+                      chain: blockchainConfig.name,
+                    })}
+                  </Text>
+                  <View
+                    style={[
+                      Layout.rowCenter,
+                      Common.inputWithButtonBgModalColors,
+                      styles.inputWithButton,
+                    ]}
+                  >
+                    <TextInput
+                      style={[Common.textInput, Common.textInputBgModal]}
+                      autoCapitalize="none"
+                      placeholder={backendsOriginalConfig[selectedChain].node}
+                      placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                      onChangeText={onChangeChainNodeService}
+                      value={chainNodeConfig}
+                      autoCorrect={false}
+                      ref={textInputB}
+                      onPressIn={() => textInputB.current?.focus()}
+                    />
+                    <TouchableOpacity
+                      onPress={resetChainNodeService}
+                      style={Common.inputIcon}
+                    >
+                      <Icon name="x" size={20} color={Colors.bluePrimary} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={[Gutters.tinyTMargin, Layout.colCenter]}>
+                    <TouchableOpacity
+                      style={[
+                        Common.button.outlineRounded,
+                        Common.button.secondaryButton,
+                      ]}
+                      onPress={() => openChainSelect()}
+                    >
+                      <Text
+                        style={[
+                          Fonts.textSmall,
+                          Fonts.textBluePrimary,
+                          Gutters.regularHPadding,
+                        ]}
+                      >
+                        {t('home:select_chain')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              <View style={[Layout.justifyContentEnd]}>
+                <TouchableOpacity
+                  style={[
+                    Common.button.rounded,
+                    Common.button.bluePrimary,
+                    Gutters.regularBMargin,
+                    Gutters.largeTMargin,
+                  ]}
+                  onPress={() => handleSave()}
+                >
+                  <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                    {t('common:save')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleCancel()}>
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBluePrimary,
+                      Fonts.textCenter,
+                    ]}
+                  >
+                    {t('common:cancel')}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-            <View style={[Layout.justifyContentEnd]}>
-              <TouchableOpacity
-                style={[
-                  Common.button.rounded,
-                  Common.button.bluePrimary,
-                  Gutters.regularBMargin,
-                  Gutters.largeTMargin,
-                ]}
-                onPress={() => handleSave()}
-              >
-                <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                  {t('common:save')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleCancel()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBluePrimary,
-                    Fonts.textCenter,
-                  ]}
-                >
-                  {t('common:cancel')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAwareScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
       <Modal
         animationType="fade"
@@ -337,7 +339,6 @@ const SettingsSection = (props: {
               <Picker
                 selectedValue={selectedChain}
                 onValueChange={(itemValue) => setSelectedChain(itemValue)}
-                mode="dropdown"
               >
                 {Object.keys(blockchains).map((key) => (
                   <Picker.Item

@@ -37,7 +37,8 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
-import CreationSteps from '../../components/CreationSteps/CreationSteps';
+import CreationSteps from 'ssp-key/src/components/CreationSteps/CreationSteps';
+import ToastNotif from 'ssp-key/src/components/Toast/Toast';
 
 type Props = {
   navigation: any;
@@ -165,6 +166,7 @@ function Create({ navigation }: Props) {
           mnemonicPhrase,
           pwForEncryption,
         ).toString();
+        await EncryptedStorage.clear();
         // store in redux persist
         dispatch(setSeedPhrase(mnemonicBlob));
         // generate master xpriv for btc
@@ -492,7 +494,7 @@ function Create({ navigation }: Props) {
             </View>
           </View>
         </ScrollView>
-        <Toast />
+        <ToastNotif />
       </Modal>
       {!keyboardVisible && <PoweredByFlux />}
     </View>

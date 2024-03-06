@@ -20,31 +20,115 @@ export function getLibId(chain: keyof cryptos): string {
 export async function fetchUtxos(
   address: string,
   chain: string,
+  confirmationMode = 0, // use confirmed utxos if replace by fee is wanted. unconfirmed if standard tx, both for ssp key for fetching all utxps
+  onlyConfirmed = true, // must have > 0 confirmations
 ): Promise<utxo[]> {
   try {
     const backendConfig = backends()[chain];
     if (blockchains[chain].backend === 'blockbook') {
-      const url = `https://${backendConfig.node}/api/v2/utxo/${address}`;
-      const { data } = await axios.get<blockbookUtxo[]>(url);
-      const fetchedUtxos = data;
-      const utxos = fetchedUtxos.map((x) => ({
-        txid: x.txid,
-        vout: x.vout,
-        scriptPubKey: '', // that is fine, not needed
-        satoshis: x.value,
-      }));
-      return utxos;
+      if (confirmationMode === 1) {
+        const url = `https://${backendConfig.node}/api/v2/utxo/${address}?confirmed=true`;
+        const { data } = await axios.get<blockbookUtxo[]>(url);
+        const fetchedUtxos = data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: '', // that is fine, not needed
+          satoshis: x.value,
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      } else if (confirmationMode === 2) {
+        const url = `https://${backendConfig.node}/api/v2/utxo/${address}?confirmed=true`;
+        const urlB = `https://${backendConfig.node}/api/v2/utxo/${address}`;
+        const { data } = await axios.get<blockbookUtxo[]>(url);
+        const responseB = await axios.get<blockbookUtxo[]>(urlB);
+        const dataB = responseB.data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const fetchedUtxos = data
+          .filter((x) => (onlyConfirmed ? x.confirmations > 0 : true))
+          .concat(dataB);
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: '', // that is fine, not needed
+          satoshis: x.value,
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      } else {
+        const url = `https://${backendConfig.node}/api/v2/utxo/${address}`;
+        const { data } = await axios.get<blockbookUtxo[]>(url);
+        const fetchedUtxos = data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: '', // that is fine, not needed
+          satoshis: x.value,
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      }
     } else {
-      const url = `https://${backendConfig.node}/api/addr/${address}/utxo`;
-      const { data } = await axios.get<utxo[]>(url);
-      const fetchedUtxos = data;
-      const utxos = fetchedUtxos.map((x) => ({
-        txid: x.txid,
-        vout: x.vout,
-        scriptPubKey: x.scriptPubKey,
-        satoshis: x.satoshis.toString(),
-      }));
-      return utxos;
+      if (confirmationMode === 1) {
+        const url = `https://${backendConfig.node}/api/addrs/${address}/unspent`;
+        const { data } = await axios.get<utxo[]>(url);
+        const fetchedUtxos = data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: x.scriptPubKey,
+          satoshis: x.satoshis.toString(),
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      } else if (confirmationMode === 2) {
+        const url = `https://${backendConfig.node}/api/addrs/${address}/unspent`;
+        const urlB = `https://${backendConfig.node}/api/addrs/${address}/utxo`;
+        const { data } = await axios.get<utxo[]>(url);
+        const responseB = await axios.get<utxo[]>(urlB);
+        const dataB = responseB.data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const fetchedUtxos = data
+          .filter((x) => (onlyConfirmed ? x.confirmations > 0 : true))
+          .concat(dataB);
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: x.scriptPubKey,
+          satoshis: x.satoshis.toString(),
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      } else {
+        const url = `https://${backendConfig.node}/api/addrs/${address}/utxo`;
+        const { data } = await axios.get<utxo[]>(url);
+        const fetchedUtxos = data.filter((x) =>
+          onlyConfirmed ? x.confirmations > 0 : true,
+        );
+        const utxos = fetchedUtxos.map((x) => ({
+          txid: x.txid,
+          vout: x.vout,
+          scriptPubKey: x.scriptPubKey,
+          satoshis: x.satoshis.toString(),
+          confirmations: x.confirmations,
+          coinbase: x.coinbase || false,
+        }));
+        return utxos;
+      }
     }
   } catch (e) {
     console.log(e);
@@ -242,7 +326,7 @@ function pickUtxos(utxos: utxo[], amount: BigNumber): utxo[] {
   // If the "sum of all your UTXO smaller than the Target" doesn't surpass the target, the smallest UTXO greater than your Target will be used.
   const utxosBiggestThanTarget = sortedUtxos.filter((utxoX) => {
     const utxoAmount = new BigNumber(utxoX.satoshis);
-    return utxoAmount.isGreaterThan(amount);
+    return utxoAmount.isGreaterThanOrEqualTo(amount);
   });
   if (totalAmountSmallerUtxos.isLessThan(amount)) {
     if (utxosBiggestThanTarget.length) {
@@ -255,13 +339,13 @@ function pickUtxos(utxos: utxo[], amount: BigNumber): utxo[] {
 
   // case 4
   // If the "sum of all your UTXO smaller than the Target" surpasses the Target, try using the smallest UTXO first and add more UTXO until you reach the Target.
-  if (totalAmountSmallerUtxos.isGreaterThan(amount)) {
+  if (totalAmountSmallerUtxos.isGreaterThanOrEqualTo(amount)) {
     let totalAmount = new BigNumber(0);
     const preselectedUtxos = [];
     for (const utxoX of utxosSmallerThanTarget) {
       totalAmount = totalAmount.plus(new BigNumber(utxoX.satoshis));
       preselectedUtxos.push(utxoX);
-      if (totalAmount.isGreaterThan(amount)) {
+      if (totalAmount.isGreaterThanOrEqualTo(amount)) {
         selectedUtxos = preselectedUtxos;
         break;
       }
@@ -273,13 +357,13 @@ function pickUtxos(utxos: utxo[], amount: BigNumber): utxo[] {
 
   // case 5
   // If the "sum of all your UTXO smaller than the Target" surpasses the Target, try using the biggest UTXO first and add more UTXO until you reach the Target.
-  if (totalAmountSmallerUtxos.isGreaterThan(amount)) {
+  if (totalAmountSmallerUtxos.isGreaterThanOrEqualTo(amount)) {
     let totalAmount = new BigNumber(0);
     const preselectedUtxos = [];
     for (const utxoX of utxosSmallerThanTarget.reverse()) {
       totalAmount = totalAmount.plus(new BigNumber(utxoX.satoshis));
       preselectedUtxos.push(utxoX);
-      if (totalAmount.isGreaterThan(amount)) {
+      if (totalAmount.isGreaterThanOrEqualTo(amount)) {
         selectedUtxos = preselectedUtxos;
         break;
       }
@@ -298,19 +382,24 @@ function pickUtxos(utxos: utxo[], amount: BigNumber): utxo[] {
   }
 
   // case 7, transaction can't be constructed, tx size would exceed 100kb. This is a limitation of the blockchain. Fallback to case 5
-  if (totalAmountSmallerUtxos.isGreaterThan(amount)) {
+  if (totalAmountSmallerUtxos.isGreaterThanOrEqualTo(amount)) {
     let totalAmount = new BigNumber(0);
     const preselectedUtxos = [];
     for (const utxoX of utxosSmallerThanTarget.reverse()) {
       totalAmount = totalAmount.plus(new BigNumber(utxoX.satoshis));
       preselectedUtxos.push(utxoX);
-      if (totalAmount.isGreaterThan(amount)) {
+      if (totalAmount.isGreaterThanOrEqualTo(amount)) {
         selectedUtxos = preselectedUtxos;
         break;
       }
     }
   }
-  return selectedUtxos;
+  if (selectedUtxos.length && selectedUtxos.length <= 670) {
+    return selectedUtxos;
+  }
+  throw new Error(
+    'Transaction can not be constructed. Try changing the amount.',
+  );
 }
 
 export async function constructAndSignTransaction(

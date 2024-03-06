@@ -1,195 +1,12 @@
-import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import utxolib from '@runonflux/utxo-lib';
-import {
-  transacitonsInsight,
-  transactionInsight,
-  transacitonsBlockbook,
-  transactionBlockbook,
-  transaction,
-  cryptos,
-} from '../types';
+import { cryptos, utxo } from '../types';
 
-import { backends } from '@storage/backends';
 import { blockchains } from '@storage/blockchains';
 
 export function getLibId(chain: keyof cryptos): string {
   return blockchains[chain].libid;
 }
-
-function decodeMessage(asm: string) {
-  const parts = asm.split('OP_RETURN ', 2);
-  let message = '';
-  if (parts[1]) {
-    const encodedMessage = parts[1];
-    const hexx = encodedMessage.toString(); // force conversion
-    for (let k = 0; k < hexx.length && hexx.slice(k, k + 2) !== '00'; k += 2) {
-      message += String.fromCharCode(parseInt(hexx.slice(k, k + 2), 16));
-    }
-  }
-  return message;
-}
-
-function processTransaction(
-  insightTx: transactionInsight,
-  address: string,
-): transaction {
-  const vins = insightTx.vin;
-  const vouts = insightTx.vout;
-
-  let numberofvins = vins.length;
-  let numberofvouts = vouts.length;
-
-  let message = '';
-
-  let amountSentInItx = new BigNumber(0);
-  let amountReceivedInItx = new BigNumber(0);
-  while (numberofvins > 0) {
-    numberofvins -= 1;
-    const jsonvin = vins[numberofvins];
-    if (jsonvin.addr && jsonvin.addr === address) {
-      // my address is sending
-      const satsSent = new BigNumber(jsonvin.value).multipliedBy(
-        new BigNumber(1e8),
-      );
-      amountSentInItx = amountSentInItx.plus(satsSent);
-    }
-  }
-
-  while (numberofvouts > 0) {
-    numberofvouts -= 1;
-    const jsonvout = vouts[numberofvouts];
-    if (jsonvout.scriptPubKey.addresses) {
-      if (jsonvout.scriptPubKey.addresses[0] === address) {
-        // my address is receiving
-        const amountReceived = new BigNumber(jsonvout.value).multipliedBy(
-          new BigNumber(1e8),
-        );
-        amountReceivedInItx = amountReceivedInItx.plus(amountReceived);
-      }
-    }
-    // check message
-    if (jsonvout.scriptPubKey.asm) {
-      const decodedMessage = decodeMessage(jsonvout.scriptPubKey.asm);
-      if (decodedMessage) {
-        message = decodedMessage;
-      }
-    }
-  }
-
-  const fee = new BigNumber(insightTx.fees).multipliedBy(new BigNumber(1e8));
-  let amount = amountReceivedInItx.minus(amountSentInItx);
-  if (amount.isNegative()) {
-    amount = amount.plus(fee); // we were the ones sending fee
-  }
-
-  const tx: transaction = {
-    txid: insightTx.txid,
-    fee: fee.toFixed(),
-    blockheight: insightTx.blockheight,
-    timestamp: insightTx.time * 1000,
-    amount: amount.toFixed(),
-    message,
-  };
-  return tx;
-}
-
-function processTransactionBlockbook(
-  blockbookTx: transactionBlockbook,
-  address: string,
-): transaction {
-  const vins = blockbookTx.vin;
-  const vouts = blockbookTx.vout;
-
-  let numberofvins = vins.length;
-  let numberofvouts = vouts.length;
-
-  let message = '';
-
-  let amountSentInItx = new BigNumber(0);
-  let amountReceivedInItx = new BigNumber(0);
-  while (numberofvins > 0) {
-    numberofvins -= 1;
-    const jsonvin = vins[numberofvins];
-    if (jsonvin.isAddress && jsonvin.addresses[0] === address) {
-      // my address is sending
-      const satsSent = new BigNumber(jsonvin.value);
-      amountSentInItx = amountSentInItx.plus(satsSent);
-    }
-  }
-
-  while (numberofvouts > 0) {
-    numberofvouts -= 1;
-    const jsonvout = vouts[numberofvouts];
-    if (jsonvout.isAddress && jsonvout.addresses[0] === address) {
-      // my address is receiving
-      const amountReceived = new BigNumber(jsonvout.value);
-      amountReceivedInItx = amountReceivedInItx.plus(amountReceived);
-    }
-    // check message
-    if (!jsonvout.isAddress) {
-      const mess = jsonvout.addresses[0];
-      const messSplit = mess.split('OP_RETURN (');
-      if (messSplit[1]) {
-        message = messSplit[1].slice(0, -1);
-      }
-    }
-  }
-
-  const fee = new BigNumber(blockbookTx.fees);
-  let amount = amountReceivedInItx.minus(amountSentInItx);
-  if (amount.isNegative()) {
-    amount = amount.plus(fee); // we were the ones sending fee
-  }
-
-  const time = blockbookTx.blockTime || new Date().getTime() / 1000;
-
-  const tx: transaction = {
-    txid: blockbookTx.txid,
-    fee: fee.toFixed(),
-    blockheight: blockbookTx.blockHeight,
-    timestamp: time * 1000,
-    amount: amount.toFixed(),
-    message,
-  };
-  return tx;
-}
-
-export async function fetchAddressTransactions(
-  address: string,
-  chain: keyof cryptos,
-  from: number,
-  to: number,
-): Promise<transaction[]> {
-  try {
-    const backendConfig = backends()[chain];
-    if (blockchains[chain].backend === 'blockbook') {
-      const pageSize = to - from;
-      const page = Math.round(from / pageSize);
-      const url = `https://${backendConfig.node}/api/v2/address/${address}?pageSize=${pageSize}&details=txs&page=${page}`;
-      const response = await axios.get<transacitonsBlockbook>(url);
-      const txs = [];
-      for (const tx of response.data.transactions) {
-        const processedTransaction = processTransactionBlockbook(tx, address);
-        txs.push(processedTransaction);
-      }
-      return txs;
-    } else {
-      const url = `https://${backendConfig.node}/api/addrs/${address}/txs?from=${from}&to=${to}`;
-      const response = await axios.get<transacitonsInsight>(url);
-      const txs = [];
-      for (const tx of response.data.items) {
-        const processedTransaction = processTransaction(tx, address);
-        txs.push(processedTransaction);
-      }
-      return txs;
-    }
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
-}
-
 interface output {
   script: Buffer;
   value: number;
@@ -198,9 +15,11 @@ interface output {
 export function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
+  utxos: utxo[],
 ) {
   try {
     const libID = getLibId(chain);
+    const decimals = blockchains[chain].decimals;
     const network = utxolib.networks[libID];
     const txhex = rawTx;
     const txb = utxolib.TransactionBuilder.fromTransaction(
@@ -211,6 +30,8 @@ export function decodeTransactionForApproval(
     let txReceiver = 'decodingError';
     let amount = '0';
     let senderAddress = '';
+    let totalInputsAmount = new BigNumber(0);
+    let totalOutputsAmount = new BigNumber(0);
 
     if (txb.inputs[0].witnessScript && txb.inputs[0].redeemScript) {
       // p2sh-p2wsh
@@ -236,10 +57,11 @@ export function decodeTransactionForApproval(
       if (out.value) {
         const address = utxolib.address.fromOutputScript(out.script, network);
         console.log(address);
+        totalOutputsAmount = totalOutputsAmount.plus(new BigNumber(out.value));
         if (address !== senderAddress) {
           txReceiver = address;
           amount = new BigNumber(out.value)
-            .dividedBy(new BigNumber(1e8))
+            .dividedBy(new BigNumber(10 ** decimals))
             .toFixed();
         }
       }
@@ -255,14 +77,32 @@ export function decodeTransactionForApproval(
         console.log(address);
         txReceiver = address;
         amount = new BigNumber(outOne.value)
-          .dividedBy(new BigNumber(1e8))
+          .dividedBy(new BigNumber(10 ** decimals))
           .toFixed();
       }
+    }
+
+    if (utxos && utxos.length) {
+      // utxos were supplied, we can calculate fee
+      utxos.forEach((u) => {
+        totalInputsAmount = totalInputsAmount.plus(new BigNumber(u.satoshis));
+      });
+    }
+
+    const fee = totalInputsAmount
+      .minus(totalOutputsAmount)
+      .dividedBy(10 ** decimals)
+      .toFixed();
+    // calculate fee
+    if (+fee < 0) {
+      // fee is negative, something is wrong. Reject.
+      throw new Error('Unexpected negative fee. Transaction Rejected.');
     }
     const txInfo = {
       sender: senderAddress,
       receiver: txReceiver,
       amount,
+      fee,
     };
     return txInfo;
   } catch (error) {
@@ -271,6 +111,7 @@ export function decodeTransactionForApproval(
       sender: 'decodingError',
       receiver: 'decodingError',
       amount: 'decodingError',
+      fee: 'decodingError',
     };
     return txInfo;
   }

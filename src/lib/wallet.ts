@@ -103,8 +103,18 @@ export function generateMultisigAddress(
   const network = utxolib.networks[libID];
   const bipParams = blockchains[chain].bip32;
   const type = blockchains[chain].scriptType;
-  const externalChain1 = HDKey.fromExtendedKey(xpub1, bipParams);
-  const externalChain2 = HDKey.fromExtendedKey(xpub2, bipParams);
+  const networkBipParams = utxolib.networks[libID].bip32;
+  let externalChain1, externalChain2;
+  try {
+    externalChain1 = HDKey.fromExtendedKey(xpub1, bipParams);
+  } catch (e) {
+    externalChain1 = HDKey.fromExtendedKey(xpub1, networkBipParams);
+  }
+  try {
+    externalChain2 = HDKey.fromExtendedKey(xpub2, bipParams);
+  } catch (e) {
+    externalChain2 = HDKey.fromExtendedKey(xpub2, networkBipParams);
+  }
 
   const externalAddress1 = externalChain1
     .deriveChild(typeIndex)
@@ -119,7 +129,6 @@ export function generateMultisigAddress(
   const pubKeyBuffer2 = Buffer.from(publicKey2!).toString('hex');
 
   const sortedPublicKeys: string[] = [pubKeyBuffer1, pubKeyBuffer2].sort();
-  console.log(sortedPublicKeys);
   const publicKeysBuffer: Buffer[] = sortedPublicKeys.map((hex: string) =>
     Buffer.from(hex, 'hex'),
   );
@@ -189,7 +198,17 @@ export function generateAddressKeypair(
 ): keyPair {
   const libID = getLibId(chain);
   const bipParams = blockchains[chain].bip32;
-  const externalChain = HDKey.fromExtendedKey(xpriv, bipParams);
+  const networkBipParams = utxolib.networks[libID].bip32;
+  let externalChain;
+  let network = utxolib.networks[libID];
+  try {
+    externalChain = HDKey.fromExtendedKey(xpriv, bipParams);
+    network = Object.assign({}, network, {
+      bip32: bipParams,
+    });
+  } catch (e) {
+    externalChain = HDKey.fromExtendedKey(xpriv, networkBipParams);
+  }
 
   const externalAddress = externalChain
     .deriveChild(typeIndex)
@@ -197,7 +216,7 @@ export function generateAddressKeypair(
 
   const derivedExternalAddress: minHDKey = utxolib.HDNode.fromBase58(
     externalAddress.toJSON().xpriv,
-    utxolib.networks[libID],
+    network,
   );
 
   const privateKeyWIF: string = derivedExternalAddress.keyPair.toWIF();
@@ -219,7 +238,13 @@ export function generateInternalIdentityAddress(
 
   const libID = getLibId(chain);
   const bipParams = blockchains[chain].bip32;
-  const externalChain = HDKey.fromExtendedKey(xpub, bipParams);
+  const networkBipParams = utxolib.networks[libID].bip32;
+  let externalChain;
+  try {
+    externalChain = HDKey.fromExtendedKey(xpub, bipParams);
+  } catch (e) {
+    externalChain = HDKey.fromExtendedKey(xpub, networkBipParams);
+  }
 
   const externalAddress = externalChain
     .deriveChild(typeIndex)

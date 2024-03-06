@@ -20,6 +20,8 @@ import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { blockchains } from '@storage/blockchains';
+import { wordlist } from '@scure/bip39/wordlists/english';
+import ToastNotif from '../../components/Toast/Toast';
 
 const CryptoJS = require('crypto-js');
 
@@ -117,9 +119,25 @@ function Restore({ navigation }: Props) {
       displayMessage('error', t('cr:err_invalid_seed'));
       return;
     }
+    if (splittedSeed.includes('')) {
+      displayMessage('error', t('cr:err_seed_invalid_spaces'));
+      return;
+    }
     const isValid = validateMnemonic(newSeedPhrase);
     if (!isValid) {
-      displayMessage('error', t('cr:err_invalid_seed'));
+      // here show what word is not alright
+      // we check ONLY for english wordlist
+      const invalidWords = splittedSeed.filter(
+        (word) => !wordlist.includes(word),
+      );
+      if (invalidWords.length) {
+        displayMessage(
+          'error',
+          t('cr:err_seed_invalid_words', { words: invalidWords.join(', ') }),
+        );
+      } else {
+        displayMessage('error', t('cr:err_invalid_seed'));
+      }
       return;
     }
     if (password !== passwordConfirm) {
@@ -554,7 +572,7 @@ function Restore({ navigation }: Props) {
             </View>
           </View>
         </ScrollView>
-        <Toast />
+        <ToastNotif />
       </Modal>
       {!keyboardVisible && <PoweredByFlux />}
     </View>

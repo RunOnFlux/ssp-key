@@ -6,21 +6,24 @@ import Toast from 'react-native-toast-message';
 import Authentication from '../Authentication/Authentication';
 import { useTheme } from '../../hooks';
 import { decodeTransactionForApproval } from '../../lib/transactions';
-import { cryptos } from '../../types';
+import { cryptos, utxo } from '../../types';
 
 import { blockchains } from '@storage/blockchains';
 
 const TransactionRequest = (props: {
   rawTx: string;
   chain: keyof cryptos;
+  utxos: utxo[];
   activityStatus: boolean;
   actionStatus: (status: boolean) => void;
 }) => {
-  const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
+  const alreadyRunning = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [sendingAmount, setSendingAmount] = useState('');
   const [receiverAddress, setReceiverAddress] = useState('');
+  const [senderAddress, setSenderAddress] = useState('');
+  const [fee, setFee] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
 
@@ -45,24 +48,41 @@ const TransactionRequest = (props: {
     }
   };
   useEffect(() => {
-    if (alreadyMounted.current) {
+    if (alreadyRunning.current) {
       return;
     }
-    alreadyMounted.current = true;
-    const txInfo = decodeTransactionForApproval(props.rawTx, props.chain);
+    alreadyRunning.current = true;
+    if (!props.rawTx || !props.chain) {
+      return;
+    }
+    console.log('Transaction Request');
+    console.log(props.rawTx);
+    console.log(props.chain);
+    const txInfo = decodeTransactionForApproval(
+      props.rawTx,
+      props.chain,
+      props.utxos,
+    );
+    console.log(txInfo);
     setSendingAmount(txInfo.amount);
     setReceiverAddress(txInfo.receiver);
+    setSenderAddress(txInfo.sender);
+    if (props.utxos && props.utxos.length) {
+      setFee(txInfo.fee);
+    }
+    console.log(fee);
     if (
       txInfo.amount === 'decodingError' ||
-      txInfo.receiver === 'decodingError'
+      txInfo.receiver === 'decodingError' ||
+      txInfo.sender === 'decodingError'
     ) {
       displayMessage('error', t('home:err_tx_decode'));
       setTimeout(() => {
         reject();
       }, 500);
     }
-    console.log(txInfo);
-  });
+    alreadyRunning.current = false;
+  }, [props.rawTx, props.chain]);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
       type,
@@ -82,16 +102,43 @@ const TransactionRequest = (props: {
         ]}
       >
         <Icon name="send" size={60} color={Colors.textGray400} />
-        <Text style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}>
+        <Text
+          style={[
+            Fonts.textBold,
+            Fonts.textRegular,
+            Gutters.smallMargin,
+            Gutters.regularBMargin,
+          ]}
+        >
           {t('home:transaction_request')}
         </Text>
-        <Text style={[Fonts.textSmall, Fonts.textCenter]}>
-          {t('home:sending_request', {
-            amount: sendingAmount,
-            address: receiverAddress,
-            symbol: blockchainConfig.symbol,
-          })}
+        <Text>
+          <Text style={[Fonts.textSmall, Fonts.textCenter]}>
+            {t('home:sending')}
+          </Text>
+          <Text style={[Fonts.textSmall, Fonts.textBold, Fonts.textCenter]}>
+            {' ' + sendingAmount + ' ' + blockchainConfig.symbol + ' '}
+          </Text>
+          <Text style={[Fonts.textSmall, Fonts.textCenter]}>
+            {t('home:to')}
+          </Text>
         </Text>
+        <Text style={[Fonts.textTiny, Fonts.textBold, Fonts.textCenter]}>
+          {receiverAddress}
+        </Text>
+        <Text
+          style={[Fonts.textTinyTiny, Fonts.textCenter, Gutters.smallTMargin]}
+        >
+          {t('home:from')}
+        </Text>
+        <Text style={[Fonts.textTinyTiny, Fonts.textCenter]}>
+          {senderAddress}
+        </Text>
+        {fee && (
+          <Text style={[Fonts.textTinyTiny, Fonts.textCenter]}>
+            {t('home:blockchain_fee', { fee, symbol: blockchainConfig.symbol })}
+          </Text>
+        )}
       </View>
       <View style={[Layout.justifyContentEnd]}>
         <TouchableOpacity

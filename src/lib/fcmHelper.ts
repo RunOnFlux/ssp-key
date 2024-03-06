@@ -91,6 +91,7 @@ export async function getFCMToken() {
   try {
     let token = await EncryptedStorage.getItem('fcmkeytoken');
 
+    // our token may not be valid anymore, on app boot run refresh function
     if (token) {
       return token;
     }
@@ -103,5 +104,16 @@ export async function getFCMToken() {
   } catch (error) {
     console.error(error);
     return null;
+  }
+}
+
+export async function refreshFCMToken() {
+  try {
+    const token = await messaging().getToken();
+    if (token) {
+      await EncryptedStorage.setItem('fcmkeytoken', token);
+    }
+  } catch (error) {
+    console.error(error);
   }
 }

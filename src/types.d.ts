@@ -29,12 +29,16 @@ export interface utxo {
   vout: number;
   scriptPubKey: string;
   satoshis: string;
+  confirmations: number;
+  coinbase: boolean;
 }
 
 export interface blockbookUtxo {
   txid: string;
   vout: number;
   value: string;
+  confirmations: number;
+  coinbase: boolean;
 }
 
 export interface broadcastTxResult {

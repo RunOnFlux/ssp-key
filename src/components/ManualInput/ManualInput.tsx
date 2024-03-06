@@ -6,8 +6,10 @@ import {
   StyleSheet,
   TextInput,
   Modal,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
@@ -38,86 +40,87 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
       visible={true}
       onRequestClose={() => handleCancel()}
     >
-      <KeyboardAwareScrollView
-        keyboardShouldPersistTaps="always"
-        extraScrollHeight={20}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[Layout.fill, Common.modalBackdrop]}
-        contentInset={{ bottom: 80 }}
-        contentContainerStyle={[
-          Gutters.smallBPadding,
-          Layout.scrollSpaceBetween,
-        ]}
       >
-        <View style={[Layout.fill, Common.modalView]}>
-          <Text
-            style={[Fonts.titleSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-          >
-            {t('home:manual_input')}
-          </Text>
-          <View
-            style={[
-              Layout.fill,
-              Layout.relative,
-              Layout.fullWidth,
-              Layout.alignItemsCenter,
-              Gutters.regularTMargin,
-            ]}
-          >
+        <ScrollView
+          contentContainerStyle={[
+            Gutters.smallBPadding,
+            Layout.scrollSpaceBetween,
+          ]}
+        >
+          <View style={[Layout.fill, Common.modalView]}>
             <Text
-              style={[
-                Fonts.textRegular,
-                Fonts.textCenter,
-                Fonts.textBold,
-                Gutters.tinyBMargin,
-              ]}
+              style={[Fonts.titleSmall, Gutters.tinyBMargin, Fonts.textCenter]}
             >
-              {t('home:sign_resync')}
+              {t('home:manual_input')}
             </Text>
-            <View style={styles.seedPhraseArea}>
-              <TextInput
-                multiline={true}
-                numberOfLines={6}
-                style={[Common.inputArea, Common.inputAreaModalColors]}
-                autoCapitalize="none"
-                placeholder={t('home:manual_input_info')}
-                placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                secureTextEntry={false}
-                onChangeText={onChangeManualInput}
-                value={manualInput}
-                autoCorrect={false}
-                ref={textInputA}
-                onPressIn={() => textInputA.current?.focus()}
-              />
-            </View>
-          </View>
-          <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
+            <View
               style={[
-                Common.button.rounded,
-                Common.button.bluePrimary,
-                Gutters.regularBMargin,
-                Gutters.smallTMargin,
+                Layout.fill,
+                Layout.relative,
+                Layout.fullWidth,
+                Layout.alignItemsCenter,
+                Gutters.regularTMargin,
               ]}
-              onPress={() => handleMnualInput()}
             >
-              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                {t('home:process_input')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleCancel()}>
               <Text
                 style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
+                  Fonts.textRegular,
                   Fonts.textCenter,
+                  Fonts.textBold,
+                  Gutters.tinyBMargin,
                 ]}
               >
-                {t('common:cancel')}
+                {t('home:sign_resync')}
               </Text>
-            </TouchableOpacity>
+              <View style={styles.seedPhraseArea}>
+                <TextInput
+                  multiline={true}
+                  numberOfLines={6}
+                  style={[Common.inputArea, Common.inputAreaModalColors]}
+                  autoCapitalize="none"
+                  placeholder={t('home:manual_input_info')}
+                  placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                  secureTextEntry={false}
+                  onChangeText={onChangeManualInput}
+                  value={manualInput}
+                  autoCorrect={false}
+                  ref={textInputA}
+                  onPressIn={() => textInputA.current?.focus()}
+                />
+              </View>
+            </View>
+            <View style={[Layout.justifyContentEnd]}>
+              <TouchableOpacity
+                style={[
+                  Common.button.rounded,
+                  Common.button.bluePrimary,
+                  Gutters.regularBMargin,
+                  Gutters.smallTMargin,
+                ]}
+                onPress={() => handleMnualInput()}
+              >
+                <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                  {t('home:process_input')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleCancel()}>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Fonts.textCenter,
+                  ]}
+                >
+                  {t('common:cancel')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </KeyboardAwareScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

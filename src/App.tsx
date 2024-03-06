@@ -10,9 +10,9 @@ import './translations';
 import { btoa, atob } from 'react-native-quick-base64';
 import { Buffer } from 'buffer';
 import 'fastestsmallesttextencoderdecoder';
-import Toast from 'react-native-toast-message';
 import { SocketProvider } from './contexts/SocketContext';
 import { notificationListener, requestUserPermission } from './lib/fcmHelper';
+import ToastNotif from './components/Toast/Toast';
 
 if (!global.btoa) {
   global.btoa = btoa;
@@ -51,7 +51,7 @@ const App = () => {
           <ApplicationNavigator />
         </SocketProvider>
       </PersistGate>
-      <Toast />
+      <ToastNotif />
     </Provider>
   );
 };

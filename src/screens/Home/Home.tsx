@@ -25,7 +25,7 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
-import { cryptos } from '../../types';
+import { cryptos, utxo } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
 const CryptoJS = require('crypto-js');
@@ -58,8 +58,8 @@ import {
 } from '../../store/ssp';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
-import { useSocket } from '../../hooks/useSocket';
-import { getFCMToken } from '../../lib/fcmHelper';
+import { useSocket } from 'ssp-key/src/hooks/useSocket';
+import { getFCMToken, refreshFCMToken } from 'ssp-key/src/lib/fcmHelper';
 
 type Props = {
   navigation: any;
@@ -83,6 +83,7 @@ function Home({ navigation }: Props) {
   const [rawTx, setRawTx] = useState('');
   const [activeChain, setActiveChain] = useState<keyof cryptos>(identityChain);
   const [txPath, setTxPath] = useState('');
+  const [txUtxos, setTxUtxos] = useState<utxo[]>([]);
   const [syncReq, setSyncReq] = useState('');
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
@@ -127,7 +128,7 @@ function Home({ navigation }: Props) {
 
   useEffect(() => {
     if (newTx.rawTx) {
-      handleTxRequest(newTx.rawTx, newTx.chain, newTx.path);
+      handleTxRequest(newTx.rawTx, newTx.chain, newTx.path, newTx.utxos);
       clearTx?.();
     }
   }, [newTx.rawTx]);
@@ -145,6 +146,7 @@ function Home({ navigation }: Props) {
   const checkFCMToken = async () => {
     if (sspWalletKeyInternalIdentity) {
       try {
+        await refreshFCMToken();
         const token = await getFCMToken();
         if (token) {
           postSyncToken(token, sspWalletKeyInternalIdentity);
@@ -232,6 +234,9 @@ function Home({ navigation }: Props) {
           0,
           chain,
         );
+        if (!addrInfo || !addrInfo.address) {
+          throw new Error('Could not generate multisig address');
+        }
         CryptoJS.AES.encrypt(
           addrInfo.redeemScript || addrInfo.witnessScript,
           pwForEncryption,
@@ -279,6 +284,9 @@ function Home({ navigation }: Props) {
           0,
           identityChain,
         );
+        if (!addrInfo || !addrInfo.address) {
+          throw new Error('Could not generate multisig address');
+        }
         CryptoJS.AES.encrypt(
           addrInfo.redeemScript || addrInfo.witnessScript,
           pwForEncryption,
@@ -295,6 +303,14 @@ function Home({ navigation }: Props) {
           0,
           identityChain,
         );
+        if (
+          !generatedSspWalletKeyInternalIdentity ||
+          !generatedSspWalletKeyInternalIdentity.address
+        ) {
+          throw new Error(
+            'Could not generate SSP Wallet Key internal identity',
+          );
+        }
         dispatch(
           setSspWalletKeyInternalIdentity(
             generatedSspWalletKeyInternalIdentity.address,
@@ -303,6 +319,9 @@ function Home({ navigation }: Props) {
         // generate ssp wallet identity
         const generatedSspWalletInternalIdentity =
           generateInternalIdentityAddress(suppliedXpubWallet, identityChain);
+        if (!generatedSspWalletInternalIdentity) {
+          throw new Error('Could not generate SSP Wallet internal identity');
+        }
         dispatch(
           setSspWalletInternalIdentity(generatedSspWalletInternalIdentity),
         );
@@ -419,11 +438,15 @@ function Home({ navigation }: Props) {
   };
   const handleTxRequest = async (
     rawTransactions: string,
-    chain: keyof cryptos = identityChain,
-    path = '0-0',
+    chain: keyof cryptos,
+    path: string,
+    utxos: utxo[] = [],
   ) => {
-    setRawTx(rawTransactions);
     setActiveChain(chain);
+    if (utxos) {
+      setTxUtxos(utxos);
+    }
+    setRawTx(rawTransactions);
     setTxPath(path);
   };
   const handleSyncRequest = async (xpubw: string, chain: keyof cryptos) => {
@@ -434,6 +457,7 @@ function Home({ navigation }: Props) {
     rawTransactions: string,
     chain: keyof cryptos,
     derivationPath: string,
+    suggestedUtxos: utxo[],
   ) => {
     try {
       console.log('tx request');
@@ -453,8 +477,11 @@ function Home({ navigation }: Props) {
         xpubKeyWalletDecrypted,
         xpubKeyDecrypted,
       );
-      const utxos = await fetchUtxos(addressDetails.address, chain);
-      console.log(utxos);
+      let utxos = suggestedUtxos;
+      // if utxos are not provided, fetch them
+      if (!(suggestedUtxos && suggestedUtxos.length > 0)) {
+        utxos = await fetchUtxos(addressDetails.address, chain, 2); // in ssp key, we want to fetch both confirmed and unconfirmed utxos
+      }
 
       const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
       const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
@@ -483,6 +510,7 @@ function Home({ navigation }: Props) {
       console.log(ttxid);
       setRawTx('');
       setTxPath('');
+      setTxUtxos([]);
       // here tell ssp-relay that we are finished, rewrite the request
       await postAction(
         'txid',
@@ -500,48 +528,60 @@ function Home({ navigation }: Props) {
     }
   };
   const handleManualInput = async (manualInput: string) => {
-    if (!manualInput) {
-      return;
-    } else if (manualInput === 'cancel') {
-      // do not process
-      setTimeout(() => {
-        setIsManualInputModalOpen(false);
-      });
-    } else {
-      const splittedInput = manualInput.split(':');
-      let chain: keyof cryptos = identityChain;
-      let wallet = '0-0';
-      let dataToProcess = '';
-      if (splittedInput[1]) {
-        // all is default
-        chain = splittedInput[0] as keyof cryptos;
-        if (splittedInput[1].includes('-')) {
-          // wallet specifiedd
-          wallet = splittedInput[1];
-          dataToProcess = splittedInput[2];
+    try {
+      if (!manualInput) {
+        return;
+      } else if (manualInput === 'cancel') {
+        // do not process
+        setTimeout(() => {
+          setIsManualInputModalOpen(false);
+        });
+      } else {
+        const splittedInput = manualInput.split(':');
+        let chain: keyof cryptos = identityChain;
+        let wallet = '0-0';
+        let dataToProcess = '';
+        if (splittedInput[1]) {
+          // all is default
+          chain = splittedInput[0] as keyof cryptos;
+          if (splittedInput[1].includes('-')) {
+            // wallet specifiedd
+            wallet = splittedInput[1];
+            dataToProcess = splittedInput[2];
+          } else {
+            // wallet default
+            dataToProcess = splittedInput[1];
+          }
         } else {
-          // wallet default
-          dataToProcess = splittedInput[1];
+          // only data
+          dataToProcess = splittedInput[0];
         }
-      } else {
-        // only data
-        dataToProcess = splittedInput[0];
+        if (!dataToProcess || !blockchains[chain]) {
+          displayMessage('error', t('home:err_invalid_manual_input'));
+        } else {
+          if (xpubRegex.test(dataToProcess)) {
+            // xpub
+            const xpubw = dataToProcess;
+            handleSyncRequest(xpubw, chain);
+            setTimeout(() => {
+              setIsManualInputModalOpen(false);
+            });
+          } else if (dataToProcess.startsWith('0')) {
+            // transaction
+            // sign transaction
+            const rawTransactions = dataToProcess;
+            handleTxRequest(rawTransactions, chain, wallet);
+            setTimeout(() => {
+              setIsManualInputModalOpen(false);
+            });
+          } else {
+            displayMessage('error', t('home:err_invalid_manual_input'));
+          }
+        }
       }
-      if (xpubRegex.test(dataToProcess)) {
-        // xpub
-        const xpubw = dataToProcess;
-        handleSyncRequest(xpubw, chain);
-      } else if (dataToProcess.startsWith('0')) {
-        // transaction
-        // sign transaction
-        const rawTransactions = dataToProcess;
-        handleTxRequest(rawTransactions, chain, wallet);
-      } else {
-        displayMessage('error', t('home:err_invalid_manual_input'));
-      }
-      setTimeout(() => {
-        setIsManualInputModalOpen(false);
-      });
+    } catch (error) {
+      console.log(error);
+      displayMessage('error', t('home:err_invalid_manual_input'));
     }
   };
   const handleMenuModalAction = (status: string) => {
@@ -571,43 +611,60 @@ function Home({ navigation }: Props) {
     }, 100);
   };
   const handleScannedData = (scannedData: string) => {
-    const splittedInput = scannedData.split(':');
-    let chain: keyof cryptos = identityChain;
-    let wallet = '0-0';
-    let dataToProcess = '';
-    if (splittedInput[1]) {
-      // all is default
-      chain = splittedInput[0] as keyof cryptos;
-      if (splittedInput[1].includes('-')) {
-        // wallet specifiedd
-        wallet = splittedInput[1];
-        dataToProcess = splittedInput[2];
+    try {
+      // https://apps.apple.com/us/app/ssp-key/id6463717332
+      const splittedInput = scannedData.split(':');
+      let chain: keyof cryptos = identityChain;
+      let wallet = '0-0';
+      let dataToProcess = '';
+      if (splittedInput[1]) {
+        // all is default
+        chain = splittedInput[0] as keyof cryptos;
+        if (splittedInput[1].includes('-')) {
+          // wallet specifiedd
+          wallet = splittedInput[1];
+          dataToProcess = splittedInput[2];
+        } else {
+          // wallet default
+          dataToProcess = splittedInput[1];
+        }
       } else {
-        // wallet default
-        dataToProcess = splittedInput[1];
+        // only data
+        dataToProcess = splittedInput[0];
       }
-    } else {
-      // only data
-      dataToProcess = splittedInput[0];
-    }
-    // check if input is xpub or transaction
-    if (xpubRegex.test(dataToProcess)) {
-      // xpub
-      const xpubw = dataToProcess;
-      handleSyncRequest(xpubw, chain);
-    } else if (dataToProcess.startsWith('0')) {
-      // transaction
-      const rawTransactions = dataToProcess;
-      handleTxRequest(rawTransactions, chain, wallet);
-    } else {
+      if (!dataToProcess || !blockchains[chain]) {
+        setTimeout(() => {
+          displayMessage('error', t('home:err_invalid_scanned_data'));
+        }, 200);
+      } else {
+        // check if input is xpub or transaction
+        if (xpubRegex.test(dataToProcess)) {
+          // xpub
+          const xpubw = dataToProcess;
+          handleSyncRequest(xpubw, chain);
+        } else if (dataToProcess.startsWith('0')) {
+          // transaction
+          const rawTransactions = dataToProcess;
+          handleTxRequest(rawTransactions, chain, wallet);
+        } else {
+          setTimeout(() => {
+            displayMessage('error', t('home:err_invalid_scanned_data'));
+          }, 200);
+        }
+      }
+      setTimeout(() => {
+        setShowScanner(false);
+      });
+      console.log(scannedData);
+    } catch (error) {
+      console.log(error);
       setTimeout(() => {
         displayMessage('error', t('home:err_invalid_scanned_data'));
       }, 200);
+      setTimeout(() => {
+        setShowScanner(false);
+      });
     }
-    setTimeout(() => {
-      setShowScanner(false);
-    });
-    console.log(scannedData);
   };
   const handleRefresh = async () => {
     // todo here can be a sync request too in the future?
@@ -629,6 +686,7 @@ function Home({ navigation }: Props) {
             result.data.payload,
             result.data.chain,
             result.data.path,
+            result.data.utxos,
           );
         }
       } else if (sspWalletInternalIdentity) {
@@ -662,7 +720,8 @@ function Home({ navigation }: Props) {
         const rtx = rawTx;
         const rchain = activeChain as keyof cryptos;
         const rpath = txPath;
-        await approveTransaction(rtx, rchain, rpath);
+        const rUtxos = txUtxos;
+        await approveTransaction(rtx, rchain, rpath, rUtxos);
       } else {
         // reject
         const rtx = rawTx;
@@ -671,6 +730,7 @@ function Home({ navigation }: Props) {
         setRawTx('');
         setActiveChain(identityChain);
         setTxPath('');
+        setTxUtxos([]);
         await postAction(
           'txrejected',
           rtx,
@@ -900,6 +960,7 @@ function Home({ navigation }: Props) {
             <TransactionRequest
               rawTx={rawTx}
               chain={activeChain as keyof cryptos}
+              utxos={txUtxos}
               activityStatus={activityStatus}
               actionStatus={handleTransactionRequestAction}
             />
