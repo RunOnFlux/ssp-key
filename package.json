@@ -13,7 +13,7 @@
     "pod": "cd ios && RCT_NEW_ARCH_ENABLED=0 bundle exec pod install && cd ..",
     "podprod": "cd ios && RCT_NEW_ARCH_ENABLED=0 NO_FLIPPER=1 bundle exec pod install && cd ..",
     "bundleinstall": "cd ios && bundle install && cd ..",
-    "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process' --yarn && patch-package && react-native setup-ios-permissions"
+    "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process' --yarn --hack && patch-package && react-native setup-ios-permissions"
   },
   "dependencies": {
     "@notifee/react-native": "~7.8.2",
@@ -104,6 +104,11 @@
   "engines": {
     "node": ">=20"
   },
+  "reactNativePermissionsIOS": [
+    "Camera",
+    "FaceID",
+    "Notifications"
+  ],
   "react-native": {
     "_stream_transform": "readable-stream/transform",
     "_stream_readable": "readable-stream/readable",
@@ -119,10 +124,5 @@
     "_stream_duplex": "readable-stream/duplex",
     "_stream_passthrough": "readable-stream/passthrough",
     "stream": "stream-browserify"
-  },
-  "reactNativePermissionsIOS": [
-    "Camera",
-    "FaceID",
-    "Notifications"
-  ]
+  }
 }
