@@ -113,9 +113,9 @@ android {
         }
     }
 
-    buildFeatures {
-        buildConfig = true
-    }
+    // buildFeatures {
+    //     buildConfig = true
+    // }
 
     // TODO this is not ideal.
     packagingOptions {
