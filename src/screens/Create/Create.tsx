@@ -37,8 +37,8 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
-import CreationSteps from 'ssp-key/src/components/CreationSteps/CreationSteps';
-import ToastNotif from 'ssp-key/src/components/Toast/Toast';
+import CreationSteps from '../../components/CreationSteps/CreationSteps';
+import ToastNotif from '../../components/Toast/Toast';
 
 type Props = {
   navigation: any;
