@@ -2,8 +2,8 @@ name: android-build
 on:
   push:
     # Pattern matched against refs/tags
-    tags:
-      - "**" # Push events to every tag including hierarchical tags like v1.0/beta
+    #tags:
+    #  - "**" # Push events to every tag including hierarchical tags like v1.0/beta
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -28,6 +28,19 @@ jobs:
     needs: install-and-test
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "yarn"
+      - name: Install npm dependencies
+        run: |
+          yarn
       - name: Decode Keystore
         id: decode_keystore
         uses: timheuer/base64-to-file@v1
