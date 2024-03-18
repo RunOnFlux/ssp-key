@@ -438,7 +438,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 selectedValue={selectedWallet}
                 onValueChange={(itemValue) => setSelectedWallet(itemValue)}
               >
-                {[...Array(1000)].map((e, i) => (
+                {[...Array(42)].map((e, i) => (
                   <Picker.Item
                     color={Colors.textInput}
                     label={`Wallet ${i + 1}`}
