@@ -31,6 +31,9 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     color: Colors.circleButtonColor,
     fill: Colors.circleButtonColor,
   };
+  const backgroundDisabled = {
+    backgroundColor: Colors.textGray400,
+  };
 
   return StyleSheet.create({
     base,
@@ -38,6 +41,7 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     circle,
     bluePrimary,
     secondaryButton,
+    backgroundDisabled,
     outline: {
       ...base,
       backgroundColor: Colors.transparent,

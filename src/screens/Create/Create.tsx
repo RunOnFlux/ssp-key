@@ -9,7 +9,6 @@ import {
   StyleSheet,
   Modal,
   Switch,
-  ActivityIndicator,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Icon from 'react-native-vector-icons/Feather';
@@ -39,6 +38,7 @@ import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from '../../components/CreationSteps/CreationSteps';
 import ToastNotif from '../../components/Toast/Toast';
+import ConfirmWordsModal from '../../components/ConfirmWordsModal/ConfirmWordsModal';
 
 type Props = {
   navigation: any;
@@ -51,6 +51,7 @@ function Create({ navigation }: Props) {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConfrimModalOpen, setIsConfrimModalOpen] = useState(false);
   const [mnemonic, setMnemonic] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(true);
@@ -130,12 +131,18 @@ function Create({ navigation }: Props) {
   }, [mnemonic]);
 
   const onChangeWSP = () => {
-    setWSPbackedUp(!WSPbackedUp);
+    if (wspWasShown) {
+      setWSPbackedUp(!WSPbackedUp);
+    } else {
+      displayMessage('info', t('cr:backup_needed'));
+    }
   };
 
   const handleOk = () => {
     if (WSPbackedUp && wspWasShown) {
-      storeMnemonic(mnemonic);
+      // storeMnemonic(mnemonic);
+      setIsModalOpen(false);
+      setIsConfrimModalOpen(true);
     } else {
       displayMessage('info', t('cr:backup_needed'));
     }
@@ -149,6 +156,15 @@ function Create({ navigation }: Props) {
     setWSPwasShown(false);
     setWSPbackedUp(false);
     setMnemonicShow(false);
+  };
+
+  const handleActionConfirmWords = (status: boolean) => {
+    if (status) {
+      storeMnemonic(mnemonic);
+    } else {
+      setIsConfrimModalOpen(false);
+      setIsModalOpen(true);
+    }
   };
 
   const storeMnemonic = (mnemonicPhrase: string) => {
@@ -197,6 +213,7 @@ function Create({ navigation }: Props) {
         await EncryptedStorage.setItem('ssp_key_pw', password);
         setIsModalOpen(false);
         setIsLoading(false);
+        setIsConfrimModalOpen(false);
         setMnemonic('');
         setPassword('');
         setPasswordConfirm('');
@@ -442,6 +459,7 @@ function Create({ navigation }: Props) {
                   onValueChange={onChangeWSP}
                   value={WSPbackedUp}
                   style={styles.toggleStyle}
+                  disabled={!wspWasShown}
                 />
                 <Text
                   style={[
@@ -461,26 +479,18 @@ function Create({ navigation }: Props) {
                   Common.button.bluePrimary,
                   Gutters.regularBMargin,
                   Gutters.smallTMargin,
+                  !wspWasShown || !WSPbackedUp
+                    ? Common.button.backgroundDisabled
+                    : null,
                 ]}
-                disabled={isLoading}
+                disabled={!wspWasShown || !WSPbackedUp}
                 onPress={() => handleOk()}
               >
-                {isLoading && (
-                  <ActivityIndicator
-                    size={'large'}
-                    style={[Gutters.largeVMargin]}
-                  />
-                )}
-                {!isLoading && (
-                  <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                    {t('cr:setup_key')}
-                  </Text>
-                )}
+                <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                  {t('common:confirm')}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                disabled={isLoading}
-                onPress={() => handleCancel()}
-              >
+              <TouchableOpacity onPress={() => handleCancel()}>
                 <Text
                   style={[
                     Fonts.textSmall,
@@ -496,6 +506,12 @@ function Create({ navigation }: Props) {
         </ScrollView>
         <ToastNotif />
       </Modal>
+      <ConfirmWordsModal
+        actionStatus={handleActionConfirmWords}
+        mnemonic={mnemonic}
+        isOpen={isConfrimModalOpen}
+        isLoading={isLoading}
+      />
       {!keyboardVisible && <PoweredByFlux />}
     </View>
   );

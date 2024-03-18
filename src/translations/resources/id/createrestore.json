@@ -28,5 +28,9 @@
   "get_started": "Mulai!",
   "create_key": "Buat Kunci",
   "backup_key": "Cadangkan Kunci",
-  "sync_wallet": "Sinkronisasi Dompet"
+  "sync_wallet": "Sinkronisasi Dompet",
+  "backup_confirmed": "Cadangan Dikonfirmasi!",
+  "confirm_key_seed_word": "Konfirmasi Benih Kunci",
+  "word_number": "Kata #{{number}}",
+  "incorrect_backup_confirmation": "Kata yang Salah"
 }
