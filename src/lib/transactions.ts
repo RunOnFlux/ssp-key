@@ -94,7 +94,7 @@ export function decodeTransactionForApproval(
       .dividedBy(10 ** decimals)
       .toFixed();
     // calculate fee
-    if (+fee < 0) {
+    if (utxos && utxos.length && +fee < 0) {
       // fee is negative, something is wrong. Reject.
       throw new Error('Unexpected negative fee. Transaction Rejected.');
     }
