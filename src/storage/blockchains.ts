@@ -8,6 +8,7 @@ const btcLogo = '/src/assets/btc.svg';
 const btcTestnetLogo = '/src/assets/btcTestnet.svg';
 const btcSignetLogo = '/src/assets/btcSignet.svg';
 const dogeLogo = '/src/assets/doge.svg';
+const zecLogo = '/src/assets/zec.svg';
 
 const flux = {
   id: 'flux',
@@ -185,12 +186,36 @@ const btcSignet = {
   bech32: 'tb1',
 };
 
+const zec = {
+  id: 'zec',
+  libid: 'zcash',
+  name: 'Zcash',
+  symbol: 'ZEC',
+  decimals: 8,
+  node: backends().zec.node,
+  slip: 133,
+  scriptType: 'p2sh',
+  messagePrefix: '\u0018Zcash Signed Message:\n',
+  pubKeyHash: '1cb8',
+  scriptHash: '1cbd',
+  wif: '80',
+  logo: zecLogo,
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  txVersion: 4,
+  txGroupID: 0xc2d6d0b4,
+  backend: 'blockbook',
+};
+
 export const blockchains = {
   btc,
   flux,
   doge,
   ltc,
   rvn,
+  zec,
   btcTestnet,
   btcSignet,
   fluxTestnet,
