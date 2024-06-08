@@ -26,6 +26,7 @@ const chains = {
   btc: chainSliceBase('btc'),
   doge: chainSliceBase('doge'),
   zec: chainSliceBase('zec'),
+  bch: chainSliceBase('bch'),
   btcTestnet: chainSliceBase('btcTestnet'),
   btcSignet: chainSliceBase('btcSignet'),
 };
@@ -45,6 +46,7 @@ const reducers = combineReducers({
   btc: chains.btc.reducer,
   doge: chains.doge.reducer,
   zec: chains.zec.reducer,
+  bch: chains.bch.reducer,
   btcTestnet: chains.btcTestnet.reducer,
   btcSignet: chains.btcSignet.reducer,
 });

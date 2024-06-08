@@ -280,6 +280,7 @@ export interface cryptos {
   btc: number;
   doge: number;
   zec: number;
+  bch: number;
   btcTestnet: number;
   btcSignet: number;
 }
