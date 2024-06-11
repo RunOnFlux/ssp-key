@@ -1,5 +1,6 @@
 import BigNumber from 'bignumber.js';
 import utxolib from '@runonflux/utxo-lib';
+import { toCashAddress } from 'bchaddrjs';
 import { cryptos, utxo } from '../types';
 
 import { blockchains } from '@storage/blockchains';
@@ -20,6 +21,7 @@ export function decodeTransactionForApproval(
   try {
     const libID = getLibId(chain);
     const decimals = blockchains[chain].decimals;
+    const cashAddrPrefix = blockchains[chain].cashaddr;
     const network = utxolib.networks[libID];
     const txhex = rawTx;
     const txb = utxolib.TransactionBuilder.fromTransaction(
@@ -97,6 +99,10 @@ export function decodeTransactionForApproval(
     if (utxos && utxos.length && +fee < 0) {
       // fee is negative, something is wrong. Reject.
       throw new Error('Unexpected negative fee. Transaction Rejected.');
+    }
+    if (cashAddrPrefix) {
+      senderAddress = toCashAddress(senderAddress);
+      txReceiver = toCashAddress(txReceiver);
     }
     const txInfo = {
       sender: senderAddress,

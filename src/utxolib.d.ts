@@ -88,6 +88,7 @@ declare module '@runonflux/utxo-lib' {
   let Transaction: {
     fromHex: (txhex: string, network: network) => object;
     SIGHASH_ALL: number;
+    SIGHASH_BITCOINCASHBIP143: number;
   };
   // Other methods/properties...
   // Replace 'any' with the appropriate type // Define the constructor signature and any other methods/properties

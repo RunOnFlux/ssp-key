@@ -25,6 +25,8 @@ const chains = {
   ltc: chainSliceBase('ltc'),
   btc: chainSliceBase('btc'),
   doge: chainSliceBase('doge'),
+  zec: chainSliceBase('zec'),
+  bch: chainSliceBase('bch'),
   btcTestnet: chainSliceBase('btcTestnet'),
   btcSignet: chainSliceBase('btcSignet'),
 };
@@ -43,6 +45,8 @@ const reducers = combineReducers({
   ltc: chains.ltc.reducer,
   btc: chains.btc.reducer,
   doge: chains.doge.reducer,
+  zec: chains.zec.reducer,
+  bch: chains.bch.reducer,
   btcTestnet: chains.btcTestnet.reducer,
   btcSignet: chains.btcSignet.reducer,
 });
@@ -82,11 +86,6 @@ const store = configureStore({
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
     });
-
-    if (__DEV__ && !process.env.JEST_WORKER_ID) {
-      const createDebugger = require('redux-flipper').default;
-      middlewares.push(createDebugger());
-    }
 
     return middlewares;
   },
