@@ -28,4 +28,4 @@ gem install bundler --install-dir $GEM_HOME
 yarn
 bundle update --bundler
 yarn bundleinstall
-yarn podprod
+yarn podinstall
