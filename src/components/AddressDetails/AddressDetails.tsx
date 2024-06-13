@@ -24,7 +24,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const [selectedChain, setSelectedChain] =
     useState<keyof cryptos>(identityChain);
   const [selectedPath, setSelectedPath] = useState('0-0');
-  const [selectedWallet, setSelectedWallet] = useState(0);
+  const [selectedWallet, setSelectedWallet] = useState('0');
   const [decryptedRedeemScript, setDecryptedRedeemScript] = useState('');
   const [decryptedWitnessScript, setDecryptedWitnessScript] = useState('');
   const [decryptedPrivateKey, setDecryptedPrivateKey] = useState('');
@@ -40,7 +40,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const blockchainConfig = blockchains[selectedChain];
 
   useEffect(() => {
-    const path = '0-' + selectedWallet.toString();
+    const path = '0-' + selectedWallet;
     setSelectedPath(path);
   }, [selectedWallet]);
 
@@ -173,7 +173,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 style={[Fonts.textTiny, Fonts.textCenter, Gutters.smallMargin]}
               >
                 {blockchainConfig.name} - {t('common:wallet')}{' '}
-                {selectedWallet + 1}
+                {+selectedWallet + 1}
               </Text>
               <TouchableOpacity
                 style={[
@@ -442,8 +442,8 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                   <Picker.Item
                     color={Colors.textInput}
                     label={`Wallet ${i + 1}`}
-                    value={i}
-                    key={i}
+                    value={i.toString()}
+                    key={i.toString()}
                   />
                 ))}
               </Picker>
