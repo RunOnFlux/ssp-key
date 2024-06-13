@@ -24,7 +24,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const [selectedChain, setSelectedChain] =
     useState<keyof cryptos>(identityChain);
   const [selectedPath, setSelectedPath] = useState('0-0');
-  const [selectedWallet, setSelectedWallet] = useState('0');
+  const [selectedWallet, setSelectedWallet] = useState(0);
   const [decryptedRedeemScript, setDecryptedRedeemScript] = useState('');
   const [decryptedWitnessScript, setDecryptedWitnessScript] = useState('');
   const [decryptedPrivateKey, setDecryptedPrivateKey] = useState('');
@@ -40,7 +40,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const blockchainConfig = blockchains[selectedChain];
 
   useEffect(() => {
-    const path = '0-' + selectedWallet;
+    const path = '0-' + selectedWallet.toString();
     setSelectedPath(path);
   }, [selectedWallet]);
 
