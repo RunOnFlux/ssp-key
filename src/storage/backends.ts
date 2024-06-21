@@ -72,6 +72,7 @@ export function backendsOriginal() {
     btc,
     doge,
     zec,
+    bch,
     btcTestnet,
     btcSignet,
   };
