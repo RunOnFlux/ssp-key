@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 // wallet.tx
 export interface minHDKey {
   keyPair: {
@@ -88,6 +87,7 @@ export interface vinBlockbook {
   txid: string;
   sequence: number;
   n: number;
+  vout: number;
   addresses: string[];
   isAddress: boolean;
   isOwn: boolean;
@@ -122,6 +122,7 @@ export interface transactionInsight {
   blockheight: number;
   confirmations: number;
   size: number;
+  vsize: number;
   time: number;
   blocktime: number;
   valueOut: number;
@@ -147,6 +148,7 @@ export interface transactionBlockbook {
   confirmations: number;
   blockTime: number;
   size: number;
+  vsize: number;
   blockTime: number;
   value: string;
   valueIn: string;
@@ -173,6 +175,7 @@ export interface wallet {
   balance: string;
   unconfirmedBalance: string;
   transactions: transaction[];
+  nodes?: node[];
 }
 
 export type wallets = Record<string, wallet>;
@@ -185,6 +188,10 @@ export interface transaction {
   fee: string;
   amount: string; // satoshis
   message: string;
+  receiver: string;
+  size: number;
+  vsize?: number;
+  utxos?: txIdentifier[];
 }
 
 export interface pendingTransaction {
@@ -206,6 +213,12 @@ export interface getInfoBlockbook {
   blockbook: {
     bestHeight: number;
   };
+}
+
+export interface evm_call {
+  jsonrpc: string;
+  id: number;
+  result: string;
 }
 
 export interface syncSSPRelay {
@@ -270,6 +283,8 @@ export interface currency {
   CZK: number;
   BHD: number;
   UAH: number;
+  BTC: number;
+  ETH: number;
 }
 
 export interface cryptos {
@@ -283,6 +298,7 @@ export interface cryptos {
   bch: number;
   btcTestnet: number;
   btcSignet: number;
+  sepolia: number;
 }
 
 export interface currencySSPRelay {

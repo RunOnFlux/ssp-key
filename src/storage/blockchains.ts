@@ -10,6 +10,7 @@ const btcSignetLogo = '/src/assets/btcSignet.svg';
 const dogeLogo = '/src/assets/doge.svg';
 const zecLogo = '/src/assets/zec.svg';
 const bchLogo = '/src/assets/bch.svg';
+const ethLogo = '/src/assets/eth.svg';
 
 const flux = {
   id: 'flux',
@@ -260,7 +261,7 @@ const zec = {
   backend: 'blockbook',
   dustLimit: 546, // min utxo amount
   minFeePerByte: 1, // min fee per byte
-  feePerByte: 2, // fee per byte
+  feePerByte: 3, // fee per byte
   maxMessage: 80, // 80 bytes in size
   maxTxSize: 100000, // 100,000 vbytes
   rbf: false,
@@ -288,12 +289,34 @@ const bch = {
   backend: 'blockbook',
   dustLimit: 546, // min utxo amount
   minFeePerByte: 1, // min fee per byte
-  feePerByte: 15, // fee per byte
+  feePerByte: 4, // fee per byte
   maxMessage: 80, // 80 bytes in size
   maxTxSize: 100000, // 100,000 vbytes
-  rbf: true,
+  rbf: false,
   cashaddr: 'bitcoincash:',
   hashType: 0x40, // will force SIGHASH_BITCOINCASHBIP143
+};
+
+const sepolia = {
+  id: 'sepolia',
+  name: 'Sepolia Ethereum',
+  symbol: 'ETH',
+  logo: ethLogo,
+  slip: 1,
+  decimals: 18,
+  node: backends().sepolia.node,
+  bip32: {
+    // not specified, use default
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  scriptType: 'p2sh', // not specified, use default
+  chainType: 'evm',
+  backend: 'alchemy',
+  accountSalt: 'aasalt', // ssp uses this salt for smart accounts
+  factorySalt: 'aafactorysalt', // factory uses this salt
+  factoryAddress: '0xA76f98D25C9775F67DCf8B9EF9618d454D287467',
+  entrypointAddress: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
 };
 
 export const blockchains = {
@@ -307,4 +330,5 @@ export const blockchains = {
   btcTestnet,
   btcSignet,
   fluxTestnet,
+  sepolia,
 };
