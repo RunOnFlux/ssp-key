@@ -5,7 +5,14 @@ import { HDKey } from '@scure/bip32';
 import * as bip39 from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import { toCashAddress } from 'bchaddrjs';
-import { keyPair, minHDKey, multisig, xPrivXpub, cryptos } from '../types';
+import {
+  keyPair,
+  minHDKey,
+  multisig,
+  xPrivXpub,
+  cryptos,
+  publicPrivateNonce,
+} from '../types';
 import { blockchains } from '@storage/blockchains';
 
 export function getLibId(chain: keyof cryptos): string {
@@ -368,4 +375,17 @@ export function generateInternalIdentityAddress(
   const address = genKeypair.getAddress();
 
   return address;
+}
+
+export function generatePublicNonce(): publicPrivateNonce {
+  // generate public nonce for evm
+  const publicNonce = aaSchnorrMultisig.core._generateNonce();
+
+  const ppNonce = {
+    k: publicNonce.k.toString('hex'),
+    kTwo: publicNonce.kTwo.toString('hex'),
+    kPublic: publicNonce.kPublic.toString('hex'),
+    kTwoPublic: publicNonce.kTwoPublic.toString('hex'),
+  };
+  return ppNonce;
 }

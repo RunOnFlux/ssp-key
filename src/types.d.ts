@@ -221,11 +221,18 @@ export interface evm_call {
   result: string;
 }
 
+export interface publicNonce {
+  kPublic: string;
+  kTwoPublic: string;
+}
+
 export interface syncSSPRelay {
   chain: string;
   walletIdentity: string;
   keyXpub: string;
   wkIdentity: string;
+  keyToken?: string | null;
+  publicNonces?: publicNonce[];
 }
 
 export interface actionSSPRelay {
@@ -304,4 +311,11 @@ export interface cryptos {
 export interface currencySSPRelay {
   fiat: currency;
   crypto: cryptos;
+}
+
+export interface publicPrivateNonce {
+  k: string;
+  kTwo: string;
+  kPublic: string;
+  kTwoPublic: string;
 }

@@ -25,7 +25,7 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
-import { cryptos, utxo } from '../../types';
+import { cryptos, utxo, syncSSPRelay, publicNonce } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
 const CryptoJS = require('crypto-js');
@@ -36,6 +36,7 @@ import {
   generateMultisigAddress,
   generateInternalIdentityAddress,
   generateAddressKeypair,
+  generatePublicNonce,
 } from '../../lib/wallet';
 
 import {
@@ -247,13 +248,31 @@ function Home({ navigation }: Props) {
         ).toString();
         setXpubWallet(chain, encryptedXpubWallet);
         // tell ssp relay that we are synced, post data to ssp sync
-        const syncData = {
+        const syncData: syncSSPRelay = {
           chain,
           walletIdentity: sspWalletInternalIdentity,
           keyXpub: xpubKeyDecrypted,
           wkIdentity: sspWalletKeyInternalIdentity,
           keyToken: await getFCMToken(),
         };
+        // == EVM ==
+        if (blockchains[chain].chainType === 'evm') {
+          const ppNonces = [];
+          // generate and replace nonces
+          for (let i = 0; i < 50; i += 1) {
+            // max 50 txs
+            const nonce = generatePublicNonce();
+            ppNonces.push(nonce);
+          }
+          // @TODO save these to our encrypted storage
+          // on publicNonces delete k and kTwo, leave only public parts
+          const publicNonces: publicNonce[] = ppNonces.map((nonce) => ({
+            kPublic: nonce.kPublic,
+            kTwoPublic: nonce.kTwoPublic,
+          }));
+          syncData.publicNonces = publicNonces;
+        }
+        // == EVM end
         console.log(syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
@@ -326,7 +345,7 @@ function Home({ navigation }: Props) {
           setSspWalletInternalIdentity(generatedSspWalletInternalIdentity),
         );
         // tell ssp relay that we are synced, post data to ssp sync
-        const syncData = {
+        const syncData: syncSSPRelay = {
           chain: identityChain,
           walletIdentity: generatedSspWalletInternalIdentity,
           keyXpub: xpubKeyDecrypted,
