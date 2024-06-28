@@ -56,6 +56,7 @@ import {
 import {
   setSspWalletKeyInternalIdentity,
   setSspWalletInternalIdentity,
+  setSspKeyPublicNonces,
 } from '../../store/ssp';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
@@ -264,7 +265,12 @@ function Home({ navigation }: Props) {
             const nonce = generatePublicNonce();
             ppNonces.push(nonce);
           }
-          // @TODO save these to our encrypted storage
+          const stringifiedNonces = JSON.stringify(ppNonces);
+          const encryptedNonces = CryptoJS.AES.encrypt(
+            stringifiedNonces,
+            pwForEncryption,
+          ).toString();
+          dispatch(setSspKeyPublicNonces(encryptedNonces));
           // on publicNonces delete k and kTwo, leave only public parts
           const publicNonces: publicNonce[] = ppNonces.map((nonce) => ({
             kPublic: nonce.kPublic,
