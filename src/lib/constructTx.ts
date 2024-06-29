@@ -268,8 +268,8 @@ export function selectPublicNonce(
   for (let i = 0; i < txPublicNonces.length; i += 1) {
     const nonceExists = publicNonces.find(
       (n) =>
-        txPublicNonces.kPublic.toString('hex') === n.kPublic &&
-        txPublicNonces.kTwoPublic.toString('hex') === n.kTwoPublic,
+        txPublicNonces[i].kPublic.buffer.toString('hex') === n.kPublic &&
+        txPublicNonces[i].kTwoPublic.buffer.toString('hex') === n.kTwoPublic,
     );
     if (nonceExists) {
       nonceToUse = nonceExists;
@@ -318,7 +318,7 @@ export async function signAndBroadcastEVM(
 
     const rpcUrl = backendConfig.node;
 
-    const transport = viemHttp(rpcUrl);
+    const transport = viemHttp(`https://${rpcUrl}`);
     const CHAIN = viemChains[blockchainConfig.libid as keyof typeof viemChains];
 
     const publicKeys = multiSigUserOp._getPublicKeys();
@@ -327,6 +327,7 @@ export async function signAndBroadcastEVM(
         publicKeys,
         publicKeys.length,
       );
+
     const multiSigSmartAccount =
       await accountAbstraction.accountAbstraction.createMultiSigSmartAccount({
         // @ts-ignore
@@ -356,11 +357,12 @@ export async function signAndBroadcastEVM(
       multiSigSmartAccount.getEntryPoint().address,
     );
 
-    console.log(uoHash);
-    return uoHash;
+    console.log(uoHash); // this is user operation hash, not tx hash
 
-    // const txHash = await smartAccountClient.waitForUserOperationTransaction({ hash: uoHash })
-    // console.log("tx", txHash)
+    const txHash = await smartAccountClient.waitForUserOperationTransaction({
+      hash: uoHash,
+    });
+    return txHash;
   } catch (error) {
     console.log(error);
     throw error;

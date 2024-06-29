@@ -15,7 +15,7 @@
     "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process' --yarn --hack && patch-package && react-native setup-ios-permissions"
   },
   "dependencies": {
-    "@alchemy/aa-core": "3.12.0",
+    "@alchemy/aa-core": "~3.12.3",
     "@notifee/react-native": "~7.8.2",
     "@react-native-firebase/app": "~20.1.0",
     "@react-native-firebase/messaging": "~20.1.0",
@@ -67,7 +67,7 @@
     "socket.io-client": "~4.7.5",
     "stream-browserify": "~3.0.0",
     "util": "~0.12.5",
-    "viem": "2.10.8"
+    "viem": "~2.16.4"
   },
   "devDependencies": {
     "@types/bchaddrjs": "~0.4.3",
