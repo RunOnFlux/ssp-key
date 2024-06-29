@@ -1,4 +1,8 @@
 import utxolib from '@runonflux/utxo-lib';
+import * as accountAbstraction from '@runonflux/aa-schnorr-multisig-sdk';
+import { getEntryPoint, createSmartAccountClient } from '@alchemy/aa-core';
+import { http as viemHttp } from 'viem';
+import * as viemChains from 'viem/chains';
 import { Buffer } from 'buffer';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
@@ -238,6 +242,79 @@ export async function broadcastTx(
       });
       return response.data.txid;
     }
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+// return txhash
+export async function signAndBroadcastEVM(
+  rawTx: string,
+  chain: keyof cryptos,
+  privateKey: `0x${string}`, // ssp
+): Promise<string> {
+  try {
+    const blockchainConfig = blockchains[chain];
+    const backendConfig = backends()[chain];
+    const accountSalt = blockchainConfig.accountSalt;
+    const schnorrSigner2 =
+      accountAbstraction.helpers.SchnorrHelpers.createSchnorrSigner(privateKey);
+
+    const multisigUserOpJSON = JSON.parse(rawTx);
+    const multiSigUserOp =
+      accountAbstraction.userOperation.MultiSigUserOp.fromJson(
+        multisigUserOpJSON,
+      );
+    multiSigUserOp.signMultiSigHash(schnorrSigner2); // this is not part of ssp wallet
+
+    const summedSignature = multiSigUserOp.getSummedSigData();
+
+    const rpcUrl = backendConfig.node;
+
+    const transport = viemHttp(rpcUrl);
+    const CHAIN = viemChains[blockchainConfig.libid as keyof typeof viemChains];
+
+    const publicKeys = multiSigUserOp._getPublicKeys();
+    const combinedAddresses =
+      accountAbstraction.helpers.SchnorrHelpers.getAllCombinedAddrFromKeys(
+        publicKeys,
+        publicKeys.length,
+      );
+    const multiSigSmartAccount =
+      await accountAbstraction.accountAbstraction.createMultiSigSmartAccount({
+        // @ts-ignore
+        transport,
+        // @ts-ignore
+        chain: CHAIN,
+        combinedAddress: combinedAddresses,
+        salt: accountAbstraction.helpers.create2Helpers.saltToHex(accountSalt),
+        // @ts-ignore
+        entryPoint: getEntryPoint(CHAIN),
+      });
+
+    const smartAccountClient = createSmartAccountClient({
+      // @ts-ignore
+      transport,
+      // @ts-ignore
+      chain: CHAIN,
+      // @ts-ignore
+      account: multiSigSmartAccount,
+    });
+
+    const uoHash = await smartAccountClient.sendRawUserOperation(
+      {
+        ...multisigUserOpJSON.userOpRequest,
+        signature: summedSignature,
+      },
+      multiSigSmartAccount.getEntryPoint().address,
+    );
+
+    console.log(uoHash);
+    return uoHash;
+
+    // const txHash = await smartAccountClient.waitForUserOperationTransaction({ hash: uoHash })
+    // console.log("tx", txHash)
   } catch (error) {
     console.log(error);
     throw error;

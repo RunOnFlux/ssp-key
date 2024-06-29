@@ -178,6 +178,26 @@ export interface wallet {
   nodes?: node[];
 }
 
+export interface node {
+  txid: string;
+  vout: number;
+  amount: string;
+  name: string;
+  ip: string;
+  status: string;
+}
+
+export interface contact {
+  id: number;
+  name: string;
+  address: string;
+}
+
+export interface txIdentifier {
+  txid: string;
+  vout: number;
+}
+
 export type wallets = Record<string, wallet>;
 export type generatedWallets = Record<string, string>;
 export interface transaction {
@@ -189,9 +209,11 @@ export interface transaction {
   amount: string; // satoshis
   message: string;
   receiver: string;
-  size: number;
+  size?: number;
   vsize?: number;
   utxos?: txIdentifier[];
+  type?: string; // evm
+  isError?: boolean;
 }
 
 export interface pendingTransaction {
@@ -221,7 +243,66 @@ export interface evm_call {
   result: string;
 }
 
+export interface etherscan_external_tx {
+  blockNumber: string;
+  timeStamp: string;
+  hash: string;
+  from: string;
+  to: string;
+  nonce: string;
+  blockHash: string;
+  transactionIndex: string;
+  value: string;
+  gas: string;
+  gasPrice: string;
+  cumulativeGasUsed: string;
+  gasUsed: string;
+  isError: string;
+  errCode: string;
+  txreceipt_status: string;
+  input: string;
+  confirmations: string;
+  methodId: string;
+  functionName: string;
+}
+
+export interface etherscan_internal_tx {
+  blockNumber: string;
+  timeStamp: string;
+  hash: string;
+  from: string;
+  to: string;
+  value: string;
+  contractAddress: string;
+  input: string;
+  type: string;
+  gas: string;
+  gasUsed: string;
+  traceId: string;
+  isError: string;
+  errCode: string;
+}
+
+export interface etherscan_call_external_txs {
+  status: string;
+  message: string;
+  result: etherscan_external_tx[];
+}
+
+export interface etherscan_call_internal_txs {
+  status: string;
+  message: string;
+  result: etherscan_internal_tx[];
+}
+
 export interface publicNonce {
+  kPublic: string;
+  kTwoPublic: string;
+}
+
+export interface publicPrivateNonce {
+  k: string;
+  kTwo: string;
   kPublic: string;
   kTwoPublic: string;
 }
@@ -308,14 +389,110 @@ export interface cryptos {
   sepolia: number;
 }
 
+export interface externalIdentity {
+  privKey: string;
+  pubKey: string;
+  address: string;
+}
+
 export interface currencySSPRelay {
   fiat: currency;
   crypto: cryptos;
 }
 
-export interface publicPrivateNonce {
-  k: string;
-  kTwo: string;
-  kPublic: string;
-  kTwoPublic: string;
+export interface networkFee {
+  coin: string;
+  economy: number;
+  normal: number;
+  fast: number;
+  recommended: number;
+}
+
+export type networkFeesSSPRelay = networkFee[];
+
+export interface confirmedNodeInsight {
+  collateral: string;
+  txhash: string;
+  outidx: string;
+  ip: string;
+  network: string;
+  added_height: number;
+  confirmed_height: number;
+  last_confirmed_height: number;
+  last_paid_height: number;
+  tier: string;
+  payment_address: string;
+  pubkey: string;
+  activesince: string;
+  lastpaid: string;
+  amount: string;
+  rank: number;
+}
+
+export interface confirmedNodesInsight {
+  result: confirmedNodeInsight[];
+}
+
+export interface dosNodeFlux {
+  collateral: string;
+  added_height: number;
+  payment_address: string;
+  eligible_in: number;
+  amount: string;
+}
+
+export interface dosFlux {
+  status: string;
+  data: dosNodeFlux[];
+}
+
+export interface dosFluxInsight {
+  error: string;
+  id: number;
+  result: dosNodeFlux[];
+}
+
+export interface startNodeFlux {
+  collateral: string;
+  added_height: number;
+  payment_address: string;
+  expires_in: number;
+  amount: string;
+}
+
+export interface startFlux {
+  status: string;
+  data: startNodeFlux[];
+}
+
+export interface startFluxInsight {
+  error: string;
+  id: number;
+  result: startNodeFlux[];
+}
+
+export interface fusionPAavailable {
+  status: string;
+  data: {
+    address: string;
+    totalClaim: number;
+    totalMiningFees: number;
+    totalSwapFees: number;
+    totalFee: number;
+    totalReward: number;
+    message: string;
+    code: number;
+    name: string;
+  };
+}
+
+export interface errorResponse {
+  message: string;
+  code: number;
+  name: string;
+}
+
+export interface fusionMessage {
+  status: string;
+  data: errorResponse | string;
 }
