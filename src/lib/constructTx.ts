@@ -12,6 +12,7 @@ import {
   blockbookBroadcastTxResult,
   broadcastTxResult,
   cryptos,
+  publicPrivateNonce,
 } from '../types';
 
 import { backends } from '@storage/backends';
@@ -248,11 +249,46 @@ export async function broadcastTx(
   }
 }
 
+export function selectPublicNonce(
+  rawTx: string,
+  publicNonces: publicPrivateNonce[], // ssp Key
+): publicPrivateNonce {
+  const multisigUserOpJSON = JSON.parse(rawTx);
+  const multiSigUserOp =
+    accountAbstraction.userOperation.MultiSigUserOp.fromJson(
+      multisigUserOpJSON,
+    );
+
+  // here restore public nonce
+  const txPublicNonces = multiSigUserOp._getPublicNonces();
+  if (!publicNonces || !publicNonces.length) {
+    throw new Error('SSP Key Public nonces are missing');
+  }
+  let nonceToUse;
+  for (let i = 0; i < txPublicNonces.length; i += 1) {
+    const nonceExists = publicNonces.find(
+      (n) =>
+        txPublicNonces.kPublic.toString('hex') === n.kPublic &&
+        txPublicNonces.kTwoPublic.toString('hex') === n.kTwoPublic,
+    );
+    if (nonceExists) {
+      nonceToUse = nonceExists;
+      break;
+    }
+  }
+
+  if (!nonceToUse) {
+    throw new Error('SSP Key Public nonces do not match');
+  }
+  return nonceToUse;
+}
+
 // return txhash
 export async function signAndBroadcastEVM(
   rawTx: string,
   chain: keyof cryptos,
   privateKey: `0x${string}`, // ssp
+  publicNonceKey: publicPrivateNonce, // ssp Key
 ): Promise<string> {
   try {
     const blockchainConfig = blockchains[chain];
@@ -266,6 +302,16 @@ export async function signAndBroadcastEVM(
       accountAbstraction.userOperation.MultiSigUserOp.fromJson(
         multisigUserOpJSON,
       );
+
+    const kPrivate = new accountAbstraction.types.Key(
+      Buffer.from(publicNonceKey.k, 'hex'),
+    );
+    const kTwoPrivate = new accountAbstraction.types.Key(
+      Buffer.from(publicNonceKey.kTwo, 'hex'),
+    );
+
+    schnorrSigner2.restorePubNonces(kPrivate, kTwoPrivate);
+
     multiSigUserOp.signMultiSigHash(schnorrSigner2); // this is not part of ssp wallet
 
     const summedSignature = multiSigUserOp.getSummedSigData();

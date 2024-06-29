@@ -25,7 +25,13 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
-import { cryptos, utxo, syncSSPRelay, publicNonce } from '../../types';
+import {
+  cryptos,
+  utxo,
+  syncSSPRelay,
+  publicNonce,
+  publicPrivateNonce,
+} from '../../types';
 import { blockchains } from '@storage/blockchains';
 
 const CryptoJS = require('crypto-js');
@@ -45,6 +51,7 @@ import {
   broadcastTx,
   fetchUtxos,
   signAndBroadcastEVM,
+  selectPublicNonce,
 } from '../../lib/constructTx';
 
 import {
@@ -102,6 +109,7 @@ function Home({ navigation }: Props) {
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
+  const { publicNonces } = useAppSelector((state) => state.ssp);
   const [activityStatus, setActivityStatus] = useState(false);
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
 
@@ -273,11 +281,11 @@ function Home({ navigation }: Props) {
           ).toString();
           dispatch(setSspKeyPublicNonces(encryptedNonces));
           // on publicNonces delete k and kTwo, leave only public parts
-          const publicNonces: publicNonce[] = ppNonces.map((nonce) => ({
+          const pNs: publicNonce[] = ppNonces.map((nonce) => ({
             kPublic: nonce.kPublic,
             kTwoPublic: nonce.kTwoPublic,
           }));
-          syncData.publicNonces = publicNonces;
+          syncData.publicNonces = pNs;
         }
         // == EVM end
         console.log(syncData);
@@ -524,7 +532,29 @@ function Home({ navigation }: Props) {
       );
       let ttxid = '';
       if (blockchains[chain].chainType === 'evm') {
-        ttxid = await signAndBroadcastEVM(rawTransaction, chain, keyPair.privKey as `0x${string}`);
+        const pNs = CryptoJS.AES.decrypt(publicNonces, pwForEncryption);
+        const pNsDecrypted = pNs.toString(CryptoJS.enc.Utf8);
+        const pubNonces = JSON.parse(pNsDecrypted) as publicPrivateNonce[];
+        const publicNonceKey = selectPublicNonce(rawTransaction, pubNonces);
+        // crucial delete nonce from publicNonces
+        const newPublicNonces = pubNonces.filter(
+          (nonce: publicPrivateNonce) =>
+            nonce.kPublic !== publicNonceKey.kPublic,
+        );
+        // encrypt and save new publicNonces
+        const stringifiedNonces = JSON.stringify(newPublicNonces);
+        const encryptedNonces = CryptoJS.AES.encrypt(
+          stringifiedNonces,
+          pwForEncryption,
+        ).toString();
+        dispatch(setSspKeyPublicNonces(encryptedNonces));
+        // sign and broadcast
+        ttxid = await signAndBroadcastEVM(
+          rawTransaction,
+          chain,
+          keyPair.privKey as `0x${string}`,
+          publicNonceKey,
+        );
       } else {
         const signedTx = await signTransaction(
           rawTransaction,
