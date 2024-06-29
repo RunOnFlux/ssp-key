@@ -44,6 +44,7 @@ import {
   finaliseTransaction,
   broadcastTx,
   fetchUtxos,
+  signAndBroadcastEVM,
 } from '../../lib/constructTx';
 
 import {
@@ -462,7 +463,7 @@ function Home({ navigation }: Props) {
       });
   };
   const handleTxRequest = async (
-    rawTransactions: string,
+    rawTransaction: string,
     chain: keyof cryptos,
     path: string,
     utxos: utxo[] = [],
@@ -471,7 +472,7 @@ function Home({ navigation }: Props) {
     if (utxos) {
       setTxUtxos(utxos);
     }
-    setRawTx(rawTransactions);
+    setRawTx(rawTransaction);
     setTxPath(path);
   };
   const handleSyncRequest = async (xpubw: string, chain: keyof cryptos) => {
@@ -479,7 +480,7 @@ function Home({ navigation }: Props) {
     setSyncReq(xpubw);
   };
   const approveTransaction = async (
-    rawTransactions: string,
+    rawTransaction: string,
     chain: keyof cryptos,
     derivationPath: string,
     suggestedUtxos: utxo[],
@@ -521,30 +522,35 @@ function Home({ navigation }: Props) {
         addressIndex,
         chain,
       );
-      const signedTx = await signTransaction(
-        rawTransactions,
-        chain,
-        keyPair.privKey,
-        addressDetails.redeemScript ?? '',
-        addressDetails.witnessScript ?? '',
-        utxos,
-      );
-      const finalTx = finaliseTransaction(signedTx, chain);
-      console.log(finalTx);
-      const ttxid = await broadcastTx(finalTx, chain);
-      console.log(ttxid);
+      let txid = '';
+      if (blockchains[chain].chainType === 'evm') {
+        txid = await signAndBroadcastEVM(rawTransaction, chain, keyPair.privKey as `0x${string}`);
+      } else {
+        const signedTx = await signTransaction(
+          rawTransaction,
+          chain,
+          keyPair.privKey,
+          addressDetails.redeemScript ?? '',
+          addressDetails.witnessScript ?? '',
+          utxos,
+        );
+        const finalTx = finaliseTransaction(signedTx, chain);
+        console.log(finalTx);
+        txid = await broadcastTx(finalTx, chain);
+      }
+      console.log(txid);
       setRawTx('');
       setTxPath('');
       setTxUtxos([]);
       // here tell ssp-relay that we are finished, rewrite the request
       await postAction(
         'txid',
-        ttxid,
+        txid,
         chain,
         derivationPath,
         sspWalletKeyInternalIdentity,
       );
-      setTxid(ttxid);
+      setTxid(txid);
     } catch (error) {
       displayMessage('error', t('home:err_tx_failed'));
       console.log(error);
@@ -594,8 +600,8 @@ function Home({ navigation }: Props) {
           } else if (dataToProcess.startsWith('0')) {
             // transaction
             // sign transaction
-            const rawTransactions = dataToProcess;
-            handleTxRequest(rawTransactions, chain, wallet);
+            const rawTransaction = dataToProcess;
+            handleTxRequest(rawTransaction, chain, wallet);
             setTimeout(() => {
               setIsManualInputModalOpen(false);
             });
@@ -669,8 +675,8 @@ function Home({ navigation }: Props) {
           handleSyncRequest(xpubw, chain);
         } else if (dataToProcess.startsWith('0')) {
           // transaction
-          const rawTransactions = dataToProcess;
-          handleTxRequest(rawTransactions, chain, wallet);
+          const rawTransaction = dataToProcess;
+          handleTxRequest(rawTransaction, chain, wallet);
         } else {
           setTimeout(() => {
             displayMessage('error', t('home:err_invalid_scanned_data'));

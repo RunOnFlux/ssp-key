@@ -297,7 +297,7 @@ export function generateAddressKeypairEVM(
   const privateKey =
     '0x' + Buffer.from(externalAddress.privateKey!).toString('hex');
 
-  return { privKey: privateKey, pubKey: publicKey };
+  return { privKey: privateKey as `0x${string}`, pubKey: publicKey };
 }
 
 // given xpriv of our party, generate keypair consisting of privateKey in WIF format and public key belonging to it

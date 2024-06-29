@@ -1,5 +1,7 @@
 import BigNumber from 'bignumber.js';
 import utxolib from '@runonflux/utxo-lib';
+import { decodeFunctionData } from 'viem';
+import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
 import { cryptos, utxo } from '../types';
 
@@ -19,6 +21,9 @@ export function decodeTransactionForApproval(
   utxos: utxo[],
 ) {
   try {
+    if (blockchains[chain].chainType === 'evm') {
+      return decodeEVMTransactionForApproval(rawTx, chain);
+    }
     const libID = getLibId(chain);
     const decimals = blockchains[chain].decimals;
     const cashAddrPrefix = blockchains[chain].cashaddr;
@@ -109,6 +114,62 @@ export function decodeTransactionForApproval(
       receiver: txReceiver,
       amount,
       fee,
+    };
+    return txInfo;
+  } catch (error) {
+    console.log(error);
+    const txInfo = {
+      sender: 'decodingError',
+      receiver: 'decodingError',
+      amount: 'decodingError',
+      fee: 'decodingError',
+    };
+    return txInfo;
+  }
+}
+
+interface decodedAbiData {
+  functionName: string;
+  args: [string, BigInt, string];
+}
+
+export function decodeEVMTransactionForApproval(
+  rawTx: string,
+  chain: keyof cryptos,
+) {
+  try {
+    const decimals = blockchains[chain].decimals;
+    const multisigUserOpJSON = JSON.parse(rawTx);
+    const { callData, sender } = multisigUserOpJSON.userOpRequest;
+
+    const decodedData: decodedAbiData = decodeFunctionData({
+      abi: abi.MultiSigSmartAccount_abi,
+      data: callData,
+    }) as decodedAbiData; // Cast decodedData to decodedAbiData type.
+
+    let txReceiver = 'decodingError';
+    let amount = '0';
+    let senderAddress = sender;
+
+    if (
+      decodedData &&
+      decodedData.functionName === 'execute' &&
+      decodedData.args &&
+      decodedData.args.length === 3
+    ) {
+      txReceiver = decodedData.args[0] as string;
+      amount = new BigNumber(decodedData.args[1].toString())
+        .dividedBy(new BigNumber(10 ** decimals))
+        .toFixed();
+    } else {
+      throw new Error('Unexpected decoded data.');
+    }
+
+    const txInfo = {
+      sender: senderAddress,
+      receiver: txReceiver,
+      amount,
+      fee: '0', // @todo: calculate fee
     };
     return txInfo;
   } catch (error) {
