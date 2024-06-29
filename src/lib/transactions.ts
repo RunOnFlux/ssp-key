@@ -149,7 +149,7 @@ export function decodeEVMTransactionForApproval(
 
     let txReceiver = 'decodingError';
     let amount = '0';
-    let senderAddress = sender;
+    const senderAddress = sender;
 
     if (
       decodedData &&

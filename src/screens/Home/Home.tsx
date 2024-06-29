@@ -522,9 +522,9 @@ function Home({ navigation }: Props) {
         addressIndex,
         chain,
       );
-      let txid = '';
+      let ttxid = '';
       if (blockchains[chain].chainType === 'evm') {
-        txid = await signAndBroadcastEVM(rawTransaction, chain, keyPair.privKey as `0x${string}`);
+        ttxid = await signAndBroadcastEVM(rawTransaction, chain, keyPair.privKey as `0x${string}`);
       } else {
         const signedTx = await signTransaction(
           rawTransaction,
@@ -536,21 +536,21 @@ function Home({ navigation }: Props) {
         );
         const finalTx = finaliseTransaction(signedTx, chain);
         console.log(finalTx);
-        txid = await broadcastTx(finalTx, chain);
+        ttxid = await broadcastTx(finalTx, chain);
       }
-      console.log(txid);
+      console.log(ttxid);
       setRawTx('');
       setTxPath('');
       setTxUtxos([]);
       // here tell ssp-relay that we are finished, rewrite the request
       await postAction(
         'txid',
-        txid,
+        ttxid,
         chain,
         derivationPath,
         sspWalletKeyInternalIdentity,
       );
-      setTxid(txid);
+      setTxid(ttxid);
     } catch (error) {
       displayMessage('error', t('home:err_tx_failed'));
       console.log(error);
