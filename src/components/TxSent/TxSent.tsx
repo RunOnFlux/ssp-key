@@ -31,7 +31,9 @@ const TxSent = (props: {
   const openExplorer = () => {
     console.log('Open Explorer');
     const backendConfig = backends()[props.chain];
-    Linking.openURL(`https://${backendConfig.node}/tx/${props.txid}`);
+    Linking.openURL(
+      `https://${backendConfig.explorer ?? backendConfig.node}/tx/${props.txid}`,
+    );
   };
 
   return (
