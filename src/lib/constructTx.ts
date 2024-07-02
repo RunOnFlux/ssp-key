@@ -369,6 +369,14 @@ export async function signAndBroadcastEVM(
     return txHash ?? uoHash;
   } catch (error) {
     console.log(error);
+    // @ts-ignore
+    if (error.message && error.message.includes('Details: ')) {
+      // @ts-ignore
+      const splitted = error.message.split('Details: ');
+      const lastDetail = splitted[splitted.length - 1];
+      // throw just this last detail
+      throw new Error(lastDetail);
+    }
     throw error;
   }
 }
