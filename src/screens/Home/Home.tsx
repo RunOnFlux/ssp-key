@@ -20,6 +20,8 @@ import ManualInput from '../../components/ManualInput/ManualInput';
 import MenuModal from '../../components/MenuModal/MenuModal';
 import Scanner from '../../components/Scanner/Scanner';
 import Navbar from '../../components/Navbar/Navbar';
+import PublicNoncesRequest from '../..//components/PublicNoncesRequest/PublicNoncesRequest';
+import PublicNoncesSuccess from '../../components/PublicNoncesSuccess/PublicNoncesSuccess';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
@@ -1113,16 +1115,13 @@ function Home({ navigation }: Props) {
             />
           )}
           {publicNoncesReq && (
-            <SyncRequest
-              chain={activeChain}
+            <PublicNoncesRequest
               activityStatus={activityStatus}
               actionStatus={handlePublicNoncesRequestAction}
             />
           )}
           {publicNoncesShared && (
-            <SyncRequest
-              chain={activeChain}
-              activityStatus={activityStatus}
+            <PublicNoncesSuccess
               actionStatus={handlePublicNoncesSharedModalAction}
             />
           )}
