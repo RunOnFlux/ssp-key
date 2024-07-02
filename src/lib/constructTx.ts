@@ -357,12 +357,16 @@ export async function signAndBroadcastEVM(
       multiSigSmartAccount.getEntryPoint().address,
     );
 
-    console.log(uoHash); // this is user operation hash, not tx hash
+    console.log(uoHash); // this is user operation hash, means it was succesfully sent but not yet included in transaction. All went well, not tx hash
 
-    const txHash = await smartAccountClient.waitForUserOperationTransaction({
-      hash: uoHash,
-    });
-    return txHash;
+    const txHash = await smartAccountClient
+      .waitForUserOperationTransaction({
+        hash: uoHash,
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+    return txHash ?? uoHash;
   } catch (error) {
     console.log(error);
     throw error;

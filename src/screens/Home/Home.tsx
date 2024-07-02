@@ -582,7 +582,8 @@ function Home({ navigation }: Props) {
       );
       setTxid(ttxid);
     } catch (error) {
-      displayMessage('error', t('home:err_tx_failed'));
+      // @ts-ignore
+      displayMessage('error', error.message ?? 'home:err_tx_failed');
       console.log(error);
     } finally {
       setSubmittingTransaction(false);
