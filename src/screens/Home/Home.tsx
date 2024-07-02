@@ -802,7 +802,7 @@ function Home({ navigation }: Props) {
             result.data.path,
             result.data.utxos,
           );
-        } else if (result.data.action === 'publicnoncesrequested') {
+        } else if (result.data.action === 'publicnoncesrequest') {
           // only this action is valid for us
           handlePublicNoncesRequest(result.data.chain);
         }
