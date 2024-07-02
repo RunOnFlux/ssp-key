@@ -95,6 +95,8 @@ function Home({ navigation }: Props) {
   const [txPath, setTxPath] = useState('');
   const [txUtxos, setTxUtxos] = useState<utxo[]>([]);
   const [syncReq, setSyncReq] = useState('');
+  const [publicNoncesReq, setPublicNoncesReq] = useState('');
+  const [publicNoncesShared, setPublicNoncesShared] = useState(false);
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
   const [addrDetailsOpen, setAddrDetailsOpen] = useState(false);
@@ -269,8 +271,8 @@ function Home({ navigation }: Props) {
         if (blockchains[chain].chainType === 'evm') {
           const ppNonces = [];
           // generate and replace nonces
-          for (let i = 0; i < 50; i += 1) {
-            // max 50 txs
+          for (let i = 0; i < 100; i += 1) {
+            // max 100 txs
             const nonce = generatePublicNonce();
             ppNonces.push(nonce);
           }
@@ -455,7 +457,7 @@ function Home({ navigation }: Props) {
         console.log(error);
       });
   };
-  const postSyncToken = async (token: string, wkIdentity: string) => {
+  const postSyncToken = (token: string, wkIdentity: string) => {
     // post fcm token tied to wkIdentity
     const data = {
       keyToken: token,
@@ -470,7 +472,7 @@ function Home({ navigation }: Props) {
         console.log(error);
       });
   };
-  const handleTxRequest = async (
+  const handleTxRequest = (
     rawTransaction: string,
     chain: keyof cryptos,
     path: string,
@@ -483,9 +485,52 @@ function Home({ navigation }: Props) {
     setRawTx(rawTransaction);
     setTxPath(path);
   };
+  const handlePublicNoncesRequest = (chain: keyof cryptos) => {
+    console.log(chain);
+    setActiveChain(chain);
+    setPublicNoncesReq(chain);
+  };
   const handleSyncRequest = async (xpubw: string, chain: keyof cryptos) => {
     setActiveChain(chain);
     setSyncReq(xpubw);
+  };
+  const approvePublicNoncesAction = async (chain: keyof cryptos) => {
+    try {
+      const ppNonces = [];
+      // generate and replace nonces
+      for (let i = 0; i < 100; i += 1) {
+        // max 100 txs
+        const nonce = generatePublicNonce();
+        ppNonces.push(nonce);
+      }
+      const id = await getUniqueId();
+      const password = await EncryptedStorage.getItem('ssp_key_pw');
+      const pwForEncryption = id + password;
+      const stringifiedNonces = JSON.stringify(ppNonces);
+      const encryptedNonces = CryptoJS.AES.encrypt(
+        stringifiedNonces,
+        pwForEncryption,
+      ).toString();
+      dispatch(setSspKeyPublicNonces(encryptedNonces));
+      // on publicNonces delete k and kTwo, leave only public parts
+      const pNs: publicNonce[] = ppNonces.map((nonce) => ({
+        kPublic: nonce.kPublic,
+        kTwoPublic: nonce.kTwoPublic,
+      }));
+      await postAction(
+        'publicnonces',
+        JSON.stringify(pNs),
+        chain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+      setPublicNoncesReq('');
+      setPublicNoncesShared(true);
+    } catch (error) {
+      // @ts-ignore
+      displayMessage('error', error.message ?? 'home:err_tx_failed');
+      console.log(error);
+    }
   };
   const approveTransaction = async (
     rawTransaction: string,
@@ -595,6 +640,11 @@ function Home({ navigation }: Props) {
         return;
       } else if (manualInput === 'cancel') {
         // do not process
+        setTimeout(() => {
+          setIsManualInputModalOpen(false);
+        });
+      } else if (manualInput === 'publicnonces') {
+        handlePublicNoncesRequest(identityChain);
         setTimeout(() => {
           setIsManualInputModalOpen(false);
         });
@@ -750,14 +800,10 @@ function Home({ navigation }: Props) {
             result.data.path,
             result.data.utxos,
           );
+        } else if (result.data.action === 'publicnoncesrequested') {
+          // only this action is valid for us
+          handlePublicNoncesRequest(result.data.chain);
         }
-      } else if (sspWalletInternalIdentity) {
-        // should not be possible?
-        // get some pending request on W identity
-        const result = await axios.get(
-          `https://${sspConfig().relay}/v1/action/${sspWalletInternalIdentity}`,
-        );
-        console.log('result', result.data);
       } else {
         // here open sync needed modal
         setSyncNeededModalOpen(true);
@@ -831,9 +877,41 @@ function Home({ navigation }: Props) {
     }
   };
 
+  const handlePublicNoncesRequestAction = async (status: boolean) => {
+    try {
+      setActivityStatus(true);
+      if (status === true) {
+        const rchain = activeChain as keyof cryptos;
+        await approvePublicNoncesAction(rchain);
+      } else {
+        // reject
+        const rchain = activeChain;
+        setActiveChain(identityChain);
+        setPublicNoncesReq('');
+        await postAction(
+          'publicnoncesrejected',
+          '',
+          rchain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setActivityStatus(false);
+    }
+  };
+
+  const handlePublicNoncesSharedModalAction = () => {
+    console.log('public nonces modal close. Clean chain');
+    setActiveChain(identityChain);
+  };
+
   const handleTxSentModalAction = () => {
     console.log('tx sent modal close. Clean TXID');
     setTxid('');
+    setActiveChain(identityChain);
   };
 
   const handleSyncSuccessModalAction = () => {
@@ -927,7 +1005,7 @@ function Home({ navigation }: Props) {
               />
             </View>
           )}
-          {!submittingTransaction && !rawTx && !syncReq && (
+          {!submittingTransaction && !rawTx && !syncReq && !publicNoncesReq && (
             <>
               <View
                 style={[
@@ -1032,6 +1110,20 @@ function Home({ navigation }: Props) {
               chain={activeChain}
               activityStatus={activityStatus}
               actionStatus={handleSynchronisationRequestAction}
+            />
+          )}
+          {publicNoncesReq && (
+            <SyncRequest
+              chain={activeChain}
+              activityStatus={activityStatus}
+              actionStatus={handlePublicNoncesRequestAction}
+            />
+          )}
+          {publicNoncesShared && (
+            <SyncRequest
+              chain={activeChain}
+              activityStatus={activityStatus}
+              actionStatus={handlePublicNoncesSharedModalAction}
             />
           )}
           {txid && (
