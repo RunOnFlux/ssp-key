@@ -133,13 +133,20 @@ interface decodedAbiData {
   args: [string, BigInt, string];
 }
 
+interface userOperation {
+  userOpRequest: {
+    sender: string;
+    callData: `0x${string}`;
+  };
+}
+
 export function decodeEVMTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
 ) {
   try {
     const decimals = blockchains[chain].decimals;
-    const multisigUserOpJSON = JSON.parse(rawTx);
+    const multisigUserOpJSON = JSON.parse(rawTx) as userOperation;
     const { callData, sender } = multisigUserOpJSON.userOpRequest;
 
     const decodedData: decodedAbiData = decodeFunctionData({
@@ -149,7 +156,6 @@ export function decodeEVMTransactionForApproval(
 
     let txReceiver = 'decodingError';
     let amount = '0';
-    const senderAddress = sender;
 
     if (
       decodedData &&
@@ -157,7 +163,7 @@ export function decodeEVMTransactionForApproval(
       decodedData.args &&
       decodedData.args.length === 3
     ) {
-      txReceiver = decodedData.args[0] as string;
+      txReceiver = decodedData.args[0];
       amount = new BigNumber(decodedData.args[1].toString())
         .dividedBy(new BigNumber(10 ** decimals))
         .toFixed();
@@ -166,7 +172,7 @@ export function decodeEVMTransactionForApproval(
     }
 
     const txInfo = {
-      sender: senderAddress,
+      sender,
       receiver: txReceiver,
       amount,
       fee: '0', // @todo: calculate fee
