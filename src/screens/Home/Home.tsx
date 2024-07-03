@@ -117,7 +117,8 @@ function Home({ navigation }: Props) {
   const [activityStatus, setActivityStatus] = useState(false);
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
 
-  const { newTx, clearTx } = useSocket();
+  const { newTx, clearTx, publicNoncesRequest, clearPublicNoncesRequest } =
+    useSocket();
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -147,6 +148,13 @@ function Home({ navigation }: Props) {
       clearTx?.();
     }
   }, [newTx.rawTx]);
+
+  useEffect(() => {
+    if (publicNoncesRequest) {
+      handlePublicNoncesRequest(identityChain);
+      clearPublicNoncesRequest?.();
+    }
+  }, [publicNoncesRequest]);
 
   useEffect(() => {
     if (!xpubKey || !xpubWallet) {
@@ -273,8 +281,8 @@ function Home({ navigation }: Props) {
         if (blockchains[chain].chainType === 'evm') {
           const ppNonces = [];
           // generate and replace nonces
-          for (let i = 0; i < 100; i += 1) {
-            // max 100 txs
+          for (let i = 0; i < 50; i += 1) {
+            // max 50 txs
             const nonce = generatePublicNonce();
             ppNonces.push(nonce);
           }
@@ -500,8 +508,8 @@ function Home({ navigation }: Props) {
     try {
       const ppNonces = [];
       // generate and replace nonces
-      for (let i = 0; i < 100; i += 1) {
-        // max 100 txs
+      for (let i = 0; i < 50; i += 1) {
+        // max 50 txs
         const nonce = generatePublicNonce();
         ppNonces.push(nonce);
       }
@@ -892,7 +900,7 @@ function Home({ navigation }: Props) {
         setPublicNoncesReq('');
         await postAction(
           'publicnoncesrejected',
-          '',
+          '{}',
           rchain,
           '',
           sspWalletKeyInternalIdentity,
@@ -908,6 +916,7 @@ function Home({ navigation }: Props) {
   const handlePublicNoncesSharedModalAction = () => {
     console.log('public nonces modal close. Clean chain');
     setActiveChain(identityChain);
+    setPublicNoncesShared(false);
   };
 
   const handleTxSentModalAction = () => {

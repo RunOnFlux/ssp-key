@@ -8,7 +8,9 @@ import { cryptos, utxo } from '../types';
 interface SocketContextType {
   socket: Socket | null;
   newTx: adjustedServeResponseTx;
+  publicNoncesRequest: boolean;
   clearTx?: () => void;
+  clearPublicNoncesRequest?: () => void;
 }
 
 interface serverResponse {
@@ -30,6 +32,7 @@ interface adjustedServeResponseTx {
 const defaultValue: SocketContextType = {
   socket: null,
   newTx: {} as adjustedServeResponseTx,
+  publicNoncesRequest: false,
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
@@ -40,6 +43,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   );
   const [socket, setSocket] = useState<Socket | null>(null);
   const [newTx, setNewTx] = useState({} as adjustedServeResponseTx);
+  const [publicNoncesRequest, setPublicNoncesRequest] = useState(false);
   const [socketIdentiy, setSocketIdentity] = useState('');
 
   useEffect(() => {
@@ -80,6 +84,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       setNewTx(adjustedTx);
     });
 
+    newSocket.on('publicnoncesrequest', () => {
+      console.log('incoming public nonces request');
+      setPublicNoncesRequest(true);
+    });
+
     setSocket(newSocket);
     return () => {
       newSocket.close();
@@ -104,8 +113,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     setNewTx({} as adjustedServeResponseTx);
   };
 
+  const clearPublicNoncesRequest = () => {
+    setPublicNoncesRequest(false);
+  };
+
   return (
-    <SocketContext.Provider value={{ socket, newTx: newTx, clearTx }}>
+    <SocketContext.Provider
+      value={{
+        socket,
+        newTx,
+        clearTx,
+        publicNoncesRequest,
+        clearPublicNoncesRequest,
+      }}
+    >
       {children}
     </SocketContext.Provider>
   );
