@@ -739,6 +739,10 @@ function Home({ navigation }: Props) {
       let chain: keyof cryptos = identityChain;
       let wallet = '0-0';
       let dataToProcess = '';
+      if (scannedData === 'publicnonces') {
+        handlePublicNoncesRequest(identityChain);
+        return;
+      }
       if (splittedInput[1]) {
         // all is default
         chain = splittedInput[0] as keyof cryptos;
