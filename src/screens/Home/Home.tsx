@@ -99,6 +99,7 @@ function Home({ navigation }: Props) {
   const [syncReq, setSyncReq] = useState('');
   const [publicNoncesReq, setPublicNoncesReq] = useState('');
   const [publicNoncesShared, setPublicNoncesShared] = useState(false);
+  const [pNonces, setPNonces] = useState('');
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
   const [addrDetailsOpen, setAddrDetailsOpen] = useState(false);
@@ -527,18 +528,34 @@ function Home({ navigation }: Props) {
         kPublic: nonce.kPublic,
         kTwoPublic: nonce.kTwoPublic,
       }));
-      await postAction(
-        'publicnonces',
-        JSON.stringify(pNs),
-        chain,
-        '',
-        sspWalletKeyInternalIdentity,
-      );
+      try {
+        await postAction(
+          'publicnonces',
+          JSON.stringify(pNs),
+          chain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+      } catch (error) {
+        // we can ignore this error and show success message as user can copy the nonces
+        displayMessage(
+          'error',
+          // @ts-ignore
+          error.message ?? 'home:err_sharing_public_nonces',
+        );
+        console.log(error);
+      }
+      setPNonces(JSON.stringify(pNs));
       setPublicNoncesReq('');
-      setPublicNoncesShared(true);
+      setTimeout(() => {
+        setPublicNoncesShared(true); // display
+      }, 100);
     } catch (error) {
-      // @ts-ignore
-      displayMessage('error', error.message ?? 'home:err_tx_failed');
+      displayMessage(
+        'error',
+        // @ts-ignore
+        error.message ?? 'home:err_generating_public_nonces',
+      );
       console.log(error);
     }
   };
@@ -921,6 +938,7 @@ function Home({ navigation }: Props) {
     console.log('public nonces modal close. Clean chain');
     setActiveChain(identityChain);
     setPublicNoncesShared(false);
+    setPNonces('');
   };
 
   const handleTxSentModalAction = () => {
@@ -1136,6 +1154,7 @@ function Home({ navigation }: Props) {
           {publicNoncesShared && (
             <PublicNoncesSuccess
               actionStatus={handlePublicNoncesSharedModalAction}
+              nonces={pNonces}
             />
           )}
           {txid && (

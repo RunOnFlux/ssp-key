@@ -17,6 +17,7 @@
   "dependencies": {
     "@alchemy/aa-core": "~3.12.3",
     "@notifee/react-native": "~7.8.2",
+    "@react-native-clipboard/clipboard": "~1.14.1",
     "@react-native-firebase/app": "~20.1.0",
     "@react-native-firebase/messaging": "~20.1.0",
     "@react-native-picker/picker": "~2.7.7",

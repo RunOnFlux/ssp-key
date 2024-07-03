@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
 const PublicNoncesSuccess = (props: {
   actionStatus: (status: boolean) => void;
+  nonces: string;
 }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
   const { t } = useTranslation(['home', 'common']);
@@ -14,6 +16,10 @@ const PublicNoncesSuccess = (props: {
   const close = () => {
     console.log('Close');
     props.actionStatus(false);
+  };
+
+  const copyToClipboard = () => {
+    Clipboard.setString(props.nonces);
   };
 
   return (
@@ -69,6 +75,17 @@ const PublicNoncesSuccess = (props: {
             >
               <Text style={[Fonts.textRegular, Fonts.textWhite]}>
                 {t('home:close')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => copyToClipboard()}>
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textBluePrimary,
+                  Fonts.textCenter,
+                ]}
+              >
+                {t('home:copy_to_clipboard')}
               </Text>
             </TouchableOpacity>
           </View>
