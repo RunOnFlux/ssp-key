@@ -11,6 +11,7 @@ const dogeLogo = '/src/assets/doge.svg';
 const zecLogo = '/src/assets/zec.svg';
 const bchLogo = '/src/assets/bch.svg';
 const ethLogo = '/src/assets/eth.svg';
+const tethLogo = '/src/assets/teth.svg';
 
 const flux = {
   id: 'flux',
@@ -300,9 +301,9 @@ const bch = {
 const sepolia = {
   id: 'sepolia',
   libid: 'sepolia',
-  name: 'Sepolia',
-  symbol: 'ETH',
-  logo: ethLogo,
+  name: 'Testnet Sepolia',
+  symbol: 'TEST-ETH',
+  logo: tethLogo,
   slip: 1,
   decimals: 18,
   node: backends().sepolia.node,
@@ -318,11 +319,73 @@ const sepolia = {
   factorySalt: 'aafactorysalt', // factory uses this salt
   factoryAddress: '0xA76f98D25C9775F67DCf8B9EF9618d454D287467',
   entrypointAddress: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
+  baseFee: 120, // 120 gwei
+  priorityFee: 5, // 5 gwei
+  gasLimit: 500000, // 500k gas
+  tokens: [
+    {
+      contract: '', // first is always the native 'no contract' token 0x0000000000000000000000000000000000000000
+      name: 'Testnet Ethereum Sepolia',
+      symbol: 'TEST-ETH',
+      decimals: 18,
+      logo: tethLogo,
+    },
+    {
+      contract: '0x690cc0235aBEA2cF89213E30D0F0Ea0fC054B909',
+      name: 'Fake Flux',
+      symbol: 'TEST-FLUX',
+      decimals: 8,
+      logo: fluxLogo,
+    },
+  ],
+};
+
+const eth = {
+  id: 'eth',
+  libid: 'eth',
+  name: 'Ethereum',
+  symbol: 'ETH',
+  logo: ethLogo,
+  slip: 60,
+  decimals: 18,
+  node: backends().eth.node,
+  bip32: {
+    // not specified, use default
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  scriptType: 'p2sh', // not specified, use default
+  chainType: 'evm',
+  backend: 'alchemy',
+  accountSalt: 'aasalt', // ssp uses this salt for smart accounts
+  factorySalt: 'aafactorysalt', // factory uses this salt
+  factoryAddress: '0xA76f98D25C9775F67DCf8B9EF9618d454D287467',
+  entrypointAddress: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
+  baseFee: 8, // 8 gwei
+  priorityFee: 2, // 2 gwei
+  gasLimit: 500000, // 500k gas
+  tokens: [
+    {
+      contract: '', // first is always the native 'no contract' token 0x0000000000000000000000000000000000000000
+      name: 'Ethereum',
+      symbol: 'ETH',
+      decimals: 18,
+      logo: ethLogo,
+    },
+    {
+      contract: '0x720cd16b011b987da3518fbf38c3071d4f0d1495',
+      name: 'Flux',
+      symbol: 'FLUX',
+      decimals: 8,
+      logo: fluxLogo,
+    },
+  ],
 };
 
 export const blockchains = {
   btc,
   flux,
+  eth,
   doge,
   ltc,
   bch,

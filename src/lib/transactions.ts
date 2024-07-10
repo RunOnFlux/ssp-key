@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import utxolib from '@runonflux/utxo-lib';
-import { decodeFunctionData } from 'viem';
+import { decodeFunctionData, erc20Abi } from 'viem';
 import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
 import { cryptos, utxo } from '../types';
@@ -130,13 +130,18 @@ export function decodeTransactionForApproval(
 
 interface decodedAbiData {
   functionName: string;
-  args: [string, BigInt, string];
+  args: [string, bigint, string];
 }
 
 interface userOperation {
   userOpRequest: {
     sender: string;
     callData: `0x${string}`;
+    callGasLimit: `0x${string}`;
+    verificationGasLimit: `0x${string}`;
+    preVerificationGas: `0x${string}`;
+    maxFeePerGas: `0x${string}`;
+    maxPriorityFeePerGas: `0x${string}`;
   };
 }
 
@@ -145,9 +150,31 @@ export function decodeEVMTransactionForApproval(
   chain: keyof cryptos,
 ) {
   try {
-    const decimals = blockchains[chain].decimals;
+    let decimals = blockchains[chain].decimals;
     const multisigUserOpJSON = JSON.parse(rawTx) as userOperation;
-    const { callData, sender } = multisigUserOpJSON.userOpRequest;
+    const {
+      callData,
+      sender,
+      callGasLimit,
+      verificationGasLimit,
+      preVerificationGas,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+    } = multisigUserOpJSON.userOpRequest;
+
+    const totalGasLimit = new BigNumber(callGasLimit)
+      .plus(new BigNumber(verificationGasLimit))
+      .plus(new BigNumber(preVerificationGas));
+
+    const totalMaxWeiPerGas = new BigNumber(maxFeePerGas).plus(
+      new BigNumber(maxPriorityFeePerGas),
+    );
+
+    const totalFeeWei = totalGasLimit.multipliedBy(totalMaxWeiPerGas);
+
+    console.log(multisigUserOpJSON);
+
+    // callGasLimit":"0x5ea6","verificationGasLimit":"0x11b5a","preVerificationGas":"0xdf89","maxFeePerGas":"0xee6b28000","maxPriorityFeePerGas":"0x77359400",
 
     const decodedData: decodedAbiData = decodeFunctionData({
       abi: abi.MultiSigSmartAccount_abi,
@@ -161,7 +188,7 @@ export function decodeEVMTransactionForApproval(
       decodedData &&
       decodedData.functionName === 'execute' &&
       decodedData.args &&
-      decodedData.args.length === 3
+      decodedData.args.length >= 3
     ) {
       txReceiver = decodedData.args[0];
       amount = new BigNumber(decodedData.args[1].toString())
@@ -175,8 +202,41 @@ export function decodeEVMTransactionForApproval(
       sender,
       receiver: txReceiver,
       amount,
-      fee: '0', // @todo: calculate fee
+      fee: totalFeeWei.toFixed(),
+      token: '',
     };
+
+    if (amount === '0') {
+      txInfo.token = decodedData.args[0];
+
+      // find the token in our token list
+      const token = blockchains[chain].tokens.find(
+        (t) => t.contract.toLowerCase() === txInfo.token.toLowerCase(),
+      );
+      if (token) {
+        decimals = token.decimals;
+      }
+      const contractData: `0x${string}` = decodedData.args[2] as `0x${string}`;
+      // most likely we are dealing with a contract call, sending some erc20 token
+      // docode args[2] which is operation
+      const decodedDataContract: decodedAbiData = decodeFunctionData({
+        abi: erc20Abi,
+        data: contractData,
+      }) as unknown as decodedAbiData; // Cast decodedDataContract to decodedAbiData type.
+      console.log(decodedDataContract);
+      if (
+        decodedDataContract &&
+        decodedDataContract.functionName === 'transfer' &&
+        decodedDataContract.args &&
+        decodedDataContract.args.length >= 2
+      ) {
+        txInfo.receiver = decodedDataContract.args[0];
+        txInfo.amount = new BigNumber(decodedDataContract.args[1].toString())
+          .dividedBy(new BigNumber(10 ** decimals))
+          .toFixed();
+      }
+    }
+
     return txInfo;
   } catch (error) {
     console.log(error);
@@ -185,6 +245,7 @@ export function decodeEVMTransactionForApproval(
       receiver: 'decodingError',
       amount: 'decodingError',
       fee: 'decodingError',
+      token: 'decodingError',
     };
     return txInfo;
   }

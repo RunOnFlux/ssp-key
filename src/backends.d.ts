@@ -1,7 +1,8 @@
 declare module '@storage/backends' {
   interface Backend {
     node: string;
-    explorer: string;
+    api?: string;
+    explorer?: string;
   }
   type backends = Record<string, Backend>;
   let backends: () => backends;

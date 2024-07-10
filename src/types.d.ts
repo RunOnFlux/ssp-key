@@ -176,6 +176,8 @@ export interface wallet {
   unconfirmedBalance: string;
   transactions: transaction[];
   nodes?: node[];
+  tokenBalances?: tokenBalanceEVM[];
+  activatedTokens?: string[];
 }
 
 export interface node {
@@ -243,6 +245,25 @@ export interface evm_call {
   result: string;
 }
 
+export interface tokenBalanceEVM {
+  contract: string;
+  balance: string;
+}
+
+export interface tokenBalance {
+  contractAddress: string;
+  tokenBalance: string;
+}
+
+export interface alchemyCallTokenBalances {
+  jsonrpc: string;
+  id: number;
+  result: {
+    address: string;
+    tokenBalances: tokenBalance[];
+  };
+}
+
 export interface etherscan_external_tx {
   blockNumber: string;
   timeStamp: string;
@@ -281,6 +302,12 @@ export interface etherscan_internal_tx {
   traceId: string;
   isError: string;
   errCode: string;
+}
+
+export interface eth_evm {
+  jsonrpc: string;
+  id: number;
+  result: string;
 }
 
 export interface etherscan_call_external_txs {
@@ -387,6 +414,7 @@ export interface cryptos {
   btcTestnet: number;
   btcSignet: number;
   sepolia: number;
+  eth: number;
 }
 
 export interface externalIdentity {
@@ -402,6 +430,7 @@ export interface currencySSPRelay {
 
 export interface networkFee {
   coin: string;
+  base: number;
   economy: number;
   normal: number;
   fast: number;
