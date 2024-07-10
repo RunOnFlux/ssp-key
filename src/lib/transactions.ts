@@ -15,11 +15,19 @@ interface output {
   value: number;
 }
 
+interface tokenInfo {
+  sender: string;
+  receiver: string;
+  amount: string;
+  fee: string;
+  token?: string;
+}
+
 export function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
   utxos: utxo[],
-) {
+): tokenInfo {
   try {
     if (blockchains[chain].chainType === 'evm') {
       return decodeEVMTransactionForApproval(rawTx, chain);
