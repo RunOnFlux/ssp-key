@@ -178,7 +178,9 @@ export function decodeEVMTransactionForApproval(
       new BigNumber(maxPriorityFeePerGas),
     );
 
-    const totalFeeWei = totalGasLimit.multipliedBy(totalMaxWeiPerGas);
+    const totalFeeWei = totalGasLimit
+      .multipliedBy(totalMaxWeiPerGas)
+      .dividedBy(10 ** 18);
 
     console.log(multisigUserOpJSON);
 

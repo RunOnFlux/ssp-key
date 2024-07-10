@@ -69,7 +69,10 @@ const TransactionRequest = (props: {
     setReceiverAddress(txInfo.receiver);
     setSenderAddress(txInfo.sender);
     setToken(txInfo.token || '');
-    if (props.utxos && props.utxos.length) {
+    if (
+      (props.utxos && props.utxos.length) ||
+      blockchains[props.chain].chainType === 'evm'
+    ) {
       setFee(txInfo.fee);
     }
     console.log(fee);
@@ -126,7 +129,7 @@ const TransactionRequest = (props: {
                 ? blockchainConfig.tokens.find(
                     (ttt) =>
                       ttt.contract.toLocaleLowerCase() === token.toLowerCase(),
-                  )
+                  )?.symbol
                 : blockchainConfig.symbol) +
               ' '}
           </Text>
