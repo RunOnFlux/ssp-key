@@ -37,6 +37,7 @@ const seedPhraseSlice = createSlice({
       state.seedPhrase = '';
       state.sspWalletKeyInternalIdentity = '';
       state.sspWalletInternalIdentity = '';
+      state.identityChain = 'btc';
       state.publicNonces = '';
     },
   },
