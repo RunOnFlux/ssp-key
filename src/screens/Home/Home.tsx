@@ -867,7 +867,6 @@ function Home({ navigation }: Props) {
         const rchain = activeChain;
         const rpath = txPath;
         setRawTx('');
-        setActiveChain(identityChain);
         setTxPath('');
         setTxUtxos([]);
         await postAction(
@@ -899,7 +898,6 @@ function Home({ navigation }: Props) {
       } else {
         // reject
         setSyncReq('');
-        setActiveChain(identityChain);
       }
     } catch (error) {
       console.log(error);
@@ -917,7 +915,6 @@ function Home({ navigation }: Props) {
       } else {
         // reject
         const rchain = activeChain;
-        setActiveChain(identityChain);
         setPublicNoncesReq('');
         await postAction(
           'publicnoncesrejected',
@@ -935,8 +932,7 @@ function Home({ navigation }: Props) {
   };
 
   const handlePublicNoncesSharedModalAction = () => {
-    console.log('public nonces modal close. Clean chain');
-    setActiveChain(identityChain);
+    console.log('public nonces modal close.');
     setPublicNoncesShared(false);
     setPNonces('');
   };
@@ -944,13 +940,11 @@ function Home({ navigation }: Props) {
   const handleTxSentModalAction = () => {
     console.log('tx sent modal close. Clean TXID');
     setTxid('');
-    setActiveChain(identityChain);
   };
 
   const handleSyncSuccessModalAction = () => {
     console.log('sync success modal close.');
     setSyncSuccessOpen(false);
-    setActiveChain(identityChain);
   };
 
   const handleAddrDetailsModalAction = () => {
