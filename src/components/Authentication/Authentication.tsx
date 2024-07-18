@@ -72,6 +72,8 @@ const Authentication = (props: {
       textForPrompt = t('home:auth_confirm_sign_send');
     } else if (props.type === 'sync') {
       textForPrompt = t('home:auth_confirm_sync');
+    } else if (props.type === 'pubnonces') {
+      textForPrompt = t('home:auth_confirm_public_nonces');
     }
     console.log('Initiate Fingerprint');
     rnBiometrics
@@ -174,14 +176,18 @@ const Authentication = (props: {
                   ? t('home:auth_sign_tx')
                   : props.type === 'sync'
                     ? t('home:auth_sync_ssp')
-                    : t('home:auth_sensitive_inf')}
+                    : props.type === 'pubnonces'
+                      ? t('home:auth_sync_pub_nonces')
+                      : t('home:auth_sensitive_inf')}
               </Text>
               <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
                 {props.type === 'tx'
                   ? t('home:auth_confirm_with_pw')
                   : props.type === 'sync'
                     ? t('home:auth_confirm_with_pw')
-                    : t('home:auth_grant_access_pw')}
+                    : props.type === 'pubnonces'
+                      ? t('home:auth_confirm_with_pw')
+                      : t('home:auth_grant_access_pw')}
               </Text>
 
               {biometricsAvailable && (

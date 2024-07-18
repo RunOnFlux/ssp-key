@@ -29,6 +29,8 @@ const chains = {
   bch: chainSliceBase('bch'),
   btcTestnet: chainSliceBase('btcTestnet'),
   btcSignet: chainSliceBase('btcSignet'),
+  sepolia: chainSliceBase('sepolia'),
+  eth: chainSliceBase('eth'),
 };
 // ********** Import chains **********
 
@@ -49,6 +51,8 @@ const reducers = combineReducers({
   bch: chains.bch.reducer,
   btcTestnet: chains.btcTestnet.reducer,
   btcSignet: chains.btcSignet.reducer,
+  sepolia: chains.sepolia.reducer,
+  eth: chains.eth.reducer,
 });
 
 export const storage = new MMKV();

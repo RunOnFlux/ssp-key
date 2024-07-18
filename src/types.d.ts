@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 // wallet.tx
 export interface minHDKey {
   keyPair: {
@@ -88,6 +87,7 @@ export interface vinBlockbook {
   txid: string;
   sequence: number;
   n: number;
+  vout: number;
   addresses: string[];
   isAddress: boolean;
   isOwn: boolean;
@@ -122,6 +122,7 @@ export interface transactionInsight {
   blockheight: number;
   confirmations: number;
   size: number;
+  vsize: number;
   time: number;
   blocktime: number;
   valueOut: number;
@@ -147,6 +148,7 @@ export interface transactionBlockbook {
   confirmations: number;
   blockTime: number;
   size: number;
+  vsize: number;
   blockTime: number;
   value: string;
   valueIn: string;
@@ -173,6 +175,29 @@ export interface wallet {
   balance: string;
   unconfirmedBalance: string;
   transactions: transaction[];
+  nodes?: node[];
+  tokenBalances?: tokenBalanceEVM[];
+  activatedTokens?: string[];
+}
+
+export interface node {
+  txid: string;
+  vout: number;
+  amount: string;
+  name: string;
+  ip: string;
+  status: string;
+}
+
+export interface contact {
+  id: number;
+  name: string;
+  address: string;
+}
+
+export interface txIdentifier {
+  txid: string;
+  vout: number;
 }
 
 export type wallets = Record<string, wallet>;
@@ -185,6 +210,12 @@ export interface transaction {
   fee: string;
   amount: string; // satoshis
   message: string;
+  receiver: string;
+  size?: number;
+  vsize?: number;
+  utxos?: txIdentifier[];
+  type?: string; // evm
+  isError?: boolean;
 }
 
 export interface pendingTransaction {
@@ -208,11 +239,108 @@ export interface getInfoBlockbook {
   };
 }
 
+export interface evm_call {
+  jsonrpc: string;
+  id: number;
+  result: string;
+}
+
+export interface tokenBalanceEVM {
+  contract: string;
+  balance: string;
+}
+
+export interface tokenBalance {
+  contractAddress: string;
+  tokenBalance: string;
+}
+
+export interface alchemyCallTokenBalances {
+  jsonrpc: string;
+  id: number;
+  result: {
+    address: string;
+    tokenBalances: tokenBalance[];
+  };
+}
+
+export interface etherscan_external_tx {
+  blockNumber: string;
+  timeStamp: string;
+  hash: string;
+  from: string;
+  to: string;
+  nonce: string;
+  blockHash: string;
+  transactionIndex: string;
+  value: string;
+  gas: string;
+  gasPrice: string;
+  cumulativeGasUsed: string;
+  gasUsed: string;
+  isError: string;
+  errCode: string;
+  txreceipt_status: string;
+  input: string;
+  confirmations: string;
+  methodId: string;
+  functionName: string;
+}
+
+export interface etherscan_internal_tx {
+  blockNumber: string;
+  timeStamp: string;
+  hash: string;
+  from: string;
+  to: string;
+  value: string;
+  contractAddress: string;
+  input: string;
+  type: string;
+  gas: string;
+  gasUsed: string;
+  traceId: string;
+  isError: string;
+  errCode: string;
+}
+
+export interface eth_evm {
+  jsonrpc: string;
+  id: number;
+  result: string;
+}
+
+export interface etherscan_call_external_txs {
+  status: string;
+  message: string;
+  result: etherscan_external_tx[];
+}
+
+export interface etherscan_call_internal_txs {
+  status: string;
+  message: string;
+  result: etherscan_internal_tx[];
+}
+
+export interface publicNonce {
+  kPublic: string;
+  kTwoPublic: string;
+}
+
+export interface publicPrivateNonce {
+  k: string;
+  kTwo: string;
+  kPublic: string;
+  kTwoPublic: string;
+}
+
 export interface syncSSPRelay {
   chain: string;
   walletIdentity: string;
   keyXpub: string;
   wkIdentity: string;
+  keyToken?: string | null;
+  publicNonces?: publicNonce[];
 }
 
 export interface actionSSPRelay {
@@ -270,6 +398,8 @@ export interface currency {
   CZK: number;
   BHD: number;
   UAH: number;
+  BTC: number;
+  ETH: number;
 }
 
 export interface cryptos {
@@ -283,9 +413,115 @@ export interface cryptos {
   bch: number;
   btcTestnet: number;
   btcSignet: number;
+  sepolia: number;
+  eth: number;
+}
+
+export interface externalIdentity {
+  privKey: string;
+  pubKey: string;
+  address: string;
 }
 
 export interface currencySSPRelay {
   fiat: currency;
   crypto: cryptos;
+}
+
+export interface networkFee {
+  coin: string;
+  base: number;
+  economy: number;
+  normal: number;
+  fast: number;
+  recommended: number;
+}
+
+export type networkFeesSSPRelay = networkFee[];
+
+export interface confirmedNodeInsight {
+  collateral: string;
+  txhash: string;
+  outidx: string;
+  ip: string;
+  network: string;
+  added_height: number;
+  confirmed_height: number;
+  last_confirmed_height: number;
+  last_paid_height: number;
+  tier: string;
+  payment_address: string;
+  pubkey: string;
+  activesince: string;
+  lastpaid: string;
+  amount: string;
+  rank: number;
+}
+
+export interface confirmedNodesInsight {
+  result: confirmedNodeInsight[];
+}
+
+export interface dosNodeFlux {
+  collateral: string;
+  added_height: number;
+  payment_address: string;
+  eligible_in: number;
+  amount: string;
+}
+
+export interface dosFlux {
+  status: string;
+  data: dosNodeFlux[];
+}
+
+export interface dosFluxInsight {
+  error: string;
+  id: number;
+  result: dosNodeFlux[];
+}
+
+export interface startNodeFlux {
+  collateral: string;
+  added_height: number;
+  payment_address: string;
+  expires_in: number;
+  amount: string;
+}
+
+export interface startFlux {
+  status: string;
+  data: startNodeFlux[];
+}
+
+export interface startFluxInsight {
+  error: string;
+  id: number;
+  result: startNodeFlux[];
+}
+
+export interface fusionPAavailable {
+  status: string;
+  data: {
+    address: string;
+    totalClaim: number;
+    totalMiningFees: number;
+    totalSwapFees: number;
+    totalFee: number;
+    totalReward: number;
+    message: string;
+    code: number;
+    name: string;
+  };
+}
+
+export interface errorResponse {
+  message: string;
+  code: number;
+  name: string;
+}
+
+export interface fusionMessage {
+  status: string;
+  data: errorResponse | string;
 }

@@ -1,23 +1,13 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  Linking,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-import { backends } from '@storage/backends';
 
-import { cryptos } from '../../types';
-
-const TxSent = (props: {
-  txid: string;
-  chain: keyof cryptos;
+const PublicNoncesSuccess = (props: {
   actionStatus: (status: boolean) => void;
+  nonces: string;
 }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
   const { t } = useTranslation(['home', 'common']);
@@ -28,12 +18,8 @@ const TxSent = (props: {
     props.actionStatus(false);
   };
 
-  const openExplorer = () => {
-    console.log('Open Explorer');
-    const backendConfig = backends()[props.chain];
-    Linking.openURL(
-      `https://${backendConfig.explorer ?? backendConfig.node}/tx/${props.txid}`,
-    );
+  const copyToClipboard = () => {
+    Clipboard.setString(props.nonces);
   };
 
   return (
@@ -44,6 +30,7 @@ const TxSent = (props: {
       onRequestClose={() => close()}
     >
       <ScrollView
+        keyboardShouldPersistTaps="always"
         style={[Layout.fill, Common.modalBackdrop]}
         contentInset={{ bottom: 80 }}
         contentContainerStyle={[
@@ -70,10 +57,10 @@ const TxSent = (props: {
                 Fonts.textCenter,
               ]}
             >
-              {t('home:transaction_sent')}
+              {t('home:public_nonces_request_approved')}
             </Text>
-            <Text style={[Fonts.textSmall, Fonts.textCenter]}>
-              {props.txid}
+            <Text style={[Fonts.textTiny, Fonts.textCenter]}>
+              {t('home:public_nonces_request_approved_info')}
             </Text>
           </View>
           <View style={[Layout.justifyContentEnd]}>
@@ -84,13 +71,13 @@ const TxSent = (props: {
                 Gutters.regularBMargin,
                 Gutters.smallTMargin,
               ]}
-              onPress={() => openExplorer()}
+              onPress={() => close()}
             >
               <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                {t('home:show_in_explorer')}
+                {t('home:close')}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => close()}>
+            <TouchableOpacity onPress={() => copyToClipboard()}>
               <Text
                 style={[
                   Fonts.textSmall,
@@ -98,7 +85,7 @@ const TxSent = (props: {
                   Fonts.textCenter,
                 ]}
               >
-                {t('home:close')}
+                {t('home:copy_to_clipboard')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -108,4 +95,4 @@ const TxSent = (props: {
   );
 };
 
-export default TxSent;
+export default PublicNoncesSuccess;

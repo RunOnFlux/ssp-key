@@ -20,12 +20,20 @@ import ManualInput from '../../components/ManualInput/ManualInput';
 import MenuModal from '../../components/MenuModal/MenuModal';
 import Scanner from '../../components/Scanner/Scanner';
 import Navbar from '../../components/Navbar/Navbar';
+import PublicNoncesRequest from '../..//components/PublicNoncesRequest/PublicNoncesRequest';
+import PublicNoncesSuccess from '../../components/PublicNoncesSuccess/PublicNoncesSuccess';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
-import { cryptos, utxo } from '../../types';
+import {
+  cryptos,
+  utxo,
+  syncSSPRelay,
+  publicNonce,
+  publicPrivateNonce,
+} from '../../types';
 import { blockchains } from '@storage/blockchains';
 
 const CryptoJS = require('crypto-js');
@@ -36,6 +44,7 @@ import {
   generateMultisigAddress,
   generateInternalIdentityAddress,
   generateAddressKeypair,
+  generatePublicNonce,
 } from '../../lib/wallet';
 
 import {
@@ -43,6 +52,8 @@ import {
   finaliseTransaction,
   broadcastTx,
   fetchUtxos,
+  signAndBroadcastEVM,
+  selectPublicNonce,
 } from '../../lib/constructTx';
 
 import {
@@ -55,6 +66,7 @@ import {
 import {
   setSspWalletKeyInternalIdentity,
   setSspWalletInternalIdentity,
+  setSspKeyPublicNonces,
 } from '../../store/ssp';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
@@ -85,6 +97,9 @@ function Home({ navigation }: Props) {
   const [txPath, setTxPath] = useState('');
   const [txUtxos, setTxUtxos] = useState<utxo[]>([]);
   const [syncReq, setSyncReq] = useState('');
+  const [publicNoncesReq, setPublicNoncesReq] = useState('');
+  const [publicNoncesShared, setPublicNoncesShared] = useState(false);
+  const [pNonces, setPNonces] = useState('');
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
   const [addrDetailsOpen, setAddrDetailsOpen] = useState(false);
@@ -99,10 +114,12 @@ function Home({ navigation }: Props) {
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
+  const { publicNonces } = useAppSelector((state) => state.ssp);
   const [activityStatus, setActivityStatus] = useState(false);
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
 
-  const { newTx, clearTx } = useSocket();
+  const { newTx, clearTx, publicNoncesRequest, clearPublicNoncesRequest } =
+    useSocket();
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -132,6 +149,13 @@ function Home({ navigation }: Props) {
       clearTx?.();
     }
   }, [newTx.rawTx]);
+
+  useEffect(() => {
+    if (publicNoncesRequest) {
+      handlePublicNoncesRequest(identityChain);
+      clearPublicNoncesRequest?.();
+    }
+  }, [publicNoncesRequest]);
 
   useEffect(() => {
     if (!xpubKey || !xpubWallet) {
@@ -247,13 +271,36 @@ function Home({ navigation }: Props) {
         ).toString();
         setXpubWallet(chain, encryptedXpubWallet);
         // tell ssp relay that we are synced, post data to ssp sync
-        const syncData = {
+        const syncData: syncSSPRelay = {
           chain,
           walletIdentity: sspWalletInternalIdentity,
           keyXpub: xpubKeyDecrypted,
           wkIdentity: sspWalletKeyInternalIdentity,
           keyToken: await getFCMToken(),
         };
+        // == EVM ==
+        if (blockchains[chain].chainType === 'evm') {
+          const ppNonces = [];
+          // generate and replace nonces
+          for (let i = 0; i < 50; i += 1) {
+            // max 50 txs
+            const nonce = generatePublicNonce();
+            ppNonces.push(nonce);
+          }
+          const stringifiedNonces = JSON.stringify(ppNonces);
+          const encryptedNonces = CryptoJS.AES.encrypt(
+            stringifiedNonces,
+            pwForEncryption,
+          ).toString();
+          dispatch(setSspKeyPublicNonces(encryptedNonces));
+          // on publicNonces delete k and kTwo, leave only public parts
+          const pNs: publicNonce[] = ppNonces.map((nonce) => ({
+            kPublic: nonce.kPublic,
+            kTwoPublic: nonce.kTwoPublic,
+          }));
+          syncData.publicNonces = pNs;
+        }
+        // == EVM end
         console.log(syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
@@ -326,7 +373,7 @@ function Home({ navigation }: Props) {
           setSspWalletInternalIdentity(generatedSspWalletInternalIdentity),
         );
         // tell ssp relay that we are synced, post data to ssp sync
-        const syncData = {
+        const syncData: syncSSPRelay = {
           chain: identityChain,
           walletIdentity: generatedSspWalletInternalIdentity,
           keyXpub: xpubKeyDecrypted,
@@ -421,7 +468,7 @@ function Home({ navigation }: Props) {
         console.log(error);
       });
   };
-  const postSyncToken = async (token: string, wkIdentity: string) => {
+  const postSyncToken = (token: string, wkIdentity: string) => {
     // post fcm token tied to wkIdentity
     const data = {
       keyToken: token,
@@ -436,8 +483,8 @@ function Home({ navigation }: Props) {
         console.log(error);
       });
   };
-  const handleTxRequest = async (
-    rawTransactions: string,
+  const handleTxRequest = (
+    rawTransaction: string,
     chain: keyof cryptos,
     path: string,
     utxos: utxo[] = [],
@@ -446,15 +493,74 @@ function Home({ navigation }: Props) {
     if (utxos) {
       setTxUtxos(utxos);
     }
-    setRawTx(rawTransactions);
+    setRawTx(rawTransaction);
     setTxPath(path);
+  };
+  const handlePublicNoncesRequest = (chain: keyof cryptos) => {
+    console.log(chain);
+    setActiveChain(chain);
+    setPublicNoncesReq(chain);
   };
   const handleSyncRequest = async (xpubw: string, chain: keyof cryptos) => {
     setActiveChain(chain);
     setSyncReq(xpubw);
   };
+  const approvePublicNoncesAction = async (chain: keyof cryptos) => {
+    try {
+      const ppNonces = [];
+      // generate and replace nonces
+      for (let i = 0; i < 50; i += 1) {
+        // max 50 txs
+        const nonce = generatePublicNonce();
+        ppNonces.push(nonce);
+      }
+      const id = await getUniqueId();
+      const password = await EncryptedStorage.getItem('ssp_key_pw');
+      const pwForEncryption = id + password;
+      const stringifiedNonces = JSON.stringify(ppNonces);
+      const encryptedNonces = CryptoJS.AES.encrypt(
+        stringifiedNonces,
+        pwForEncryption,
+      ).toString();
+      dispatch(setSspKeyPublicNonces(encryptedNonces));
+      // on publicNonces delete k and kTwo, leave only public parts
+      const pNs: publicNonce[] = ppNonces.map((nonce) => ({
+        kPublic: nonce.kPublic,
+        kTwoPublic: nonce.kTwoPublic,
+      }));
+      try {
+        await postAction(
+          'publicnonces',
+          JSON.stringify(pNs),
+          chain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+      } catch (error) {
+        // we can ignore this error and show success message as user can copy the nonces
+        displayMessage(
+          'error',
+          // @ts-ignore
+          error.message ?? 'home:err_sharing_public_nonces',
+        );
+        console.log(error);
+      }
+      setPNonces(JSON.stringify(pNs));
+      setPublicNoncesReq('');
+      setTimeout(() => {
+        setPublicNoncesShared(true); // display
+      }, 100);
+    } catch (error) {
+      displayMessage(
+        'error',
+        // @ts-ignore
+        error.message ?? 'home:err_generating_public_nonces',
+      );
+      console.log(error);
+    }
+  };
   const approveTransaction = async (
-    rawTransactions: string,
+    rawTransaction: string,
     chain: keyof cryptos,
     derivationPath: string,
     suggestedUtxos: utxo[],
@@ -496,17 +602,44 @@ function Home({ navigation }: Props) {
         addressIndex,
         chain,
       );
-      const signedTx = await signTransaction(
-        rawTransactions,
-        chain,
-        keyPair.privKey,
-        addressDetails.redeemScript ?? '',
-        addressDetails.witnessScript ?? '',
-        utxos,
-      );
-      const finalTx = finaliseTransaction(signedTx, chain);
-      console.log(finalTx);
-      const ttxid = await broadcastTx(finalTx, chain);
+      let ttxid = '';
+      if (blockchains[chain].chainType === 'evm') {
+        const pNs = CryptoJS.AES.decrypt(publicNonces, pwForEncryption);
+        const pNsDecrypted = pNs.toString(CryptoJS.enc.Utf8);
+        const pubNonces = JSON.parse(pNsDecrypted) as publicPrivateNonce[];
+        const publicNonceKey = selectPublicNonce(rawTransaction, pubNonces);
+        // crucial delete nonce from publicNonces
+        const newPublicNonces = pubNonces.filter(
+          (nonce: publicPrivateNonce) =>
+            nonce.kPublic !== publicNonceKey.kPublic,
+        );
+        // encrypt and save new publicNonces
+        const stringifiedNonces = JSON.stringify(newPublicNonces);
+        const encryptedNonces = CryptoJS.AES.encrypt(
+          stringifiedNonces,
+          pwForEncryption,
+        ).toString();
+        dispatch(setSspKeyPublicNonces(encryptedNonces));
+        // sign and broadcast
+        ttxid = await signAndBroadcastEVM(
+          rawTransaction,
+          chain,
+          keyPair.privKey as `0x${string}`,
+          publicNonceKey,
+        );
+      } else {
+        const signedTx = await signTransaction(
+          rawTransaction,
+          chain,
+          keyPair.privKey,
+          addressDetails.redeemScript ?? '',
+          addressDetails.witnessScript ?? '',
+          utxos,
+        );
+        const finalTx = finaliseTransaction(signedTx, chain);
+        console.log(finalTx);
+        ttxid = await broadcastTx(finalTx, chain);
+      }
       console.log(ttxid);
       setRawTx('');
       setTxPath('');
@@ -521,7 +654,8 @@ function Home({ navigation }: Props) {
       );
       setTxid(ttxid);
     } catch (error) {
-      displayMessage('error', t('home:err_tx_failed'));
+      // @ts-ignore
+      displayMessage('error', error.message ?? 'home:err_tx_failed');
       console.log(error);
     } finally {
       setSubmittingTransaction(false);
@@ -533,6 +667,11 @@ function Home({ navigation }: Props) {
         return;
       } else if (manualInput === 'cancel') {
         // do not process
+        setTimeout(() => {
+          setIsManualInputModalOpen(false);
+        });
+      } else if (manualInput === 'publicnonces') {
+        handlePublicNoncesRequest(identityChain);
         setTimeout(() => {
           setIsManualInputModalOpen(false);
         });
@@ -569,8 +708,8 @@ function Home({ navigation }: Props) {
           } else if (dataToProcess.startsWith('0')) {
             // transaction
             // sign transaction
-            const rawTransactions = dataToProcess;
-            handleTxRequest(rawTransactions, chain, wallet);
+            const rawTransaction = dataToProcess;
+            handleTxRequest(rawTransaction, chain, wallet);
             setTimeout(() => {
               setIsManualInputModalOpen(false);
             });
@@ -617,6 +756,10 @@ function Home({ navigation }: Props) {
       let chain: keyof cryptos = identityChain;
       let wallet = '0-0';
       let dataToProcess = '';
+      if (scannedData === 'publicnonces') {
+        handlePublicNoncesRequest(identityChain);
+        return;
+      }
       if (splittedInput[1]) {
         // all is default
         chain = splittedInput[0] as keyof cryptos;
@@ -644,8 +787,8 @@ function Home({ navigation }: Props) {
           handleSyncRequest(xpubw, chain);
         } else if (dataToProcess.startsWith('0')) {
           // transaction
-          const rawTransactions = dataToProcess;
-          handleTxRequest(rawTransactions, chain, wallet);
+          const rawTransaction = dataToProcess;
+          handleTxRequest(rawTransaction, chain, wallet);
         } else {
           setTimeout(() => {
             displayMessage('error', t('home:err_invalid_scanned_data'));
@@ -688,14 +831,10 @@ function Home({ navigation }: Props) {
             result.data.path,
             result.data.utxos,
           );
+        } else if (result.data.action === 'publicnoncesrequest') {
+          // only this action is valid for us
+          handlePublicNoncesRequest(result.data.chain);
         }
-      } else if (sspWalletInternalIdentity) {
-        // should not be possible?
-        // get some pending request on W identity
-        const result = await axios.get(
-          `https://${sspConfig().relay}/v1/action/${sspWalletInternalIdentity}`,
-        );
-        console.log('result', result.data);
       } else {
         // here open sync needed modal
         setSyncNeededModalOpen(true);
@@ -728,7 +867,6 @@ function Home({ navigation }: Props) {
         const rchain = activeChain;
         const rpath = txPath;
         setRawTx('');
-        setActiveChain(identityChain);
         setTxPath('');
         setTxUtxos([]);
         await postAction(
@@ -760,13 +898,43 @@ function Home({ navigation }: Props) {
       } else {
         // reject
         setSyncReq('');
-        setActiveChain(identityChain);
       }
     } catch (error) {
       console.log(error);
     } finally {
       setActivityStatus(false);
     }
+  };
+
+  const handlePublicNoncesRequestAction = async (status: boolean) => {
+    try {
+      setActivityStatus(true);
+      if (status === true) {
+        const rchain = activeChain as keyof cryptos;
+        await approvePublicNoncesAction(rchain);
+      } else {
+        // reject
+        const rchain = activeChain;
+        setPublicNoncesReq('');
+        await postAction(
+          'publicnoncesrejected',
+          '{}',
+          rchain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setActivityStatus(false);
+    }
+  };
+
+  const handlePublicNoncesSharedModalAction = () => {
+    console.log('public nonces modal close.');
+    setPublicNoncesShared(false);
+    setPNonces('');
   };
 
   const handleTxSentModalAction = () => {
@@ -777,7 +945,6 @@ function Home({ navigation }: Props) {
   const handleSyncSuccessModalAction = () => {
     console.log('sync success modal close.');
     setSyncSuccessOpen(false);
-    setActiveChain(identityChain);
   };
 
   const handleAddrDetailsModalAction = () => {
@@ -865,7 +1032,7 @@ function Home({ navigation }: Props) {
               />
             </View>
           )}
-          {!submittingTransaction && !rawTx && !syncReq && (
+          {!submittingTransaction && !rawTx && !syncReq && !publicNoncesReq && (
             <>
               <View
                 style={[
@@ -970,6 +1137,18 @@ function Home({ navigation }: Props) {
               chain={activeChain}
               activityStatus={activityStatus}
               actionStatus={handleSynchronisationRequestAction}
+            />
+          )}
+          {publicNoncesReq && (
+            <PublicNoncesRequest
+              activityStatus={activityStatus}
+              actionStatus={handlePublicNoncesRequestAction}
+            />
+          )}
+          {publicNoncesShared && (
+            <PublicNoncesSuccess
+              actionStatus={handlePublicNoncesSharedModalAction}
+              nonces={pNonces}
             />
           )}
           {txid && (

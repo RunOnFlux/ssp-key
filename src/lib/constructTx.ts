@@ -1,4 +1,8 @@
 import utxolib from '@runonflux/utxo-lib';
+import * as accountAbstraction from '@runonflux/aa-schnorr-multisig-sdk';
+import { getEntryPoint, createSmartAccountClient } from '@alchemy/aa-core';
+import { http as viemHttp } from 'viem';
+import * as viemChains from 'viem/chains';
 import { Buffer } from 'buffer';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
@@ -8,6 +12,7 @@ import {
   blockbookBroadcastTxResult,
   broadcastTxResult,
   cryptos,
+  publicPrivateNonce,
 } from '../types';
 
 import { backends } from '@storage/backends';
@@ -240,6 +245,138 @@ export async function broadcastTx(
     }
   } catch (error) {
     console.log(error);
+    throw error;
+  }
+}
+
+export function selectPublicNonce(
+  rawTx: string,
+  publicNonces: publicPrivateNonce[], // ssp Key
+): publicPrivateNonce {
+  const multisigUserOpJSON = JSON.parse(rawTx);
+  const multiSigUserOp =
+    accountAbstraction.userOperation.MultiSigUserOp.fromJson(
+      multisigUserOpJSON,
+    );
+
+  // here restore public nonce
+  const txPublicNonces = multiSigUserOp._getPublicNonces();
+  if (!publicNonces || !publicNonces.length) {
+    throw new Error('SSP Key Public nonces are missing');
+  }
+  let nonceToUse;
+  for (let i = 0; i < txPublicNonces.length; i += 1) {
+    const nonceExists = publicNonces.find(
+      (n) =>
+        txPublicNonces[i].kPublic.buffer.toString('hex') === n.kPublic &&
+        txPublicNonces[i].kTwoPublic.buffer.toString('hex') === n.kTwoPublic,
+    );
+    if (nonceExists) {
+      nonceToUse = nonceExists;
+      break;
+    }
+  }
+
+  if (!nonceToUse) {
+    throw new Error('SSP Key Public nonces do not match');
+  }
+  return nonceToUse;
+}
+
+// return txhash
+export async function signAndBroadcastEVM(
+  rawTx: string,
+  chain: keyof cryptos,
+  privateKey: `0x${string}`, // ssp
+  publicNonceKey: publicPrivateNonce, // ssp Key
+): Promise<string> {
+  try {
+    const blockchainConfig = blockchains[chain];
+    const backendConfig = backends()[chain];
+    const accountSalt = blockchainConfig.accountSalt;
+    const schnorrSigner2 =
+      accountAbstraction.helpers.SchnorrHelpers.createSchnorrSigner(privateKey);
+
+    const multisigUserOpJSON = JSON.parse(rawTx);
+    const multiSigUserOp =
+      accountAbstraction.userOperation.MultiSigUserOp.fromJson(
+        multisigUserOpJSON,
+      );
+
+    const kPrivate = new accountAbstraction.types.Key(
+      Buffer.from(publicNonceKey.k, 'hex'),
+    );
+    const kTwoPrivate = new accountAbstraction.types.Key(
+      Buffer.from(publicNonceKey.kTwo, 'hex'),
+    );
+
+    schnorrSigner2.restorePubNonces(kPrivate, kTwoPrivate);
+
+    multiSigUserOp.signMultiSigHash(schnorrSigner2); // this is not part of ssp wallet
+
+    const summedSignature = multiSigUserOp.getSummedSigData();
+
+    const rpcUrl = backendConfig.node;
+
+    const transport = viemHttp(`https://${rpcUrl}`);
+    const CHAIN = viemChains[blockchainConfig.libid as keyof typeof viemChains];
+
+    const publicKeys = multiSigUserOp._getPublicKeys();
+    const combinedAddresses =
+      accountAbstraction.helpers.SchnorrHelpers.getAllCombinedAddrFromKeys(
+        publicKeys,
+        publicKeys.length,
+      );
+
+    const multiSigSmartAccount =
+      await accountAbstraction.accountAbstraction.createMultiSigSmartAccount({
+        // @ts-ignore
+        transport,
+        // @ts-ignore
+        chain: CHAIN,
+        combinedAddress: combinedAddresses,
+        salt: accountAbstraction.helpers.create2Helpers.saltToHex(accountSalt),
+        // @ts-ignore
+        entryPoint: getEntryPoint(CHAIN),
+      });
+
+    const smartAccountClient = createSmartAccountClient({
+      // @ts-ignore
+      transport,
+      // @ts-ignore
+      chain: CHAIN,
+      // @ts-ignore
+      account: multiSigSmartAccount,
+    });
+
+    const uoHash = await smartAccountClient.sendRawUserOperation(
+      {
+        ...multisigUserOpJSON.userOpRequest,
+        signature: summedSignature,
+      },
+      multiSigSmartAccount.getEntryPoint().address,
+    );
+
+    console.log(uoHash); // this is user operation hash, means it was succesfully sent but not yet included in transaction. All went well, not tx hash
+
+    const txHash = await smartAccountClient
+      .waitForUserOperationTransaction({
+        hash: uoHash,
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+    return txHash ?? uoHash;
+  } catch (error) {
+    console.log(error);
+    // @ts-ignore
+    if (error.message && error.message.includes('Details: ')) {
+      // @ts-ignore
+      const splitted = error.message.split('Details: ');
+      const lastDetail = splitted[splitted.length - 1];
+      // throw just this last detail
+      throw new Error(lastDetail);
+    }
     throw error;
   }
 }

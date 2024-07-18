@@ -23,6 +23,7 @@ const TransactionRequest = (props: {
   const [sendingAmount, setSendingAmount] = useState('');
   const [receiverAddress, setReceiverAddress] = useState('');
   const [senderAddress, setSenderAddress] = useState('');
+  const [token, setToken] = useState('');
   const [fee, setFee] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
@@ -67,7 +68,11 @@ const TransactionRequest = (props: {
     setSendingAmount(txInfo.amount);
     setReceiverAddress(txInfo.receiver);
     setSenderAddress(txInfo.sender);
-    if (props.utxos && props.utxos.length) {
+    setToken(txInfo.token || '');
+    if (
+      (props.utxos && props.utxos.length) ||
+      blockchains[props.chain].chainType === 'evm'
+    ) {
       setFee(txInfo.fee);
     }
     console.log(fee);
@@ -117,7 +122,16 @@ const TransactionRequest = (props: {
             {t('home:sending')}
           </Text>
           <Text style={[Fonts.textSmall, Fonts.textBold, Fonts.textCenter]}>
-            {' ' + sendingAmount + ' ' + blockchainConfig.symbol + ' '}
+            {' ' +
+              sendingAmount +
+              ' ' +
+              (token
+                ? blockchainConfig.tokens.find(
+                    (ttt) =>
+                      ttt.contract.toLocaleLowerCase() === token.toLowerCase(),
+                  )?.symbol
+                : blockchainConfig.symbol) +
+              ' '}
           </Text>
           <Text style={[Fonts.textSmall, Fonts.textCenter]}>
             {t('home:to')}

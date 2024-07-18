@@ -83,7 +83,9 @@ const SyncSuccess = (props: {
   const openExplorer = () => {
     console.log('Open Explorer');
     const backendConfig = backends()[props.chain];
-    Linking.openURL(`https://${backendConfig.node}/address/${chainAddress}`);
+    Linking.openURL(
+      `https://${backendConfig.explorer ?? backendConfig.node}/address/${chainAddress}`,
+    );
   };
 
   return (

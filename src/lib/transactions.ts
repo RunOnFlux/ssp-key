@@ -1,5 +1,7 @@
 import BigNumber from 'bignumber.js';
 import utxolib from '@runonflux/utxo-lib';
+import { decodeFunctionData, erc20Abi } from 'viem';
+import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
 import { cryptos, utxo } from '../types';
 
@@ -13,12 +15,23 @@ interface output {
   value: number;
 }
 
+interface tokenInfo {
+  sender: string;
+  receiver: string;
+  amount: string;
+  fee: string;
+  token?: string;
+}
+
 export function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
   utxos: utxo[],
-) {
+): tokenInfo {
   try {
+    if (blockchains[chain].chainType === 'evm') {
+      return decodeEVMTransactionForApproval(rawTx, chain);
+    }
     const libID = getLibId(chain);
     const decimals = blockchains[chain].decimals;
     const cashAddrPrefix = blockchains[chain].cashaddr;
@@ -118,6 +131,131 @@ export function decodeTransactionForApproval(
       receiver: 'decodingError',
       amount: 'decodingError',
       fee: 'decodingError',
+    };
+    return txInfo;
+  }
+}
+
+interface decodedAbiData {
+  functionName: string;
+  args: [string, bigint, string];
+}
+
+interface userOperation {
+  userOpRequest: {
+    sender: string;
+    callData: `0x${string}`;
+    callGasLimit: `0x${string}`;
+    verificationGasLimit: `0x${string}`;
+    preVerificationGas: `0x${string}`;
+    maxFeePerGas: `0x${string}`;
+    maxPriorityFeePerGas: `0x${string}`;
+  };
+}
+
+export function decodeEVMTransactionForApproval(
+  rawTx: string,
+  chain: keyof cryptos,
+) {
+  try {
+    let decimals = blockchains[chain].decimals;
+    const multisigUserOpJSON = JSON.parse(rawTx) as userOperation;
+    const {
+      callData,
+      sender,
+      callGasLimit,
+      verificationGasLimit,
+      preVerificationGas,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+    } = multisigUserOpJSON.userOpRequest;
+
+    const totalGasLimit = new BigNumber(callGasLimit)
+      .plus(new BigNumber(verificationGasLimit))
+      .plus(new BigNumber(preVerificationGas));
+
+    const totalMaxWeiPerGas = new BigNumber(maxFeePerGas).plus(
+      new BigNumber(maxPriorityFeePerGas),
+    );
+
+    const totalFeeWei = totalGasLimit
+      .multipliedBy(totalMaxWeiPerGas)
+      .dividedBy(10 ** 18);
+
+    console.log(multisigUserOpJSON);
+
+    // callGasLimit":"0x5ea6","verificationGasLimit":"0x11b5a","preVerificationGas":"0xdf89","maxFeePerGas":"0xee6b28000","maxPriorityFeePerGas":"0x77359400",
+
+    const decodedData: decodedAbiData = decodeFunctionData({
+      abi: abi.MultiSigSmartAccount_abi,
+      data: callData,
+    }) as decodedAbiData; // Cast decodedData to decodedAbiData type.
+
+    let txReceiver = 'decodingError';
+    let amount = '0';
+
+    if (
+      decodedData &&
+      decodedData.functionName === 'execute' &&
+      decodedData.args &&
+      decodedData.args.length >= 3
+    ) {
+      txReceiver = decodedData.args[0];
+      amount = new BigNumber(decodedData.args[1].toString())
+        .dividedBy(new BigNumber(10 ** decimals))
+        .toFixed();
+    } else {
+      throw new Error('Unexpected decoded data.');
+    }
+
+    const txInfo = {
+      sender,
+      receiver: txReceiver,
+      amount,
+      fee: totalFeeWei.toFixed(),
+      token: '',
+    };
+
+    if (amount === '0') {
+      txInfo.token = decodedData.args[0];
+
+      // find the token in our token list
+      const token = blockchains[chain].tokens.find(
+        (t) => t.contract.toLowerCase() === txInfo.token.toLowerCase(),
+      );
+      if (token) {
+        decimals = token.decimals;
+      }
+      const contractData: `0x${string}` = decodedData.args[2] as `0x${string}`;
+      // most likely we are dealing with a contract call, sending some erc20 token
+      // docode args[2] which is operation
+      const decodedDataContract: decodedAbiData = decodeFunctionData({
+        abi: erc20Abi,
+        data: contractData,
+      }) as unknown as decodedAbiData; // Cast decodedDataContract to decodedAbiData type.
+      console.log(decodedDataContract);
+      if (
+        decodedDataContract &&
+        decodedDataContract.functionName === 'transfer' &&
+        decodedDataContract.args &&
+        decodedDataContract.args.length >= 2
+      ) {
+        txInfo.receiver = decodedDataContract.args[0];
+        txInfo.amount = new BigNumber(decodedDataContract.args[1].toString())
+          .dividedBy(new BigNumber(10 ** decimals))
+          .toFixed();
+      }
+    }
+
+    return txInfo;
+  } catch (error) {
+    console.log(error);
+    const txInfo = {
+      sender: 'decodingError',
+      receiver: 'decodingError',
+      amount: 'decodingError',
+      fee: 'decodingError',
+      token: 'decodingError',
     };
     return txInfo;
   }

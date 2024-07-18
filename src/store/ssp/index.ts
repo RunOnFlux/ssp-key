@@ -4,6 +4,7 @@ export interface seedPhraseState {
   seedPhrase: string;
   sspWalletKeyInternalIdentity: string;
   sspWalletInternalIdentity: string;
+  publicNonces: string;
   identityChain: 'btc';
 }
 
@@ -11,6 +12,7 @@ const initialStateSeedPhrase: seedPhraseState = {
   seedPhrase: '',
   sspWalletKeyInternalIdentity: '',
   sspWalletInternalIdentity: '',
+  publicNonces: '',
   identityChain: 'btc',
 };
 
@@ -28,11 +30,15 @@ const seedPhraseSlice = createSlice({
     setSspWalletInternalIdentity: (state, action: PayloadAction<string>) => {
       state.sspWalletInternalIdentity = action.payload;
     },
+    setSspKeyPublicNonces: (state, action: PayloadAction<string>) => {
+      state.publicNonces = action.payload;
+    },
     setSSPInitialState: (state) => {
       state.seedPhrase = '';
       state.sspWalletKeyInternalIdentity = '';
       state.sspWalletInternalIdentity = '';
       state.identityChain = 'btc';
+      state.publicNonces = '';
     },
   },
 });
@@ -41,6 +47,7 @@ export const {
   setSeedPhrase,
   setSspWalletKeyInternalIdentity,
   setSspWalletInternalIdentity,
+  setSspKeyPublicNonces,
   setSSPInitialState,
 } = seedPhraseSlice.actions;
 
