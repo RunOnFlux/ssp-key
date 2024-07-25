@@ -1,12 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { chainStateKey } from '../../types';
 
-export interface ChainState {
-  xpubWallet: string;
-  xpubKey: string;
-  xprivKey: string;
-}
-
-const initialState: ChainState = {
+const initialState: chainStateKey = {
   xpubWallet: '', // encrypted
   xpubKey: '', // encrypted
   xprivKey: '', // encrypted

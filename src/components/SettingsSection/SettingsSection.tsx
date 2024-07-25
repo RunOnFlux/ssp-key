@@ -86,6 +86,7 @@ const SettingsSection = (props: {
     if (backendsOriginalConfig[selectedChain].node !== chainNodeConfig) {
       const backendsConfig = {
         [selectedChain]: {
+          ...backendsOriginalConfig[selectedChain],
           node: chainNodeConfig,
         },
       };

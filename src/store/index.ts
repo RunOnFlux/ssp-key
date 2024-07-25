@@ -1,4 +1,4 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { configureStore, combineReducers, Reducer } from '@reduxjs/toolkit';
 import { setupListeners } from '@reduxjs/toolkit/query';
 import {
   persistReducer,
@@ -13,7 +13,7 @@ import {
 } from 'redux-persist';
 import autoMergeLevel2 from 'redux-persist/lib/stateReconciler/autoMergeLevel2'; // here we need to be careful with updates to our initial state!
 import { MMKV } from 'react-native-mmkv';
-import { cryptos } from '../types';
+import { cryptos, chainStateKey } from '../types';
 
 // ********** Import chains **********
 import chainSliceBase from './chainSliceBase';
@@ -34,6 +34,8 @@ const chains = {
 };
 // ********** Import chains **********
 
+const chainKeys = Object.keys(chains) as (keyof cryptos)[];
+
 import theme from './theme';
 import ssp from './ssp';
 
@@ -41,18 +43,13 @@ const reducers = combineReducers({
   theme,
   ssp,
   // === IMPORT CHAINS ===
-  flux: chains.flux.reducer,
-  fluxTestnet: chains.fluxTestnet.reducer,
-  rvn: chains.rvn.reducer,
-  ltc: chains.ltc.reducer,
-  btc: chains.btc.reducer,
-  doge: chains.doge.reducer,
-  zec: chains.zec.reducer,
-  bch: chains.bch.reducer,
-  btcTestnet: chains.btcTestnet.reducer,
-  btcSignet: chains.btcSignet.reducer,
-  sepolia: chains.sepolia.reducer,
-  eth: chains.eth.reducer,
+  ...chainKeys.reduce(
+    (acc, key) => {
+      acc[key] = chains[key].reducer;
+      return acc;
+    },
+    {} as Record<keyof cryptos, Reducer<chainStateKey>>,
+  ),
 });
 
 export const storage = new MMKV();
