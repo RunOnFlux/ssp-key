@@ -525,3 +525,17 @@ export interface fusionMessage {
   status: string;
   data: errorResponse | string;
 }
+
+export interface chainState {
+  xpubWallet: string;
+  xpubKey: string;
+  wallets: wallets;
+  blockheight: number;
+  walletInUse: string;
+}
+
+export interface chainStateKey {
+  xpubWallet: string;
+  xpubKey: string;
+  xprivKey: string;
+}
