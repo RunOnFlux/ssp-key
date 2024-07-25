@@ -8,7 +8,7 @@ type Props = {
   mode?: 'contain' | 'cover' | 'stretch' | 'repeat' | 'center';
 };
 
-const Brand = ({ mode }: Props) => {
+const Brand = ({ mode = 'contain' }: Props) => {
   const { darkMode, Layout, Images, Gutters } = useTheme();
 
   return (
@@ -24,12 +24,6 @@ const Brand = ({ mode }: Props) => {
       />
     </View>
   );
-};
-
-Brand.defaultProps = {
-  height: 150,
-  width: 150,
-  mode: 'contain',
 };
 
 export default Brand;

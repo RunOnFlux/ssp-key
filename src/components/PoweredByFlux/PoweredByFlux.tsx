@@ -8,7 +8,7 @@ type Props = {
   isClickeable?: boolean;
 };
 
-const PoweredByFlux = ({ isClickeable }: Props) => {
+const PoweredByFlux = ({ isClickeable = false }: Props) => {
   const { darkMode: isDark, Images, Layout, NavigationColors } = useTheme();
 
   const openFlux = () => {
@@ -67,7 +67,5 @@ const PoweredByFlux = ({ isClickeable }: Props) => {
     </>
   );
 };
-
-PoweredByFlux.defaultProps = { isClickeable: false };
 
 export default PoweredByFlux;
