@@ -19,7 +19,7 @@ import { generateMultisigAddress } from '../../lib/wallet';
 
 import { useAppSelector } from '../../hooks';
 
-const CryptoJS = require('crypto-js');
+import CryptoJS from 'crypto-js';
 
 const SyncSuccess = (props: {
   chain: keyof cryptos;

@@ -19,7 +19,7 @@ import { useTheme } from '../../hooks';
 import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
-const CryptoJS = require('crypto-js');
+import CryptoJS from 'crypto-js';
 
 import { blockchains } from '@storage/blockchains';
 

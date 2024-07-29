@@ -1,5 +1,6 @@
 import { ThemeVariables } from '../../@types/theme';
 
+// eslint-disable-next-line no-empty-pattern
 export default function ({}: ThemeVariables) {
   return {
     ssp: {

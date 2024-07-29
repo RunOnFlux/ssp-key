@@ -1,6 +1,6 @@
-module.exports = {
-  arrowParens: "always",
+export default {
+  arrowParens: 'always',
   bracketSameLine: false,
   singleQuote: true,
-  trailingComma: "all",
+  trailingComma: 'all',
 };
