@@ -262,7 +262,7 @@ function Home({ navigation }: Props) {
           throw new Error('Could not generate multisig address');
         }
         CryptoJS.AES.encrypt(
-          addrInfo.redeemScript || addrInfo.witnessScript,
+          addrInfo.redeemScript || addrInfo.witnessScript || '',
           pwForEncryption,
         ).toString(); // just to test all is fine
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
@@ -335,7 +335,7 @@ function Home({ navigation }: Props) {
           throw new Error('Could not generate multisig address');
         }
         CryptoJS.AES.encrypt(
-          addrInfo.redeemScript || addrInfo.witnessScript,
+          addrInfo.redeemScript || addrInfo.witnessScript || '',
           pwForEncryption,
         ).toString(); // just to test all is ok
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
