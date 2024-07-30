@@ -183,7 +183,6 @@ export function signTransaction(
     if (blockchains[chain].hashType) {
       // only for BCH
       hashType =
-        // eslint-disable-next-line no-bitwise
         utxolib.Transaction.SIGHASH_ALL |
         utxolib.Transaction.SIGHASH_BITCOINCASHBIP143;
     }
@@ -330,22 +329,19 @@ export async function signAndBroadcastEVM(
 
     const multiSigSmartAccount =
       await accountAbstraction.accountAbstraction.createMultiSigSmartAccount({
-        // @ts-ignore
         transport,
-        // @ts-ignore
         chain: CHAIN,
         combinedAddress: combinedAddresses,
         salt: accountAbstraction.helpers.create2Helpers.saltToHex(accountSalt),
-        // @ts-ignore
+        // @ts-expect-error 'error' is of type 'unknown'
         entryPoint: getEntryPoint(CHAIN),
       });
 
     const smartAccountClient = createSmartAccountClient({
-      // @ts-ignore
+      // @ts-expect-error 'error' is of type 'unknown'
       transport,
-      // @ts-ignore
+      // @ts-expect-error 'error' is of type 'unknown'
       chain: CHAIN,
-      // @ts-ignore
       account: multiSigSmartAccount,
     });
 
@@ -369,9 +365,9 @@ export async function signAndBroadcastEVM(
     return txHash ?? uoHash;
   } catch (error) {
     console.log(error);
-    // @ts-ignore
+    // @ts-expect-error 'error' is of type 'unknown'
     if (error.message && error.message.includes('Details: ')) {
-      // @ts-ignore
+      // @ts-expect-error 'error' is of type 'unknown'
       const splitted = error.message.split('Details: ');
       const lastDetail = splitted[splitted.length - 1];
       // throw just this last detail

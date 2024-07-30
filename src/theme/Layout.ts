@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { ThemeVariables } from '../../@types/theme';
 
+// eslint-disable-next-line no-empty-pattern
 export default function ({}: ThemeVariables) {
   return StyleSheet.create({
     /* Column Layouts */

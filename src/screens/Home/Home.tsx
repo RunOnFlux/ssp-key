@@ -36,7 +36,7 @@ import {
 } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
-const CryptoJS = require('crypto-js');
+import * as CryptoJS from 'crypto-js';
 
 import {
   getMasterXpriv,
@@ -262,7 +262,7 @@ function Home({ navigation }: Props) {
           throw new Error('Could not generate multisig address');
         }
         CryptoJS.AES.encrypt(
-          addrInfo.redeemScript || addrInfo.witnessScript,
+          addrInfo.redeemScript || addrInfo.witnessScript || '',
           pwForEncryption,
         ).toString(); // just to test all is fine
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
@@ -335,7 +335,7 @@ function Home({ navigation }: Props) {
           throw new Error('Could not generate multisig address');
         }
         CryptoJS.AES.encrypt(
-          addrInfo.redeemScript || addrInfo.witnessScript,
+          addrInfo.redeemScript || addrInfo.witnessScript || '',
           pwForEncryption,
         ).toString(); // just to test all is ok
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
@@ -540,7 +540,7 @@ function Home({ navigation }: Props) {
         // we can ignore this error and show success message as user can copy the nonces
         displayMessage(
           'error',
-          // @ts-ignore
+          // @ts-expect-error 'error' is of type 'unknown'
           error.message ?? 'home:err_sharing_public_nonces',
         );
         console.log(error);
@@ -553,7 +553,7 @@ function Home({ navigation }: Props) {
     } catch (error) {
       displayMessage(
         'error',
-        // @ts-ignore
+        // @ts-expect-error 'error' is of type 'unknown'
         error.message ?? 'home:err_generating_public_nonces',
       );
       console.log(error);
@@ -654,7 +654,7 @@ function Home({ navigation }: Props) {
       );
       setTxid(ttxid);
     } catch (error) {
-      // @ts-ignore
+      // @ts-expect-error 'error' is of type 'unknown'
       displayMessage('error', error.message ?? 'home:err_tx_failed');
       console.log(error);
     } finally {
