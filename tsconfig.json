@@ -4,7 +4,6 @@
     "esModuleInterop": true,
     "jsx": "react",
     "types": [
-      "react-native",
       "jest",
       "node"
     ],
