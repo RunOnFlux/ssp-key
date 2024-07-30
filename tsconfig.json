@@ -1,9 +1,8 @@
 {
   "extends": "@react-native/typescript-config/tsconfig.json",
   "compilerOptions": {
-    "esModuleInterop": true,
-    "jsx": "react",
     "types": [
+      "react-native",
       "jest",
       "node"
     ],
