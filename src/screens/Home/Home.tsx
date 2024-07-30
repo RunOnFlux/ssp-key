@@ -36,7 +36,8 @@ import {
 } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
-import CryptoJS from 'crypto-js';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const CryptoJS = require('crypto-js');
 
 import {
   getMasterXpriv,

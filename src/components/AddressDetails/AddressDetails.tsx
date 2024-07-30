@@ -15,7 +15,8 @@ import { cryptos } from '../../types';
 
 import { blockchains } from '@storage/blockchains';
 
-import CryptoJS from 'crypto-js';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const CryptoJS = require('crypto-js');
 
 const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const { identityChain } = useAppSelector((state) => state.ssp);
