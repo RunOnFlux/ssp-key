@@ -19,8 +19,7 @@ import { generateMultisigAddress } from '../../lib/wallet';
 
 import { useAppSelector } from '../../hooks';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const CryptoJS = require('crypto-js');
+import * as CryptoJS from 'crypto-js';
 
 const SyncSuccess = (props: {
   chain: keyof cryptos;

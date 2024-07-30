@@ -23,8 +23,7 @@ import { blockchains } from '@storage/blockchains';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import ToastNotif from '../../components/Toast/Toast';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const CryptoJS = require('crypto-js');
+import * as CryptoJS from 'crypto-js';
 
 import {
   getMasterXpriv,
