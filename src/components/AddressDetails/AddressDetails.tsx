@@ -15,7 +15,7 @@ import { cryptos } from '../../types';
 
 import { blockchains } from '@storage/blockchains';
 
-const CryptoJS = require('crypto-js');
+import * as CryptoJS from 'crypto-js';
 
 const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const { identityChain } = useAppSelector((state) => state.ssp);
@@ -438,7 +438,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 selectedValue={selectedWallet}
                 onValueChange={(itemValue) => setSelectedWallet(itemValue)}
               >
-                {[...Array(1000)].map((e, i) => (
+                {Array.from(Array(42), (_, i) => (
                   <Picker.Item
                     color={Colors.textInput}
                     label={`Wallet ${i + 1}`}

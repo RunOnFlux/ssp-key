@@ -26,7 +26,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
         resolve(true);
       }, 500),
     );
-    await setDefaultTheme({ theme: 'default', darkMode: null });
+    setDefaultTheme({ theme: 'default', darkMode: null });
     navigation.reset({
       index: 0,
       routes: [{ name: 'Main' }],

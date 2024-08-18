@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "full": "SSP Klíč",
+    "initials": "SSPKey",
+    "moto": "Bezpečná. Jednoduchá. Našlapaná."
+  },
+  "back": "Zpět",
+  "cancel": "Zrušit",
+  "key_seed_phrase": "Key Seed Phrase",
+  "refresh": "Obnovit",
+  "settings": "Nastavení",
+  "restore": "Obnvit",
+  "flux": "Flux",
+  "powered_by": "Poháněné sítí",
+  "ok": "OK",
+  "help": "Pomoc",
+  "save": "Uložit",
+  "confirm": "Potvrdit",
+  "ask_me_later": "Zeptat se později",
+  "chain": "Chain",
+  "wallet": "Peněženka"
+}

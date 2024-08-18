@@ -19,7 +19,7 @@ import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
 
 import { blockchains } from '@storage/blockchains';
 
-const CryptoJS = require('crypto-js');
+import * as CryptoJS from 'crypto-js';
 
 const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
   // ssp key seed phrase, xpriv, xpub

@@ -36,7 +36,7 @@ import {
 } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
-const CryptoJS = require('crypto-js');
+import * as CryptoJS from 'crypto-js';
 
 import {
   getMasterXpriv,
@@ -181,9 +181,9 @@ function Home({ navigation }: Props) {
     }
   };
 
-  const checkXpubXpriv = async () => {
+  const checkXpubXpriv = () => {
     // todo loading animation on chain sync approval
-    const chainToUse = activeChain as keyof cryptos;
+    const chainToUse = activeChain;
     const blockchainConfigToUse = blockchains[chainToUse];
     if (!xpubKey || !xprivKey) {
       // just a precaution to make sure xpub and xpriv are set. Should acutally never end up here
@@ -262,7 +262,7 @@ function Home({ navigation }: Props) {
           throw new Error('Could not generate multisig address');
         }
         CryptoJS.AES.encrypt(
-          addrInfo.redeemScript || addrInfo.witnessScript,
+          addrInfo.redeemScript || addrInfo.witnessScript || '',
           pwForEncryption,
         ).toString(); // just to test all is fine
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
@@ -335,7 +335,7 @@ function Home({ navigation }: Props) {
           throw new Error('Could not generate multisig address');
         }
         CryptoJS.AES.encrypt(
-          addrInfo.redeemScript || addrInfo.witnessScript,
+          addrInfo.redeemScript || addrInfo.witnessScript || '',
           pwForEncryption,
         ).toString(); // just to test all is ok
         const encryptedXpubWallet = CryptoJS.AES.encrypt(
@@ -445,7 +445,7 @@ function Home({ navigation }: Props) {
       setSettingsMenuOpen(true);
     });
   };
-  const postAction = (
+  const postAction = async (
     action: string,
     payload: string,
     chain: string,
@@ -459,14 +459,11 @@ function Home({ navigation }: Props) {
       path,
       wkIdentity,
     };
-    axios
-      .post(`https://${sspConfig().relay}/v1/action`, data)
-      .then((res) => {
-        console.log(res.data);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+    const result = await axios.post(
+      `https://${sspConfig().relay}/v1/action`,
+      data,
+    );
+    console.log(result.data);
   };
   const postSyncToken = (token: string, wkIdentity: string) => {
     // post fcm token tied to wkIdentity
@@ -501,7 +498,7 @@ function Home({ navigation }: Props) {
     setActiveChain(chain);
     setPublicNoncesReq(chain);
   };
-  const handleSyncRequest = async (xpubw: string, chain: keyof cryptos) => {
+  const handleSyncRequest = (xpubw: string, chain: keyof cryptos) => {
     setActiveChain(chain);
     setSyncReq(xpubw);
   };
@@ -540,7 +537,7 @@ function Home({ navigation }: Props) {
         // we can ignore this error and show success message as user can copy the nonces
         displayMessage(
           'error',
-          // @ts-ignore
+          // @ts-expect-error 'error' is of type 'unknown'
           error.message ?? 'home:err_sharing_public_nonces',
         );
         console.log(error);
@@ -553,7 +550,7 @@ function Home({ navigation }: Props) {
     } catch (error) {
       displayMessage(
         'error',
-        // @ts-ignore
+        // @ts-expect-error 'error' is of type 'unknown'
         error.message ?? 'home:err_generating_public_nonces',
       );
       console.log(error);
@@ -628,7 +625,7 @@ function Home({ navigation }: Props) {
           publicNonceKey,
         );
       } else {
-        const signedTx = await signTransaction(
+        const signedTx = signTransaction(
           rawTransaction,
           chain,
           keyPair.privKey,
@@ -654,14 +651,14 @@ function Home({ navigation }: Props) {
       );
       setTxid(ttxid);
     } catch (error) {
-      // @ts-ignore
+      // @ts-expect-error 'error' is of type 'unknown'
       displayMessage('error', error.message ?? 'home:err_tx_failed');
       console.log(error);
     } finally {
       setSubmittingTransaction(false);
     }
   };
-  const handleManualInput = async (manualInput: string) => {
+  const handleManualInput = (manualInput: string) => {
     try {
       if (!manualInput) {
         return;
@@ -857,7 +854,7 @@ function Home({ navigation }: Props) {
       setActivityStatus(true);
       if (status === true) {
         const rtx = rawTx;
-        const rchain = activeChain as keyof cryptos;
+        const rchain = activeChain;
         const rpath = txPath;
         const rUtxos = txUtxos;
         await approveTransaction(rtx, rchain, rpath, rUtxos);
@@ -910,7 +907,7 @@ function Home({ navigation }: Props) {
     try {
       setActivityStatus(true);
       if (status === true) {
-        const rchain = activeChain as keyof cryptos;
+        const rchain = activeChain;
         await approvePublicNoncesAction(rchain);
       } else {
         // reject
@@ -962,7 +959,7 @@ function Home({ navigation }: Props) {
     setSettingsMenuOpen(false);
   };
 
-  const handleSyncNeededModalAction = async (status: string) => {
+  const handleSyncNeededModalAction = (status: string) => {
     try {
       setSyncNeededModalOpen(false);
       setTimeout(() => {
@@ -1126,7 +1123,7 @@ function Home({ navigation }: Props) {
           {!submittingTransaction && rawTx && xpubWallet && xpubKey && (
             <TransactionRequest
               rawTx={rawTx}
-              chain={activeChain as keyof cryptos}
+              chain={activeChain}
               utxos={txUtxos}
               activityStatus={activityStatus}
               actionStatus={handleTransactionRequestAction}
@@ -1154,7 +1151,7 @@ function Home({ navigation }: Props) {
           {txid && (
             <TxSent
               txid={txid}
-              chain={activeChain as keyof cryptos}
+              chain={activeChain}
               actionStatus={handleTxSentModalAction}
             />
           )}

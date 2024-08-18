@@ -39,7 +39,7 @@ export default function () {
   if (currentTheme !== 'default') {
     const {
       Variables,
-      // @ts-ignore to prevent multiple themes handling
+      // @ts-expect-error 'error' is of type 'unknown' to prevent multiple themes handling
       ...themeConfig
     } = themes[currentTheme] || {};
 
@@ -173,7 +173,7 @@ const mergeTheme = <F, G, I, L, C>(
       },
     }),
     baseTheme,
-  ) as typeof baseTheme;
+  );
 
 /**
  * Merge the React Navigation Theme
