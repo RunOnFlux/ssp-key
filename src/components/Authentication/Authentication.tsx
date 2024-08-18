@@ -35,35 +35,39 @@ const Authentication = (props: {
 
   useEffect(() => {
     console.log('entered auth');
-    rnBiometrics.isSensorAvailable().then((resultObject) => {
-      const { available, biometryType } = resultObject;
-
-      if (available && biometryType === BiometryTypes.TouchID) {
-        console.log('TouchID is supported');
-        setBiometricsAvailable(true);
-        // keep timeout
-        // iOS freezes if we call biometrics right away
-        setTimeout(() => {
-          initiateFingerprint();
-        }, 250);
-      } else if (available && biometryType === BiometryTypes.FaceID) {
-        console.log('FaceID is supported');
-        setBiometricsAvailable(true);
-        setTimeout(() => {
-          initiateFingerprint();
-        }, 250);
-      } else if (available && biometryType === BiometryTypes.Biometrics) {
-        console.log('Biometrics is supported');
-        setBiometricsAvailable(true);
-        setTimeout(() => {
-          initiateFingerprint();
-        }, 250);
-      } else {
-        // here we show fallback mechanism if none of the above succeed
-        console.log('Biometrics not supported');
-        setBiometricsAvailable(false);
-      }
-    });
+    rnBiometrics
+      .isSensorAvailable()
+      .then((resultObject) => {
+        const { available, biometryType } = resultObject;
+        if (available && biometryType === BiometryTypes.TouchID) {
+          console.log('TouchID is supported');
+          setBiometricsAvailable(true);
+          // keep timeout
+          // iOS freezes if we call biometrics right away
+          setTimeout(() => {
+            initiateFingerprint();
+          }, 250);
+        } else if (available && biometryType === BiometryTypes.FaceID) {
+          console.log('FaceID is supported');
+          setBiometricsAvailable(true);
+          setTimeout(() => {
+            initiateFingerprint();
+          }, 250);
+        } else if (available && biometryType === BiometryTypes.Biometrics) {
+          console.log('Biometrics is supported');
+          setBiometricsAvailable(true);
+          setTimeout(() => {
+            initiateFingerprint();
+          }, 250);
+        } else {
+          // here we show fallback mechanism if none of the above succeed
+          console.log('Biometrics not supported');
+          setBiometricsAvailable(false);
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   }, []);
 
   const initiateFingerprint = () => {

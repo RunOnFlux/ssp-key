@@ -3,7 +3,6 @@ if (typeof __filename === 'undefined') global.__filename = '';
 if (typeof process === 'undefined') {
   global.process = require('process');
 } else {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const bProcess = require('process');
   for (var p in bProcess) {
     if (!(p in process)) {
@@ -13,7 +12,6 @@ if (typeof process === 'undefined') {
 }
 
 process.browser = false;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 if (typeof Buffer === 'undefined') global.Buffer = require('buffer').Buffer;
 
 // global.location = global.location || { port: 80 }

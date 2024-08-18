@@ -41,6 +41,7 @@ type DarkProps<T> = {
 type PropsWithoutDark<T> = Omit<T, DarkProps<T>>;
 
 export type ThemeState = {
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   theme: 'default' | keyof PropsWithoutDark<typeof themes>;
   darkMode: boolean | null;
 };
