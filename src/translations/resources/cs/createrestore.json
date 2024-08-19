@@ -7,9 +7,9 @@
   "key_backup": "Záloha Klíče",
   "show_mnemonic": "Ukázat Mnemonic",
   "hide_mnemonic": "Skrýt Mnemonic",
-  "key_backup_text_1": "Seed Klíče se používá ke generování všech adres. Kdokoliv kdá zná váš see má částečnou kontrolu nad celou vaší peněženkou.",
+  "key_backup_text_1": "Seed Klíče se používá ke generování všech adres. Kdokoliv kdá zná váš seed má částečnou kontrolu nad celou vaší peněženkou.",
   "key_backup_text_2": "Uschovejte si Seed Klíče na bezpečném místě.",
-  "key_backup_text_3": "Zráta seedu Klíče vústí v kompletní ztrátu celé peněženky a vašich prostředků.",
+  "key_backup_text_3": "Zráta seedu Klíče vyústí v kompletní ztrátu celé peněženky a vašich prostředků.",
   "seed_phrase_backed_up": "Uschoval jsem si seed frázi mého klíče na bezpečném místě.",
   "import_key_phrase": "Importovat Seed Frázi Klíče",
   "err_enter_seed": "Prosím zadejte svou seed frázi Klíče",
@@ -28,5 +28,5 @@
   "get_started": "Pojďme Začít!",
   "create_key": "Vytvořit Klíč",
   "backup_key": "Zálohovat Klíč",
-  "sync_wallet": "Syncrhonizovat Peněženku"
+  "sync_wallet": "Synchronizovat Peněženku"
 }
