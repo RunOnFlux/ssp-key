@@ -1,7 +1,7 @@
 {
   "title": "$t(common:appName.full)",
   "subtitle": "$t(common:appName.moto)",
-  "description": "Klíč je vaše dfouvázové ověření k SSP Peněžence.",
+  "description": "Klíč je vaše dvoufázové ověření k SSP Peněžence.",
   "synchronise_key": "Synchronizovat Klíč!",
   "restore_key": "Obnovit Klíč"
 }
