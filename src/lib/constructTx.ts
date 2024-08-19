@@ -369,7 +369,7 @@ export async function signAndBroadcastEVM(
     if (error.message && error.message.includes('Details: ')) {
       // @ts-expect-error 'error' is of type 'unknown'
       const splitted = error.message.split('Details: ');
-      const lastDetail = splitted[splitted.length - 1];
+      const lastDetail = splitted[splitted.length - 1] as string | undefined;
       // throw just this last detail
       throw new Error(lastDetail);
     }

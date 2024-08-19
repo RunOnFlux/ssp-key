@@ -21,7 +21,8 @@ export async function requestUserPermission() {
   await notifee.requestPermission();
 }
 
-export async function notificationListener() {
+export function notificationListener() {
+  // eslint-disable-next-line @typescript-eslint/require-await
   notifee.onBackgroundEvent(async ({ type, detail }) => {
     console.log('type ', type);
     console.log('detail ', detail);
@@ -50,7 +51,7 @@ export async function notificationListener() {
   messaging().onMessage(onMessageReceived);
 }
 
-export async function onBackgroundMessageHandler() {
+export function onBackgroundMessageHandler() {
   messaging().setBackgroundMessageHandler(onMessageReceived);
 }
 

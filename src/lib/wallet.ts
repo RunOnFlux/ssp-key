@@ -127,11 +127,13 @@ export function generateMultisigAddress(
   try {
     externalChain1 = HDKey.fromExtendedKey(xpub1, bipParams);
   } catch (e) {
+    console.log(e);
     externalChain1 = HDKey.fromExtendedKey(xpub1, networkBipParams);
   }
   try {
     externalChain2 = HDKey.fromExtendedKey(xpub2, bipParams);
   } catch (e) {
+    console.log(e);
     externalChain2 = HDKey.fromExtendedKey(xpub2, networkBipParams);
   }
 
@@ -322,6 +324,7 @@ export function generateAddressKeypair(
       bip32: bipParams,
     });
   } catch (e) {
+    console.log(e);
     externalChain = HDKey.fromExtendedKey(xpriv, networkBipParams);
   }
 
@@ -359,6 +362,7 @@ export function generateInternalIdentityAddress(
   try {
     externalChain = HDKey.fromExtendedKey(xpub, bipParams);
   } catch (e) {
+    console.log(e);
     externalChain = HDKey.fromExtendedKey(xpub, networkBipParams);
   }
 

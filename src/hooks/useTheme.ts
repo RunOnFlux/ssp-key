@@ -173,7 +173,7 @@ const mergeTheme = <F, G, I, L, C>(
       },
     }),
     baseTheme,
-  ) as typeof baseTheme;
+  );
 
 /**
  * Merge the React Navigation Theme
