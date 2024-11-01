@@ -68,7 +68,7 @@
     "socket.io-client": "~4.7.5",
     "stream-browserify": "~3.0.0",
     "util": "~0.12.5",
-    "viem": "~2.21.34"
+    "viem": "~2.19.6"
   },
   "devDependencies": {
     "@babel/core": "~7.25.2",
