@@ -6,6 +6,7 @@ import { toCashAddress } from 'bchaddrjs';
 import { cryptos, utxo } from '../types';
 
 import { blockchains } from '@storage/blockchains';
+import axios from 'axios';
 
 export function getLibId(chain: keyof cryptos): string {
   return blockchains[chain].libid;
@@ -153,6 +154,13 @@ interface userOperation {
   };
 }
 
+export async function getTokenMetadata (contractAddress: any, network: any) {
+  // const url = `http://localhost:9876/v1/tokeninfo/${network}/${contractAddress}`; // local env
+  const url = `https://relay.sspwallet.io/v1/tokeninfo/${network}/${contractAddress}`;
+  const data = await axios.get(url).then((response) => response.data)
+  return data;
+}
+
 export function decodeEVMTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
@@ -220,9 +228,16 @@ export function decodeEVMTransactionForApproval(
       txInfo.token = decodedData.args[0];
 
       // find the token in our token list
-      const token = blockchains[chain].tokens.find(
+      let token: any = {};
+
+      token = blockchains[chain].tokens.find(
         (t) => t.contract.toLowerCase() === txInfo.token.toLowerCase(),
       );
+      
+      if (Object.keys(token).length <= 0) {
+        token = getTokenMetadata(txInfo.token.toLowerCase(), chain.toLowerCase());
+      }
+
       if (token) {
         decimals = token.decimals;
       }
