@@ -1,15 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck test suite
-import chai from 'chai';
-import { describe, it } from 'mocha';
-
 import {
   getLibId,
   decodeTransactionForApproval,
   decodeEVMTransactionForApproval,
 } from '../../src/lib/transactions';
-
-const { assert } = chai;
 
 const rawTxSepolia = JSON.stringify({
   id: '0x8b18236447c918b3b217da857a787a7561313b730374430596eaa6f9c2d0ee16',
@@ -68,14 +63,14 @@ const rawTxFlux =
 
 describe('Transactions Lib', () => {
   describe('Verifies transactions', () => {
-    it('should return getLibId data when value is flux', () => {
+    test('should return getLibId data when value is flux', () => {
       const res = getLibId('flux');
-      assert.equal(res, 'flux');
+      expect(res).toBe('flux');
     });
 
-    it('should return decodeTransactionForApproval data when value is invalid', () => {
+    test('should return decodeTransactionForApproval data when value is invalid', () => {
       const res = decodeTransactionForApproval('{}', 'sepolia');
-      assert.deepEqual(res, {
+      expect(res).toEqual({
         sender: 'decodingError',
         receiver: 'decodingError',
         amount: 'decodingError',
@@ -84,38 +79,40 @@ describe('Transactions Lib', () => {
       });
     });
 
-    it('should return decodeTransactionForApproval data when value is invalid rawTx', () => {
+    test('should return decodeTransactionForApproval data when value is invalid rawTx', () => {
       const res = decodeTransactionForApproval(rawTxSepolia, 'flux');
-      assert.deepEqual(res, {
+      expect(res).toEqual({
         sender: 'decodingError',
         receiver: 'decodingError',
         amount: 'decodingError',
+        fee: 'decodingError',
       });
     });
 
-    it('should return decodeTransactionForApproval data when value is valid', () => {
+    test('should return decodeTransactionForApproval data when value is valid', () => {
       const res = decodeTransactionForApproval(rawTxFlux, 'flux');
-      assert.deepEqual(res, {
+      expect(res).toEqual({
         sender: 't3VhYxSXapJEq2mH1z5MmFUcVLYvrYNfqbv',
         receiver: 't3cwthwVvGg7WKkxhzw87xnDDsdb9kS92x3',
         amount: '0.0009968',
+        fee: '-0.0009968',
       });
     });
 
-    it('should return decodeEVMTransactionForApproval data when value is valid', () => {
+    test('should return decodeEVMTransactionForApproval data when value is valid', () => {
       const res = decodeEVMTransactionForApproval(rawTxSepolia, 'sepolia');
-      assert.deepEqual(res, {
+      expect(res).toEqual({
         sender: '0xd447BA08b0d395fCAd6e480d270529c932289Ce1',
         receiver: '0x66324EE406cCccdDdAd7f510a61Af22DeC391606',
         amount: '0.1',
-        fee: '591584934602552',
+        fee: '0.000591584934602552',
         token: '',
       });
     });
 
-    it('should return decodeEVMTransactionForApproval data when value is invalid', () => {
+    test('should return decodeEVMTransactionForApproval data when value is invalid', () => {
       const res = decodeEVMTransactionForApproval('{}', 'sepolia');
-      assert.deepEqual(res, {
+      expect(res).toEqual({
         sender: 'decodingError',
         receiver: 'decodingError',
         amount: 'decodingError',
