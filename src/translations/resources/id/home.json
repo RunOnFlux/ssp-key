@@ -5,6 +5,7 @@
   "no_pending_actions": "Tidak ada tindakan yang tertunda.",
   "sign_resync": "Tanda tangani transaksi atau sinkronkan ulang dompet secara manual",
   "ssp_key_details": "Detail Kunci SSP",
+  "ssp_service_details": "Detail Layanan",
   "synced_ssp_address": "Alamat Lengkap",
   "transaction_request": "Permintaan Transaksi",
   "approve_transaction": "Setujui Transaksi",
