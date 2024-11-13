@@ -427,6 +427,13 @@ function eth() {
       logo: require('../assets/snx.svg'),
     },
     {
+      contract: '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8',
+      name: 'PayPal USD',
+      symbol: 'PYUSD',
+      decimals: 6,
+      logo: require('../assets/etht.svg'),
+    },
+    {
       contract: '0xde4EE8057785A7e8e800Db58F9784845A5C2Cbd6',
       name: 'DeXe',
       symbol: 'DEXE',
