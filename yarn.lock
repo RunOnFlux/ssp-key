@@ -7916,10 +7916,10 @@ react-native-camera-kit@~14.0.0:
   resolved "https://registry.yarnpkg.com/react-native-camera-kit/-/react-native-camera-kit-14.0.0.tgz#20f95dabfa2b58607a8dda926d35d78ea7634682"
   integrity sha512-0xt1XU6iDm9do7dYldTH01zeWY1zcz9B9bCsFb575DoGtu7PaC+i2aL48nNDqaSlsRCXp2DP6hYZ0ESGJO2Rhw==
 
-react-native-device-info@~11.1.0:
-  version "11.1.0"
-  resolved "https://registry.yarnpkg.com/react-native-device-info/-/react-native-device-info-11.1.0.tgz#7db5c4e5a179dce761efac155a493aa0956a40ab"
-  integrity sha512-hzXJSObJdezEz0hF7MAJ3tGeoesuQWenXXt9mrQR9Mjb8kXpZ09rqSsZ/quNpJdZpQ3rYiFa3/0GFG5KNn9PBg==
+react-native-device-info@~14.0.0:
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/react-native-device-info/-/react-native-device-info-14.0.0.tgz#371601bb07f738aba721c74ad9c58b815d16f2b7"
+  integrity sha512-hKgH5URRQyMvr1wcBF8pZ9EnSM6fLGAfYRGZaOM8ljkr841kV5bjteI/p9ORfulxgZjB/vfz2J8zMAYwPOQWJg==
 
 react-native-encrypted-storage@~4.0.3:
   version "4.0.3"

@@ -46,7 +46,7 @@
     "react-native": "~0.75.4",
     "react-native-biometrics": "~3.0.1",
     "react-native-camera-kit": "~14.0.0",
-    "react-native-device-info": "~11.1.0",
+    "react-native-device-info": "~14.0.0",
     "react-native-encrypted-storage": "~4.0.3",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-get-random-values": "~1.11.0",

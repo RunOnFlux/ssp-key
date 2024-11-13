@@ -1705,7 +1705,7 @@ PODS:
     - React-Core
   - RNCPicker (2.9.0):
     - React-Core
-  - RNDeviceInfo (11.1.0):
+  - RNDeviceInfo (14.0.0):
     - React-Core
   - RNFBApp (21.4.0):
     - Firebase/CoreOnly (<= 11.4.0)
@@ -2217,7 +2217,7 @@ SPEC CHECKSUMS:
   ReactNativeCameraKit: 3a9658e0582988646c914eeadbb206615fc35ae5
   RNCClipboard: dbcf25b8f666b4685c02eeb65be981d30198e505
   RNCPicker: 0e683a85cae99a8a739e97a49f269a4630de0a01
-  RNDeviceInfo: 900bd20e1fd3bfd894e7384cc4a83880c0341bd3
+  RNDeviceInfo: f632df5f5d9262794c03eac265e4a0f6dbb14f0a
   RNFBApp: 2b3e5b80d615db84a1767a2a6050e02f70cc9bf0
   RNFBMessaging: c7f2f51494724d83792c1f687f4ea7bde07ead3a
   RNGestureHandler: 27a63f2218affdf1a426d56682f9b174904838b3
