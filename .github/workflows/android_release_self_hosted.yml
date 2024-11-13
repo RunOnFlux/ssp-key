@@ -21,6 +21,9 @@ jobs:
       - name: Install npm dependencies
         run: |
           yarn
+      - name: Run Test Suite
+        run: |
+          yarn test:report
   build-android:
     needs: install-and-test
     runs-on: ssp-key-android
