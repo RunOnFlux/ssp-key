@@ -11,6 +11,6 @@ res react-navigation v7
 
 min ios 13.4
 
-android 6
+android 7
 
 RN 76 has minimum ios 15.1
