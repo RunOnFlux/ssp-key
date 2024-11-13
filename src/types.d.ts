@@ -350,6 +350,13 @@ export interface actionSSPRelay {
   expireAt: string;
 }
 
+export interface tokenDataSSPRelay {
+  decimals: number;
+  logo: string | null;
+  name: string;
+  symbol: string;
+}
+
 export interface currency {
   EUR: number;
   AUD: number;

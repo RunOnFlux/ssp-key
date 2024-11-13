@@ -68,8 +68,8 @@ describe('Transactions Lib', () => {
       expect(res).toBe('flux');
     });
 
-    test('should return decodeTransactionForApproval data when value is invalid', () => {
-      const res = decodeTransactionForApproval('{}', 'sepolia');
+    test('should return decodeTransactionForApproval data when value is invalid', async () => {
+      const res = await decodeTransactionForApproval('{}', 'sepolia');
       expect(res).toEqual({
         sender: 'decodingError',
         receiver: 'decodingError',
@@ -79,8 +79,8 @@ describe('Transactions Lib', () => {
       });
     });
 
-    test('should return decodeTransactionForApproval data when value is invalid rawTx', () => {
-      const res = decodeTransactionForApproval(rawTxSepolia, 'flux');
+    test('should return decodeTransactionForApproval data when value is invalid rawTx', async () => {
+      const res = await decodeTransactionForApproval(rawTxSepolia, 'flux');
       expect(res).toEqual({
         sender: 'decodingError',
         receiver: 'decodingError',
@@ -89,8 +89,8 @@ describe('Transactions Lib', () => {
       });
     });
 
-    test('should return decodeTransactionForApproval data when value is valid', () => {
-      const res = decodeTransactionForApproval(rawTxFlux, 'flux');
+    test('should return decodeTransactionForApproval data when value is valid', async () => {
+      const res = await decodeTransactionForApproval(rawTxFlux, 'flux');
       expect(res).toEqual({
         sender: 't3VhYxSXapJEq2mH1z5MmFUcVLYvrYNfqbv',
         receiver: 't3cwthwVvGg7WKkxhzw87xnDDsdb9kS92x3',
@@ -99,8 +99,11 @@ describe('Transactions Lib', () => {
       });
     });
 
-    test('should return decodeEVMTransactionForApproval data when value is valid', () => {
-      const res = decodeEVMTransactionForApproval(rawTxSepolia, 'sepolia');
+    test('should return decodeEVMTransactionForApproval data when value is valid', async () => {
+      const res = await decodeEVMTransactionForApproval(
+        rawTxSepolia,
+        'sepolia',
+      );
       expect(res).toEqual({
         sender: '0xd447BA08b0d395fCAd6e480d270529c932289Ce1',
         receiver: '0x66324EE406cCccdDdAd7f510a61Af22DeC391606',
@@ -110,8 +113,8 @@ describe('Transactions Lib', () => {
       });
     });
 
-    test('should return decodeEVMTransactionForApproval data when value is invalid', () => {
-      const res = decodeEVMTransactionForApproval('{}', 'sepolia');
+    test('should return decodeEVMTransactionForApproval data when value is invalid', async () => {
+      const res = await decodeEVMTransactionForApproval('{}', 'sepolia');
       expect(res).toEqual({
         sender: 'decodingError',
         receiver: 'decodingError',

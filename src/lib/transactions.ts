@@ -3,9 +3,10 @@ import utxolib from '@runonflux/utxo-lib';
 import { decodeFunctionData, erc20Abi } from 'viem';
 import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
+import { getTokenMetadata } from './tokens';
 import { cryptos, utxo } from '../types';
 
-import { blockchains } from '@storage/blockchains';
+import { blockchains, Token } from '@storage/blockchains';
 
 export function getLibId(chain: keyof cryptos): string {
   return blockchains[chain].libid;
@@ -23,14 +24,15 @@ interface tokenInfo {
   token?: string;
 }
 
-export function decodeTransactionForApproval(
+export async function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
   utxos: utxo[],
-): tokenInfo {
+): Promise<tokenInfo> {
   try {
     if (blockchains[chain].chainType === 'evm') {
-      return decodeEVMTransactionForApproval(rawTx, chain);
+      const decodedTx = await decodeEVMTransactionForApproval(rawTx, chain);
+      return decodedTx;
     }
     const libID = getLibId(chain);
     const decimals = blockchains[chain].decimals;
@@ -153,7 +155,7 @@ interface userOperation {
   };
 }
 
-export function decodeEVMTransactionForApproval(
+export async function decodeEVMTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
 ) {
@@ -220,9 +222,21 @@ export function decodeEVMTransactionForApproval(
       txInfo.token = decodedData.args[0];
 
       // find the token in our token list
-      const token = blockchains[chain].tokens.find(
+      let token = blockchains[chain].tokens.find(
         (t) => t.contract.toLowerCase() === txInfo.token.toLowerCase(),
       );
+
+      if (!token) {
+        token = (await getTokenMetadata(
+          txInfo.token.toLowerCase(),
+          chain.toLowerCase(),
+        )) as Token; // this is actually a tokenDataSSPRelay missing contract but we need only decimals
+      }
+
+      if (!token || !token.name || !token.symbol) {
+        throw new Error('Token information not found.');
+      }
+
       if (token) {
         decimals = token.decimals;
       }

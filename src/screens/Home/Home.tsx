@@ -73,6 +73,7 @@ import {
 import { useAppSelector, useAppDispatch } from '../../hooks';
 import { useSocket } from '../../hooks/useSocket';
 import { getFCMToken, refreshFCMToken } from '../../lib/fcmHelper';
+import { changeTheme } from '../../store/theme';
 
 type Props = {
   navigation: any;
@@ -754,6 +755,7 @@ function Home({ navigation }: Props) {
   const handleCancelScanner = () => {
     setTimeout(() => {
       setShowScanner(false);
+      dispatch(changeTheme({ theme: 'default', darkMode: null })); // make our theme dark
     }, 100);
   };
   const handleScannedData = (scannedData: string) => {
@@ -804,6 +806,7 @@ function Home({ navigation }: Props) {
       }
       setTimeout(() => {
         setShowScanner(false);
+        dispatch(changeTheme({ theme: 'default', darkMode: null })); // make our theme dark
       });
       console.log(scannedData);
     } catch (error) {
@@ -813,6 +816,7 @@ function Home({ navigation }: Props) {
       }, 200);
       setTimeout(() => {
         setShowScanner(false);
+        dispatch(changeTheme({ theme: 'default', darkMode: null })); // make our theme dark
       });
     }
   };
