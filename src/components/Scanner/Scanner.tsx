@@ -19,6 +19,8 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../../hooks';
+import { useDispatch } from 'react-redux';
+import { changeTheme } from '../../store/theme';
 
 interface QRScannerProps {
   onRead: (data: string) => void;
@@ -29,6 +31,8 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   const { Colors } = useTheme();
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const { t } = useTranslation(['home', 'common']);
+  const dispatch = useDispatch();
+  dispatch(changeTheme({ theme: 'default', darkMode: true })); // make our theme dark
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -157,6 +161,7 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
           showFrame={true}
           laserColor="green"
           frameColor="white"
+          resizeMode="cover"
         />
       ) : (
         <View style={styles.camera}>
@@ -178,9 +183,13 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
+    height: '100%',
+    backgroundColor: 'black',
   },
   camera: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
   backButton: {
     position: 'absolute',

@@ -225,9 +225,12 @@ export async function decodeEVMTransactionForApproval(
       let token = blockchains[chain].tokens.find(
         (t) => t.contract.toLowerCase() === txInfo.token.toLowerCase(),
       );
-      
+
       if (!token) {
-        token = await getTokenMetadata(txInfo.token.toLowerCase(), chain.toLowerCase()) as Token; // this is actually a tokenDataSSPRelay missing contract but we need only decimals
+        token = (await getTokenMetadata(
+          txInfo.token.toLowerCase(),
+          chain.toLowerCase(),
+        )) as Token; // this is actually a tokenDataSSPRelay missing contract but we need only decimals
       }
 
       if (!token || !token.name || !token.symbol) {
