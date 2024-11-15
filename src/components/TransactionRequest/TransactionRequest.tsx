@@ -24,6 +24,7 @@ const TransactionRequest = (props: {
   const [receiverAddress, setReceiverAddress] = useState('');
   const [senderAddress, setSenderAddress] = useState('');
   const [token, setToken] = useState('');
+  const [tokenSymbol, setTokenSymbol] = useState('');
   const [fee, setFee] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
@@ -52,41 +53,53 @@ const TransactionRequest = (props: {
     if (alreadyRunning.current) {
       return;
     }
-    alreadyRunning.current = true;
     if (!props.rawTx || !props.chain) {
       return;
     }
+    alreadyRunning.current = true;
     console.log('Transaction Request');
     console.log(props.rawTx);
     console.log(props.chain);
-    const txInfo = decodeTransactionForApproval(
-      props.rawTx,
-      props.chain,
-      props.utxos,
-    );
-    console.log(txInfo);
-    setSendingAmount(txInfo.amount);
-    setReceiverAddress(txInfo.receiver);
-    setSenderAddress(txInfo.sender);
-    setToken(txInfo.token || '');
-    if (
-      (props.utxos && props.utxos.length) ||
-      blockchains[props.chain].chainType === 'evm'
-    ) {
-      setFee(txInfo.fee);
-    }
-    console.log(fee);
-    if (
-      txInfo.amount === 'decodingError' ||
-      txInfo.receiver === 'decodingError' ||
-      txInfo.sender === 'decodingError'
-    ) {
-      displayMessage('error', t('home:err_tx_decode'));
-      setTimeout(() => {
-        reject();
-      }, 500);
-    }
-    alreadyRunning.current = false;
+    void (async function () {
+      try {
+        const txInfo = await decodeTransactionForApproval(
+          props.rawTx,
+          props.chain,
+          props.utxos,
+        );
+        console.log(txInfo);
+        setSendingAmount(txInfo.amount);
+        setReceiverAddress(txInfo.receiver);
+        setSenderAddress(txInfo.sender);
+        setToken(txInfo.token || '');
+        setTokenSymbol(txInfo.tokenSymbol);
+        if (
+          (props.utxos && props.utxos.length) ||
+          blockchains[props.chain].chainType === 'evm'
+        ) {
+          setFee(txInfo.fee);
+        }
+        console.log(fee);
+        if (
+          txInfo.amount === 'decodingError' ||
+          txInfo.receiver === 'decodingError' ||
+          txInfo.sender === 'decodingError'
+        ) {
+          displayMessage('error', t('home:err_tx_decode'));
+          setTimeout(() => {
+            reject();
+          }, 500);
+        }
+      } catch (error) {
+        console.log(error);
+        displayMessage('error', t('home:err_tx_decode'));
+        setTimeout(() => {
+          reject();
+        }, 500);
+      } finally {
+        alreadyRunning.current = false;
+      }
+    })();
   }, [props.rawTx, props.chain]);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -125,12 +138,7 @@ const TransactionRequest = (props: {
             {' ' +
               sendingAmount +
               ' ' +
-              (token
-                ? blockchainConfig.tokens.find(
-                    (ttt) =>
-                      ttt.contract.toLocaleLowerCase() === token.toLowerCase(),
-                  )?.symbol
-                : blockchainConfig.symbol) +
+              (token ? tokenSymbol : blockchainConfig.symbol) +
               ' '}
           </Text>
           <Text style={[Fonts.textSmall, Fonts.textCenter]}>

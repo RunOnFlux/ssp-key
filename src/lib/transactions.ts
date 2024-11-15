@@ -3,9 +3,10 @@ import utxolib from '@runonflux/utxo-lib';
 import { decodeFunctionData, erc20Abi } from 'viem';
 import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
+import { getTokenMetadata } from './tokens';
 import { cryptos, utxo } from '../types';
 
-import { blockchains } from '@storage/blockchains';
+import { blockchains, Token } from '@storage/blockchains';
 
 export function getLibId(chain: keyof cryptos): string {
   return blockchains[chain].libid;
@@ -20,17 +21,19 @@ interface tokenInfo {
   receiver: string;
   amount: string;
   fee: string;
+  tokenSymbol: string;
   token?: string;
 }
 
-export function decodeTransactionForApproval(
+export async function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
   utxos: utxo[],
-): tokenInfo {
+): Promise<tokenInfo> {
   try {
     if (blockchains[chain].chainType === 'evm') {
-      return decodeEVMTransactionForApproval(rawTx, chain);
+      const decodedTx = await decodeEVMTransactionForApproval(rawTx, chain);
+      return decodedTx;
     }
     const libID = getLibId(chain);
     const decimals = blockchains[chain].decimals;
@@ -122,6 +125,7 @@ export function decodeTransactionForApproval(
       receiver: txReceiver,
       amount,
       fee,
+      tokenSymbol: blockchains[chain].symbol,
     };
     return txInfo;
   } catch (error) {
@@ -131,6 +135,7 @@ export function decodeTransactionForApproval(
       receiver: 'decodingError',
       amount: 'decodingError',
       fee: 'decodingError',
+      tokenSymbol: 'decodingError',
     };
     return txInfo;
   }
@@ -153,7 +158,7 @@ interface userOperation {
   };
 }
 
-export function decodeEVMTransactionForApproval(
+export async function decodeEVMTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
 ) {
@@ -214,17 +219,31 @@ export function decodeEVMTransactionForApproval(
       amount,
       fee: totalFeeWei.toFixed(),
       token: '',
+      tokenSymbol: '',
     };
 
     if (amount === '0') {
       txInfo.token = decodedData.args[0];
 
       // find the token in our token list
-      const token = blockchains[chain].tokens.find(
+      let token = blockchains[chain].tokens.find(
         (t) => t.contract.toLowerCase() === txInfo.token.toLowerCase(),
       );
+
+      if (!token) {
+        token = (await getTokenMetadata(
+          txInfo.token.toLowerCase(),
+          chain.toLowerCase(),
+        )) as Token; // this is actually a tokenDataSSPRelay missing contract but we need only decimals
+      }
+
+      if (!token || !token.name || !token.symbol) {
+        throw new Error('Token information not found.');
+      }
+
       if (token) {
         decimals = token.decimals;
+        txInfo.tokenSymbol = token.symbol;
       }
       const contractData: `0x${string}` = decodedData.args[2] as `0x${string}`;
       // most likely we are dealing with a contract call, sending some erc20 token
@@ -245,6 +264,8 @@ export function decodeEVMTransactionForApproval(
           .dividedBy(new BigNumber(10 ** decimals))
           .toFixed();
       }
+    } else {
+      txInfo.tokenSymbol = blockchains[chain].symbol;
     }
 
     return txInfo;
@@ -256,6 +277,7 @@ export function decodeEVMTransactionForApproval(
       amount: 'decodingError',
       fee: 'decodingError',
       token: 'decodingError',
+      tokenSymbol: 'decodingError',
     };
     return txInfo;
   }
