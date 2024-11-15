@@ -76,6 +76,7 @@ describe('Transactions Lib', () => {
         amount: 'decodingError',
         fee: 'decodingError',
         token: 'decodingError',
+        tokenSymbol: 'decodingError',
       });
     });
 
@@ -86,6 +87,7 @@ describe('Transactions Lib', () => {
         receiver: 'decodingError',
         amount: 'decodingError',
         fee: 'decodingError',
+        tokenSymbol: 'decodingError',
       });
     });
 
@@ -96,6 +98,7 @@ describe('Transactions Lib', () => {
         receiver: 't3cwthwVvGg7WKkxhzw87xnDDsdb9kS92x3',
         amount: '0.0009968',
         fee: '-0.0009968',
+        tokenSymbol: 'FLUX',
       });
     });
 
@@ -110,6 +113,7 @@ describe('Transactions Lib', () => {
         amount: '0.1',
         fee: '0.000591584934602552',
         token: '',
+        tokenSymbol: 'TEST-ETH',
       });
     });
 
@@ -121,6 +125,7 @@ describe('Transactions Lib', () => {
         amount: 'decodingError',
         fee: 'decodingError',
         token: 'decodingError',
+        tokenSymbol: 'decodingError',
       });
     });
   });
