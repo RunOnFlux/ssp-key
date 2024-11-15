@@ -21,6 +21,7 @@ interface tokenInfo {
   receiver: string;
   amount: string;
   fee: string;
+  tokenSymbol: string;
   token?: string;
 }
 
@@ -124,6 +125,7 @@ export async function decodeTransactionForApproval(
       receiver: txReceiver,
       amount,
       fee,
+      tokenSymbol: blockchains[chain].symbol,
     };
     return txInfo;
   } catch (error) {
@@ -133,6 +135,7 @@ export async function decodeTransactionForApproval(
       receiver: 'decodingError',
       amount: 'decodingError',
       fee: 'decodingError',
+      tokenSymbol: 'decodingError',
     };
     return txInfo;
   }
@@ -216,6 +219,7 @@ export async function decodeEVMTransactionForApproval(
       amount,
       fee: totalFeeWei.toFixed(),
       token: '',
+      tokenSymbol: '',
     };
 
     if (amount === '0') {
@@ -239,6 +243,7 @@ export async function decodeEVMTransactionForApproval(
 
       if (token) {
         decimals = token.decimals;
+        txInfo.tokenSymbol = token.symbol;
       }
       const contractData: `0x${string}` = decodedData.args[2] as `0x${string}`;
       // most likely we are dealing with a contract call, sending some erc20 token
@@ -259,6 +264,8 @@ export async function decodeEVMTransactionForApproval(
           .dividedBy(new BigNumber(10 ** decimals))
           .toFixed();
       }
+    } else {
+      txInfo.tokenSymbol = blockchains[chain].symbol;
     }
 
     return txInfo;
@@ -270,6 +277,7 @@ export async function decodeEVMTransactionForApproval(
       amount: 'decodingError',
       fee: 'decodingError',
       token: 'decodingError',
+      tokenSymbol: 'decodingError',
     };
     return txInfo;
   }

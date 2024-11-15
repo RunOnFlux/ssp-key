@@ -24,6 +24,7 @@ const TransactionRequest = (props: {
   const [receiverAddress, setReceiverAddress] = useState('');
   const [senderAddress, setSenderAddress] = useState('');
   const [token, setToken] = useState('');
+  const [tokenSymbol, setTokenSymbol] = useState('');
   const [fee, setFee] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
@@ -71,6 +72,7 @@ const TransactionRequest = (props: {
         setReceiverAddress(txInfo.receiver);
         setSenderAddress(txInfo.sender);
         setToken(txInfo.token || '');
+        setTokenSymbol(txInfo.tokenSymbol);
         if (
           (props.utxos && props.utxos.length) ||
           blockchains[props.chain].chainType === 'evm'
@@ -136,12 +138,7 @@ const TransactionRequest = (props: {
             {' ' +
               sendingAmount +
               ' ' +
-              (token
-                ? blockchainConfig.tokens.find(
-                    (ttt) =>
-                      ttt.contract.toLocaleLowerCase() === token.toLowerCase(),
-                  )?.symbol
-                : blockchainConfig.symbol) +
+              (token ? tokenSymbol : blockchainConfig.symbol) +
               ' '}
           </Text>
           <Text style={[Fonts.textSmall, Fonts.textCenter]}>
