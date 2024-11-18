@@ -1,0 +1,7 @@
+{
+  "title": "$t(common:appName.full)",
+  "subtitle": "$t(common:appName.moto)",
+  "description": "Ключ для вашего кошелька SSP с двойной подписью.",
+  "synchronise_key": "Синхронизировать ключ!",
+  "restore_key": "Восстановить ключ"
+}
