@@ -15,6 +15,7 @@ import TxSent from '../../components/TxSent/TxSent';
 import SyncSuccess from '../../components/SyncSuccess/SyncSuccess';
 import Authentication from '../../components/Authentication/Authentication';
 import SettingsSection from '../../components/SettingsSection/SettingsSection';
+import ServiceDetails from '../../components/ServiceDetails/ServiceDetails';
 import SyncNeeded from '../../components/SyncNeeded/SyncNeeded';
 import ManualInput from '../../components/ManualInput/ManualInput';
 import MenuModal from '../../components/MenuModal/MenuModal';
@@ -105,6 +106,7 @@ function Home({ navigation }: Props) {
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
   const [addrDetailsOpen, setAddrDetailsOpen] = useState(false);
   const [sspKeyDetailsOpen, setSSPKeyDetailsOpen] = useState(false);
+  const [serviceDetailsOpen, setServiceDetailsOpen] = useState(false);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const [actionToPerform, setActionToPerform] = useState('');
@@ -440,6 +442,12 @@ function Home({ navigation }: Props) {
       setAuthenticationOpen(true);
     });
   };
+  const openServiceDetails = () => {
+    setIsMenuModalOpen(false);
+    setTimeout(() => {
+      setServiceDetailsOpen(true);
+    });
+  };
   const openMenuSettings = () => {
     setIsMenuModalOpen(false);
     setTimeout(() => {
@@ -728,6 +736,8 @@ function Home({ navigation }: Props) {
       openAddressDetails();
     } else if (status === 'sspkeydetails') {
       openSSPKeyDetails();
+    } else if (status === 'servicedetails') {
+      openServiceDetails();
     } else if (status === 'menusettings') {
       openMenuSettings();
     } else if (status === 'restore') {
@@ -958,6 +968,11 @@ function Home({ navigation }: Props) {
     setSSPKeyDetailsOpen(false);
   };
 
+  const handleServiceDetailsModalAction = () => {
+    console.log('service modal close.');
+    setServiceDetailsOpen(false);
+  };
+
   const handleSettingsModalAction = () => {
     console.log('settings modal close.');
     setSettingsMenuOpen(false);
@@ -1170,6 +1185,12 @@ function Home({ navigation }: Props) {
           )}
           {sspKeyDetailsOpen && (
             <SSPKeyDetails actionStatus={handleSSPKeyModalAction} />
+          )}
+          {serviceDetailsOpen && (
+            <ServiceDetails
+              actionStatus={handleServiceDetailsModalAction}
+              navigation={navigation}
+            />
           )}
           {settingsMenuOpen && (
             <SettingsSection

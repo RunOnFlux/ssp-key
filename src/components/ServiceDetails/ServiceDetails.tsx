@@ -30,7 +30,7 @@ import { blockchains } from '@storage/blockchains';
 const backendsOriginalConfig = backendsOriginal();
 const originalConfig = sspConfigOriginal();
 
-const SettingsSection = (props: {
+const ServiceDetails = (props: {
   actionStatus: (status: boolean) => void;
   navigation: any;
 }) => {
@@ -163,7 +163,7 @@ const SettingsSection = (props: {
           >
             <View style={[Layout.fill, Common.modalView]}>
               <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
-                {t('common:settings')}
+                {t('home:ssp_service_details')}
               </Text>
               <View
                 style={[
@@ -174,31 +174,90 @@ const SettingsSection = (props: {
                   Gutters.regularTMargin,
                 ]}
               >
-                <View style={[Gutters.smallBMargin]}>
+                <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
                   <Text
                     style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
                   >
-                    {t('home:change_pw')}
+                    {t('home:ssp_relay_server')}
                   </Text>
-                  <TouchableOpacity
+                  <View
                     style={[
-                      Common.button.outlineRounded,
-                      Common.button.secondaryButton,
-                      Gutters.smallTMargin,
+                      Layout.rowCenter,
+                      Common.inputWithButtonBgModalColors,
+                      styles.inputWithButton,
                     ]}
-                    onPress={() => handleRestore()}
                   >
-                    <Text
-                      style={[
-                        Fonts.textTiny,
-                        Fonts.textBluePrimary,
-                        Gutters.tinyVPadding,
-                        Gutters.tinyHPadding,
-                      ]}
+                    <TextInput
+                      style={[Common.textInput, Common.textInputBgModal]}
+                      autoCapitalize="none"
+                      placeholder={originalConfig.relay}
+                      placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                      onChangeText={onChangeSSPrelay}
+                      value={sspConfigRelay}
+                      autoCorrect={false}
+                      ref={textInputA}
+                      onPressIn={() => textInputA.current?.focus()}
+                    />
+                    <TouchableOpacity
+                      onPress={resetSSPRelay}
+                      style={Common.inputIcon}
                     >
-                      {t('home:change_pw_restore')}
-                    </Text>
-                  </TouchableOpacity>
+                      <Icon name="x" size={20} color={Colors.bluePrimary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:chain_node_service', {
+                      chain: blockchainConfig.name,
+                    })}
+                  </Text>
+                  <View
+                    style={[
+                      Layout.rowCenter,
+                      Common.inputWithButtonBgModalColors,
+                      styles.inputWithButton,
+                    ]}
+                  >
+                    <TextInput
+                      style={[Common.textInput, Common.textInputBgModal]}
+                      autoCapitalize="none"
+                      placeholder={backendsOriginalConfig[selectedChain].node}
+                      placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                      onChangeText={onChangeChainNodeService}
+                      value={chainNodeConfig}
+                      autoCorrect={false}
+                      ref={textInputB}
+                      onPressIn={() => textInputB.current?.focus()}
+                    />
+                    <TouchableOpacity
+                      onPress={resetChainNodeService}
+                      style={Common.inputIcon}
+                    >
+                      <Icon name="x" size={20} color={Colors.bluePrimary} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={[Gutters.tinyTMargin, Layout.colCenter]}>
+                    <TouchableOpacity
+                      style={[
+                        Common.button.outlineRounded,
+                        Common.button.secondaryButton,
+                      ]}
+                      onPress={() => openChainSelect()}
+                    >
+                      <Text
+                        style={[
+                          Fonts.textSmall,
+                          Fonts.textBluePrimary,
+                          Gutters.regularHPadding,
+                        ]}
+                      >
+                        {t('home:select_chain')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
               <View style={[Layout.justifyContentEnd]}>
@@ -294,7 +353,7 @@ const SettingsSection = (props: {
   );
 };
 
-export default SettingsSection;
+export default ServiceDetails;
 
 const styles = StyleSheet.create({
   inputWithButton: {

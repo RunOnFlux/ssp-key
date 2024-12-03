@@ -23,6 +23,9 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
   const openSSPKeyDetails = () => {
     props.actionStatus('sspkeydetails');
   };
+  const openServiceDetails = () => {
+    props.actionStatus('servicedetails');
+  };
   const openMenuSettings = () => {
     props.actionStatus('menusettings');
   };
@@ -84,6 +87,18 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                   ]}
                 >
                   {t('home:ssp_key_details')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => openServiceDetails()}>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Fonts.textCenter,
+                    Gutters.tinyPadding,
+                  ]}
+                >
+                  {t('home:ssp_service_details')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => openMenuSettings()}>

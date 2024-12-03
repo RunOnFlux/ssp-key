@@ -5,6 +5,7 @@
   "no_pending_actions": "Žádné čekající akce.",
   "sign_resync": "Podepsat transakci nebo synchronizovat peněženku ručně",
   "ssp_key_details": "Detaily SSP Klíče",
+  "ssp_service_details": "Podrobnosti o službě",
   "synced_ssp_address": "Detaily Adresy",
   "transaction_request": "Požadavek o Transakci",
   "approve_transaction": "Potvrdit Transakci",
