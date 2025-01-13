@@ -81,7 +81,7 @@
   "submitting_transaction": "Отправка транзакции...",
   "err_generate_address": "Ошибка при генерации адреса.",
   "public_nonces_request": "Запрос публичных Nonces",
-  "ssp_public_nonces_request": "SSP Wallet would like to request Public Nonces. Public Nonces are used to construct blockchain transactions that use Schnorr signatures.",
+  "ssp_public_nonces_request": "Кошелек SSP хочет запросить публичные Nonces. Публичные Nonces используются для создания транзакций на блокчейне, которые используют подписи Schnorr.",
   "approve_request": "Одобрить запрос",
   "public_nonces_request_approved": "Публичные Nonces синхронизированы!",
   "public_nonces_request_approved_info": "Публичные Nonces были сгенерированы и отправлены для синхронизации с кошельком SSP.",
