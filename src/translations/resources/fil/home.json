@@ -81,7 +81,7 @@
   "submitting_transaction": "Nagsusubmit ng Transaction...",
   "err_generate_address": "Error habang bumubuo ng address.",
   "public_nonces_request": "Paghiling ng Pampublikong Nonces",
-  "ssp_public_nonces_request": "Gustong humiling ng SSP Wallet ng mga Public Nonces. Ginagamit ang Public Nonces upang bumuo ng mga transaction sa blockchain na gumagamit ng mga Schnorr signatures.",
+  "ssp_public_nonces_request": "SSP Wallet would like to request Public Nonces. Public Nonces are used to construct blockchain transactions that use Schnorr signatures.",
   "approve_request": "Aprubahan ang Kahilingan",
   "public_nonces_request_approved": "Naka-sync ang Mga Pampublikong Nonces!",
   "public_nonces_request_approved_info": "Ang mga Pampublikong Nonces ay nabuo at ipinadala para sa pag-sync sa SSP Wallet.",
