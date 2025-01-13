@@ -81,7 +81,7 @@
   "submitting_transaction": "Mengirimkan Transaksi...",
   "err_generate_address": "Terjadi kesalahan saat membuat alamat.",
   "public_nonces_request": "Permintaan Nonce Publik",
-  "ssp_public_nonces_request": "SSP Wallet would like to request Public Nonces. Public Nonces are used to construct blockchain transactions that use Schnorr signatures.",
+  "ssp_public_nonces_request": "SSP Wallet ingin meminta Nonce Publik.",
   "approve_request": "Setujui Permintaan",
   "public_nonces_request_approved": "Nonce Publik Disinkronkan!",
   "public_nonces_request_approved_info": "Nonce Publik dibuat dan dikirim untuk disinkronkan dengan SSP Wallet.",
