@@ -49,7 +49,7 @@
   "sending_request": "Nagpapadala ng {{amount}} {{symbol}} sa {{address}}",
   "sending": "Nagpapadala",
   "to": "to",
-  "mula sa": "mula sa",
+  "from": "from",
   "blockchain_fee": "Blockchain Network Fee: {{fee}} {{symbol}}",
   "ssp_sync_request": "Gusto ng SSP Wallet na i-link at i-synchronize ang {{chain}} ({{symbol}}) chain sa iyong SSP Key.",
   "ssp_key_info": "Ang SSP Key ay isang pangalawang kadahilanan sa pagpapatunay para sa iyong SSP Wallet.",
