@@ -81,7 +81,7 @@
   "submitting_transaction": "Odesílání Transakce...",
   "err_generate_address": "Chyba při generování adresy",
   "public_nonces_request": "Požadavek o Veřejné Nonce",
-  "ssp_public_nonces_request": "SSP Wallet would like to request Public Nonces. Public Nonces are used to construct blockchain transactions that use Schnorr signatures.",
+  "ssp_public_nonces_request": "SSP Peněženka by chtěla požádat o Veřejné Nonce. Veřejné Nonce se používají ke konstrukci transakcí na blockchainu, které používají podepisování typu Schnorr.",
   "approve_request": "Povolit Požadavek",
   "public_nonces_request_approved": "Veřejné Nonce Synchronizovány!",
   "public_nonces_request_approved_info": "Veřejné Nonce byly vygenerovány a odeslány pro synchronizaci do SSP Peněženky.",
