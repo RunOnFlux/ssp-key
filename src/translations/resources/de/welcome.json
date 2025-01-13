@@ -1,0 +1,7 @@
+{
+  "title": "$t(common:appName.full)",
+  "subtitle": "$t(common:appName.moto)",
+  "description": "Der Schlüssel für Ihre SSP Wallet mit 2FA.",
+  "synchronise_key": "Schlüssel synchronisieren!",
+  "restore_key": "Schlüssel wiederherstellen"
+}
