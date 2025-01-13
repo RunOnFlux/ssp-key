@@ -81,7 +81,7 @@
   "submitting_transaction": "Submitting Transaction...",
   "err_generate_address": "Error while generating address.",
   "public_nonces_request": "Public Nonces Request",
-  "ssp_public_nonces_request": "SSP Wallet would like to request Public Nonces. Public Nonces are used to construct blockchain transcations that use Schnorr signatures.",
+  "ssp_public_nonces_request": "SSP Wallet would like to request Public Nonces. Public Nonces are used to construct blockchain transactions that use Schnorr signatures.",
   "approve_request": "Approve Request",
   "public_nonces_request_approved": "Public Nonces Synced!",
   "public_nonces_request_approved_info": "Public Nonces were generated and sent for syncing with SSP Wallet.",
