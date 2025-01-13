@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "full": "SSP Key",
+    "initials": "SSPKey",
+    "moto": "Secure. Simple. Powerful."
+  },
+  "back": "Back",
+  "cancel": "Cancel",
+  "key_seed_phrase": "Key Seed Phrase",
+  "refresh": "Refresh",
+  "settings": "Settings",
+  "restore": "Restore",
+  "flux": "Flux",
+  "powered_by": "Powered by",
+  "ok": "OK",
+  "help": "Help",
+  "save": "Save",
+  "confirm": "Confirm",
+  "ask_me_later": "Ask me later",
+  "chain": "Chain",
+  "wallet": "Wallet"
+}
