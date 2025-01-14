@@ -277,6 +277,7 @@ function Home({ navigation }: Props) {
           walletIdentity: sspWalletInternalIdentity,
           keyXpub: xpubKeyDecrypted,
           wkIdentity: sspWalletKeyInternalIdentity,
+          generatedAddress: addrInfo.address,
           keyToken: await getFCMToken(),
         };
         // == EVM ==
@@ -379,6 +380,7 @@ function Home({ navigation }: Props) {
           walletIdentity: generatedSspWalletInternalIdentity,
           keyXpub: xpubKeyDecrypted,
           wkIdentity: generatedSspWalletKeyInternalIdentity.address,
+          generatedAddress: addrInfo.address,
           keyToken: await getFCMToken(),
         };
         console.log(syncData);

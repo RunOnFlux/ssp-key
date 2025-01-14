@@ -340,6 +340,7 @@ export interface syncSSPRelay {
   keyXpub: string;
   wkIdentity: string;
   keyToken?: string | null;
+  generatedAddress?: string;
   publicNonces?: publicNonce[];
 }
 
