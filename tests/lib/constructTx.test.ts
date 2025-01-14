@@ -102,7 +102,7 @@ describe('ConstructTx Lib', () => {
 
     test('should return fetchUtxos data when value is valid flux', async () => {
       const res = await fetchUtxos(
-        't1cwbdvsWGHjeG3sd2esrjbchSrzW62w3GY',
+        't3ThbWogDoAjGuS6DEnmN1GWJBRbVjSUK4T',
         'flux',
       );
       expect(res[0]).not.toBeNull();
