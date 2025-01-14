@@ -314,6 +314,17 @@ function Restore({ navigation }: Props) {
           <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
             {t('cr:import_key_phrase')}
           </Text>
+          <Text
+            style={[
+              Fonts.textSmall,
+              Gutters.tinyBMargin,
+              Fonts.textCenter,
+              Gutters.smallLMargin,
+              Gutters.smallRMargin,
+            ]}
+          >
+            {t('cr:key_seed_info')}
+          </Text>
           <View style={styles.seedPhraseArea}>
             <TextInput
               multiline={true}
