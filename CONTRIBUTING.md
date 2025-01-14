@@ -68,10 +68,8 @@ Refer to the [SSP Documentation](https://sspwallet.gitbook.io/docs/) for further
   ```
 
 ### Prettier Configuration
-Ensure your editor supports Prettier or run:
-```bash
-yarn format
-```
+Ensure your editor supports Prettier.
+
 
 ### Type Checking
 The project uses TypeScript. Run type checks locally with:
