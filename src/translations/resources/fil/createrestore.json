@@ -12,6 +12,7 @@
   "key_backup_text_3": "Ang pagkawala ng key seed ay magreresulta sa pagkawala ng access sa iyong wallet.",
   "seed_phrase_backed_up": "Na-back up ko ang aking pangunahing seed phrase sa isang secure na lokasyon.",
   "import_key_phrase": "Mag-import ng Key Seed Phrase",
+  "key_seed_info": "SSP Key and SSP Wallet must both be using unique, different seed phrases.",
   "err_enter_seed": "Pakilagay ang iyong Key seed phrase",
   "err_invalid_seed": "Ang Key Seed Phrase ay hindi wasto. Ang Key Seed Phrase ay binubuo ng hindi bababa sa 12 salita.",
   "err_seed_invalid_words": "Ang Key Seed Phrase ay walang wastong salita: {{words}}.",
