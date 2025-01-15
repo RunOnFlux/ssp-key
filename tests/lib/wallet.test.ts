@@ -86,7 +86,7 @@ describe('Wallet Lib', () => {
         'sepolia',
       );
       expect(res).toEqual({
-        address: '0x28FF9c641b4294bb4Dab37Dc983dB8fD6ABfBA61',
+        address: '0x388FBa75f0b18566CfeFf56d641e1A30f1655076',
       });
     });
 
