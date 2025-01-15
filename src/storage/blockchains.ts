@@ -305,7 +305,7 @@ const sepolia = {
   backend: 'alchemy',
   accountSalt: 'aasalt', // ssp uses this salt for smart accounts
   factorySalt: 'aafactorysalt', // factory uses this salt
-  factoryAddress: '0xA76f98D25C9775F67DCf8B9EF9618d454D287467',
+  factoryAddress: '0x3974821943e9cA3549744D910999332eE387Fda4',
   entrypointAddress: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
   baseFee: 120, // 120 gwei
   priorityFee: 5, // 5 gwei
@@ -332,7 +332,7 @@ const eth = {
   backend: 'alchemy',
   accountSalt: 'aasalt', // ssp uses this salt for smart accounts
   factorySalt: 'aafactorysalt', // factory uses this salt
-  factoryAddress: '0xA76f98D25C9775F67DCf8B9EF9618d454D287467',
+  factoryAddress: '0x3974821943e9cA3549744D910999332eE387Fda4',
   entrypointAddress: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
   baseFee: 8, // 8 gwei
   priorityFee: 2, // 2 gwei
