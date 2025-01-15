@@ -1,7 +1,7 @@
 {
   "title": "$t(common:appName.full)",
   "subtitle": "$t(common:appName.moto)",
-  "description": "The Key for your dual signature SSP Wallet.",
-  "synchronise_key": "Synchronise Key!",
-  "restore_key": "Restore Key"
+  "description": "Ključ za vaš dualni SSP novčanik.",
+  "synchronise_key": "Sinkronizirajte ključ!",
+  "restore_key": "Obnovi ključ"
 }
