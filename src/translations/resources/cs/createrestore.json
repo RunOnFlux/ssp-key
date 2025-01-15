@@ -12,7 +12,7 @@
   "key_backup_text_3": "Ztráta seedu Klíče vyústí v kompletní ztrátu celé peněženky a vašich prostředků.",
   "seed_phrase_backed_up": "Uschoval jsem si seed frázi mého klíče na bezpečném místě.",
   "import_key_phrase": "Importovat Seed Frázi Klíče",
-  "key_seed_info": "SSP Key and SSP Wallet must both be using unique, different seed phrases.",
+  "key_seed_info": "SSP Klíč a SSP peněženka musí obě používat jinou unikátní seed frázi.",
   "err_enter_seed": "Prosím zadejte svou seed frázi Klíče",
   "err_invalid_seed": "Seed Fráze Klíče není platná. Seed fráze se skládá z minimálně 12 slov.",
   "err_seed_invalid_words": "Seed Fráze Klíče má neplatná slova: {{words}}.",
