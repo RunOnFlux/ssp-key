@@ -1,16 +1,16 @@
 {
   "appName": {
     "full": "SSP Schlüssel",
-    "moto": "Secure. Simple. Powerful."
+    "moto": "Sicher. Einfach. Mächtig."
   },
   "back": "Zurück",
   "cancel": "Abbrechen",
-  "key_seed_phrase": "Key Seed Phrase",
+  "key_seed_phrase": "Widerherstellungsschlüssel",
   "refresh": "Aktualisieren",
   "settings": "Einstellungen",
   "restore": "Wiederherstellen",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "ermöglicht durch",
   "ok": "OK",
   "help": "Hilfe",
   "save": "Speichern",
