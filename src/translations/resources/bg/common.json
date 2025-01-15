@@ -5,7 +5,7 @@
   },
   "back": "Назад",
   "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
+  "key_seed_phrase": "Фраза за ключа",
   "refresh": "Refresh",
   "settings": "Settings",
   "restore": "Restore",
@@ -17,5 +17,5 @@
   "confirm": "Confirm",
   "ask_me_later": "Ask me later",
   "chain": "Chain",
-  "wallet": "Wallet"
+  "wallet": "Портфейл"
 }
