@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP kulcs",
+    "moto": "Biztonságos. Egyszerű. Erőteljes."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Vissza",
+  "cancel": "Mégse",
+  "key_seed_phrase": "Tárca visszaállítási kód",
+  "refresh": "Frissítés",
+  "settings": "Beállítások",
+  "restore": "Visszaállítás",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Üzemeltető",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "help": "Súgó",
+  "save": "Mentés",
+  "confirm": "Megerősít",
+  "ask_me_later": "Kérdezzen rá később",
+  "chain": "Lánc",
+  "wallet": "Tárca"
 }
