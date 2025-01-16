@@ -1,0 +1,7 @@
+{
+  "title": "$t(common:appName.full)",
+  "subtitle": "$t(common:appName.moto)",
+  "description": "आपके ड्यूल हस्ताक्षर वाले एस. एस. पी. वॉलेट की कुंजी।",
+  "synchronise_key": "कुंजी सिंक्रनाइज़ करें!",
+  "restore_key": "कुंजी रीस्टोर करें"
+}

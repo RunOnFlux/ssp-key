@@ -28,6 +28,6 @@
   "import_key": "Import Key",
   "get_started": "Get Started!",
   "create_key": "Create Key",
-  "backup_key": "Backup Key",
+  "backup_key": "Резервно копие на ключа",
   "sync_wallet": "Sync Wallet"
 }

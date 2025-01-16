@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "Chiave SSP",
+    "moto": "Sicuro. Semplice. Potente."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Indietro",
+  "cancel": "Annulla",
+  "key_seed_phrase": "Frase Mnemonica",
+  "refresh": "Aggiorna",
+  "settings": "Impostazioni",
+  "restore": "Ripristina",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Fornito da",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "help": "Aiuto",
+  "save": "Salva",
+  "confirm": "Conferma",
+  "ask_me_later": "Chiedimelo più tardi",
+  "chain": "Catena",
+  "wallet": "Portafoglio"
 }

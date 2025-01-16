@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP கீ",
+    "moto": "பாதுகாப்பானது. எளிமையானது. சக்திவாய்ந்தது."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
-  "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "back": "திரும்பவும்",
+  "cancel": "ரத்து",
+  "key_seed_phrase": "கீச்சீட் ப்ரேஸ்",
+  "refresh": "முக்கிய குறிசொல்",
+  "settings": "அமைப்புகள்",
+  "restore": "மறுசீரமைப்பு",
+  "flux": "ஃப்லக்ஸ்",
+  "powered_by": "ஆதரித்தது",
+  "ok": "சரி",
+  "help": "சேமிக்க",
+  "save": "சேமி",
+  "confirm": "உறுதிப்படுத்தவும்",
+  "ask_me_later": "பிறகு கேளுங்கள்",
+  "chain": "சங்கிலி",
+  "wallet": "வாலட்"
 }

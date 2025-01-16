@@ -12,6 +12,7 @@
   "key_backup_text_3": "Kehilangan key seed akan mengakibatkan hilangnya akses ke dompet anda.",
   "seed_phrase_backed_up": "Saya telah mencadangkan frasa seed kunci saya di lokasi yang aman.",
   "import_key_phrase": "Mengimpor Frasa Benih Kunci",
+  "key_seed_info": "Kunci SSP dan Dompet SSP harus menggunakan frasa awal yang unik dan berbeda.",
   "err_enter_seed": "Silakan masukkan frasa kata kunci Anda",
   "err_invalid_seed": "Frasa Bibit Kunci tidak valid. Key Seed Phrase minimal terdiri dari 12 kata.",
   "err_seed_invalid_words": "Frasa Benih Kunci tidak memiliki kata-kata yang valid: {{words}}.",

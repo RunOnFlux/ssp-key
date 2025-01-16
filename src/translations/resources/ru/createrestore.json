@@ -12,6 +12,7 @@
   "key_backup_text_3": "Потеря секретного ключа приведет к потере доступа к вашему кошельку.",
   "seed_phrase_backed_up": "Я сделал резервную копию секретной фразы в безопасном месте.",
   "import_key_phrase": "Импортировать секретную фразу",
+  "key_seed_info": "SSP Key and SSP Wallet must both be using unique, different seed phrases.",
   "err_enter_seed": "Пожалуйста, введите секретную фразу",
   "err_invalid_seed": "Секретная фраза недействительна. Она должна содержать как минимум 12 слов.",
   "err_seed_invalid_words": "Секретная фраза содержит недопустимые слова: {{words}}.",

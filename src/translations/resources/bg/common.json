@@ -1,12 +1,12 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP Ключ",
+    "moto": "Сигурно. Просто. Мощно."
   },
-  "back": "Back",
-  "cancel": "Cancelar",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refrescar",
+  "back": "Назад",
+  "cancel": "Cancel",
+  "key_seed_phrase": "Фраза за ключа",
+  "refresh": "Refresh",
   "settings": "Settings",
   "restore": "Restore",
   "flux": "Flux",
@@ -17,5 +17,5 @@
   "confirm": "Confirm",
   "ask_me_later": "Ask me later",
   "chain": "Chain",
-  "wallet": "Wallet"
+  "wallet": "Портфейл"
 }

@@ -1,0 +1,7 @@
+{
+  "title": "$t(common:appName.full)",
+  "subtitle": "$t(common:appName.moto)",
+  "description": "আপনার ডুয়াল সিগনেচার SSP ওয়ালেটের জন্য কী.",
+  "synchronise_key": "কী সিঙ্ক্রোনাইজ করুন!",
+  "restore_key": "কী পুনরুদ্ধার করুন"
+}
