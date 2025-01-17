@@ -22,12 +22,12 @@
   "backup_needed": "Debe hacer una copia de seguridad de su frase de semilla antes de poder sincronizar una clave.",
   "seed_phrase_invalid": "La frase de semilla no es válida.",
   "err_setting_key": "Algo salió mal durante la configuración de su clave.",
-  "set_key_pin": "Set SSP Key Password",
-  "confirm_key_pin": "Confirm Key Password",
-  "input_mnemonic": "Input your Mnemonic Key Seed Phrase",
-  "import_key": "Import Key",
-  "get_started": "Get Started!",
-  "create_key": "Create Key",
-  "backup_key": "Backup Key",
-  "sync_wallet": "Sync Wallet"
+  "set_key_pin": "Establecer contraseña de Clave SSP",
+  "confirm_key_pin": "Confirmar Contraseña de Clave",
+  "input_mnemonic": "Ingrese su Frase de Semilla de Clave Mnemónica",
+  "import_key": "Importar Clave",
+  "get_started": "¡Empezar!",
+  "create_key": "Crear Clave",
+  "backup_key": "Respaldar Clave",
+  "sync_wallet": "Sincronizar Cartera"
 }
