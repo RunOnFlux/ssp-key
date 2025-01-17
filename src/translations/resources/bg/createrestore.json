@@ -1,7 +1,7 @@
 {
   "secure_key": "",
-  "set_pw": "Set Password",
-  "confirm_pw": "Confirm Password",
+  "set_pw": "Задайте парола",
+  "confirm_pw": "Потвърдете паролата",
   "setup_key": "Setup Key!",
   "restore_key": "Restore Key",
   "key_backup": "Key Backup",
