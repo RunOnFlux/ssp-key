@@ -1,11 +1,11 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "Khóa SSP",
+    "moto": "An Toàn. Đơn giản. Mạnh mẽ."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
+  "back": "Quay lại",
+  "cancel": "Hủy bỏ",
+  "key_seed_phrase": "Cụm khôi phục Ví",
   "refresh": "Refresh",
   "settings": "Settings",
   "restore": "Restore",
