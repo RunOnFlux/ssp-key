@@ -10,12 +10,12 @@
   "settings": "Cài đặt",
   "restore": "Phục hồi",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Được cung cấp sức mạnh bởi",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "help": "Trợ giúp",
+  "save": "Lưu",
+  "confirm": "Xác nhận",
+  "ask_me_later": "Hỏi lại tôi sau",
+  "chain": "Chuỗi khối",
+  "wallet": "Ví"
 }
