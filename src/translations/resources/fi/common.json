@@ -12,10 +12,10 @@
   "flux": "Flux",
   "powered_by": "Voimanlähteenä",
   "ok": "Okei",
-  "help": "Ohje",
-  "save": "Tallentaa",
+  "help": "Ohjeet",
+  "save": "Tallenna",
   "confirm": "Vahvista",
-  "ask_me_later": "Kysy minulta myöhemmin",
+  "ask_me_later": "Kysy myöhemmin",
   "chain": "Ketju",
   "wallet": "Lompakko"
 }
