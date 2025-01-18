@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP-avain",
+    "moto": "Turvallinen. Yksinkertainen. Tehokas."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Takaisin",
+  "cancel": "Peruuta",
+  "key_seed_phrase": "Avaimen siemenlauseke",
+  "refresh": "Päivitä",
+  "settings": "Asetukset",
+  "restore": "Palauta",
   "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "powered_by": "Voimanlähteenä",
+  "ok": "Okei",
+  "help": "Ohjeet",
+  "save": "Tallenna",
+  "confirm": "Vahvista",
+  "ask_me_later": "Kysy myöhemmin",
+  "chain": "Ketju",
+  "wallet": "Lompakko"
 }

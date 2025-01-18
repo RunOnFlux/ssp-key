@@ -1,6 +1,6 @@
 {
   "title": "$t(common:appName.full)",
-  "subtitle": "$t(commun:appName.moto)",
+  "subtitle": "$t(common:appName.moto)",
   "description": "La clé de votre portefeuille SSP à double signature.",
   "synchronise_key": "Synchroniser la clé !",
   "restore_key": "Restaurer la clé"

@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSPキー",
+    "moto": "安全. 簡単. 強力."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "戻る",
+  "cancel": "キャンセル",
+  "key_seed_phrase": "キーシードフレーズ",
+  "refresh": "更新",
+  "settings": "設定",
+  "restore": "復元",
   "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "powered_by": "提供元",
+  "ok": "わかりました",
+  "help": "ヘルプ",
+  "save": "保存",
+  "confirm": "確認",
+  "ask_me_later": "後で聞いてください",
+  "chain": "チェーン",
+  "wallet": "ウォレット"
 }

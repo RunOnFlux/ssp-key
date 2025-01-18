@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "Khóa SSP",
+    "moto": "An Toàn. Đơn giản. Mạnh mẽ."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Quay lại",
+  "cancel": "Hủy bỏ",
+  "key_seed_phrase": "Cụm khôi phục Ví",
+  "refresh": "Làm mới",
+  "settings": "Cài đặt",
+  "restore": "Phục hồi",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Được cung cấp sức mạnh bởi",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "help": "Trợ giúp",
+  "save": "Lưu",
+  "confirm": "Xác nhận",
+  "ask_me_later": "Hỏi lại tôi sau",
+  "chain": "Chuỗi khối",
+  "wallet": "Ví"
 }

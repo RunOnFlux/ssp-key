@@ -1,16 +1,16 @@
 {
   "appName": {
     "full": "SSP Ключ",
-    "moto": "Сигурно. Просто. Мощно."
+    "moto": "Сигурно. Лесно. Мощно."
   },
   "back": "Назад",
-  "cancel": "Cancel",
+  "cancel": "Отказ",
   "key_seed_phrase": "Фраза за ключа",
-  "refresh": "Refresh",
+  "refresh": "Обнови",
   "settings": "Settings",
   "restore": "Restore",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Осъществено от /\nС подкрепата на",
   "ok": "OK",
   "help": "Help",
   "save": "Save",
