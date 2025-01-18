@@ -1,7 +1,7 @@
 {
   "title": "$t(common:appName.full)",
   "subtitle": "$t(common:appName.moto)",
-  "description": "The Key for your dual signature SSP Wallet.",
-  "synchronise_key": "Synchronise Key!",
-  "restore_key": "Restore Key"
+  "description": "Το κλειδί για το διπλής υπογραφής SSP πορτοφόλι σας.",
+  "synchronise_key": "Συγχρονισμός Κλειδιού!",
+  "restore_key": "Επαναφορά Κλειδιού"
 }
