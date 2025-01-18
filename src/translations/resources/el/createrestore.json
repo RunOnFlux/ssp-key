@@ -22,12 +22,12 @@
   "backup_needed": "You must backup your key seed phrase before you can synchronise a key.",
   "seed_phrase_invalid": "Key seed phrase is invalid.",
   "err_setting_key": "Something went wrong while setting up your Key.",
-  "set_key_pin": "Set SSP Key Password",
-  "confirm_key_pin": "Confirm Key Password",
+  "set_key_pin": "Ορίστε Κωδικό Πρόσβασης Κλειδιού SSP",
+  "confirm_key_pin": "Επιβεβαίωση Κωδικού",
   "input_mnemonic": "Input your Mnemonic Key Seed Phrase",
-  "import_key": "Import Key",
-  "get_started": "Get Started!",
-  "create_key": "Create Key",
+  "import_key": "Εισαγωγή κλειδιού",
+  "get_started": "Ας Ξεκινήσουμε!",
+  "create_key": "Δημιουργία κλειδιού",
   "backup_key": "Backup Key",
-  "sync_wallet": "Sync Wallet"
+  "sync_wallet": "Συγχρονισμός Πορτοφολιού"
 }
