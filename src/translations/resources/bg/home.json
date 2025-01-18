@@ -55,8 +55,8 @@
   "ssp_key_info": "SSP ключът е втори фактор за автентикация за вашия SSP портфейл.",
   "manual_input_info": "Въведете вашата транзакция за подписване или XPUB на вашия портфейл за синхронизиране.",
   "ssp_help_about": "Вашият втори фактор за автентикация на SSP портфейла.",
-  "scan_camera_permissions": "Camera Permission",
-  "scan_camera_needed": "SSP Key needs access to your camera to scan QR codes.",
+  "scan_camera_permissions": "Разрешение за достъп до камерата",
+  "scan_camera_needed": "SSP ключът изисква достъп до вашата камера, за да сканира QR кодове.",
   "err_camera_unavailable": "Camera is unavailable.",
   "err_camera_denied": "Camera access denied.",
   "err_camera_forbidden": "Camera access is forbidden. Please enable it in your phone app permission settings first.",
@@ -87,5 +87,5 @@
   "public_nonces_request_approved_info": "Public Nonces were generated and sent for syncing with SSP Wallet.",
   "err_sharing_public_nonces": "Error while sharing Public Nonces.",
   "err_generating_public_nonces": "Error while generating Public Nonces.",
-  "copy_to_clipboard": "Copy to Clipboard"
+  "copy_to_clipboard": "Копирано в клипборда"
 }
