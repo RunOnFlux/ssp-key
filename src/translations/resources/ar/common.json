@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": " SSP مفتاح",
+    "moto": "آمن. بسيط. قوي."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
-  "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "back": "العودة",
+  "cancel": "إلغاء",
+  "key_seed_phrase": "",
+  "refresh": "تحديث",
+  "settings": "الإعدادات",
+  "restore": "استعادة",
+  "flux": "فلوكس",
+  "powered_by": "مدعوم بواسطة",
+  "ok": "حسنًا",
+  "help": "المساعدة",
+  "save": "حفظ",
+  "confirm": "تأكيد",
+  "ask_me_later": "اسألني لاحقًا",
+  "chain": "سلسلة",
+  "wallet": "محفظة"
 }
