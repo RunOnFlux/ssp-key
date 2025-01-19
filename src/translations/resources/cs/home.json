@@ -36,6 +36,8 @@
   "change_pw_restore": "Změna Hesla? Obnovit!",
   "ssp_relay_server": "SSP Relay Server",
   "chain_node_service": "{{chain}} Node Služba",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "Potvrdit Heslo",
   "grant_access": "Povolit Přístup",
   "sync_needed": "Je zapotřebí Synchronizace",
