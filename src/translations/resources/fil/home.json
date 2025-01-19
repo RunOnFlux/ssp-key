@@ -36,6 +36,8 @@
   "change_pw_restore": "Palitan ang Password? Ibalik!",
   "ssp_relay_server": "SSP Relay Server",
   "chain_node_service": "{{chain}} Node Service",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "Kumpirmahin ang Password",
   "grant_access": "Bigyan ng Access",
   "sync_needed": "Kailangan ng Pag-synchronize",
