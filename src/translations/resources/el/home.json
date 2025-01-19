@@ -36,6 +36,8 @@
   "change_pw_restore": "Αλλαγή κωδικού πρόσβασης; Επαναφορά κωδικού!",
   "ssp_relay_server": "Εξυπηρετητής Relay SSP",
   "chain_node_service": "Υπηρεσία {{chain}} Κόμβων",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "Επιβεβαίωση Κωδικού",
   "grant_access": "Παρέχετε Πρόσβαση",
   "sync_needed": "Απαιτείται Συγχρονισμός",
