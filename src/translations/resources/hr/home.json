@@ -36,6 +36,8 @@
   "change_pw_restore": "Promijeni lozinku? Vrati!",
   "ssp_relay_server": "SSP Relay Server",
   "chain_node_service": "{{chain}} Node Usluga",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "Potvrdi lozinku",
   "grant_access": "Dajte Pristup",
   "sync_needed": "Potrebna sinkronizacija",
