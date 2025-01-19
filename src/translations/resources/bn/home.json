@@ -36,6 +36,8 @@
   "change_pw_restore": "পাসওয়ার্ড পরিবর্তন করবেন? পুনরুদ্ধার করুন!",
   "ssp_relay_server": "SSP রিলে সার্ভার",
   "chain_node_service": "{{chain}} নোড সেবা",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "পাসওয়ার্ড নিশ্চিত করুন",
   "grant_access": "অ্যাক্সেস প্রদান করুন",
   "sync_needed": "Synchronisation Needed",
