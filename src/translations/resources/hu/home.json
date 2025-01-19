@@ -36,6 +36,8 @@
   "change_pw_restore": "Jelszó megváltoztatása? Visszaállítás!",
   "ssp_relay_server": "SSP Relé szerver",
   "chain_node_service": "{{chain}} Node szolgáltatás",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "Jelszó megerősítése",
   "grant_access": "Hozzáférés engedélyezése",
   "sync_needed": "Szinkronizálás szükséges",
