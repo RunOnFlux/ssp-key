@@ -11,6 +11,8 @@ export function loadSSPConfig() {
   if (localForgeSSPConfig) {
     console.log(localForgeSSPConfig);
     storedLocalForgeSSPConfig = JSON.parse(localForgeSSPConfig);
+  } else {
+    storedLocalForgeSSPConfig = {};
   }
 }
 

@@ -42,27 +42,39 @@ const SettingsSection = (props: {
   const [isChainSelectOpen, setIsChainSelectOpen] = useState(false);
   const [selectedChain, setSelectedChain] =
     useState<keyof cryptos>(identityChain);
-  const FNC = backends()[selectedChain].node;
+  const NC = backends()[selectedChain].node;
+  const API = backends()[selectedChain].api;
+  const EXPLORER = backends()[selectedChain].explorer;
   const SSPR = sspConfig().relay;
-  console.log(SSPR);
   const [sspConfigRelay, setSspConfigRelay] = useState(SSPR);
-  const [chainNodeConfig, setChainNodeConfig] = useState(FNC);
+  const [nodeConfig, setNodeConfig] = useState(NC);
+  const [apiConfig, setApiConfig] = useState(API);
+  const [explorerConfig, setExplorerConfig] = useState(EXPLORER);
   const { t } = useTranslation(['home', 'common']);
   const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const blockchainConfig = blockchains[selectedChain];
 
   useEffect(() => {
-    const FNCnew = backends()[selectedChain].node;
-    setChainNodeConfig(FNCnew);
+    const NCnew = backends()[selectedChain].node;
+    setNodeConfig(NCnew);
+    const APInew = backends()[selectedChain].api;
+    setApiConfig(APInew);
+    const EXPLORERnew = backends()[selectedChain].explorer;
+    setExplorerConfig(EXPLORERnew);
   }, [selectedChain]);
 
   const handleCancel = () => {
-    console.log('Close');
     if (SSPR !== sspConfigRelay) {
       setSspConfigRelay(SSPR);
     }
-    if (FNC !== chainNodeConfig) {
-      setChainNodeConfig(FNC);
+    if (NC !== nodeConfig) {
+      setNodeConfig(NC);
+    }
+    if (API !== apiConfig) {
+      setApiConfig(API);
+    }
+    if (EXPLORER !== explorerConfig) {
+      setExplorerConfig(EXPLORER);
     }
     loadBackendsConfig();
     loadSSPConfig();
@@ -78,25 +90,65 @@ const SettingsSection = (props: {
       storage.set('sspConfig', JSON.stringify(sspConf));
     } else {
       // remove if present on mmkv
-      // storage.delete('sspConfig'); // why this does not work??? It gets readded somewhere somehow???
-      // workaround
-      storage.set('sspConfig', JSON.stringify(originalConfig));
+      storage.delete('sspConfig');
     }
-    // adjust chain node
-    if (backendsOriginalConfig[selectedChain].node !== chainNodeConfig) {
-      const backendsConfig = {
-        [selectedChain]: {
-          ...backendsOriginalConfig[selectedChain],
-          node: chainNodeConfig,
-        },
+
+    // adjust node, api, explorer
+    const backendStorageString = storage.getString('backends'); // load our backends
+    console.log(backendStorageString);
+    let storedBackends: backends = {};
+    if (backendStorageString) {
+      storedBackends = JSON.parse(backendStorageString);
+    }
+    if (!storedBackends[selectedChain]) {
+      storedBackends[selectedChain] = {
+        ...backendsOriginalConfig[selectedChain],
       };
-      storage.set('backends', JSON.stringify(backendsConfig));
-    } else {
-      // remove if present on mmkv
-      // storage.delete('backends'); // this does not work??? It gets readded somewhere somehow???
-      // workaround
-      storage.set('backends', JSON.stringify(backendsOriginalConfig));
+    } // if this coin is not present, add it
+    // adjust node
+    if (storedBackends?.[selectedChain]?.node !== nodeConfig) {
+      storedBackends[selectedChain].node = nodeConfig;
     }
+    // adjust api
+    if (storedBackends?.[selectedChain]?.api !== apiConfig) {
+      storedBackends[selectedChain].api = apiConfig;
+    }
+    // adjust explorer
+    if (storedBackends?.[selectedChain]?.explorer !== explorerConfig) {
+      storedBackends[selectedChain].explorer = explorerConfig;
+    }
+    // if any config or backend is the same as original, remove it
+    if (
+      storedBackends?.[selectedChain]?.node ===
+      backendsOriginalConfig[selectedChain].node
+    ) {
+      delete storedBackends?.[selectedChain]?.node;
+    }
+    if (
+      storedBackends?.[selectedChain]?.api ===
+      backendsOriginalConfig[selectedChain].api
+    ) {
+      delete storedBackends?.[selectedChain]?.api;
+    }
+    if (
+      storedBackends?.[selectedChain]?.explorer ===
+      backendsOriginalConfig[selectedChain].explorer
+    ) {
+      delete storedBackends?.[selectedChain]?.explorer;
+    }
+    // if config of backend coin is empty, delete it
+    if (Object.keys(storedBackends?.[selectedChain]).length === 0) {
+      delete storedBackends?.[selectedChain];
+    }
+    // if entire config of backends is empty, delete it, otherwise save it
+    if (Object.keys(storedBackends).length === 0) {
+      storage.delete('backends');
+    } else {
+      console.log('save backends');
+      console.log(storedBackends);
+      storage.set('backends', JSON.stringify(storedBackends));
+    }
+
     // apply configuration
     loadBackendsConfig();
     loadSSPConfig();
@@ -116,7 +168,17 @@ const SettingsSection = (props: {
 
   const resetChainNodeService = () => {
     console.log('Reset Chain Node Service');
-    setChainNodeConfig(backendsOriginalConfig[selectedChain].node);
+    setNodeConfig(backendsOriginalConfig[selectedChain].node);
+  };
+
+  const resetChainApiService = () => {
+    console.log('Reset Chain Api Service');
+    setApiConfig(backendsOriginalConfig[selectedChain].api);
+  };
+
+  const resetChainExplorerService = () => {
+    console.log('Reset Chain Explorer Service');
+    setExplorerConfig(backendsOriginalConfig[selectedChain].explorer);
   };
 
   const onChangeSSPrelay = (text: string) => {
@@ -124,7 +186,15 @@ const SettingsSection = (props: {
   };
 
   const onChangeChainNodeService = (text: string) => {
-    setChainNodeConfig(text);
+    setNodeConfig(text);
+  };
+
+  const onChangeChainApiService = (text: string) => {
+    setApiConfig(text);
+  };
+
+  const onChangeChainExplorerService = (text: string) => {
+    setExplorerConfig(text);
   };
 
   const openChainSelect = () => {
@@ -233,38 +303,134 @@ const SettingsSection = (props: {
                   </View>
                 </View>
                 <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
-                  <Text
-                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                  >
-                    {t('home:chain_node_service', {
-                      chain: blockchainConfig.name,
-                    })}
-                  </Text>
-                  <View
-                    style={[
-                      Layout.rowCenter,
-                      Common.inputWithButtonBgModalColors,
-                      styles.inputWithButton,
-                    ]}
-                  >
-                    <TextInput
-                      style={[Common.textInput, Common.textInputBgModal]}
-                      autoCapitalize="none"
-                      placeholder={backendsOriginalConfig[selectedChain].node}
-                      placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                      onChangeText={onChangeChainNodeService}
-                      value={chainNodeConfig}
-                      autoCorrect={false}
-                      ref={textInputB}
-                      onPressIn={() => textInputB.current?.focus()}
-                    />
-                    <TouchableOpacity
-                      onPress={resetChainNodeService}
-                      style={Common.inputIcon}
-                    >
-                      <Icon name="x" size={20} color={Colors.bluePrimary} />
-                    </TouchableOpacity>
-                  </View>
+                  {backendsOriginalConfig[selectedChain].node && (
+                    <>
+                      <Text
+                        style={[
+                          Fonts.textBold,
+                          Fonts.textSmall,
+                          Fonts.textCenter,
+                        ]}
+                      >
+                        {t('home:chain_node_service', {
+                          chain: blockchainConfig.name,
+                        })}
+                      </Text>
+                      <View
+                        style={[
+                          Layout.rowCenter,
+                          Common.inputWithButtonBgModalColors,
+                          styles.inputWithButton,
+                        ]}
+                      >
+                        <TextInput
+                          style={[Common.textInput, Common.textInputBgModal]}
+                          autoCapitalize="none"
+                          placeholder={
+                            backendsOriginalConfig[selectedChain].node
+                          }
+                          placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                          onChangeText={onChangeChainNodeService}
+                          value={nodeConfig}
+                          autoCorrect={false}
+                          ref={textInputB}
+                          onPressIn={() => textInputB.current?.focus()}
+                        />
+                        <TouchableOpacity
+                          onPress={resetChainNodeService}
+                          style={Common.inputIcon}
+                        >
+                          <Icon name="x" size={20} color={Colors.bluePrimary} />
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                  {backendsOriginalConfig[selectedChain].api && (
+                    <>
+                      <Text
+                        style={[
+                          Fonts.textBold,
+                          Fonts.textSmall,
+                          Fonts.textCenter,
+                          Gutters.smallTMargin,
+                        ]}
+                      >
+                        {t('home:chain_api_service', {
+                          chain: blockchainConfig.name,
+                        })}
+                      </Text>
+                      <View
+                        style={[
+                          Layout.rowCenter,
+                          Common.inputWithButtonBgModalColors,
+                          styles.inputWithButton,
+                        ]}
+                      >
+                        <TextInput
+                          style={[Common.textInput, Common.textInputBgModal]}
+                          autoCapitalize="none"
+                          placeholder={
+                            backendsOriginalConfig[selectedChain].api
+                          }
+                          placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                          onChangeText={onChangeChainApiService}
+                          value={apiConfig}
+                          autoCorrect={false}
+                          ref={textInputB}
+                          onPressIn={() => textInputB.current?.focus()}
+                        />
+                        <TouchableOpacity
+                          onPress={resetChainApiService}
+                          style={Common.inputIcon}
+                        >
+                          <Icon name="x" size={20} color={Colors.bluePrimary} />
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                  {backendsOriginalConfig[selectedChain].explorer && (
+                    <>
+                      <Text
+                        style={[
+                          Fonts.textBold,
+                          Fonts.textSmall,
+                          Fonts.textCenter,
+                          Gutters.smallTMargin,
+                        ]}
+                      >
+                        {t('home:chain_explorer_service', {
+                          chain: blockchainConfig.name,
+                        })}
+                      </Text>
+                      <View
+                        style={[
+                          Layout.rowCenter,
+                          Common.inputWithButtonBgModalColors,
+                          styles.inputWithButton,
+                        ]}
+                      >
+                        <TextInput
+                          style={[Common.textInput, Common.textInputBgModal]}
+                          autoCapitalize="none"
+                          placeholder={
+                            backendsOriginalConfig[selectedChain].explorer
+                          }
+                          placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                          onChangeText={onChangeChainExplorerService}
+                          value={explorerConfig}
+                          autoCorrect={false}
+                          ref={textInputB}
+                          onPressIn={() => textInputB.current?.focus()}
+                        />
+                        <TouchableOpacity
+                          onPress={resetChainExplorerService}
+                          style={Common.inputIcon}
+                        >
+                          <Icon name="x" size={20} color={Colors.bluePrimary} />
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
                   <View style={[Gutters.tinyTMargin, Layout.colCenter]}>
                     <TouchableOpacity
                       style={[
