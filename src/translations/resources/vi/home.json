@@ -36,6 +36,8 @@
   "change_pw_restore": "Thay đổi mật khẩu? Phục hồi!",
   "ssp_relay_server": "Máy chủ Rơ-le SSP",
   "chain_node_service": "Dịch vụ nút mạng {{chain}}",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "Xác nhận mật khẩu",
   "grant_access": "Cấp quyền truy cập",
   "sync_needed": "Cần sự đồng bộ",
