@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "I Public Nonces sono stati generati e inviati per la sincronizzazione con il Portafoglio SSP.",
   "err_sharing_public_nonces": "Errore durante la condivisione di Public Nonces.",
   "err_generating_public_nonces": "Errore durante la generazione dei Public Nonces.",
-  "copy_to_clipboard": "Copia negli appunti"
+  "copy_to_clipboard": "Copia negli appunti",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }
