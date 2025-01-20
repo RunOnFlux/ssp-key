@@ -86,8 +86,8 @@ android {
         applicationId "io.runonflux.sspkey"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 27
-        versionName "1.6.0"
+        versionCode 28
+        versionName "1.7.0"
     }
     signingConfigs {
         debug {
