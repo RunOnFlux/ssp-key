@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "Ang mga Pampublikong Nonces ay nabuo at ipinadala para sa pag-sync sa SSP Wallet.",
   "err_sharing_public_nonces": "Error habang nagbabahagi ng Public Nonces.",
   "err_generating_public_nonces": "Error habang bumubuo ng Public Nonces.",
-  "copy_to_clipboard": "Kopyahin sa Clipboard"
+  "copy_to_clipboard": "Kopyahin sa Clipboard",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }
