@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP 密钥",
+    "moto": "安全. 简单. 强大."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "返回",
+  "cancel": "取消",
+  "key_seed_phrase": "密钥种子短语",
+  "refresh": "刷新",
+  "settings": "设置",
+  "restore": "恢复",
   "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "powered_by": "技术支持：",
+  "ok": "确定",
+  "help": "帮助",
+  "save": "保存",
+  "confirm": "确认",
+  "ask_me_later": "稍后再问",
+  "chain": "链",
+  "wallet": "钱包"
 }
