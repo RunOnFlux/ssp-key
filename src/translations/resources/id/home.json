@@ -36,6 +36,8 @@
   "change_pw_restore": "Ganti kata sandi? Pulihkan",
   "ssp_relay_server": "Server Relai SSP",
   "chain_node_service": "{{chain}} Layanan Node",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "konfirmasi sandi",
   "grant_access": "Berikan Akses",
   "sync_needed": "Sinkronisasi Diperlukan",

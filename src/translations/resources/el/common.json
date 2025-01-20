@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "Κλειδί SSP",
+    "moto": "Ασφαλές. Απλό. Δυνατό."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Πίσω",
+  "cancel": "Ακύρωση",
+  "key_seed_phrase": "Εισάγετε την Seed Phrase",
+  "refresh": "Ανανέωση",
+  "settings": "Ρυθμίσεις",
+  "restore": "Επαναφορά",
   "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "powered_by": "Με την υποστήριξη",
+  "ok": "ΟΚ",
+  "help": "Βοήθεια",
+  "save": "Αποθήκευση",
+  "confirm": "Επιβεβαίωση",
+  "ask_me_later": "Ρωτήστε με αργότερα",
+  "chain": "Αλυσίδα",
+  "wallet": "Πορτοφόλι"
 }

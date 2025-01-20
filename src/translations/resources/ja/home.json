@@ -36,6 +36,8 @@
   "change_pw_restore": "パスワードの変更？復元!",
   "ssp_relay_server": "SSP中継サーバー",
   "chain_node_service": "{{chain}}ノードサービス",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "パスワードを確認",
   "grant_access": "アクセスを許可",
   "sync_needed": "同期が必要です",

@@ -36,6 +36,8 @@
   "change_pw_restore": "கடவுச்சொல் மாற்ற வேண்டுமா? மீட்டெடுக்கவும்!",
   "ssp_relay_server": "SSP ரிலே சர்வர்",
   "chain_node_service": "{{chain}} நொடு சேவை",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "பாஸ்வோர்டை உறுதிப்படுத்தவும்",
   "grant_access": "அணுகலை வழங்கவும்",
   "sync_needed": "ஒத்திசைவு தேவை",

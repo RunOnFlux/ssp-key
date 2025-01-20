@@ -36,6 +36,8 @@
   "change_pw_restore": "¿Cambiar contraseña? ¡Restaurar!",
   "ssp_relay_server": "Servidor de Retransmisión SSP",
   "chain_node_service": "Servicio de Nodo {{chain}}",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "Confirmar Contraseña",
   "grant_access": "Otorgar Acceso",
   "sync_needed": "Se Necesita Sincronización",

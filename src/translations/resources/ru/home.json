@@ -36,6 +36,8 @@
   "change_pw_restore": "Изменить пароль? Восстановить!",
   "ssp_relay_server": "Ретрансляционный сервер SSP",
   "chain_node_service": "Сервис узла {{chain}}",
+  "chain_api_service": "{{chain}} API Service",
+  "chain_explorer_service": "{{chain}} Explorer Service",
   "confirm_password_pin": "Подтвердить пароль",
   "grant_access": "Предоставить доступ",
   "sync_needed": "Требуется синхронизация",
