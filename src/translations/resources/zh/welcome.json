@@ -1,7 +1,7 @@
 {
   "title": "$t(common:appName.full)",
   "subtitle": "$t(common:appName.moto)",
-  "description": "您的双签名SSP钱包的密钥.",
-  "synchronise_key": "同步密钥！",
-  "restore_key": "恢复密钥"
+  "description": "用於您的雙重簽名 SSP 錢包的金鑰.",
+  "synchronise_key": "同步金鑰！",
+  "restore_key": "恢復金鑰"
 }
