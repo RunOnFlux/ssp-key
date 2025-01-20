@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "A nyilvános nonce-ok létre lettek hozva és el lettek küldve az SSP tárcával való szinkronizáláshoz.",
   "err_sharing_public_nonces": "Hiba történt a nyilvános nonce-ok megosztása során.",
   "err_generating_public_nonces": "Hiba történt a nyilvános nonce-ok generálása során.",
-  "copy_to_clipboard": "Másolás vágólapra"
+  "copy_to_clipboard": "Másolás vágólapra",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }
