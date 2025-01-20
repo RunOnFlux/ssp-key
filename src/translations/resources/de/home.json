@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "Öffentliche Nonces wurden generiert und zur Synchronisierung mit der SSP Wallet gesendet.",
   "err_sharing_public_nonces": "Beim Teilen öffentlicher Nonces ist ein Fehler aufgetreten.",
   "err_generating_public_nonces": "Fehler beim Generieren öffentlicher Nonces.",
-  "copy_to_clipboard": "In die Zwischenablage kopieren"
+  "copy_to_clipboard": "In die Zwischenablage kopieren",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }
