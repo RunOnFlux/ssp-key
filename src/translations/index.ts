@@ -1,9 +1,23 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { NativeModules, Platform } from 'react-native';
 import * as resources from './resources';
 
 const ns = Object.keys(Object.values(resources)[0]);
 export const defaultNS = ns[0];
+
+const deviceLanguage =
+  Platform.OS === 'ios'
+    ? NativeModules.SettingsManager.settings.AppleLocale ||
+      NativeModules.SettingsManager.settings.AppleLanguages[0] // iOS 13
+    : NativeModules.I18nManager.localeIdentifier;
+
+let lng = deviceLanguage.split('_')[0].split('-')[0];
+
+// check if lng is in resources, if not, set to en
+if (!Object.keys(resources).includes(lng)) {
+  lng = 'en';
+}
 
 i18n.use(initReactI18next).init({
   ns,
@@ -17,7 +31,7 @@ i18n.use(initReactI18next).init({
       {},
     ),
   },
-  lng: 'en',
+  lng,
   fallbackLng: 'en',
   interpolation: {
     escapeValue: false, // not needed for react as it escapes by default

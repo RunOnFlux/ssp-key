@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  NativeModules,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
@@ -27,6 +28,8 @@ import { useAppSelector } from '../../hooks';
 
 import { blockchains } from '@storage/blockchains';
 
+import * as resources from '../../translations/resources';
+
 const backendsOriginalConfig = backendsOriginal();
 const originalConfig = sspConfigOriginal();
 
@@ -40,8 +43,13 @@ const SettingsSection = (props: {
   const { identityChain } = useAppSelector((state) => state.ssp);
   const [isMainModalOpen, setIsMainModalOpen] = useState(true);
   const [isChainSelectOpen, setIsChainSelectOpen] = useState(false);
+  const [isLanguageSelectOpen, setIsLanguageSelectOpen] = useState(false);
   const [selectedChain, setSelectedChain] =
     useState<keyof cryptos>(identityChain);
+  const currentLanguage = storage.getString('language');
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    currentLanguage ?? 'system',
+  );
   const NC = backends()[selectedChain].node;
   const API = backends()[selectedChain].api;
   const EXPLORER = backends()[selectedChain].explorer;
@@ -51,8 +59,48 @@ const SettingsSection = (props: {
   const [apiConfig, setApiConfig] = useState(API);
   const [explorerConfig, setExplorerConfig] = useState(EXPLORER);
   const { t } = useTranslation(['home', 'common']);
+  const { i18n } = useTranslation();
   const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const blockchainConfig = blockchains[selectedChain];
+
+  const deviceLanguage =
+    Platform.OS === 'ios'
+      ? NativeModules.SettingsManager.settings.AppleLocale ||
+        NativeModules.SettingsManager.settings.AppleLanguages[0] // iOS 13
+      : NativeModules.I18nManager.localeIdentifier;
+
+  const deviceLanguageShort = deviceLanguage.split('_')[0].split('-')[0];
+
+  const languages = [
+    { value: 'en', label: 'en', desc: 'English' },
+    { value: 'id', label: 'id', desc: 'Bahasa Indonesia' },
+    { value: 'bn', label: 'bn', desc: 'বাংলা' },
+    { value: 'cs', label: 'cs', desc: 'Čeština' },
+    { value: 'de', label: 'de', desc: 'Deutsch' },
+    { value: 'es', label: 'es', desc: 'Español' },
+    { value: 'fi', label: 'fi', desc: 'Suomen kieli' },
+    { value: 'fil', label: 'fil', desc: 'Filipino' },
+    { value: 'fr', label: 'fr', desc: 'Français' },
+    { value: 'el', label: 'el', desc: 'Ελληνικά' },
+    { value: 'hi', label: 'hi', desc: 'हिन्दी' },
+    { value: 'hr', label: 'hr', desc: 'Hrvatski' },
+    { value: 'it', label: 'it', desc: 'Italiano' },
+    { value: 'ko', label: 'ko', desc: '한국어' },
+    { value: 'hu', label: 'hu', desc: 'Magyar' },
+    { value: 'ja', label: 'ja', desc: '日本語' },
+    { value: 'ru', label: 'ru', desc: 'Русский' },
+    { value: 'ta', label: 'ta', desc: 'தமிழ்' },
+    { value: 'vi', label: 'vi', desc: 'Tiếng Việt' },
+    ...(Object.keys(resources).includes(deviceLanguageShort)
+      ? [
+          {
+            value: 'system',
+            label: deviceLanguageShort,
+            desc: t('home:use_system_language'),
+          },
+        ]
+      : []),
+  ];
 
   useEffect(() => {
     const NCnew = backends()[selectedChain].node;
@@ -62,6 +110,17 @@ const SettingsSection = (props: {
     const EXPLORERnew = backends()[selectedChain].explorer;
     setExplorerConfig(EXPLORERnew);
   }, [selectedChain]);
+
+  useEffect(() => {
+    void (async function () {
+      if (selectedLanguage === 'system') {
+        await i18n.changeLanguage(deviceLanguageShort);
+      } else {
+        await i18n.changeLanguage(selectedLanguage);
+      }
+      storage.set('language', selectedLanguage);
+    })();
+  }, [selectedLanguage]);
 
   const handleCancel = () => {
     if (SSPR !== sspConfigRelay) {
@@ -213,6 +272,22 @@ const SettingsSection = (props: {
     });
   };
 
+  const openLanguageSelect = () => {
+    console.log('Open language select');
+    setIsMainModalOpen(false);
+    setTimeout(() => {
+      setIsLanguageSelectOpen(true);
+    });
+  };
+
+  const closeLanguageSelect = () => {
+    console.log('Close language select');
+    setIsLanguageSelectOpen(false);
+    setTimeout(() => {
+      setIsMainModalOpen(true);
+    });
+  };
+
   return (
     <>
       <Modal
@@ -267,6 +342,34 @@ const SettingsSection = (props: {
                       ]}
                     >
                       {t('home:change_pw_restore')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={[Gutters.smallBMargin]}>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:language')}
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      Common.button.outlineRounded,
+                      Common.button.secondaryButton,
+                      Gutters.smallTMargin,
+                    ]}
+                    onPress={() => openLanguageSelect()}
+                  >
+                    <Text
+                      style={[
+                        Fonts.textTiny,
+                        Fonts.textBluePrimary,
+                        Gutters.tinyVPadding,
+                        Gutters.tinyHPadding,
+                      ]}
+                    >
+                      {languages.find(
+                        (language) => language.value === selectedLanguage,
+                      )?.desc ?? t('home:use_system_language')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -526,6 +629,65 @@ const SettingsSection = (props: {
                   Gutters.regularTMargin,
                 ]}
                 onPress={() => closeChainSelect()}
+              >
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBluePrimary,
+                    Gutters.regularHPadding,
+                  ]}
+                >
+                  {t('common:ok')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </Modal>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isLanguageSelectOpen}
+        onRequestClose={() => setIsLanguageSelectOpen(false)}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="always"
+          style={[Layout.fill, Common.modalBackdrop]}
+          contentInset={{ bottom: 80 }}
+          contentContainerStyle={[
+            Gutters.smallBPadding,
+            Layout.scrollSpaceBetween,
+            Layout.justifyContentCenter,
+          ]}
+        >
+          <View style={[Common.modalView]}>
+            <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+              {t('home:change_language')}
+            </Text>
+            <View style={[Gutters.regularTMargin]}>
+              <Picker
+                selectedValue={selectedLanguage}
+                onValueChange={(itemValue) => setSelectedLanguage(itemValue)}
+              >
+                {languages.map((language) => (
+                  <Picker.Item
+                    label={language.desc}
+                    color={Colors.textInput}
+                    value={language.value}
+                    key={language.value}
+                  />
+                ))}
+              </Picker>
+            </View>
+            <View style={[Layout.justifyContentEnd]}>
+              <TouchableOpacity
+                style={[
+                  Common.button.outlineRounded,
+                  Common.button.secondaryButton,
+                  Layout.fullWidth,
+                  Gutters.regularTMargin,
+                ]}
+                onPress={() => closeLanguageSelect()}
               >
                 <Text
                   style={[

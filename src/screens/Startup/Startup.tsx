@@ -6,6 +6,7 @@ import { Brand } from '../../components';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import { setDefaultTheme } from '../../store/theme';
 import { ApplicationScreenProps } from '../../../@types/navigation';
+import { storage } from '../../store/index'; // mmkv
 
 // do we need this page? todo reevaluate to move to app and go straight to MainNavigator
 const Startup = ({ navigation }: ApplicationScreenProps) => {
@@ -20,7 +21,12 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
         : NativeModules.I18nManager.localeIdentifier;
 
     console.log(deviceLanguage); // en_US
-    await i18n.changeLanguage(deviceLanguage.split('_')[0].split('-')[0]); // use system language
+    const language = storage.getString('language');
+    if (language && language !== 'system') {
+      await i18n.changeLanguage(language);
+    } else {
+      await i18n.changeLanguage(deviceLanguage.split('_')[0].split('-')[0]); // use system language
+    }
     await new Promise((resolve) =>
       setTimeout(() => {
         resolve(true);
