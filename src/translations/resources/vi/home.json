@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "Các số Nonce công cộng đã được khởi tạo và được gửi để đồng bộ với Ví SSP của bạn.",
   "err_sharing_public_nonces": "Gặp lỗi khi chia sẻ các số Nonce công cộng.",
   "err_generating_public_nonces": "Gặp lỗi khi khởi tạo các số Nonce công cộng.",
-  "copy_to_clipboard": "Sao chép vào bộ nhớ tạm"
+  "copy_to_clipboard": "Sao chép vào bộ nhớ tạm",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }
