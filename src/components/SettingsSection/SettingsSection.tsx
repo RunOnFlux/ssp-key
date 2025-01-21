@@ -74,7 +74,10 @@ const SettingsSection = (props: {
   const languages = [
     { value: 'en', label: 'en', desc: 'English' },
     { value: 'id', label: 'id', desc: 'Bahasa Indonesia' },
+    { value: 'bg', label: 'bg', desc: 'Български' },
     { value: 'bn', label: 'bn', desc: 'বাংলা' },
+    { value: 'zh', label: 'zh', desc: '简体中文' },
+    { value: 'zh_TW', label: 'zh_TW', desc: '繁体中文' },
     { value: 'cs', label: 'cs', desc: 'Čeština' },
     { value: 'de', label: 'de', desc: 'Deutsch' },
     { value: 'es', label: 'es', desc: 'Español' },
