@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "पब्लिक नॉन्सेस जेनेरेट किए गए और उन्हें एस. एस. पी. वॉलेट के साथ सिंक करने के लिए भेजा गया।",
   "err_sharing_public_nonces": "पब्लिक नॉन्सेस शेयर करते समय त्रुटि हुई।",
   "err_generating_public_nonces": "पब्लिक नॉन्सेस शेयर करते समय त्रुटि हुई।",
-  "copy_to_clipboard": "क्लिपबोर्ड पर कॉपी करें"
+  "copy_to_clipboard": "क्लिपबोर्ड पर कॉपी करें",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }

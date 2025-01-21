@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "公開ナンスが生成され、SSPウォレットとの同期のために送信されました.",
   "err_sharing_public_nonces": "公開ナンスの共有中にエラーが発生しました.",
   "err_generating_public_nonces": "公開ナンスの生成中にエラーが発生しました.",
-  "copy_to_clipboard": "クリップボードにコピー"
+  "copy_to_clipboard": "クリップボードにコピー",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }

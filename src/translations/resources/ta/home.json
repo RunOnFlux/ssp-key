@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "பொது நோன்ஸ்கள் உருவாக்கப்பட்டு SSP பணப்பையுடன் ஒத்திசைக்க அனுப்பப்பட்டது.",
   "err_sharing_public_nonces": "பொது நோன்ஸ்கள் பகிர்ந்துகொள்கையில் பிழை ஏற்பட்டது.",
   "err_generating_public_nonces": "பொது நோன்ஸ்கள் உருவாக்கும்போது பிழை ஏற்பட்டது.",
-  "copy_to_clipboard": "கிளிப் போர்டிற்குப் பதிப்பு"
+  "copy_to_clipboard": "கிளிப் போர்டிற்குப் பதிப்பு",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }

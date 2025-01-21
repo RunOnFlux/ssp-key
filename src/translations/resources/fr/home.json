@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "Les Nonces publics ont été générés et envoyés pour être synchronisés avec le portefeuille SSP.",
   "err_sharing_public_nonces": "Erreur lors du partage des Nonces publics.",
   "err_generating_public_nonces": "Erreur lors de la génération de Nonces publics.",
-  "copy_to_clipboard": "Copier dans le presse-papiers"
+  "copy_to_clipboard": "Copier dans le presse-papiers",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }

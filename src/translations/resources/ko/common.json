@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP 키",
+    "moto": "안전. 간단. 강력."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "뒤로",
+  "cancel": "취소",
+  "key_seed_phrase": "키 시드 구문",
+  "refresh": "새로고침",
+  "settings": "설정",
+  "restore": "복원",
   "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "powered_by": "제공:",
+  "ok": "확인",
+  "help": "도움말",
+  "save": "저장",
+  "confirm": "확인",
+  "ask_me_later": "나중에 묻기",
+  "chain": "체인",
+  "wallet": "지갑"
 }

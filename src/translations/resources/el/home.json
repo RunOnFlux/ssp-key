@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "Τα Δημόσια Nonces δημιουργήθηκαν και εστάλησαν για συγχρονισμό με το πορτοφόλι SSP.",
   "err_sharing_public_nonces": "Σφάλμα κατά την κοινή χρήση των δημόσιων Nonces.",
   "err_generating_public_nonces": "Σφάλμα κατά την δημιουργία των δημόσιων Nonces.",
-  "copy_to_clipboard": "Αντιγραφή στο πρόχειρο"
+  "copy_to_clipboard": "Αντιγραφή στο πρόχειρο",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }

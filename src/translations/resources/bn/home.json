@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "পাবলিক ননস তৈরি করা হয়েছে এবং SSP Wallet এর সাথে সিঙ্ক করার জন্য পাঠানো হয়েছে.",
   "err_sharing_public_nonces": "পাবলিক ননস শেয়ার করার সময় ত্রুটি হয়েছে.",
   "err_generating_public_nonces": "পাবলিক ননস তৈরি করার সময় ত্রুটি হয়েছে.",
-  "copy_to_clipboard": "ক্লিপবোর্ডে কপি করুন"
+  "copy_to_clipboard": "ক্লিপবোর্ডে কপি করুন",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }

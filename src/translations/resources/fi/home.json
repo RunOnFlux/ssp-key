@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "Julkiset nonce-arvot luotiin ja lähetettiin SSP-lompakon synkronointia varten.",
   "err_sharing_public_nonces": "Virhe jaettaessa julkisia nonce-arvoja.",
   "err_generating_public_nonces": "Virhe julkisia nonce-arvoja luotaessa.",
-  "copy_to_clipboard": "Kopioi leikepöydälle"
+  "copy_to_clipboard": "Kopioi leikepöydälle",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }

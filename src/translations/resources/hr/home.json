@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "Javni nonce-i su generirani i poslani na sinkronizaciju s SSP novčanikom.",
   "err_sharing_public_nonces": "Error pri dijeljenju javnih nonce-ova.",
   "err_generating_public_nonces": "Error pri generiranju javnih nonce-ova.",
-  "copy_to_clipboard": "Kopiraj u međuspremnik"
+  "copy_to_clipboard": "Kopiraj u međuspremnik",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }

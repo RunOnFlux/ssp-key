@@ -36,8 +36,8 @@
   "change_pw_restore": "Ganti kata sandi? Pulihkan",
   "ssp_relay_server": "Server Relai SSP",
   "chain_node_service": "{{chain}} Layanan Node",
-  "chain_api_service": "{{chain}} API Service",
-  "chain_explorer_service": "{{chain}} Explorer Service",
+  "chain_api_service": "{{chain}} Layanan API",
+  "chain_explorer_service": "{{chain}} Layanan Penjelajah",
   "confirm_password_pin": "konfirmasi sandi",
   "grant_access": "Berikan Akses",
   "sync_needed": "Sinkronisasi Diperlukan",
@@ -89,5 +89,8 @@
   "public_nonces_request_approved_info": "Nonce Publik dibuat dan dikirim untuk disinkronkan dengan SSP Wallet.",
   "err_sharing_public_nonces": "Terjadi kesalahan saat membagikan Nonce Publik.",
   "err_generating_public_nonces": "Terjadi kesalahan saat membuat Nonce Publik.",
-  "copy_to_clipboard": "Salin ke papan klip"
+  "copy_to_clipboard": "Salin ke papan klip",
+  "change_language": "Change Language",
+  "language": "Language",
+  "use_system_language": "Use System Language"
 }
