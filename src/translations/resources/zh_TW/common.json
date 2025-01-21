@@ -1,0 +1,21 @@
+{
+  "appName": {
+    "full": "SSP 金鑰",
+    "moto": "安全.簡單.強大."
+  },
+  "back": "返回",
+  "cancel": "取消",
+  "key_seed_phrase": "金鑰助記詞",
+  "refresh": "刷新",
+  "settings": "設定",
+  "restore": "恢復",
+  "flux": "Flux",
+  "powered_by": "技術提供",
+  "ok": "確定",
+  "help": "幫助",
+  "save": "儲存",
+  "confirm": "確認",
+  "ask_me_later": "稍後再問我",
+  "chain": "鏈",
+  "wallet": "錢包"
+}
