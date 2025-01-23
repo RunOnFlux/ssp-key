@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP ključ",
+    "moto": "Varno. Preprosto. Zmogljivo."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Nazaj",
+  "cancel": "Prekliči",
+  "key_seed_phrase": "Začetna fraza ključa",
+  "refresh": "Osveži",
+  "settings": "Nastavitve",
+  "restore": "Obnovi",
   "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "powered_by": "Omogoča",
+  "ok": "V redu",
+  "help": "Pomoč",
+  "save": "Shrani",
+  "confirm": "Potrdi",
+  "ask_me_later": "Vprašaj me pozneje",
+  "chain": "Veriga",
+  "wallet": "Denarnica"
 }
