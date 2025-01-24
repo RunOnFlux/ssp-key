@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP Ключ",
+    "moto": "Безпечно. Просто. Сильна перевага."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Назад",
+  "cancel": "Скасувати",
+  "key_seed_phrase": "Сід Фраза від гаманця",
+  "refresh": "Оновити",
+  "settings": "Налаштування",
+  "restore": "Відновити",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "За підтримки",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "help": "Допомога",
+  "save": "Зберегти",
+  "confirm": "Підтвердити",
+  "ask_me_later": "Запитайте мене пізніше",
+  "chain": "Блокчейн",
+  "wallet": "Гаманець"
 }
