@@ -14,3 +14,8 @@ min ios 13.4
 android 7
 
 RN 76 has minimum ios 15.1
+
+RN 76 has issue on iOS modal, cant merge as of this
+https://github.com/facebook/react-native/issues/47694
+https://github.com/facebook/react-native/issues/48611
+https://github.com/facebook/react-native/issues/48245
