@@ -110,7 +110,7 @@ function Home({ navigation }: Props) {
   const [actionToPerform, setActionToPerform] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncNeededModalOpen, setSyncNeededModalOpen] = useState(false);
-  const [manualInputModalOpen, setIsManualInputModalOpen] = useState(true);
+  const [manualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
@@ -424,10 +424,7 @@ function Home({ navigation }: Props) {
 
   const openManualInput = () => {
     setIsMenuModalOpen(false);
-    console.log('openManualInput');
-    setIsManualInputModalOpen(true);
     setTimeout(() => {
-      console.log('openManualInput timeout');
       setIsManualInputModalOpen(true);
     });
   };
