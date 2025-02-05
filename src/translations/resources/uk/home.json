@@ -57,7 +57,7 @@
   "ssp_key_info": "SSP ключ - це другий фактор аутентифікації для вашого SSP Wallet.",
   "manual_input_info": "Введіть вашу транзакцію для підпису або xpub вашого гаманця для синхронізації.",
   "ssp_help_about": "Ваш другий ключ аутентифікації для вашого SSP Wallet.",
-  "scan_camera_permissions": "Потрібен доступ до Вашої камери.",
+  "scan_camera_permissions": "Потрібен доступ до Вашої камери",
   "scan_camera_needed": "SSP ключ потребує доступу до вашої камери, щоб сканувати QR-коди.",
   "err_camera_unavailable": "Камера недоступна.",
   "err_camera_denied": "Доступ до камери заборонено.",
