@@ -82,6 +82,7 @@ const SettingsSection = (props: {
     { value: 'de', label: 'de', desc: 'Deutsch' },
     { value: 'es', label: 'es', desc: 'Español' },
     { value: 'fi', label: 'fi', desc: 'Suomen kieli' },
+    { value: 'sl', label: 'sl', desc: 'Slovenščina' },
     { value: 'fil', label: 'fil', desc: 'Filipino' },
     { value: 'fr', label: 'fr', desc: 'Français' },
     { value: 'el', label: 'el', desc: 'Ελληνικά' },
@@ -92,6 +93,7 @@ const SettingsSection = (props: {
     { value: 'hu', label: 'hu', desc: 'Magyar' },
     { value: 'ja', label: 'ja', desc: '日本語' },
     { value: 'ru', label: 'ru', desc: 'Русский' },
+    { value: 'uk', label: 'uk', desc: 'Українська' },
     { value: 'ta', label: 'ta', desc: 'தமிழ்' },
     { value: 'vi', label: 'vi', desc: 'Tiếng Việt' },
     ...(Object.keys(resources).includes(deviceLanguageShort)
