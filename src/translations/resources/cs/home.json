@@ -36,8 +36,8 @@
   "change_pw_restore": "Změna Hesla? Obnovit!",
   "ssp_relay_server": "SSP Relay Server",
   "chain_node_service": "{{chain}} Node Služba",
-  "chain_api_service": "{{chain}} API Service",
-  "chain_explorer_service": "{{chain}} Explorer Service",
+  "chain_api_service": "{{chain}} API Služba",
+  "chain_explorer_service": "{{chain}} Explorer Služba",
   "confirm_password_pin": "Potvrdit Heslo",
   "grant_access": "Povolit Přístup",
   "sync_needed": "Je zapotřebí Synchronizace",
@@ -90,7 +90,7 @@
   "err_sharing_public_nonces": "Chyba při sdílení Veřejných Noncí.",
   "err_generating_public_nonces": "Chyba při generování Veřejných Noncí.",
   "copy_to_clipboard": "Zkopírovat",
-  "change_language": "Change Language",
-  "language": "Language",
-  "use_system_language": "Use System Language"
+  "change_language": "Změnit Jazyk",
+  "language": "Jazyk",
+  "use_system_language": "Použít Systémový Jazyk"
 }
