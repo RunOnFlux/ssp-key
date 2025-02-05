@@ -17,7 +17,7 @@ jest.mock('redux-persist', () => {
 });
 
 // Silence the warning: Animated: `useNativeDriver` is not supported because the native animated module is missing
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+// jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
 
 jest.mock('react-i18next', () => ({
   // this mock makes sure any components using the translation hook can use it without a warning being shown

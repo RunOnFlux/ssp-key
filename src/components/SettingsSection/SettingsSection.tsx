@@ -9,7 +9,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  NativeModules,
+  Settings,
+  I18nManager,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
@@ -65,9 +66,8 @@ const SettingsSection = (props: {
 
   const deviceLanguage =
     Platform.OS === 'ios'
-      ? NativeModules.SettingsManager.settings.AppleLocale ||
-        NativeModules.SettingsManager.settings.AppleLanguages[0] // iOS 13
-      : NativeModules.I18nManager.localeIdentifier;
+      ? Settings.get('AppleLocale') || Settings.get('AppleLanguages')[0]
+      : I18nManager.getConstants().localeIdentifier;
 
   const deviceLanguageShort = deviceLanguage.split('_')[0].split('-')[0];
 
