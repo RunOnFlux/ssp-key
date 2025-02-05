@@ -1,5 +1,11 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, View, NativeModules, Platform } from 'react-native';
+import {
+  ActivityIndicator,
+  View,
+  Settings,
+  I18nManager,
+  Platform,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { Brand } from '../../components';
@@ -16,9 +22,8 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
   const init = async () => {
     const deviceLanguage =
       Platform.OS === 'ios'
-        ? NativeModules.SettingsManager.settings.AppleLocale ||
-          NativeModules.SettingsManager.settings.AppleLanguages[0] // iOS 13
-        : NativeModules.I18nManager.localeIdentifier;
+        ? Settings.get('AppleLocale') || Settings.get('AppleLanguages')[0]
+        : I18nManager.getConstants().localeIdentifier;
 
     console.log(deviceLanguage); // en_US
     const language = storage.getString('language');

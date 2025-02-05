@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { NativeModules, Platform } from 'react-native';
+import { Platform, Settings, I18nManager } from 'react-native';
 import * as resources from './resources';
 
 const ns = Object.keys(Object.values(resources)[0]);
@@ -8,9 +8,8 @@ export const defaultNS = ns[0];
 
 const deviceLanguage =
   Platform.OS === 'ios'
-    ? NativeModules.SettingsManager.settings.AppleLocale ||
-      NativeModules.SettingsManager.settings.AppleLanguages[0] // iOS 13
-    : NativeModules.I18nManager.localeIdentifier;
+    ? Settings.get('AppleLocale') || Settings.get('AppleLanguages')[0]
+    : I18nManager.getConstants().localeIdentifier;
 
 let lng = deviceLanguage.split('_')[0].split('-')[0];
 
