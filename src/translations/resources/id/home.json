@@ -90,7 +90,7 @@
   "err_sharing_public_nonces": "Terjadi kesalahan saat membagikan Nonce Publik.",
   "err_generating_public_nonces": "Terjadi kesalahan saat membuat Nonce Publik.",
   "copy_to_clipboard": "Salin ke papan klip",
-  "change_language": "Change Language",
-  "language": "Language",
-  "use_system_language": "Use System Language"
+  "change_language": "Ganti Bahasa",
+  "language": "Bahasa",
+  "use_system_language": "Gunakan Bahasa Sistem"
 }

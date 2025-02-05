@@ -37,7 +37,7 @@
   "ssp_relay_server": "SSP ретранслиращ сървър",
   "chain_node_service": "{{chain}} Услуги свързани с валидатора",
   "chain_api_service": "{{chain}} API услуга",
-  "chain_explorer_service": "{{chain}} Explorer Service",
+  "chain_explorer_service": "{{chain}} блокчейн",
   "confirm_password_pin": "Потвърдете паролата",
   "grant_access": "Предоставете достъп",
   "sync_needed": "Необходима е синхронизация",
@@ -90,7 +90,7 @@
   "err_sharing_public_nonces": "Публичните nonces (единични произволни стойности) бяха генерирани и изпратени за синхронизация с SSP портфейла.",
   "err_generating_public_nonces": "Грешка при генериране на публичните nonces (единични произволни стойности).",
   "copy_to_clipboard": "Копирано в клипборда",
-  "change_language": "Change Language",
-  "language": "Language",
-  "use_system_language": "Use System Language"
+  "change_language": "Смяна на език",
+  "language": "Език",
+  "use_system_language": "Използвайте системен език"
 }
