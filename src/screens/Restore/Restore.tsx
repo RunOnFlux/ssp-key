@@ -17,8 +17,8 @@ import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { useKeyboardVisible } from '../../hooks/keyboardVisible';
-import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import Keychain from 'react-native-keychain';
 import { blockchains } from '@storage/blockchains';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import ToastNotif from '../../components/Toast/Toast';
@@ -190,11 +190,26 @@ function Restore({ navigation }: Props) {
     setInitialStateForAllChains();
     setIsLoading(true);
 
-    getUniqueId()
-      .then(async (id) => {
-        // clean up password from encrypted storage
-        await EncryptedStorage.clear();
-        const pwForEncryption = id + password;
+    // generate random encryption key
+    // clear all data
+    EncryptedStorage.clear() // to be removed in later releases
+      .then(async () => {
+        await Keychain.resetGenericPassword({
+          service: 'enc_key',
+        });
+        await Keychain.resetGenericPassword({
+          service: 'ssp_key_pw',
+        });
+        await Keychain.resetGenericPassword({
+          service: 'fcm_key_token',
+        });
+        const rnd = crypto.getRandomValues(new Uint8Array(64));
+        const encKey = Buffer.from(rnd).toString('hex');
+
+        await Keychain.setGenericPassword('enc_key', encKey, {
+          service: 'enc_key',
+        });
+        const pwForEncryption = encKey + password;
         const mnemonicBlob = CryptoJS.AES.encrypt(
           mnemonicPhrase,
           pwForEncryption,
@@ -225,8 +240,14 @@ function Restore({ navigation }: Props) {
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
         setXprivKeyIdentity(xprivBlob);
         setXpubKeyIdentity(xpubBlob);
-        // In keychain plain password is stored (only password not id)
-        await EncryptedStorage.setItem('ssp_key_pw', password);
+        // encrypt password with enc_key
+        const encryptedPassword = CryptoJS.AES.encrypt(
+          password,
+          encKey,
+        ).toString();
+        await Keychain.setGenericPassword('ssp_key_pw', encryptedPassword, {
+          service: 'ssp_key_pw',
+        });
         setIsModalOpen(false);
         setIsLoading(false);
         setMnemonic('');

@@ -12,8 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { backends } from '@storage/backends';
 import { cryptos } from '../../types';
-import EncryptedStorage from 'react-native-encrypted-storage';
-import { getUniqueId } from 'react-native-device-info';
+import Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
 import { generateMultisigAddress } from '../../lib/wallet';
 
@@ -48,11 +47,24 @@ const SyncSuccess = (props: {
   };
 
   const generateAddress = () => {
-    getUniqueId()
-      .then(async (id) => {
-        // get password from encrypted storage
-        const password = await EncryptedStorage.getItem('ssp_key_pw');
-        const pwForEncryption = id + password;
+    Keychain.getGenericPassword({
+      service: 'enc_key',
+    })
+      .then(async (idData) => {
+        // clean up password from encrypted storage
+        const passwordData = await Keychain.getGenericPassword({
+          service: 'ssp_key_pw',
+        });
+        if (!passwordData || !idData) {
+          throw new Error('Unable to decrypt stored data');
+        }
+        // decrypt passwordData.password with idData.password
+        const password = CryptoJS.AES.decrypt(
+          passwordData.password,
+          idData.password,
+        );
+        const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
+        const pwForEncryption = idData.password + passwordDecrypted;
         const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
         const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
         const xpw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);

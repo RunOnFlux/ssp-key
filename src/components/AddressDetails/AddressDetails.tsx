@@ -4,8 +4,7 @@ import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-import { getUniqueId } from 'react-native-device-info';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Keychain from 'react-native-keychain';
 import {
   generateAddressKeypair,
   generateMultisigAddress,
@@ -45,12 +44,25 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   }, [selectedWallet]);
 
   useEffect(() => {
-    getUniqueId()
-      .then(async (id) => {
-        console.log('here');
+    Keychain.getGenericPassword({
+      service: 'enc_key',
+    })
+      .then(async (idData) => {
         // clean up password from encrypted storage
-        const password = await EncryptedStorage.getItem('ssp_key_pw');
-        const pwForEncryption = id + password;
+        const passwordData = await Keychain.getGenericPassword({
+          service: 'ssp_key_pw',
+        });
+        if (!passwordData || !idData) {
+          throw new Error('Unable to decrypt stored data');
+        }
+        // decrypt passwordData.password with idData.password
+        const password = CryptoJS.AES.decrypt(
+          passwordData.password,
+          idData.password,
+        );
+        const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
+
+        const pwForEncryption = idData.password + passwordDecrypted;
         const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
         const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
         const xpubk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);

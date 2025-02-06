@@ -13,9 +13,10 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics';
+import * as CryptoJS from 'crypto-js';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Keychain from 'react-native-keychain';
 import { useTheme } from '../../hooks';
 import ToastNotif from '../Toast/Toast';
 
@@ -119,8 +120,25 @@ const Authentication = (props: {
   const grantAccess = async () => {
     try {
       console.log('Grant Access');
-      const storedPassword = await EncryptedStorage.getItem('ssp_key_pw');
-      if (password !== storedPassword) {
+      // get from keychain
+      // encryption key
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'ssp_key_pw',
+      });
+      if (!passwordData || !encryptionKey) {
+        throw new Error('Unable to decrypt stored data');
+      }
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const passwordDecryptedString = passwordDecrypted.toString(
+        CryptoJS.enc.Utf8,
+      );
+      if (password !== passwordDecryptedString) {
         displayMessage('error', t('home:err_auth_pw_incorrect'));
         return;
       }

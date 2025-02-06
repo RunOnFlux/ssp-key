@@ -1,7 +1,7 @@
 import messaging, {
   FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Keychain from 'react-native-keychain';
 import notifee from '@notifee/react-native';
 import { AppState, Platform } from 'react-native';
 
@@ -90,18 +90,21 @@ async function displayNotification(message: Record<string, string>) {
 
 export async function getFCMToken() {
   try {
-    let token = await EncryptedStorage.getItem('fcmkeytoken');
+    const token = await Keychain.getGenericPassword({
+      service: 'fcm_key_token',
+    });
 
     // our token may not be valid anymore, on app boot run refresh function
     if (token) {
-      return token;
+      return token.password;
     }
 
-    token = await messaging().getToken();
+    const newToken = await messaging().getToken();
+    await Keychain.setGenericPassword('fcm_key_token', newToken, {
+      service: 'fcm_key_token',
+    });
 
-    await EncryptedStorage.setItem('fcmkeytoken', token);
-
-    return token;
+    return newToken;
   } catch (error) {
     console.error(error);
     return null;
@@ -112,7 +115,9 @@ export async function refreshFCMToken() {
   try {
     const token = await messaging().getToken();
     if (token) {
-      await EncryptedStorage.setItem('fcmkeytoken', token);
+      await Keychain.setGenericPassword('fcm_key_token', token, {
+        service: 'fcm_key_token',
+      });
     }
   } catch (error) {
     console.error(error);
