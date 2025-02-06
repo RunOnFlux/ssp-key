@@ -193,7 +193,7 @@ function Home({ navigation }: Props) {
         .then(async (idData) => {
           // clean up password from encrypted storage
           const passwordData = await Keychain.getGenericPassword({
-            service: 'ssp_key_pw',
+            service: 'sspkey_pw',
           });
           if (!passwordData || !idData) {
             throw new Error('Unable to decrypt stored data');
@@ -263,7 +263,7 @@ function Home({ navigation }: Props) {
       .then(async (idData) => {
         // clean up password from encrypted storage
         const passwordData = await Keychain.getGenericPassword({
-          service: 'ssp_key_pw',
+          service: 'sspkey_pw',
         });
         if (!passwordData || !idData) {
           throw new Error('Unable to decrypt stored data');
@@ -350,7 +350,7 @@ function Home({ navigation }: Props) {
       .then(async (idData) => {
         // clean up password from encrypted storage
         const passwordData = await Keychain.getGenericPassword({
-          service: 'ssp_key_pw',
+          service: 'sspkey_pw',
         });
         if (!passwordData || !idData) {
           throw new Error('Unable to decrypt stored data');
@@ -558,7 +558,7 @@ function Home({ navigation }: Props) {
         service: 'enc_key',
       });
       const passwordData = await Keychain.getGenericPassword({
-        service: 'ssp_key_pw',
+        service: 'sspkey_pw',
       });
       if (!passwordData || !encryptionKey) {
         throw new Error('Unable to decrypt stored data');
@@ -628,7 +628,7 @@ function Home({ navigation }: Props) {
         service: 'enc_key',
       });
       const passwordData = await Keychain.getGenericPassword({
-        service: 'ssp_key_pw',
+        service: 'sspkey_pw',
       });
       if (!passwordData || !encryptionKey) {
         throw new Error('Unable to decrypt stored data');

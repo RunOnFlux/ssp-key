@@ -126,7 +126,7 @@ const Authentication = (props: {
         service: 'enc_key',
       });
       const passwordData = await Keychain.getGenericPassword({
-        service: 'ssp_key_pw',
+        service: 'sspkey_pw',
       });
       if (!passwordData || !encryptionKey) {
         throw new Error('Unable to decrypt stored data');

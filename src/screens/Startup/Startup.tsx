@@ -38,10 +38,10 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
           password,
           encKey,
         ).toString();
-        await Keychain.setGenericPassword('ssp_key_pw', encryptedPassword, {
-          service: 'ssp_key_pw',
+        await Keychain.setGenericPassword('sspkey_pw', encryptedPassword, {
+          service: 'sspkey_pw',
         });
-        // we use users ssp_key_pw + enc_key to encrypt and decrypt data
+        // we use users sspkey_pw + enc_key to encrypt and decrypt data
         // remove from encrypted storage
         await EncryptedStorage.removeItem('ssp_key_pw');
       }

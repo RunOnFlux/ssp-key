@@ -165,7 +165,7 @@ function Create({ navigation }: Props) {
           service: 'enc_key',
         });
         await Keychain.resetGenericPassword({
-          service: 'ssp_key_pw',
+          service: 'sspkey_pw',
         });
         await Keychain.resetGenericPassword({
           service: 'fcm_key_token',
@@ -212,8 +212,8 @@ function Create({ navigation }: Props) {
           password,
           encKey,
         ).toString();
-        await Keychain.setGenericPassword('ssp_key_pw', encryptedPassword, {
-          service: 'ssp_key_pw',
+        await Keychain.setGenericPassword('sspkey_pw', encryptedPassword, {
+          service: 'sspkey_pw',
         });
         setIsModalOpen(false);
         setIsLoading(false);
