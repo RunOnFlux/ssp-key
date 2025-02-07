@@ -168,12 +168,24 @@ function Create({ navigation }: Props) {
           service: 'sspkey_pw',
         });
         await Keychain.resetGenericPassword({
+          service: 'sspkey_pw_hash',
+        });
+        await Keychain.resetGenericPassword({
           service: 'fcm_key_token',
+        });
+        await Keychain.resetGenericPassword({
+          service: 'salt',
         });
         const rnd = crypto.getRandomValues(new Uint8Array(64));
         const encKey = Buffer.from(rnd).toString('hex');
         await Keychain.setGenericPassword('enc_key', encKey, {
           service: 'enc_key',
+        });
+        // generate salt
+        const salt = CryptoJS.lib.WordArray.random(64).toString();
+        // store salt, used for hashing password
+        await Keychain.setGenericPassword('salt', salt, {
+          service: 'salt',
         });
         const pwForEncryption = encKey + password;
         const mnemonicBlob = CryptoJS.AES.encrypt(
@@ -206,7 +218,17 @@ function Create({ navigation }: Props) {
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
         setXprivKeyIdentity(xprivBlob);
         setXpubKeyIdentity(xpubBlob);
-        // In keychain plain password is stored (only password not id)
+        // generate hash of our password
+        const key256Bits1000Iterations = CryptoJS.PBKDF2(password, salt, {
+          keySize: 256 / 32,
+          iterations: 100000, // more is too slow, favor performance
+        });
+        const pwHash = key256Bits1000Iterations.toString();
+        // store the pwHash
+        // this is used in case password is supplied and not biometrics
+        await Keychain.setGenericPassword('sspkey_pw_hash', pwHash, {
+          service: 'sspkey_pw_hash',
+        });
         // encrypt password with enc_key
         const encryptedPassword = CryptoJS.AES.encrypt(
           password,

@@ -33,6 +33,24 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
         await Keychain.setGenericPassword('enc_key', encKey, {
           service: 'enc_key',
         });
+        // generate salt
+        const salt = CryptoJS.lib.WordArray.random(64).toString();
+        // store salt, used for hashing password
+        await Keychain.setGenericPassword('salt', salt, {
+          service: 'salt',
+        });
+        // generate hash of our password
+        const key256Bits1000Iterations = CryptoJS.PBKDF2(password, salt, {
+          keySize: 256 / 32,
+          iterations: 100000, // more is too slow, favor performance
+        });
+        const pwHash = key256Bits1000Iterations.toString();
+        // store the pwHash
+        // this is used in case password is supplied and not biometrics
+        await Keychain.setGenericPassword('sspkey_pw_hash', pwHash, {
+          // this encrypted one should be for biometrics?
+          service: 'sspkey_pw_hash',
+        });
         // encrypt our password with enc_key
         const encryptedPassword = CryptoJS.AES.encrypt(
           password,

@@ -81,6 +81,9 @@ const Authentication = (props: {
       textForPrompt = t('home:auth_confirm_public_nonces');
     }
     console.log('Initiate Fingerprint');
+    // instead of this try to retrieve our keychain secret that has been stored with access control biometrics current set. Generate that secret on create/restore or here if it does not exist
+    // if we do not have it, we show fallback mechanism
+    // if success continue, if fail, show error message and only allow password authentication
     rnBiometrics
       .simplePrompt({
         promptMessage: textForPrompt,
@@ -121,24 +124,28 @@ const Authentication = (props: {
     try {
       console.log('Grant Access');
       // get from keychain
-      // encryption key
-      const encryptionKey = await Keychain.getGenericPassword({
-        service: 'enc_key',
+      const passwordHash = await Keychain.getGenericPassword({
+        service: 'sspkey_pw_hash',
       });
-      const passwordData = await Keychain.getGenericPassword({
-        service: 'sspkey_pw',
+      // get salt
+      const saltData = await Keychain.getGenericPassword({
+        service: 'salt',
       });
-      if (!passwordData || !encryptionKey) {
+      // from user password create hash
+      if (!passwordHash || !saltData) {
         throw new Error('Unable to decrypt stored data');
       }
-      const passwordDecrypted = CryptoJS.AES.decrypt(
-        passwordData.password,
-        encryptionKey.password,
+      // generate hash of our password
+      const key256Bits1000Iterations = CryptoJS.PBKDF2(
+        password,
+        saltData.password,
+        {
+          keySize: 256 / 32,
+          iterations: 100000, // more is too slow, favor performance
+        },
       );
-      const passwordDecryptedString = passwordDecrypted.toString(
-        CryptoJS.enc.Utf8,
-      );
-      if (password !== passwordDecryptedString) {
+      const pwHash = key256Bits1000Iterations.toString();
+      if (passwordHash.password !== pwHash) {
         displayMessage('error', t('home:err_auth_pw_incorrect'));
         return;
       }
