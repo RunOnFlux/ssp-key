@@ -32,17 +32,19 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
         const encKey = await getUniqueId();
         await Keychain.setGenericPassword('enc_key', encKey, {
           service: 'enc_key',
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // generate salt
         const salt = CryptoJS.lib.WordArray.random(64).toString();
         // store salt, used for hashing password
         await Keychain.setGenericPassword('salt', salt, {
           service: 'salt',
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // generate hash of our password
         const key256Bits1000Iterations = CryptoJS.PBKDF2(password, salt, {
           keySize: 256 / 32,
-          iterations: 100000, // more is too slow, favor performance
+          iterations: 1000, // more is too slow, favor performance, this is already 0.1 seconds
         });
         const pwHash = key256Bits1000Iterations.toString();
         // store the pwHash
@@ -50,15 +52,37 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
         await Keychain.setGenericPassword('sspkey_pw_hash', pwHash, {
           // this encrypted one should be for biometrics?
           service: 'sspkey_pw_hash',
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // encrypt our password with enc_key
         const encryptedPassword = CryptoJS.AES.encrypt(
           password,
           encKey,
         ).toString();
-        await Keychain.setGenericPassword('sspkey_pw', encryptedPassword, {
+        const options: Keychain.Options = {
           service: 'sspkey_pw',
-        });
+          storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        };
+        await Keychain.setGenericPassword(
+          'sspkey_pw',
+          encryptedPassword,
+          options,
+        );
+        const isBiometricsSupported = await Keychain.getSupportedBiometryType();
+        if (isBiometricsSupported) {
+          const optionsBiometrics: Keychain.Options = {
+            service: 'sspkey_pw_bio',
+            storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244
+            accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+            accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+          };
+          await Keychain.setGenericPassword(
+            'sspkey_pw_bio',
+            encryptedPassword,
+            optionsBiometrics,
+          );
+        }
         // we use users sspkey_pw + enc_key to encrypt and decrypt data
         // remove from encrypted storage
         await EncryptedStorage.removeItem('ssp_key_pw');
@@ -68,6 +92,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
       if (fcmToken) {
         await Keychain.setGenericPassword('fcm_key_token', fcmToken, {
           service: 'fcm_key_token',
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // remove from encrypted storage
         await EncryptedStorage.removeItem('fcmkeytoken');

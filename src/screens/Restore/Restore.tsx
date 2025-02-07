@@ -201,6 +201,9 @@ function Restore({ navigation }: Props) {
           service: 'sspkey_pw',
         });
         await Keychain.resetGenericPassword({
+          service: 'sspkey_pw_bio',
+        });
+        await Keychain.resetGenericPassword({
           service: 'sspkey_pw_hash',
         });
         await Keychain.resetGenericPassword({
@@ -213,12 +216,14 @@ function Restore({ navigation }: Props) {
         const encKey = Buffer.from(rnd).toString('hex');
         await Keychain.setGenericPassword('enc_key', encKey, {
           service: 'enc_key',
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // generate salt
         const salt = CryptoJS.lib.WordArray.random(64).toString();
         // store salt, used for hashing password
         await Keychain.setGenericPassword('salt', salt, {
           service: 'salt',
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         const pwForEncryption = encKey + password;
         const mnemonicBlob = CryptoJS.AES.encrypt(
@@ -254,22 +259,44 @@ function Restore({ navigation }: Props) {
         // generate hash of our password
         const key256Bits1000Iterations = CryptoJS.PBKDF2(password, salt, {
           keySize: 256 / 32,
-          iterations: 100000, // more is too slow, favor performance
+          iterations: 1000, // more is too slow, favor performance, this is already 0.1 seconds
         });
         const pwHash = key256Bits1000Iterations.toString();
         // store the pwHash
         // this is used in case password is supplied and not biometrics
         await Keychain.setGenericPassword('sspkey_pw_hash', pwHash, {
           service: 'sspkey_pw_hash',
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // encrypt password with enc_key
         const encryptedPassword = CryptoJS.AES.encrypt(
           password,
           encKey,
         ).toString();
-        await Keychain.setGenericPassword('sspkey_pw', encryptedPassword, {
+        const options: Keychain.Options = {
           service: 'sspkey_pw',
-        });
+          storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        };
+        await Keychain.setGenericPassword(
+          'sspkey_pw',
+          encryptedPassword,
+          options,
+        );
+        const isBiometricsSupported = await Keychain.getSupportedBiometryType();
+        if (isBiometricsSupported) {
+          const optionsBiometrics: Keychain.Options = {
+            service: 'sspkey_pw_bio',
+            storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244
+            accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+            accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+          };
+          await Keychain.setGenericPassword(
+            'sspkey_pw_bio',
+            encryptedPassword,
+            optionsBiometrics,
+          );
+        }
         setIsModalOpen(false);
         setIsLoading(false);
         setMnemonic('');

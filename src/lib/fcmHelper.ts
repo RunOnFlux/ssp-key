@@ -102,6 +102,7 @@ export async function getFCMToken() {
     const newToken = await messaging().getToken();
     await Keychain.setGenericPassword('fcm_key_token', newToken, {
       service: 'fcm_key_token',
+      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     });
 
     return newToken;
@@ -117,6 +118,7 @@ export async function refreshFCMToken() {
     if (token) {
       await Keychain.setGenericPassword('fcm_key_token', token, {
         service: 'fcm_key_token',
+        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
       });
     }
   } catch (error) {

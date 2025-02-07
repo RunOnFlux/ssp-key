@@ -92,5 +92,6 @@
   "copy_to_clipboard": "Copy to Clipboard",
   "change_language": "Change Language",
   "language": "Language",
-  "use_system_language": "Use System Language"
+  "use_system_language": "Use System Language",
+  "err_auth_biometrics_pw_needed": "Biometrics restricted, use password authentication instead."
 }

@@ -12,15 +12,12 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
-import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics';
 import * as CryptoJS from 'crypto-js';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import Keychain from 'react-native-keychain';
 import { useTheme } from '../../hooks';
 import ToastNotif from '../Toast/Toast';
-
-const rnBiometrics = new ReactNativeBiometrics();
 
 const Authentication = (props: {
   actionStatus: (status: boolean) => void;
@@ -33,35 +30,22 @@ const Authentication = (props: {
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(false);
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
+  const [setupBiometrics, setSetupBiometrics] = useState(false);
 
   useEffect(() => {
     console.log('entered auth');
-    rnBiometrics
-      .isSensorAvailable()
+    Keychain.getSupportedBiometryType()
       .then((resultObject) => {
-        const { available, biometryType } = resultObject;
-        if (available && biometryType === BiometryTypes.TouchID) {
-          console.log('TouchID is supported');
+        if (resultObject) {
+          console.log('Biometrics is supported');
           setBiometricsAvailable(true);
           // keep timeout
           // iOS freezes if we call biometrics right away
-          setTimeout(() => {
-            initiateFingerprint();
-          }, 250);
-        } else if (available && biometryType === BiometryTypes.FaceID) {
-          console.log('FaceID is supported');
-          setBiometricsAvailable(true);
-          setTimeout(() => {
-            initiateFingerprint();
-          }, 250);
-        } else if (available && biometryType === BiometryTypes.Biometrics) {
-          console.log('Biometrics is supported');
-          setBiometricsAvailable(true);
+          // toggle biometrics immediately? reevaluate
           setTimeout(() => {
             initiateFingerprint();
           }, 250);
         } else {
-          // here we show fallback mechanism if none of the above succeed
           console.log('Biometrics not supported');
           setBiometricsAvailable(false);
         }
@@ -81,28 +65,42 @@ const Authentication = (props: {
       textForPrompt = t('home:auth_confirm_public_nonces');
     }
     console.log('Initiate Fingerprint');
-    // instead of this try to retrieve our keychain secret that has been stored with access control biometrics current set. Generate that secret on create/restore or here if it does not exist
-    // if we do not have it, we show fallback mechanism
     // if success continue, if fail, show error message and only allow password authentication
-    rnBiometrics
-      .simplePrompt({
-        promptMessage: textForPrompt,
-      })
-      .then((resultObject) => {
-        const { success } = resultObject;
+    // get from keychain
+    const options: Keychain.Options = {
+      service: 'sspkey_pw_bio',
+      authenticationPrompt: {
+        title: textForPrompt,
+        // subtitle: textForPrompt,
+        // description: textForPrompt,
+        // cancel: t('common:cancel'),
+      },
+    };
 
-        if (success) {
-          setTimeout(() => {
-            console.log('successful biometrics provided');
+    Keychain.getGenericPassword(options) // This does NOT work in simulator, library issues, direct access may be granted in simulator but not on real device!
+      .then((data) => {
+        setTimeout(() => {
+          if (data && data.password) {
             setPassword('');
             setPasswordVisibility(false);
             props.actionStatus(true);
-          }, 250);
-        } else {
-          console.log('user cancelled biometric prompt');
-        }
+          } else {
+            // biometrics failed, were tempered with, disable biometrics option and only allow for password authentication
+            setPassword('');
+            setPasswordVisibility(false);
+            displayMessage('error', t('home:err_auth_biometrics_pw_needed'));
+            setSetupBiometrics(true);
+          }
+        }, 250);
+        console.log(data);
       })
       .catch((error) => {
+        // some other failure, show error message
+        displayMessage('error', t('home:err_auth_biometrics_pw_needed'));
+        setPassword('');
+        setPasswordVisibility(false);
+        setBiometricsAvailable(false);
+        setSetupBiometrics(true);
         console.log(error);
       });
   };
@@ -141,7 +139,7 @@ const Authentication = (props: {
         saltData.password,
         {
           keySize: 256 / 32,
-          iterations: 100000, // more is too slow, favor performance
+          iterations: 1000, // more is too slow, favor performance, this is already 0.1 seconds
         },
       );
       const pwHash = key256Bits1000Iterations.toString();
@@ -149,8 +147,31 @@ const Authentication = (props: {
         displayMessage('error', t('home:err_auth_pw_incorrect'));
         return;
       }
+      if (setupBiometrics) {
+        // if we authenticated with password, check if biometrics is available and store the secret so bio can be used next time
+        const isBiometricsSupported = await Keychain.getSupportedBiometryType();
+        if (isBiometricsSupported) {
+          const passwordData = await Keychain.getGenericPassword({
+            service: 'sspkey_pw',
+          });
+          if (passwordData) {
+            const options: Keychain.Options = {
+              service: 'sspkey_pw_bio',
+              storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244
+              accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+              accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+            };
+            await Keychain.setGenericPassword(
+              'sspkey_pw_bio',
+              passwordData.password,
+              options,
+            );
+          }
+        }
+      }
       setPassword('');
       setPasswordVisibility(false);
+      setSetupBiometrics(false);
       props.actionStatus(true);
     } catch (error) {
       console.log(error);
