@@ -92,7 +92,6 @@ const Authentication = (props: {
             setSetupBiometrics(true);
           }
         }, 250);
-        console.log(data);
       })
       .catch((error) => {
         // some other failure, show error message
