@@ -26,13 +26,9 @@ export type ThemeNavigationTheme = {
   colors: ThemeNavigationColors;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const fonts = Fonts(DefaultVariables);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const gutters = Gutters(DefaultVariables);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const images = Images(DefaultVariables);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const layout = Layout(DefaultVariables);
 
 export type CommonParams<C> = ThemeVariables &
