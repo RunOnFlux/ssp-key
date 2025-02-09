@@ -1362,8 +1362,6 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-biometrics (3.0.1):
-    - React-Core
   - react-native-encrypted-storage (4.0.3):
     - React-Core
   - react-native-get-random-values (1.11.0):
@@ -2127,7 +2125,6 @@ DEPENDENCIES:
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
-  - react-native-biometrics (from `../node_modules/react-native-biometrics`)
   - react-native-encrypted-storage (from `../node_modules/react-native-encrypted-storage`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-mmkv (from `../node_modules/react-native-mmkv`)
@@ -2265,8 +2262,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
-  react-native-biometrics:
-    :path: "../node_modules/react-native-biometrics"
   react-native-encrypted-storage:
     :path: "../node_modules/react-native-encrypted-storage"
   react-native-get-random-values:
@@ -2411,7 +2406,6 @@ SPEC CHECKSUMS:
   React-logger: d42a53754a7252cc7a851315f0da2e46b450ea92
   React-Mapbuffer: 89885d1518433a462fe64b68bf5e097997380090
   React-microtasksnativemodule: 36341e09dcd1df535503e6ed2ddf88f10da56d52
-  react-native-biometrics: 43ed5b828646a7862dbc7945556446be00798e7d
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-mmkv: b4af3744580f08e1ffc7761103b408d313b2f772
