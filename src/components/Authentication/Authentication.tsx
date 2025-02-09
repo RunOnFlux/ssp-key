@@ -71,8 +71,8 @@ const Authentication = (props: {
       service: 'sspkey_pw_bio',
       authenticationPrompt: {
         title: textForPrompt,
-        subtitle: textForPrompt, // android only todo test
-        description: textForPrompt, // android only todo test
+        // subtitle: textForPrompt, // android only
+        // description: textForPrompt, // android only
         cancel: t('common:cancel'),
       },
     };
@@ -94,12 +94,10 @@ const Authentication = (props: {
         }, 250);
       })
       .catch((error) => {
-        // some other failure, show error message
-        displayMessage('error', 'Biometrics Cancelled'); // todo test
+        // some other failure, cancellation of biometrics
         setPassword('');
         setPasswordVisibility(false);
-        setBiometricsAvailable(false);
-        setSetupBiometrics(true);
+        setSetupBiometrics(true); // setup again
         console.log(error);
       });
   };
