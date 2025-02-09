@@ -71,9 +71,9 @@ const Authentication = (props: {
       service: 'sspkey_pw_bio',
       authenticationPrompt: {
         title: textForPrompt,
-        // subtitle: textForPrompt,
-        // description: textForPrompt,
-        // cancel: t('common:cancel'),
+        subtitle: textForPrompt, // android only todo test
+        description: textForPrompt, // android only todo test
+        cancel: t('common:cancel'),
       },
     };
 
@@ -95,7 +95,7 @@ const Authentication = (props: {
       })
       .catch((error) => {
         // some other failure, show error message
-        displayMessage('error', t('home:err_auth_biometrics_pw_needed'));
+        displayMessage('error', 'Biometrics Cancelled'); // todo test
         setPassword('');
         setPasswordVisibility(false);
         setBiometricsAvailable(false);
@@ -154,16 +154,17 @@ const Authentication = (props: {
             service: 'sspkey_pw',
           });
           if (passwordData) {
-            const options: Keychain.Options = {
-              service: 'sspkey_pw_bio',
-              storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244
-              accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-              accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
-            };
             await Keychain.setGenericPassword(
               'sspkey_pw_bio',
               passwordData.password,
-              options,
+              {
+                service: 'sspkey_pw_bio',
+                storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244 THIS IS FORCING BIOMETRICS ON ANDROID android only,
+                accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
+                accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
+                authenticationType: Keychain.AUTHENTICATION_TYPE.BIOMETRICS, // iOS only Only allow biometrics, not passcodem use default is both
+                securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
+              },
             );
           }
         }

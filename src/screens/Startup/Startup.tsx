@@ -32,6 +32,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
         const encKey = await getUniqueId();
         await Keychain.setGenericPassword('enc_key', encKey, {
           service: 'enc_key',
+          storage: Keychain.STORAGE_TYPE.AES,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // generate salt
@@ -39,6 +40,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
         // store salt, used for hashing password
         await Keychain.setGenericPassword('salt', salt, {
           service: 'salt',
+          storage: Keychain.STORAGE_TYPE.AES,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // generate hash of our password
@@ -52,6 +54,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
         await Keychain.setGenericPassword('sspkey_pw_hash', pwHash, {
           // this encrypted one should be for biometrics?
           service: 'sspkey_pw_hash',
+          storage: Keychain.STORAGE_TYPE.AES,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // encrypt our password with enc_key
@@ -59,28 +62,24 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
           password,
           encKey,
         ).toString();
-        const options: Keychain.Options = {
+        await Keychain.setGenericPassword('sspkey_pw', encryptedPassword, {
           service: 'sspkey_pw',
-          storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244
+          storage: Keychain.STORAGE_TYPE.AES,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-        };
-        await Keychain.setGenericPassword(
-          'sspkey_pw',
-          encryptedPassword,
-          options,
-        );
+        });
         const isBiometricsSupported = await Keychain.getSupportedBiometryType();
         if (isBiometricsSupported) {
-          const optionsBiometrics: Keychain.Options = {
-            service: 'sspkey_pw_bio',
-            storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244
-            accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-            accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
-          };
           await Keychain.setGenericPassword(
             'sspkey_pw_bio',
             encryptedPassword,
-            optionsBiometrics,
+            {
+              service: 'sspkey_pw_bio',
+              storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244 THIS IS FORCING BIOMETRICS ON ANDROID android only,
+              accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
+              accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
+              authenticationType: Keychain.AUTHENTICATION_TYPE.BIOMETRICS, // iOS only Only allow biometrics, not passcodem use default is both
+              securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
+            },
           );
         }
         // we use users sspkey_pw + enc_key to encrypt and decrypt data
@@ -92,6 +91,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
       if (fcmToken) {
         await Keychain.setGenericPassword('fcm_key_token', fcmToken, {
           service: 'fcm_key_token',
+          storage: Keychain.STORAGE_TYPE.AES,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // remove from encrypted storage
