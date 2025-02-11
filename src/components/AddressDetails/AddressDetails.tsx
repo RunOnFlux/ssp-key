@@ -4,7 +4,7 @@ import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-import Keychain from 'react-native-keychain';
+import * as Keychain from 'react-native-keychain';
 import {
   generateAddressKeypair,
   generateMultisigAddress,

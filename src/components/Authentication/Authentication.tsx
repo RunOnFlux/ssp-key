@@ -15,7 +15,7 @@ import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as CryptoJS from 'crypto-js';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
-import Keychain from 'react-native-keychain';
+import * as Keychain from 'react-native-keychain';
 import { useTheme } from '../../hooks';
 import ToastNotif from '../Toast/Toast';
 
@@ -35,16 +35,25 @@ const Authentication = (props: {
   useEffect(() => {
     console.log('entered auth');
     Keychain.getSupportedBiometryType()
-      .then((resultObject) => {
+      .then(async (resultObject) => {
         if (resultObject) {
           console.log('Biometrics is supported');
-          setBiometricsAvailable(true);
-          // keep timeout
-          // iOS freezes if we call biometrics right away
-          // toggle biometrics immediately? reevaluate
-          setTimeout(() => {
-            initiateFingerprint();
-          }, 250);
+          // check if we have it
+          const bioExists = await Keychain.hasInternetCredentials({
+            service: 'sspkey_pw_bio',
+          });
+          if (bioExists) {
+            setBiometricsAvailable(true);
+            // keep timeout
+            // iOS freezes if we call biometrics right away
+            // toggle biometrics immediately? reevaluate
+            setTimeout(() => {
+              initiateFingerprint();
+            }, 250);
+          } else {
+            console.log('Biometrics not set');
+            setBiometricsAvailable(false);
+          }
         } else {
           console.log('Biometrics not supported');
           setBiometricsAvailable(false);
@@ -148,7 +157,21 @@ const Authentication = (props: {
         displayMessage('error', t('home:err_auth_pw_incorrect'));
         return;
       }
-      if (setupBiometrics) {
+      let isBioSet = false;
+      // check if we have it
+      try {
+        const bioExists = await Keychain.hasGenericPassword({
+          service: 'sspkey_pw_bio',
+        });
+        console.log('passwordData', bioExists);
+        if (bioExists) {
+          isBioSet = true;
+        }
+      } catch (error) {
+        console.log(error);
+      }
+      if (setupBiometrics || !isBioSet) {
+        // todo check if we have it, if not, do not try to set it
         try {
           // if we authenticated with password, check if biometrics is available and store the secret so bio can be used next time
           const isBiometricsSupported =
@@ -164,7 +187,7 @@ const Authentication = (props: {
                 passwordData.password,
                 {
                   service: 'sspkey_pw_bio',
-                  storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption
+                  storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption, on android setGenericPassword PROMPTS for biometric inputs using AES_GCM, RSA does not prompt for it. iOS does not prompt.
                   accessible:
                     Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
                   accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.

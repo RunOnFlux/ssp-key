@@ -22,7 +22,7 @@ import Scanner from '../../components/Scanner/Scanner';
 import Navbar from '../../components/Navbar/Navbar';
 import PublicNoncesRequest from '../..//components/PublicNoncesRequest/PublicNoncesRequest';
 import PublicNoncesSuccess from '../../components/PublicNoncesSuccess/PublicNoncesSuccess';
-import Keychain from 'react-native-keychain';
+import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';

@@ -1,7 +1,7 @@
 import messaging, {
   FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
-import Keychain from 'react-native-keychain';
+import * as Keychain from 'react-native-keychain';
 import notifee from '@notifee/react-native';
 import { AppState, Platform } from 'react-native';
 

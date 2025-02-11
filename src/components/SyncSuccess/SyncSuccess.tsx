@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { backends } from '@storage/backends';
 import { cryptos } from '../../types';
-import Keychain from 'react-native-keychain';
+import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
 import { generateMultisigAddress } from '../../lib/wallet';
 

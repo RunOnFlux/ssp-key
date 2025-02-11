@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import Keychain from 'react-native-keychain';
+import * as Keychain from 'react-native-keychain';
 import { blockchains } from '@storage/blockchains';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import ToastNotif from '../../components/Toast/Toast';
@@ -288,12 +288,15 @@ function Restore({ navigation }: Props) {
             encryptedPassword,
             {
               service: 'sspkey_pw_bio',
-              storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption
+              storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption, on android setGenericPassword PROMPTS for biometric inputs using AES_GCM, RSA does not prompt for it. iOS does not prompt.
               accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
               accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
               securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
             },
-          );
+          ).catch((error) => {
+            // not critical, proceed without it
+            console.log(error);
+          });
         }
         setIsModalOpen(false);
         setIsLoading(false);
@@ -308,7 +311,7 @@ function Restore({ navigation }: Props) {
       .catch((error) => {
         setIsLoading(false);
         dispatch(setSSPInitialState());
-        displayMessage('error', error.message || t('cr:err_setting_key'));
+        displayMessage('error', t('cr:err_setting_key'));
         console.log(error.message);
       });
   };
