@@ -39,7 +39,7 @@ const Authentication = (props: {
         if (resultObject) {
           console.log('Biometrics is supported');
           // check if we have it
-          const bioExists = await Keychain.hasInternetCredentials({
+          const bioExists = await Keychain.hasGenericPassword({
             service: 'sspkey_pw_bio',
           });
           if (bioExists) {
@@ -170,8 +170,8 @@ const Authentication = (props: {
       } catch (error) {
         console.log(error);
       }
+      // if we do not have biometrics or we want to setup biometrics, we can try to set it
       if (setupBiometrics || !isBioSet) {
-        // todo check if we have it, if not, do not try to set it
         try {
           // if we authenticated with password, check if biometrics is available and store the secret so bio can be used next time
           const isBiometricsSupported =
