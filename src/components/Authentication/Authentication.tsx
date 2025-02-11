@@ -69,12 +69,14 @@ const Authentication = (props: {
     // get from keychain
     const options = {
       service: 'sspkey_pw_bio',
+      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       authenticationPrompt: {
         title: textForPrompt,
         // subtitle: textForPrompt, // android only
         // description: textForPrompt, // android only
         cancel: t('common:cancel'),
       },
+      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
     };
 
     Keychain.getGenericPassword(options) // This does NOT work in simulator, library issues, direct access may be granted in simulator but not on real device!
@@ -121,10 +123,12 @@ const Authentication = (props: {
       // get from keychain
       const passwordHash = await Keychain.getGenericPassword({
         service: 'sspkey_pw_hash',
+        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       });
       // get salt
       const saltData = await Keychain.getGenericPassword({
         service: 'salt',
+        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       });
       // from user password create hash
       if (!passwordHash || !saltData) {
@@ -150,6 +154,7 @@ const Authentication = (props: {
         if (isBiometricsSupported) {
           const passwordData = await Keychain.getGenericPassword({
             service: 'sspkey_pw',
+            rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
           });
           if (passwordData) {
             await Keychain.setGenericPassword(
