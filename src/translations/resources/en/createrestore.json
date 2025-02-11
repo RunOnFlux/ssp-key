@@ -29,5 +29,6 @@
   "get_started": "Get Started!",
   "create_key": "Create Key",
   "backup_key": "Backup Key",
-  "sync_wallet": "Sync Wallet"
+  "sync_wallet": "Sync Wallet",
+  "setup_biometrics": "Setup Biometrics Authentication"
 }

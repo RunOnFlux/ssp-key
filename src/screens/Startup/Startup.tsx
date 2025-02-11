@@ -21,6 +21,7 @@ import { storage } from '../../store/index'; // mmkv
 // do we need this page? todo reevaluate to move to app and go straight to MainNavigator
 const Startup = ({ navigation }: ApplicationScreenProps) => {
   const { i18n } = useTranslation();
+  const { t } = useTranslation(['cr', 'common']);
   const { Layout, Gutters } = useTheme();
 
   const init = async () => {
@@ -78,6 +79,12 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
               accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
               accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
               securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
+              authenticationPrompt: {
+                title: t('cr:setup_biometrics'),
+                // subtitle: textForPrompt, // android only
+                // description: textForPrompt, // android only
+                cancel: t('common:cancel'),
+              },
             },
           ).catch((error) => {
             // not critical, proceed without it
