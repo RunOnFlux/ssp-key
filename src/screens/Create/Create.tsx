@@ -183,7 +183,7 @@ function Create({ navigation }: Props) {
         const encKey = Buffer.from(rnd).toString('hex');
         await Keychain.setGenericPassword('enc_key', encKey, {
           service: 'enc_key',
-          storage: Keychain.STORAGE_TYPE.AES,
+          storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // generate salt
@@ -191,7 +191,7 @@ function Create({ navigation }: Props) {
         // store salt, used for hashing password
         await Keychain.setGenericPassword('salt', salt, {
           service: 'salt',
-          storage: Keychain.STORAGE_TYPE.AES,
+          storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         const pwForEncryption = encKey + password;
@@ -235,7 +235,7 @@ function Create({ navigation }: Props) {
         // this is used in case password is supplied and not biometrics
         await Keychain.setGenericPassword('sspkey_pw_hash', pwHash, {
           service: 'sspkey_pw_hash',
-          storage: Keychain.STORAGE_TYPE.AES,
+          storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         // encrypt password with enc_key
@@ -245,7 +245,7 @@ function Create({ navigation }: Props) {
         ).toString();
         await Keychain.setGenericPassword('sspkey_pw', encryptedPassword, {
           service: 'sspkey_pw',
-          storage: Keychain.STORAGE_TYPE.AES,
+          storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
         const isBiometricsSupported = await Keychain.getSupportedBiometryType();
@@ -255,10 +255,9 @@ function Create({ navigation }: Props) {
             encryptedPassword,
             {
               service: 'sspkey_pw_bio',
-              storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244 THIS IS FORCING BIOMETRICS ON ANDROID android only,
+              storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption
               accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
               accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
-              authenticationType: Keychain.AUTHENTICATION_TYPE.BIOMETRICS, // iOS only Only allow biometrics, not passcodem use default is both
               securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
             },
           );

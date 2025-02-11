@@ -67,7 +67,7 @@ const Authentication = (props: {
     console.log('Initiate Fingerprint');
     // if success continue, if fail, show error message and only allow password authentication
     // get from keychain
-    const options: Keychain.Options = {
+    const options = {
       service: 'sspkey_pw_bio',
       authenticationPrompt: {
         title: textForPrompt,
@@ -157,10 +157,9 @@ const Authentication = (props: {
               passwordData.password,
               {
                 service: 'sspkey_pw_bio',
-                storage: Keychain.STORAGE_TYPE.RSA, // https://github.com/oblador/react-native-keychain/issues/244 THIS IS FORCING BIOMETRICS ON ANDROID android only,
+                storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption
                 accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
                 accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
-                authenticationType: Keychain.AUTHENTICATION_TYPE.BIOMETRICS, // iOS only Only allow biometrics, not passcodem use default is both
                 securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
               },
             );
