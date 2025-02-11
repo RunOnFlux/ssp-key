@@ -61,7 +61,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
    ```
 
 4. **Link with SSP Wallet**  
-   Follow the integration guide in the [SSP Documentation](https://sspwallet.gitbook.io/docs).
+   Follow the integration guide in the [SSP Documentation](https://docs.sspwallet.io).
 
 ---
 
@@ -77,7 +77,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
 
 ## Documentation and Support
 
-- **SSP Wallet Ecosystem**: Learn how SSP Key integrates with SSP Wallet in the [SSP Documentation](https://sspwallet.gitbook.io/docs).
+- **SSP Wallet Ecosystem**: Learn how SSP Key integrates with SSP Wallet in the [SSP Documentation](https://docs.sspwallet.io).
 - **SSP Wallet Assets**: Integrated Blockchains, Assets and Tokens in SSP [SSP Assets](https://docs.google.com/spreadsheets/d/1GUqGeV4hCwjKlxazY1vPY52owrEqXQ1UTchOKfkyS7c).
 - **Disclaimer**: Review the [SSP Key Disclaimer](https://github.com/RunOnFlux/ssp-key/blob/master/DISCLAIMER.md).  
 - **Code of Conduct**: See our [Code of Conduct](https://github.com/RunOnFlux/ssp-key/blob/master/CODE_OF_CONDUCT.md).  
