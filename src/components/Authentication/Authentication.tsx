@@ -99,7 +99,7 @@ const Authentication = (props: {
         // some other failure, cancellation of biometrics
         setPassword('');
         setPasswordVisibility(false);
-        setSetupBiometrics(true); // setup again
+        // setSetupBiometrics(true); // do not setup again, it is already setup. If enabled it forces android users to authenticate again.
         console.log(error);
       });
   };
@@ -149,26 +149,32 @@ const Authentication = (props: {
         return;
       }
       if (setupBiometrics) {
-        // if we authenticated with password, check if biometrics is available and store the secret so bio can be used next time
-        const isBiometricsSupported = await Keychain.getSupportedBiometryType();
-        if (isBiometricsSupported) {
-          const passwordData = await Keychain.getGenericPassword({
-            service: 'sspkey_pw',
-            rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
-          });
-          if (passwordData) {
-            await Keychain.setGenericPassword(
-              'sspkey_pw_bio',
-              passwordData.password,
-              {
-                service: 'sspkey_pw_bio',
-                storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption
-                accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
-                accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
-                securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
-              },
-            );
+        try {
+          // if we authenticated with password, check if biometrics is available and store the secret so bio can be used next time
+          const isBiometricsSupported =
+            await Keychain.getSupportedBiometryType();
+          if (isBiometricsSupported) {
+            const passwordData = await Keychain.getGenericPassword({
+              service: 'sspkey_pw',
+              rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+            });
+            if (passwordData) {
+              await Keychain.setGenericPassword(
+                'sspkey_pw_bio',
+                passwordData.password,
+                {
+                  service: 'sspkey_pw_bio',
+                  storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption
+                  accessible:
+                    Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
+                  accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
+                  securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
+                },
+              );
+            }
           }
+        } catch (error) {
+          console.log(error); // catch error to still allow password authentication as this is not crucial
         }
       }
       setPassword('');
