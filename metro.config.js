@@ -12,29 +12,6 @@ const { assetExts, sourceExts } = defaultConfig.resolver;
 const config = {
   transformer: {
     babelTransformerPath: require.resolve('react-native-svg-transformer'),
-    minifierPath: 'metro-minify-obfuscator', // <- add this
-    minifierConfig: {
-      defaultMinifierPath: require('metro-minify-uglify'), // required if filter/includeNodeModules options is set, can be metro-minify-uglify or metro-minify-terser dependes on RN version / available installed minifier
-      filter: () => true, // return true to obfuscate
-      includeNodeModules: true, // set false to ignore node_modules from obfuscation
-      trace: false, // show output log
-      obfuscatorOptions: {
-        stringArray: false,
-        compact: true,
-        controlFlowFlattening: true,
-        controlFlowFlatteningThreshold: 0.75,
-        identifierNamesGenerator: 'hexadecimal',
-        numbersToExpressions: true,
-        splitStrings: true,
-        splitStringsChunkLength: 3,
-        transformObjectKeys: true,
-        simplify: true,
-        disableConsoleOutput: true,
-        log: false,
-        selfDefending: true, // prevent tempering, debugging
-        unicodeEscapeSequence: true,
-      },
-    },
   },
   resolver: {
     assetExts: assetExts.filter((ext) => ext !== 'svg'),
