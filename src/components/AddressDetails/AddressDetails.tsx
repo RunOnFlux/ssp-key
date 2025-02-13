@@ -5,7 +5,6 @@ import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import * as Keychain from 'react-native-keychain';
-import RNScreenshotPrevent from 'rn-screenshot-prevent';
 import {
   generateAddressKeypair,
   generateMultisigAddress,
@@ -39,12 +38,6 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
     (state) => state[selectedChain],
   );
   const blockchainConfig = blockchains[selectedChain];
-
-  // disable screenshots
-  useEffect(() => {
-    RNScreenshotPrevent.enableSecureView();
-    RNScreenshotPrevent.enabled(true);
-  }, []);
 
   useEffect(() => {
     const path = '0-' + selectedWallet;
@@ -145,8 +138,6 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
     setDecryptedRedeemScript('');
     setDecryptedWitnessScript('');
     props.actionStatus(false);
-    RNScreenshotPrevent.enabled(false);
-    RNScreenshotPrevent.disableSecureView();
   };
 
   const openChainSelect = () => {

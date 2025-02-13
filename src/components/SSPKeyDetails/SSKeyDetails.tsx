@@ -7,7 +7,6 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import RNScreenshotPrevent from 'rn-screenshot-prevent';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
@@ -41,12 +40,6 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const blockchainConfig = blockchains[selectedChain];
   const [activityLoading, setActivityLoading] = useState(false);
-
-  // disable screenshots
-  useEffect(() => {
-    RNScreenshotPrevent.enableSecureView();
-    RNScreenshotPrevent.enabled(true);
-  }, []);
 
   useEffect(() => {
     Keychain.getGenericPassword({
@@ -124,8 +117,6 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
     setDecryptedXpub('');
     setDecryptedMnemonic('');
     props.actionStatus(false);
-    RNScreenshotPrevent.enabled(false);
-    RNScreenshotPrevent.disableSecureView();
   };
 
   const openChainSelect = () => {

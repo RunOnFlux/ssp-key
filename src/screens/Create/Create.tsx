@@ -20,7 +20,6 @@ import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import * as Keychain from 'react-native-keychain';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import * as CryptoJS from 'crypto-js';
-import RNScreenshotPrevent from 'rn-screenshot-prevent';
 
 import { blockchains } from '@storage/blockchains';
 
@@ -124,12 +123,6 @@ function Create({ navigation }: Props) {
   const showModal = () => {
     setIsModalOpen(true);
   };
-
-  // disable screenshots
-  useEffect(() => {
-    RNScreenshotPrevent.enableSecureView();
-    RNScreenshotPrevent.enabled(true);
-  }, []);
 
   useEffect(() => {
     if (mnemonic) {

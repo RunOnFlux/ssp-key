@@ -36,7 +36,6 @@ import {
 import { blockchains } from '@storage/blockchains';
 
 import * as CryptoJS from 'crypto-js';
-import RNScreenshotPrevent from 'rn-screenshot-prevent';
 
 import {
   getMasterXpriv,
@@ -121,12 +120,6 @@ function Home({ navigation }: Props) {
 
   const { newTx, clearTx, publicNoncesRequest, clearPublicNoncesRequest } =
     useSocket();
-
-  // ENABLE screenshots
-  useEffect(() => {
-    RNScreenshotPrevent.disableSecureView();
-    RNScreenshotPrevent.enabled(false);
-  }, []);
 
   useEffect(() => {
     if (alreadyMounted.current) {

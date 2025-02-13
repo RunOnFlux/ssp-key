@@ -8303,11 +8303,6 @@ rn-nodeify@10.3.0:
     semver "^5.0.1"
     xtend "^4.0.0"
 
-rn-screenshot-prevent@0.0.8:
-  version "0.0.8"
-  resolved "https://registry.yarnpkg.com/rn-screenshot-prevent/-/rn-screenshot-prevent-0.0.8.tgz#05a02511eb0158494f010a2a63b5e60ca3b0180e"
-  integrity sha512-Z0dpoT5rplGJ61UVw/xrEJV/QyAZSldqZdMFoTRf49FKZ2HwHYGoBRU+bBXuRtNHdOC1d0bnU5C92ML2X1iJvw==
-
 run-parallel@^1.1.2, run-parallel@^1.1.9:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/run-parallel/-/run-parallel-1.2.0.tgz#66d1368da7bdf921eb9d95bd1a9229e7f21a43ee"
@@ -8904,9 +8899,9 @@ temp@^0.8.4:
     rimraf "~2.6.2"
 
 terser@^5.15.0:
-  version "5.38.2"
-  resolved "https://registry.yarnpkg.com/terser/-/terser-5.38.2.tgz#24aef4ea48c900d46a4b13f6a53789980d59967f"
-  integrity sha512-w8CXxxbFA5zfNsR/i8HZq5bvn18AK0O9jj7hyo1YqkovLxEFa0uP0LCVGZRqiRaKRFxXhELBp8SteeAjEnfeJg==
+  version "5.39.0"
+  resolved "https://registry.yarnpkg.com/terser/-/terser-5.39.0.tgz#0e82033ed57b3ddf1f96708d123cca717d86ca3a"
+  integrity sha512-LBAhFyLho16harJoWMg/nZsQYgTrg5jXOn2nCYjRUcZZEdE3qa2zb8QEDRUGVZBW4rlazf2fxkg8tztybTaqWw==
   dependencies:
     "@jridgewell/source-map" "^0.3.3"
     acorn "^8.8.2"

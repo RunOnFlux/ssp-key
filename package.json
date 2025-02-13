@@ -72,7 +72,6 @@
     "react-redux": "9.2.0",
     "readable-stream": "4.7.0",
     "redux-persist": "6.0.0",
-    "rn-screenshot-prevent": "0.0.8",
     "socket.io-client": "4.8.1",
     "stream-browserify": "3.0.0",
     "util": "0.12.5",
