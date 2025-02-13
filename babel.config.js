@@ -19,4 +19,9 @@ module.exports = {
     'inline-dotenv',
     'react-native-reanimated/plugin',
   ],
+  env: {
+    production: {
+      plugins: ['transform-remove-console'],
+    },
+  },
 };

@@ -16,8 +16,10 @@ import * as CryptoJS from 'crypto-js';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import * as Keychain from 'react-native-keychain';
+import RNScreenshotPrevent from 'rn-screenshot-prevent';
 import { useTheme } from '../../hooks';
 import ToastNotif from '../Toast/Toast';
+import BlurOverlay from '../../BlurOverlay';
 
 const Authentication = (props: {
   actionStatus: (status: boolean) => void;
@@ -31,6 +33,12 @@ const Authentication = (props: {
   const [passwordVisibility, setPasswordVisibility] = useState(false);
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
   const [setupBiometrics, setSetupBiometrics] = useState(false);
+
+  // disable screenshots
+  useEffect(() => {
+    RNScreenshotPrevent.enableSecureView();
+    RNScreenshotPrevent.enabled(true);
+  }, []);
 
   useEffect(() => {
     console.log('entered auth');
@@ -227,6 +235,7 @@ const Authentication = (props: {
       visible={true}
       onRequestClose={() => close()}
     >
+      <BlurOverlay />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[Layout.fill, Common.modalBackdrop]}

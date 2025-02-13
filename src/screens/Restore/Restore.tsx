@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,9 +19,11 @@ import { useTheme } from '../../hooks';
 import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import * as Keychain from 'react-native-keychain';
+import RNScreenshotPrevent from 'rn-screenshot-prevent';
 import { blockchains } from '@storage/blockchains';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import ToastNotif from '../../components/Toast/Toast';
+import BlurOverlay from '../../BlurOverlay';
 
 import * as CryptoJS from 'crypto-js';
 
@@ -79,6 +81,12 @@ function Restore({ navigation }: Props) {
       text1: content,
     });
   };
+
+  // disable screenshots
+  useEffect(() => {
+    RNScreenshotPrevent.enableSecureView();
+    RNScreenshotPrevent.enabled(true);
+  }, []);
 
   const onChangePassword = (text: string) => {
     setPassword(text);
@@ -509,6 +517,7 @@ function Restore({ navigation }: Props) {
         visible={isModalOpen}
         onRequestClose={() => handleCancel()}
       >
+        <BlurOverlay />
         <ScrollView
           keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}

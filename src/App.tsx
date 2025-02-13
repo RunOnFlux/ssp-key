@@ -13,6 +13,7 @@ import 'fastestsmallesttextencoderdecoder';
 import { SocketProvider } from './contexts/SocketContext';
 import { notificationListener, requestUserPermission } from './lib/fcmHelper';
 import ToastNotif from './components/Toast/Toast';
+import BlurOverlay from './BlurOverlay';
 
 if (!global.btoa) {
   global.btoa = btoa;
@@ -49,6 +50,7 @@ const App = () => {
       <PersistGate loading={null} persistor={persistor}>
         <SocketProvider>
           <ApplicationNavigator />
+          <BlurOverlay />
         </SocketProvider>
       </PersistGate>
       <ToastNotif />

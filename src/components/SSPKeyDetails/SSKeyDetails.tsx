@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import RNScreenshotPrevent from 'rn-screenshot-prevent';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +16,7 @@ import * as Keychain from 'react-native-keychain';
 import { useAppSelector } from '../../hooks';
 import { cryptos } from '../../types';
 import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
+import BlurOverlay from '../../BlurOverlay';
 
 import { blockchains } from '@storage/blockchains';
 
@@ -39,6 +41,12 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const blockchainConfig = blockchains[selectedChain];
   const [activityLoading, setActivityLoading] = useState(false);
+
+  // disable screenshots
+  useEffect(() => {
+    RNScreenshotPrevent.enableSecureView();
+    RNScreenshotPrevent.enabled(true);
+  }, []);
 
   useEffect(() => {
     Keychain.getGenericPassword({
@@ -116,6 +124,8 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
     setDecryptedXpub('');
     setDecryptedMnemonic('');
     props.actionStatus(false);
+    RNScreenshotPrevent.enabled(false);
+    RNScreenshotPrevent.disableSecureView();
   };
 
   const openChainSelect = () => {
@@ -144,6 +154,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
         visible={isMainModalOpen}
         onRequestClose={() => close()}
       >
+        <BlurOverlay />
         <ScrollView
           keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}

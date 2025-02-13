@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-
+import BlurOverlay from '../../BlurOverlay';
 const ManualInput = (props: { actionStatus: (data: string) => void }) => {
   const textInputA = useRef<TextInput | null>(null);
   const { t } = useTranslation(['home', 'common']);
@@ -40,6 +40,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
       visible={true}
       onRequestClose={() => handleCancel()}
     >
+      <BlurOverlay />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[Layout.fill, Common.modalBackdrop]}

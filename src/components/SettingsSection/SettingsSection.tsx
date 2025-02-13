@@ -30,6 +30,7 @@ import { useAppSelector } from '../../hooks';
 import { blockchains } from '@storage/blockchains';
 
 import * as resources from '../../translations/resources';
+import BlurOverlay from '../../BlurOverlay';
 
 const backendsOriginalConfig = backendsOriginal();
 const originalConfig = sspConfigOriginal();
@@ -301,6 +302,7 @@ const SettingsSection = (props: {
         visible={isMainModalOpen}
         onRequestClose={() => handleCancel()}
       >
+        <BlurOverlay />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={[Layout.fill, Common.modalBackdrop]}

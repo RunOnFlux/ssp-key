@@ -20,6 +20,7 @@ import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import * as Keychain from 'react-native-keychain';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import * as CryptoJS from 'crypto-js';
+import RNScreenshotPrevent from 'rn-screenshot-prevent';
 
 import { blockchains } from '@storage/blockchains';
 
@@ -39,6 +40,7 @@ import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from '../../components/CreationSteps/CreationSteps';
 import ToastNotif from '../../components/Toast/Toast';
+import BlurOverlay from '../../BlurOverlay';
 
 type Props = {
   navigation: any;
@@ -122,6 +124,12 @@ function Create({ navigation }: Props) {
   const showModal = () => {
     setIsModalOpen(true);
   };
+
+  // disable screenshots
+  useEffect(() => {
+    RNScreenshotPrevent.enableSecureView();
+    RNScreenshotPrevent.enabled(true);
+  }, []);
 
   useEffect(() => {
     if (mnemonic) {
@@ -420,6 +428,7 @@ function Create({ navigation }: Props) {
         visible={isModalOpen}
         onRequestClose={() => handleCancel()}
       >
+        <BlurOverlay />
         <ScrollView
           keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}
