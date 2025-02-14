@@ -395,6 +395,18 @@ function Create({ navigation }: Props) {
               />
             </TouchableOpacity>
           </View>
+          <Text
+            style={[
+              Fonts.textTinyTiny,
+              Gutters.tinyMargin,
+              Fonts.textCenter,
+              Gutters.smallRMargin,
+              Gutters.smallLMargin,
+              Gutters.smallBMargin,
+            ]}
+          >
+            {t('cr:strong_password')}
+          </Text>
           <TouchableOpacity
             style={[
               Common.button.rounded,
