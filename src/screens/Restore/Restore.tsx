@@ -560,18 +560,77 @@ function Restore({ navigation }: Props) {
               <Divider color={Colors.textGray200} />
               <Text
                 style={[
-                  Fonts.textItalic,
-                  Fonts.textBold,
-                  Fonts.textSmall,
-                  Fonts.textCenter,
-                  Gutters.tinyBMargin,
+                  Fonts.textTinyTiny,
+                  Fonts.textLight,
+                  Gutters.tinyTMargin,
+                  Fonts.textJustify,
+                  Fonts.textError,
                 ]}
-                selectable={true}
               >
-                {mnemonicShow
-                  ? mnemonic
-                  : '*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***'}
+                {t('cr:ssp_key_mnemonic_sec')}
               </Text>
+              <View
+                style={[
+                  { borderWidth: 1, borderColor: Colors.textInput },
+                  Gutters.smallTMargin,
+                  Gutters.smallBMargin,
+                ]}
+              >
+                <Text
+                  selectable={true}
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.tinyMargin,
+                    Fonts.textBold,
+                  ]}
+                >
+                  {mnemonicShow
+                    ? mnemonic
+                        .split(' ')
+                        .slice(0, Math.round(mnemonic.split(' ').length / 3))
+                        .join(' ')
+                    : '*** *** *** *** *** *** *** ***'}
+                </Text>
+                <Text
+                  selectable={true}
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.tinyMargin,
+                    Fonts.textBold,
+                  ]}
+                >
+                  {mnemonicShow
+                    ? mnemonic
+                        .split(' ')
+                        .slice(
+                          Math.round(mnemonic.split(' ').length / 3),
+                          Math.round((mnemonic.split(' ').length / 3) * 2),
+                        )
+                        .join(' ')
+                    : '*** *** *** *** *** *** *** ***'}
+                </Text>
+                <Text
+                  selectable={true}
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.tinyMargin,
+                    Fonts.textBold,
+                  ]}
+                >
+                  {mnemonicShow
+                    ? mnemonic
+                        .split(' ')
+                        .slice(
+                          Math.round((mnemonic.split(' ').length / 3) * 2),
+                          mnemonic.split(' ').length,
+                        )
+                        .join(' ')
+                    : '*** *** *** *** *** *** *** ***'}
+                </Text>
+              </View>
               <View style={[Gutters.tinyBMargin]}>
                 <TouchableOpacity
                   style={[

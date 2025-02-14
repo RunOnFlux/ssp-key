@@ -36,6 +36,8 @@ const App = () => {
     alreadyMounted.current = true;
     requestUserPermission();
     notificationListener();
+    // @TODO this still does not prevent modal screenshot, unable to find a solution, notify user that screenshot was taken - unable to find a solution
+    // only package that works is rn-screenshot-prevent, but it does not work on modal, enable screenshots on iOS to not cause confusion. Android uses secure FLAG_SECURE
   });
 
   return (

@@ -30,5 +30,6 @@
   "create_key": "Create Key",
   "backup_key": "Backup Key",
   "sync_wallet": "Sync Wallet",
-  "setup_biometrics": "Setup Biometrics Authentication"
+  "setup_biometrics": "Setup Biometrics Authentication",
+  "ssp_key_mnemonic_sec": "WARNING: For security reasons, the seed phrase is displayed in 3 parts. Please join them together to get the full seed phrase. It is highly discouraged to copy the seed phrase into your clipboard, any application or website has access to clipboard and can see your seed phrase."
 }

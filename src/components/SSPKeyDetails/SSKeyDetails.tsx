@@ -36,7 +36,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const [xpubVisible, setXpubVisible] = useState(false);
   const [xprivVisible, setXprivVisible] = useState(false);
   const [mnemonicVisible, setMnemonicVisible] = useState(false);
-  const { t } = useTranslation(['home', 'common']);
+  const { t } = useTranslation(['home', 'common', 'cr']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const blockchainConfig = blockchains[selectedChain];
   const [activityLoading, setActivityLoading] = useState(false);
@@ -309,18 +309,84 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 >
                   {t('home:ssp_key_mnemonic_desc')}
                 </Text>
-                <View>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Gutters.tinyTMargin,
+                    Fonts.textJustify,
+                    Fonts.textError,
+                  ]}
+                >
+                  {t('cr:ssp_key_mnemonic_sec')}
+                </Text>
+                <View
+                  style={[
+                    { borderWidth: 1, borderColor: Colors.textInput },
+                    Gutters.smallTMargin,
+                    Gutters.smallBMargin,
+                  ]}
+                >
                   <Text
                     selectable={true}
                     style={[
-                      Fonts.textTiny,
+                      Fonts.textSmall,
                       Fonts.textCenter,
-                      Gutters.smallMargin,
+                      Gutters.tinyMargin,
+                      Fonts.textBold,
                     ]}
                   >
                     {mnemonicVisible
                       ? decryptedMnemonic
-                      : '*** *** *** *** *** ***'}
+                          .split(' ')
+                          .slice(
+                            0,
+                            Math.round(decryptedMnemonic.split(' ').length / 3),
+                          )
+                          .join(' ')
+                      : '*** *** *** *** *** *** *** ***'}
+                  </Text>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textCenter,
+                      Gutters.tinyMargin,
+                      Fonts.textBold,
+                    ]}
+                  >
+                    {mnemonicVisible
+                      ? decryptedMnemonic
+                          .split(' ')
+                          .slice(
+                            Math.round(decryptedMnemonic.split(' ').length / 3),
+                            Math.round(
+                              (decryptedMnemonic.split(' ').length / 3) * 2,
+                            ),
+                          )
+                          .join(' ')
+                      : '*** *** *** *** *** *** *** ***'}
+                  </Text>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textCenter,
+                      Gutters.tinyMargin,
+                      Fonts.textBold,
+                    ]}
+                  >
+                    {mnemonicVisible
+                      ? decryptedMnemonic
+                          .split(' ')
+                          .slice(
+                            Math.round(
+                              (decryptedMnemonic.split(' ').length / 3) * 2,
+                            ),
+                            decryptedMnemonic.split(' ').length,
+                          )
+                          .join(' ')
+                      : '*** *** *** *** *** *** *** ***'}
                   </Text>
                 </View>
               </View>
