@@ -376,19 +376,72 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 >
                   {t('home:wallet_priv_key_desc')}
                 </Text>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Gutters.tinyTMargin,
+                    Fonts.textJustify,
+                    Fonts.textError,
+                  ]}
+                >
+                  {t('home:sensitive_data_warning', {
+                    sensitive_data: t('home:wallet_private_key'),
+                  })}
+                </Text>
                 <View>
-                  <Text
-                    selectable={true}
-                    style={[
-                      Fonts.textTiny,
-                      Fonts.textCenter,
-                      Gutters.smallMargin,
-                    ]}
-                  >
-                    {privateKeyVisible
-                      ? decryptedPrivateKey
-                      : '*** *** *** *** *** ***'}
-                  </Text>
+                  {decryptedPrivateKey == t('home:chain_not_synced_scan') && (
+                    <Text
+                      selectable={true}
+                      style={[
+                        Fonts.textTiny,
+                        Fonts.textCenter,
+                        Gutters.tinyMargin,
+                        Gutters.smallBMargin,
+                        Gutters.smallTMargin,
+                      ]}
+                    >
+                      {privateKeyVisible
+                        ? decryptedPrivateKey
+                        : '*** *** *** *** *** ***'}
+                    </Text>
+                  )}
+                  {decryptedPrivateKey !== t('home:chain_not_synced_scan') && (
+                    <>
+                      <Text
+                        selectable={true}
+                        style={[
+                          Fonts.textTiny,
+                          Fonts.textCenter,
+                          Gutters.tinyMargin,
+                          Gutters.smallTMargin,
+                        ]}
+                      >
+                        {privateKeyVisible
+                          ? decryptedPrivateKey.slice(
+                              0,
+                              Math.floor(decryptedPrivateKey.length / 2),
+                            )
+                          : '*** *** *** *** *** ***'}
+                      </Text>
+                      <Text
+                        selectable={true}
+                        style={[
+                          Fonts.textTiny,
+                          Fonts.textCenter,
+                          Gutters.tinyMargin,
+                          Gutters.smallBMargin,
+                        ]}
+                      >
+                        {privateKeyVisible
+                          ? decryptedPrivateKey.slice(
+                              Math.floor(decryptedPrivateKey.length / 2),
+                              decryptedPrivateKey.length,
+                            )
+                          : '*** *** *** *** *** ***'}
+                      </Text>
+                    </>
+                  )}
                 </View>
               </View>
             </View>

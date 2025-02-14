@@ -93,5 +93,6 @@
   "change_language": "Change Language",
   "language": "Language",
   "use_system_language": "Use System Language",
-  "err_auth_biometrics_pw_needed": "Biometrics restricted, use password authentication instead."
+  "err_auth_biometrics_pw_needed": "Biometrics restricted, use password authentication instead.",
+  "sensitive_data_warning": "WARNING: For security reasons, the {{sensitive_data}} is displayed in 2 parts. Please join them together to get the full {{sensitive_data}}. It is highly discouraged to copy the {{sensitive_data}} into your clipboard, any application or website has access to clipboard and can see your {{sensitive_data}}."
 }

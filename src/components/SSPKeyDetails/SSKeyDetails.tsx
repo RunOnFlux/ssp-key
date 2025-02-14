@@ -266,19 +266,57 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 >
                   {t('home:chain_xpriv_desc', { chain: blockchainConfig.name })}
                 </Text>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Gutters.tinyTMargin,
+                    Fonts.textJustify,
+                    Fonts.textError,
+                  ]}
+                >
+                  {t('home:sensitive_data_warning', {
+                    sensitive_data: t('home:chain_xpriv', {
+                      chain: blockchainConfig.name,
+                    }),
+                  })}
+                </Text>
                 <View>
                   {activityLoading && <ActivityIndicator size={'large'} />}
                   {!activityLoading && (
-                    <Text
-                      selectable={true}
-                      style={[
-                        Fonts.textTiny,
-                        Fonts.textCenter,
-                        Gutters.smallMargin,
-                      ]}
-                    >
-                      {xprivVisible ? deryptedXpriv : '*** *** *** *** *** ***'}
-                    </Text>
+                    <>
+                      <Text
+                        selectable={true}
+                        style={[
+                          Fonts.textTiny,
+                          Fonts.textCenter,
+                          Gutters.tinyMargin,
+                        ]}
+                      >
+                        {xprivVisible
+                          ? deryptedXpriv.slice(
+                              0,
+                              Math.floor(deryptedXpriv.length / 2),
+                            )
+                          : '*** *** *** *** *** ***'}
+                      </Text>
+                      <Text
+                        selectable={true}
+                        style={[
+                          Fonts.textTiny,
+                          Fonts.textCenter,
+                          Gutters.tinyMargin,
+                          Gutters.smallBMargin,
+                        ]}
+                      >
+                        {xprivVisible
+                          ? deryptedXpriv.slice(
+                              Math.floor(deryptedXpriv.length / 2),
+                              deryptedXpriv.length,
+                            )
+                          : '*** *** *** *** *** ***'}
+                      </Text>
+                    </>
                   )}
                 </View>
               </View>
