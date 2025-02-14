@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "Cụm từ phục hồi Khóa không có các từ hợp lệ: {{words}}.",
   "err_seed_invalid_spaces": "Cụm từ phục hồi Khóa dư khoảng trống.",
   "err_pins_no_match": "Mật khẩu không khớp",
-  "err_pins_min_length": "Mật khẩu phải có ít nhất 4 kí tự",
+  "err_pins_min_length": "Mật khẩu phải có ít nhất 8 kí tự",
   "backup_needed": "Bạn phải sao lưu các cụm từ phục hồi trước khi bạn có thể khởi tạo một Khóa.",
   "seed_phrase_invalid": "Cụm từ khôi phục Khóa không hợp lệ.",
   "err_setting_key": "Có lỗi xảy ra khi cài đặt Khóa của bạn.",

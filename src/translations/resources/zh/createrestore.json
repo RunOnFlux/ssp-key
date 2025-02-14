@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "密钥种子短语包含无效单词：{{words}}.",
   "err_seed_invalid_spaces": "密钥种子短语有多余的空格。",
   "err_pins_no_match": "密码不匹配",
-  "err_pins_min_length": "密码必须至少为4个字符",
+  "err_pins_min_length": "密码必须至少为8个字符",
   "backup_needed": "在同步密钥之前，您必须备份密钥种子短语.",
   "seed_phrase_invalid": "密钥种子短语无效。",
   "err_setting_key": "设置密钥时出错.",

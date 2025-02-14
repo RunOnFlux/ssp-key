@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "키 시드 구문에 유효하지 않은 단어가 포함되어 있습니다: {{words}}.",
   "err_seed_invalid_spaces": "키 시드 구문에 여분의 공백이 포함되어 있습니다.",
   "err_pins_no_match": "비밀번호가 일치하지 않습니다",
-  "err_pins_min_length": "비밀번호는 최소 4 자 이상이어야 합니다",
+  "err_pins_min_length": "비밀번호는 최소 8 자 이상이어야 합니다",
   "backup_needed": "키를 동기화하기 전에 키 시드 구문을 백업해야 합니다.",
   "seed_phrase_invalid": "키 시드 구문이 유효하지 않습니다.",
   "err_setting_key": "키 설정 중 문제가 발생했습니다.",

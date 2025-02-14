@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "金鑰助記詞中包含無效單字：{{words}}.",
   "err_seed_invalid_spaces": "金鑰助記詞包含額外的空格.",
   "err_pins_no_match": "密碼不符",
-  "err_pins_min_length": "密碼必須至少包含 4 個字元",
+  "err_pins_min_length": "密碼必須至少包含 8 個字元",
   "backup_needed": "您必須先備份金鑰助記詞，才能同步金鑰.",
   "seed_phrase_invalid": "金鑰助記詞無效",
   "err_setting_key": "設定金鑰時發生錯誤.",

@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "キーシードフレーズに無効な単語が含まれています: {{words}}.",
   "err_seed_invalid_spaces": "キーシードフレーズに余分なスペースがあります.",
   "err_pins_no_match": "パスワードが一致しません",
-  "err_pins_min_length": "パスワードは少なくとも 4 文字でなければなりません",
+  "err_pins_min_length": "パスワードは少なくとも 8 文字でなければなりません",
   "backup_needed": "キーを同期する前に、キーシードフレーズをバックアップする必要があります.",
   "seed_phrase_invalid": "キーシードフレーズが無効です.",
   "err_setting_key": "キーの設定中に問題が発生しました.",
