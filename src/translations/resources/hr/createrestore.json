@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "Fraza seed ključa sadrži nevažeće riječi: {{words}}.",
   "err_seed_invalid_spaces": "Fraza seed ključa sadrži dodatne razmake.",
   "err_pins_no_match": "Lozinke se ne podudaraju",
-  "err_pins_min_length": "Lozinka mora imati najmanje 4 znaka",
+  "err_pins_min_length": "Lozinka mora imati najmanje 8 znaka",
   "backup_needed": "Morate napraviti sigurnosnu kopiju svoje fraze seed ključa prije nego što možete sinkronizirati ključ.",
   "seed_phrase_invalid": "Fraza seed ključa je nevažeća.",
   "err_setting_key": "Došlo je do pogreške prilikom postavljanja vašeg ključa.",

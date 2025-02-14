@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "Avaimen siemenlauseke sisältää virheellisiä sanoja: {{words}}.",
   "err_seed_invalid_spaces": "Avaimen siemenlauseke sisältää ylimääräisiä välilyöntejä.",
   "err_pins_no_match": "Salasanat eivät täsmää",
-  "err_pins_min_length": "Salasanan on oltava vähintään 4 merkkiä pitkä",
+  "err_pins_min_length": "Salasanan on oltava vähintään 8 merkkiä pitkä",
   "backup_needed": "Sinun on varmuuskopioitava avaimen siemenlauseke ennen kuin voit synkronoida avaimen.",
   "seed_phrase_invalid": "Avaimen siemenlauseke ei kelpaa.",
   "err_setting_key": "Jokin meni pieleen avaimen asennuksen aikana.",

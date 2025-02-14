@@ -142,7 +142,7 @@ function Restore({ navigation }: Props) {
     }
     if (password !== passwordConfirm) {
       displayMessage('error', t('cr:err_pins_no_match'));
-    } else if (password.length < 4) {
+    } else if (password.length < 8) {
       displayMessage('error', t('cr:err_pins_min_length'));
     } else {
       setMnemonic(newSeedPhrase);

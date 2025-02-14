@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "Ang Key Seed Phrase ay walang wastong salita: {{words}}.",
   "err_seed_invalid_spaces": "May mga karagdagang puwang ang Key Seed Phrase.",
   "err_pins_no_match": "Hindi magkatugma ang mga password",
-  "err_pins_min_length": "Ang password ay dapat na hindi bababa sa 4 na character",
+  "err_pins_min_length": "Ang password ay dapat na hindi bababa sa 8 na character",
   "backup_needed": "Dapat mong i-backup ang iyong key seed phrase bago mo ma-synchronize ang isang key.",
   "seed_phrase_invalid": "Ang key seed phrase ay hindi wasto.",
   "err_setting_key": "May nangyaring mali habang sine-set up ang iyong Key.",

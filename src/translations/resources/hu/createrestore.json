@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "Visszaállítási kulcs helytelen szavakat is tartalmaz: {{words}}.",
   "err_seed_invalid_spaces": "A tárca visszaállítási kulcsa extra szóközöket tartalmaz.",
   "err_pins_no_match": "A megadott jelszavak nem egyeznek",
-  "err_pins_min_length": "A jelszónak legalább 4 karakterből kell állnia",
+  "err_pins_min_length": "A jelszónak legalább 8 karakterből kell állnia",
   "backup_needed": "Biztonsági másolatot kell készítenie a tárca visszaállítási kulcsáról, mielőtt kulcsot szinkronizál.",
   "seed_phrase_invalid": "A visszaállítási kulcsa helytelen.",
   "err_setting_key": "Hiba lépett fel a kulcs beállítása közben.",
