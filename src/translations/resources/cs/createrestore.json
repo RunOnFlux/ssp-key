@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "Seed Fráze Klíče má neplatná slova: {{words}}.",
   "err_seed_invalid_spaces": "Seed Fráze Klíče má extra mezery.",
   "err_pins_no_match": "Hesla se neshodují",
-  "err_pins_min_length": "Heslo musí mít minimálně 4 znaky",
+  "err_pins_min_length": "Heslo musí mít minimálně 8 znaky",
   "backup_needed": "Musíte si zálohovat vaši seed frázi klíče předtím než můžete klíč synchronizovat.",
   "seed_phrase_invalid": "Seed fráze klíče není platná.",
   "err_setting_key": "Něco se pokazilo při nastavování Klíče.",

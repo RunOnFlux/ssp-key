@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "Der Widerherstellungsschlüssel hat keine gültigen Wörter: {{words}}.",
   "err_seed_invalid_spaces": "Der Widerherstellungsschlüssel beinhaltet zusätzliche Leerzeichen.",
   "err_pins_no_match": "Die Passwörter stimmen nicht überein",
-  "err_pins_min_length": "Das Passwort muss mindestens 4 Zeichen lang sein",
+  "err_pins_min_length": "Das Passwort muss mindestens 8 Zeichen lang sein",
   "backup_needed": "Bevor Sie einen Schlüssel synchronisieren können, müssen Sie eine Sicherungskopie Ihres Widerherstellungsschlüssels erstellen.",
   "seed_phrase_invalid": "Der Widerherstellungsschlüssel ist ungültig.",
   "err_setting_key": "Beim Einrichten Ihres Schlüssels ist etwas schief gelaufen.",

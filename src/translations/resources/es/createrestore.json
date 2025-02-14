@@ -18,7 +18,7 @@
   "err_seed_invalid_words": "La Frase Clave de Semilla no tiene palabras válidas: {{words}}.",
   "err_seed_invalid_spaces": "La Frase Clave de Semilla tiene espacios adicionales.",
   "err_pins_no_match": "Las contraseñas no coinciden",
-  "err_pins_min_length": "La contraseña debe tener al menos 4 caracteres",
+  "err_pins_min_length": "La contraseña debe tener al menos 8 caracteres",
   "backup_needed": "Debe hacer una copia de seguridad de su frase de semilla antes de poder sincronizar una clave.",
   "seed_phrase_invalid": "La frase de semilla no es válida.",
   "err_setting_key": "Algo salió mal durante la configuración de su clave.",
