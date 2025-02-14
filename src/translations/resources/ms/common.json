@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "Kunci SSP",
+    "moto": "Selamat. Ringkas. Berkuasa."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Kembali",
+  "cancel": "Batal",
+  "key_seed_phrase": "Frasa Benih Kunci",
+  "refresh": "Segar Semula",
+  "settings": "Tetapan",
+  "restore": "Pulihkan",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Dikuasakan oleh",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "help": "Bantuan",
+  "save": "Simpan",
+  "confirm": "Sahkan",
+  "ask_me_later": "Tanya saya kemudian",
+  "chain": "Rantai",
+  "wallet": "Dompet"
 }
