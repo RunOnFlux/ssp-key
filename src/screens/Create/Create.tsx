@@ -40,6 +40,7 @@ import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from '../../components/CreationSteps/CreationSteps';
 import ToastNotif from '../../components/Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';
+import WeakPassword from '../../components/WeakPassword/WeakPassword';
 
 type Props = {
   navigation: any;
@@ -63,6 +64,7 @@ function Create({ navigation }: Props) {
   const [mnemonicShow, setMnemonicShow] = useState(false);
   const [WSPbackedUp, setWSPbackedUp] = useState(false);
   const [wspWasShown, setWSPwasShown] = useState(false);
+  const [weakPasswordOpen, setWeakPasswordOpen] = useState(false);
   const { t } = useTranslation(['cr', 'common']);
   const { darkMode, Common, Fonts, Gutters, Layout, Images, Colors } =
     useTheme();
@@ -289,6 +291,35 @@ function Create({ navigation }: Props) {
       });
   };
 
+  const isPasswordStrong = (password: string) => {
+    return (
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[a-z]/.test(password) &&
+      /[0-9]/.test(password) &&
+      /[!@#$%^&*]/.test(password)
+    );
+  };
+
+  const checkPasswordStrength = () => {
+    if (!isPasswordStrong(password)) {
+      setWeakPasswordOpen(true);
+    } else {
+      setupKey();
+    }
+  };
+
+  const handleWeakPassword = (status: boolean) => {
+    console.log('Weak password', status);
+    // if status is true, user confirms the password is weak and wants to continue
+    if (status === true) {
+      setWeakPasswordOpen(false);
+      setupKey();
+    } else {
+      setWeakPasswordOpen(false);
+    }
+  };
+
   return (
     <View style={[Layout.fullSize, Layout.fill, Layout.scrollSpaceBetween]}>
       <View
@@ -414,7 +445,7 @@ function Create({ navigation }: Props) {
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
-            onPressIn={() => setupKey()}
+            onPressIn={() => checkPasswordStrength()}
           >
             <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {t('cr:setup_key')}
@@ -646,6 +677,10 @@ function Create({ navigation }: Props) {
         </ScrollView>
         <ToastNotif />
       </Modal>
+      <WeakPassword
+        isOpen={weakPasswordOpen}
+        actionStatus={handleWeakPassword}
+      />
       {!keyboardVisible && <PoweredByFlux />}
     </View>
   );

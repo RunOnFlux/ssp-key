@@ -42,6 +42,7 @@ import { useAppSelector, useAppDispatch } from '../../hooks';
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from '../../components/CreationSteps/CreationSteps';
+import WeakPassword from '../../components/WeakPassword/WeakPassword';
 // import Headerbar from '../../components/Headerbar/Headerbar';
 
 type Props = {
@@ -73,7 +74,7 @@ function Restore({ navigation }: Props) {
     useTheme();
   const blockchainConfig = blockchains[identityChain];
   const keyboardVisible = useKeyboardVisible();
-
+  const [weakPasswordOpen, setWeakPasswordOpen] = useState(false);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
       type,
@@ -331,6 +332,35 @@ function Restore({ navigation }: Props) {
     }
   };
 
+  const isPasswordStrong = (password: string) => {
+    return (
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[a-z]/.test(password) &&
+      /[0-9]/.test(password) &&
+      /[!@#$%^&*]/.test(password)
+    );
+  };
+
+  const checkPasswordStrength = () => {
+    if (!isPasswordStrong(password)) {
+      setWeakPasswordOpen(true);
+    } else {
+      setupImportKey();
+    }
+  };
+
+  const handleWeakPassword = (status: boolean) => {
+    console.log('Weak password', status);
+    // if status is true, user confirms the password is weak and wants to continue
+    if (status === true) {
+      setWeakPasswordOpen(false);
+      setupImportKey();
+    } else {
+      setWeakPasswordOpen(false);
+    }
+  };
+
   return (
     <View style={[Layout.fullSize, Layout.fill, Layout.scrollSpaceBetween]}>
       <View
@@ -498,7 +528,7 @@ function Restore({ navigation }: Props) {
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
-            onPressIn={() => setupImportKey()}
+            onPressIn={() => checkPasswordStrength()}
           >
             <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {t('cr:import_key')}
@@ -735,6 +765,10 @@ function Restore({ navigation }: Props) {
         </ScrollView>
         <ToastNotif />
       </Modal>
+      <WeakPassword
+        isOpen={weakPasswordOpen}
+        actionStatus={handleWeakPassword}
+      />
       {!keyboardVisible && <PoweredByFlux />}
     </View>
   );
