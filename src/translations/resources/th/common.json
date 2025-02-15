@@ -1,21 +1,21 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "คีย์ SSP",
+    "moto": "ปลอดภัย. เรียบง่าย. ทรงพลัง."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "กลับ",
+  "cancel": "ยกเลิก",
+  "key_seed_phrase": "วลีเมล็ดคีย์",
+  "refresh": "รีเฟรช",
+  "settings": "การตั้งค่า",
+  "restore": "กู้คืน",
   "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet"
+  "powered_by": "ขับเคลื่อนโดย",
+  "ok": "ตกลง",
+  "help": "ช่วยเหลือ",
+  "save": "บันทึก",
+  "confirm": "ยืนยัน",
+  "ask_me_later": "ถามฉันภายหลัง",
+  "chain": "เชน",
+  "wallet": "กระเป๋าเงิน"
 }
