@@ -22,6 +22,7 @@ import Scanner from '../../components/Scanner/Scanner';
 import Navbar from '../../components/Navbar/Navbar';
 import PublicNoncesRequest from '../..//components/PublicNoncesRequest/PublicNoncesRequest';
 import PublicNoncesSuccess from '../../components/PublicNoncesSuccess/PublicNoncesSuccess';
+import Receive from '../../components/Receive/Receive';
 import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
@@ -111,6 +112,7 @@ function Home({ navigation }: Props) {
   const [syncNeededModalOpen, setSyncNeededModalOpen] = useState(false);
   const [manualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
@@ -1060,6 +1062,11 @@ function Home({ navigation }: Props) {
     }
   };
 
+  const handleReceiveModalAction = () => {
+    console.log('receive modal close.');
+    setReceiveModalOpen(false);
+  };
+
   const handleAuthenticationOpen = (status: boolean) => {
     console.log(status);
     console.log('authentication modal close.');
@@ -1117,6 +1124,22 @@ function Home({ navigation }: Props) {
           )}
           {!submittingTransaction && !rawTx && !syncReq && !publicNoncesReq && (
             <>
+              <TouchableOpacity
+                onPressIn={() => setReceiveModalOpen(true)}
+                style={[Layout.row, { height: 30, marginTop: -30 }]}
+              >
+                <IconB name="qrcode" size={30} color={Colors.textGray400} />
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBold,
+                    Gutters.tinyTinyTMargin,
+                    Gutters.tinyTinyLMargin,
+                  ]}
+                >
+                  {t('common:receive')}
+                </Text>
+              </TouchableOpacity>
               <View
                 style={[
                   Layout.fill,
@@ -1270,6 +1293,9 @@ function Home({ navigation }: Props) {
           )}
           {manualInputModalOpen && (
             <ManualInput actionStatus={handleManualInput} />
+          )}
+          {receiveModalOpen && (
+            <Receive actionStatus={handleReceiveModalAction} />
           )}
           {isMenuModalOpen && (
             <MenuModal actionStatus={handleMenuModalAction} />

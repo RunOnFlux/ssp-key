@@ -343,7 +343,11 @@ function Restore({ navigation }: Props) {
   };
 
   const checkPasswordStrength = () => {
-    if (!isPasswordStrong(password)) {
+    if (password.length < 8) {
+      displayMessage('error', t('cr:err_pins_min_length'));
+    } else if (password !== passwordConfirm) {
+      displayMessage('error', t('cr:err_pins_no_match'));
+    } else if (!isPasswordStrong(password)) {
       setWeakPasswordOpen(true);
     } else {
       setupImportKey();
