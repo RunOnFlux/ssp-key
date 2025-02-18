@@ -46,6 +46,7 @@
     "events": "3.3.0",
     "fastestsmallesttextencoderdecoder": "1.0.22",
     "i18next": "24.2.2",
+    "jail-monkey": "2.8.3",
     "postinstall-postinstall": "2.1.0",
     "process": "0.11.10",
     "react": "18.3.1",

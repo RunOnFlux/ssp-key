@@ -5,12 +5,14 @@ import {
   Settings,
   I18nManager,
   Platform,
+  Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import * as Keychain from 'react-native-keychain';
 import * as CryptoJS from 'crypto-js';
 import { getUniqueId } from 'react-native-device-info';
+import JailMonkey from 'jail-monkey';
 import { useTheme } from '../../hooks';
 import { Brand } from '../../components';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
@@ -23,6 +25,18 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
   const { i18n } = useTranslation();
   const { t } = useTranslation(['cr', 'common']);
   const { Layout, Gutters } = useTheme();
+
+  const checkJailbroken = () => {
+    const isJailbroken = JailMonkey.isJailBroken();
+    if (isJailbroken) {
+      console.log('this device is jailbroken/rooted, be careful');
+      Alert.alert('this device is jailbroken/rooted, be careful');
+      return;
+    } else {
+      console.log('this device is not jailbroken/rooted, proceed');
+      Alert.alert('this device is not jailbroken/rooted, proceed');
+    }
+  };
 
   const init = async () => {
     try {
@@ -126,10 +140,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
         }, 500),
       );
       setDefaultTheme({ theme: 'default', darkMode: null });
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' }],
-      });
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (error) {
       console.log(error);
     }
@@ -137,6 +148,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
 
   useEffect(() => {
     init();
+    checkJailbroken();
   }, []);
 
   return (

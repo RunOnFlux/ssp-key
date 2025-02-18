@@ -6058,6 +6058,11 @@ iterator.prototype@^1.1.4:
     has-symbols "^1.1.0"
     set-function-name "^2.0.2"
 
+jail-monkey@2.8.3:
+  version "2.8.3"
+  resolved "https://registry.yarnpkg.com/jail-monkey/-/jail-monkey-2.8.3.tgz#f3b92b5c517c177340744d7bdf157386dc5b9da5"
+  integrity sha512-+MMjFZ45svBkPurEn/QLZ4K8+Dc7XRWta3gofjSqiJemdIfD7MZeR2z5g6T3D2IlNUDqJ7lISYM21YWmSIoDZA==
+
 jest-changed-files@^29.7.0:
   version "29.7.0"
   resolved "https://registry.yarnpkg.com/jest-changed-files/-/jest-changed-files-29.7.0.tgz#1c06d07e77c78e1585d020424dedc10d6e17ac3a"
