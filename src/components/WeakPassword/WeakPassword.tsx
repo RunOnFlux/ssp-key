@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import BlurOverlay from '../../BlurOverlay';
 
 const WeakPassword = (props: {
   isOpen: boolean;
@@ -26,6 +27,7 @@ const WeakPassword = (props: {
       visible={props.isOpen}
       onRequestClose={() => reject()}
     >
+      <BlurOverlay />
       <ScrollView
         style={[Layout.fill, Common.modalBackdrop]}
         contentInset={{ bottom: 80 }}

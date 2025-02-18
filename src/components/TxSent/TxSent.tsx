@@ -11,6 +11,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { backends } from '@storage/backends';
+import BlurOverlay from '../../BlurOverlay';
 
 import { cryptos } from '../../types';
 
@@ -43,6 +44,7 @@ const TxSent = (props: {
       visible={true}
       onRequestClose={() => close()}
     >
+      <BlurOverlay />
       <ScrollView
         style={[Layout.fill, Common.modalBackdrop]}
         contentInset={{ bottom: 80 }}

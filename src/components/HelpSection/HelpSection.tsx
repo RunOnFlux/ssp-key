@@ -11,6 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import BlurOverlay from '../../BlurOverlay';
 
 const HelpSection = (props: {
   actionStatus: (status: boolean) => void;
@@ -51,6 +52,7 @@ const HelpSection = (props: {
       visible={props.visible}
       onRequestClose={() => close()}
     >
+      <BlurOverlay />
       <ScrollView
         keyboardShouldPersistTaps="always"
         style={[Layout.fill, Common.modalBackdrop]}

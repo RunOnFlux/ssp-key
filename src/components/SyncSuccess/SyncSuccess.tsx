@@ -15,6 +15,7 @@ import { cryptos } from '../../types';
 import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
 import { generateMultisigAddress } from '../../lib/wallet';
+import BlurOverlay from '../../BlurOverlay';
 
 import { useAppSelector } from '../../hooks';
 
@@ -109,6 +110,7 @@ const SyncSuccess = (props: {
       visible={true}
       onRequestClose={() => close()}
     >
+      <BlurOverlay />
       <ScrollView
         keyboardShouldPersistTaps="always"
         style={[Layout.fill, Common.modalBackdrop]}
