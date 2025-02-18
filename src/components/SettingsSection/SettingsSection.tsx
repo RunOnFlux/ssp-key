@@ -598,6 +598,7 @@ const SettingsSection = (props: {
         visible={isChainSelectOpen}
         onRequestClose={() => setIsChainSelectOpen(false)}
       >
+        <BlurOverlay />
         <ScrollView
           keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}
@@ -657,6 +658,7 @@ const SettingsSection = (props: {
         visible={isLanguageSelectOpen}
         onRequestClose={() => setIsLanguageSelectOpen(false)}
       >
+        <BlurOverlay />
         <ScrollView
           keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}

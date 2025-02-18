@@ -459,6 +459,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
         visible={isChainSelectOpen}
         onRequestClose={() => setIsChainSelectOpen(false)}
       >
+        <BlurOverlay />
         <ScrollView
           keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}
