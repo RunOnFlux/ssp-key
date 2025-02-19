@@ -29,6 +29,10 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
   const checkJailbroken = () => {
     const isJailbroken = JailMonkey.isJailBroken();
     if (isJailbroken) {
+      console.log('jailbroken');
+      if (__DEV__) {
+        return;
+      }
       // if ios, show alert with title and message
       if (Platform.OS === 'ios') {
         Alert.alert(t('cr:jailbroken_device_title'), t('cr:jailbroken_device'));
