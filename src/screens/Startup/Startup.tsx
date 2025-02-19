@@ -29,12 +29,12 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
   const checkJailbroken = () => {
     const isJailbroken = JailMonkey.isJailBroken();
     if (isJailbroken) {
-      console.log('this device is jailbroken/rooted, be careful');
-      Alert.alert('this device is jailbroken/rooted, be careful');
-      return;
-    } else {
-      console.log('this device is not jailbroken/rooted, proceed');
-      Alert.alert('this device is not jailbroken/rooted, proceed');
+      // if ios, show alert with title and message
+      if (Platform.OS === 'ios') {
+        Alert.alert(t('cr:jailbroken_device_title'), t('cr:jailbroken_device'));
+      } else {
+        Alert.alert(t('cr:rooted_device_title'), t('cr:rooted_device'));
+      }
     }
   };
 
