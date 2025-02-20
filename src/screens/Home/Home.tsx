@@ -1289,6 +1289,7 @@ function Home({ navigation }: Props) {
             <Authentication
               actionStatus={handleAuthenticationOpen}
               type="sensitive"
+              biomatricsAllowed={true}
             />
           )}
           {manualInputModalOpen && (

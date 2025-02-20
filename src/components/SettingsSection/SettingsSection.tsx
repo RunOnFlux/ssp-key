@@ -17,6 +17,12 @@ import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { storage } from '../../store/index'; // mmkv
+import Authentication from '../Authentication/Authentication';
+import { setSSPInitialState } from '../../store/ssp';
+
+import { setInitialStateForAllChains } from '../../store';
+
+import { useAppDispatch } from '../../hooks';
 
 import {
   backends,
@@ -64,11 +70,12 @@ const SettingsSection = (props: {
   const { i18n } = useTranslation();
   const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const blockchainConfig = blockchains[selectedChain];
-
+  const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const deviceLanguage =
     Platform.OS === 'ios'
       ? Settings.get('AppleLocale') || Settings.get('AppleLanguages')[0]
       : I18nManager.getConstants().localeIdentifier;
+  const dispatch = useAppDispatch();
 
   const deviceLanguageShort = deviceLanguage.split('_')[0].split('-')[0];
 
@@ -225,6 +232,31 @@ const SettingsSection = (props: {
     props.actionStatus(false);
   };
 
+  const handleBeginDeletion = () => {
+    setIsMainModalOpen(false);
+    setTimeout(() => {
+      setAuthenticationOpen(true);
+    }, 100);
+  };
+
+  const handleDelete = () => {
+    dispatch(setSSPInitialState());
+    setInitialStateForAllChains();
+    setTimeout(() => {
+      // navigate to welcome screen where keychain is reset
+      props.navigation.navigate('Welcome');
+    }, 100);
+  };
+
+  const handleAuthenticationOpen = (status: boolean) => {
+    setAuthenticationOpen(false);
+    if (status === true) {
+      handleDelete();
+    } else {
+      setIsMainModalOpen(true);
+    }
+  };
+
   const resetSSPRelay = () => {
     console.log('Reset SSP Relay');
     console.log(originalConfig.relay);
@@ -326,7 +358,7 @@ const SettingsSection = (props: {
                   Gutters.regularTMargin,
                 ]}
               >
-                <View style={[Gutters.smallBMargin]}>
+                <View style={[Gutters.regularBMargin]}>
                   <Text
                     style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
                   >
@@ -352,7 +384,41 @@ const SettingsSection = (props: {
                     </Text>
                   </TouchableOpacity>
                 </View>
-                <View style={[Gutters.smallBMargin]}>
+                <Text
+                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                >
+                  {t('home:delete_ssp_key_data')}
+                </Text>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Fonts.textJustify,
+                    Gutters.tinyTMargin,
+                  ]}
+                >
+                  {t('home:delete_ssp_key_data_desc')}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    Common.button.outlineRounded,
+                    Common.button.secondaryButton,
+                    Gutters.tinyTMargin,
+                  ]}
+                  onPress={() => handleBeginDeletion()}
+                >
+                  <Text
+                    style={[
+                      Fonts.textTiny,
+                      Fonts.textBluePrimary,
+                      Gutters.tinyVPadding,
+                      Gutters.tinyHPadding,
+                    ]}
+                  >
+                    {t('home:delete_ssp_key')}
+                  </Text>
+                </TouchableOpacity>
+                <View style={[Gutters.smallBMargin, Gutters.regularTMargin]}>
                   <Text
                     style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
                   >
@@ -712,6 +778,13 @@ const SettingsSection = (props: {
           </View>
         </ScrollView>
       </Modal>
+      {authenticationOpen && (
+        <Authentication
+          actionStatus={handleAuthenticationOpen}
+          type="delete"
+          biomatricsAllowed={false}
+        />
+      )}
     </>
   );
 };

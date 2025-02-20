@@ -23,6 +23,7 @@ import BlurOverlay from '../../BlurOverlay';
 const Authentication = (props: {
   actionStatus: (status: boolean) => void;
   type: string;
+  biomatricsAllowed: boolean;
 }) => {
   // focusability of inputs
   const textInputA = useRef<TextInput | null>(null);
@@ -34,6 +35,9 @@ const Authentication = (props: {
   const [setupBiometrics, setSetupBiometrics] = useState(false);
 
   useEffect(() => {
+    if (!props.biomatricsAllowed) {
+      return;
+    }
     console.log('entered auth');
     Keychain.getSupportedBiometryType()
       .then(async (resultObject) => {
@@ -267,17 +271,28 @@ const Authentication = (props: {
                     ? t('home:auth_sync_ssp')
                     : props.type === 'pubnonces'
                       ? t('home:auth_sync_pub_nonces')
-                      : t('home:auth_sensitive_inf')}
+                      : props.type === 'delete'
+                        ? t('home:auth_delete_ssp_key_data')
+                        : t('home:auth_sensitive_inf')}
               </Text>
-              <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-                {props.type === 'tx'
-                  ? t('home:auth_confirm_with_pw')
-                  : props.type === 'sync'
+              {props.type !== 'delete' && (
+                <Text
+                  style={[
+                    Fonts.textBold,
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.smallTMargin,
+                  ]}
+                >
+                  {props.type === 'tx'
                     ? t('home:auth_confirm_with_pw')
-                    : props.type === 'pubnonces'
+                    : props.type === 'sync'
                       ? t('home:auth_confirm_with_pw')
-                      : t('home:auth_grant_access_pw')}
-              </Text>
+                      : props.type === 'pubnonces'
+                        ? t('home:auth_confirm_with_pw')
+                        : t('home:auth_grant_access_pw')}
+                </Text>
+              )}
 
               {biometricsAvailable && (
                 <IconB
