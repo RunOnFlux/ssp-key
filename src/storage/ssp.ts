@@ -19,7 +19,7 @@ export function loadSSPConfig() {
 loadSSPConfig();
 
 const ssp = {
-  relay: 'relay.ssp.runonflux.io',
+  relay: 'relay.sspwallet.io',
 };
 
 export function sspConfig() {
