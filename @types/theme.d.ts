@@ -1,5 +1,5 @@
 import Variables from '../src/theme/Variables';
-import { DefaultVariables, Fonts, Gutters, Images, Layout } from '../src/theme';
+import { Fonts, Gutters, Images, Layout } from '../src/theme';
 import { Theme as ReactNavigationTheme } from '@react-navigation/native/src/types';
 
 export type ThemeVariables = {
@@ -26,18 +26,15 @@ export type ThemeNavigationTheme = {
   colors: ThemeNavigationColors;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const fonts = Fonts(DefaultVariables);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const gutters = Gutters(DefaultVariables);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const images = Images(DefaultVariables);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const layout = Layout(DefaultVariables);
-
 export type CommonParams<C> = ThemeVariables &
   Pick<
-    Theme<typeof fonts, typeof gutters, typeof images, typeof layout, C>,
+    Theme<
+      ReturnType<typeof Fonts>,
+      ReturnType<typeof Gutters>,
+      ReturnType<typeof Images>,
+      ReturnType<typeof Layout>,
+      C
+    >,
     'Layout' | 'Gutters' | 'Fonts' | 'Images'
   >;
 

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import BlurOverlay from '../../BlurOverlay';
 
 const ManualInput = (props: { actionStatus: (data: string) => void }) => {
   const { t } = useTranslation(['home', 'common']);
@@ -42,6 +43,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
       transparent={true}
       visible={true}
     >
+      <BlurOverlay />
       <TouchableWithoutFeedback
         onPress={() => {
           handleCancel();

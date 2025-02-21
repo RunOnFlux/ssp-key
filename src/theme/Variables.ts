@@ -56,11 +56,13 @@ export const FontSize = {
  * Metrics Sizes
  */
 const tiny = 10;
+const tinyTiny = tiny * 0.5; // 5
 const tinySmall = tiny * 1.5; // 15
 const small = tiny * 2; // 20
 const regular = tiny * 3; // 30
 const large = regular * 2; // 60
 export const MetricsSizes = {
+  tinyTiny,
   tiny,
   tinySmall,
   small,

@@ -103,6 +103,7 @@ const PublicNoncesRequest = (props: {
         <Authentication
           actionStatus={handleAuthenticationOpen}
           type="pubnonces"
+          biomatricsAllowed={true}
         />
       )}
     </>

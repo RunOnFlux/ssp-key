@@ -17,11 +17,12 @@ import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { useKeyboardVisible } from '../../hooks/keyboardVisible';
-import { getUniqueId } from 'react-native-device-info';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import * as Keychain from 'react-native-keychain';
 import { blockchains } from '@storage/blockchains';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import ToastNotif from '../../components/Toast/Toast';
+import BlurOverlay from '../../BlurOverlay';
 
 import * as CryptoJS from 'crypto-js';
 
@@ -41,6 +42,7 @@ import { useAppSelector, useAppDispatch } from '../../hooks';
 import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from '../../components/CreationSteps/CreationSteps';
+import WeakPassword from '../../components/WeakPassword/WeakPassword';
 // import Headerbar from '../../components/Headerbar/Headerbar';
 
 type Props = {
@@ -72,7 +74,7 @@ function Restore({ navigation }: Props) {
     useTheme();
   const blockchainConfig = blockchains[identityChain];
   const keyboardVisible = useKeyboardVisible();
-
+  const [weakPasswordOpen, setWeakPasswordOpen] = useState(false);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
       type,
@@ -190,11 +192,44 @@ function Restore({ navigation }: Props) {
     setInitialStateForAllChains();
     setIsLoading(true);
 
-    getUniqueId()
-      .then(async (id) => {
-        // clean up password from encrypted storage
-        await EncryptedStorage.clear();
-        const pwForEncryption = id + password;
+    // generate random encryption key
+    // clear all data
+    EncryptedStorage.clear() // to be removed in later releases
+      .then(async () => {
+        await Keychain.resetGenericPassword({
+          service: 'enc_key',
+        });
+        await Keychain.resetGenericPassword({
+          service: 'sspkey_pw',
+        });
+        await Keychain.resetGenericPassword({
+          service: 'sspkey_pw_bio',
+        });
+        await Keychain.resetGenericPassword({
+          service: 'sspkey_pw_hash',
+        });
+        await Keychain.resetGenericPassword({
+          service: 'fcm_key_token',
+        });
+        await Keychain.resetGenericPassword({
+          service: 'salt',
+        });
+        const rnd = crypto.getRandomValues(new Uint8Array(64));
+        const encKey = Buffer.from(rnd).toString('hex');
+        await Keychain.setGenericPassword('enc_key', encKey, {
+          service: 'enc_key',
+          storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        });
+        // generate salt
+        const salt = CryptoJS.lib.WordArray.random(64).toString();
+        // store salt, used for hashing password
+        await Keychain.setGenericPassword('salt', salt, {
+          service: 'salt',
+          storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        });
+        const pwForEncryption = encKey + password;
         const mnemonicBlob = CryptoJS.AES.encrypt(
           mnemonicPhrase,
           pwForEncryption,
@@ -225,8 +260,52 @@ function Restore({ navigation }: Props) {
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
         setXprivKeyIdentity(xprivBlob);
         setXpubKeyIdentity(xpubBlob);
-        // In keychain plain password is stored (only password not id)
-        await EncryptedStorage.setItem('ssp_key_pw', password);
+        // generate hash of our password
+        const key256Bits1000Iterations = CryptoJS.PBKDF2(password, salt, {
+          keySize: 256 / 32,
+          iterations: 1000, // more is too slow, favor performance, this is already 0.1 seconds
+        });
+        const pwHash = key256Bits1000Iterations.toString();
+        // store the pwHash
+        // this is used in case password is supplied and not biometrics
+        await Keychain.setGenericPassword('sspkey_pw_hash', pwHash, {
+          service: 'sspkey_pw_hash',
+          storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        });
+        // encrypt password with enc_key
+        const encryptedPassword = CryptoJS.AES.encrypt(
+          password,
+          encKey,
+        ).toString();
+        await Keychain.setGenericPassword('sspkey_pw', encryptedPassword, {
+          service: 'sspkey_pw',
+          storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        });
+        const isBiometricsSupported = await Keychain.getSupportedBiometryType();
+        if (isBiometricsSupported) {
+          await Keychain.setGenericPassword(
+            'sspkey_pw_bio',
+            encryptedPassword,
+            {
+              service: 'sspkey_pw_bio',
+              storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption, on android setGenericPassword PROMPTS for biometric inputs using AES_GCM, RSA does not prompt for it. iOS does not prompt.
+              accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
+              accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
+              securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
+              authenticationPrompt: {
+                title: t('cr:setup_biometrics'),
+                // subtitle: textForPrompt, // android only
+                // description: textForPrompt, // android only
+                cancel: t('common:cancel'),
+              },
+            },
+          ).catch((error) => {
+            // not critical, proceed without it
+            console.log(error);
+          });
+        }
         setIsModalOpen(false);
         setIsLoading(false);
         setMnemonic('');
@@ -240,7 +319,7 @@ function Restore({ navigation }: Props) {
       .catch((error) => {
         setIsLoading(false);
         dispatch(setSSPInitialState());
-        displayMessage('error', error.message || t('cr:err_setting_key'));
+        displayMessage('error', t('cr:err_setting_key'));
         console.log(error.message);
       });
   };
@@ -250,6 +329,39 @@ function Restore({ navigation }: Props) {
       navigation.navigate('Home');
     } else {
       navigation.navigate('Welcome');
+    }
+  };
+
+  const isPasswordStrong = (password: string) => {
+    return (
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[a-z]/.test(password) &&
+      /[0-9]/.test(password) &&
+      /[!@#$%^&*]/.test(password)
+    );
+  };
+
+  const checkPasswordStrength = () => {
+    if (password.length < 8) {
+      displayMessage('error', t('cr:err_pins_min_length'));
+    } else if (password !== passwordConfirm) {
+      displayMessage('error', t('cr:err_pins_no_match'));
+    } else if (!isPasswordStrong(password)) {
+      setWeakPasswordOpen(true);
+    } else {
+      setupImportKey();
+    }
+  };
+
+  const handleWeakPassword = (status: boolean) => {
+    console.log('Weak password', status);
+    // if status is true, user confirms the password is weak and wants to continue
+    if (status === true) {
+      setWeakPasswordOpen(false);
+      setupImportKey();
+    } else {
+      setWeakPasswordOpen(false);
     }
   };
 
@@ -401,6 +513,18 @@ function Restore({ navigation }: Props) {
               />
             </TouchableOpacity>
           </View>
+          <Text
+            style={[
+              Fonts.textTinyTiny,
+              Gutters.tinyMargin,
+              Fonts.textCenter,
+              Gutters.smallRMargin,
+              Gutters.smallLMargin,
+              Gutters.smallBMargin,
+            ]}
+          >
+            {t('cr:strong_password')}
+          </Text>
           <TouchableOpacity
             style={[
               Common.button.rounded,
@@ -408,7 +532,7 @@ function Restore({ navigation }: Props) {
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
-            onPressIn={() => setupImportKey()}
+            onPressIn={() => checkPasswordStrength()}
           >
             <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {t('cr:import_key')}
@@ -432,6 +556,7 @@ function Restore({ navigation }: Props) {
         visible={isModalOpen}
         onRequestClose={() => handleCancel()}
       >
+        <BlurOverlay />
         <ScrollView
           keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}
@@ -481,18 +606,77 @@ function Restore({ navigation }: Props) {
               <Divider color={Colors.textGray200} />
               <Text
                 style={[
-                  Fonts.textItalic,
-                  Fonts.textBold,
-                  Fonts.textSmall,
-                  Fonts.textCenter,
-                  Gutters.tinyBMargin,
+                  Fonts.textTinyTiny,
+                  Fonts.textLight,
+                  Gutters.tinyTMargin,
+                  Fonts.textJustify,
+                  Fonts.textError,
                 ]}
-                selectable={true}
               >
-                {mnemonicShow
-                  ? mnemonic
-                  : '*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***'}
+                {t('cr:ssp_key_mnemonic_sec')}
               </Text>
+              <View
+                style={[
+                  { borderWidth: 1, borderColor: Colors.textInput },
+                  Gutters.smallTMargin,
+                  Gutters.smallBMargin,
+                ]}
+              >
+                <Text
+                  selectable={true}
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.tinyMargin,
+                    Fonts.textBold,
+                  ]}
+                >
+                  {mnemonicShow
+                    ? mnemonic
+                        .split(' ')
+                        .slice(0, Math.round(mnemonic.split(' ').length / 3))
+                        .join(' ')
+                    : '*** *** *** *** *** *** *** ***'}
+                </Text>
+                <Text
+                  selectable={true}
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.tinyMargin,
+                    Fonts.textBold,
+                  ]}
+                >
+                  {mnemonicShow
+                    ? mnemonic
+                        .split(' ')
+                        .slice(
+                          Math.round(mnemonic.split(' ').length / 3),
+                          Math.round((mnemonic.split(' ').length / 3) * 2),
+                        )
+                        .join(' ')
+                    : '*** *** *** *** *** *** *** ***'}
+                </Text>
+                <Text
+                  selectable={true}
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.tinyMargin,
+                    Fonts.textBold,
+                  ]}
+                >
+                  {mnemonicShow
+                    ? mnemonic
+                        .split(' ')
+                        .slice(
+                          Math.round((mnemonic.split(' ').length / 3) * 2),
+                          mnemonic.split(' ').length,
+                        )
+                        .join(' ')
+                    : '*** *** *** *** *** *** *** ***'}
+                </Text>
+              </View>
               <View style={[Gutters.tinyBMargin]}>
                 <TouchableOpacity
                   style={[
@@ -585,6 +769,10 @@ function Restore({ navigation }: Props) {
         </ScrollView>
         <ToastNotif />
       </Modal>
+      <WeakPassword
+        isOpen={weakPasswordOpen}
+        actionStatus={handleWeakPassword}
+      />
       {!keyboardVisible && <PoweredByFlux />}
     </View>
   );

@@ -22,8 +22,8 @@ import Scanner from '../../components/Scanner/Scanner';
 import Navbar from '../../components/Navbar/Navbar';
 import PublicNoncesRequest from '../..//components/PublicNoncesRequest/PublicNoncesRequest';
 import PublicNoncesSuccess from '../../components/PublicNoncesSuccess/PublicNoncesSuccess';
-import { getUniqueId } from 'react-native-device-info';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Receive from '../../components/Receive/Receive';
+import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
@@ -112,6 +112,7 @@ function Home({ navigation }: Props) {
   const [syncNeededModalOpen, setSyncNeededModalOpen] = useState(false);
   const [manualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
@@ -188,11 +189,26 @@ function Home({ navigation }: Props) {
     const blockchainConfigToUse = blockchains[chainToUse];
     if (!xpubKey || !xprivKey) {
       // just a precaution to make sure xpub and xpriv are set. Should acutally never end up here
-      getUniqueId()
-        .then(async (id) => {
+      Keychain.getGenericPassword({
+        service: 'enc_key',
+        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+      })
+        .then(async (idData) => {
           // clean up password from encrypted storage
-          const password = await EncryptedStorage.getItem('ssp_key_pw');
-          const pwForEncryption = id + password;
+          const passwordData = await Keychain.getGenericPassword({
+            service: 'sspkey_pw',
+            rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+          });
+          if (!passwordData || !idData) {
+            throw new Error('Unable to decrypt stored data');
+          }
+          // decrypt passwordData.password with idData.password
+          const password = CryptoJS.AES.decrypt(
+            passwordData.password,
+            idData.password,
+          );
+          const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
+          const pwForEncryption = idData.password + passwordDecrypted;
           const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
           const mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
           // generate master xpriv, xpub for chain
@@ -245,11 +261,26 @@ function Home({ navigation }: Props) {
     suppliedXpubWallet: string,
     chain: keyof cryptos,
   ) => {
-    getUniqueId()
-      .then(async (id) => {
-        // get password from encrypted storage
-        const password = await EncryptedStorage.getItem('ssp_key_pw');
-        const pwForEncryption = id + password;
+    Keychain.getGenericPassword({
+      service: 'enc_key',
+      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+    })
+      .then(async (idData) => {
+        // clean up password from encrypted storage
+        const passwordData = await Keychain.getGenericPassword({
+          service: 'sspkey_pw',
+          rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+        });
+        if (!passwordData || !idData) {
+          throw new Error('Unable to decrypt stored data');
+        }
+        // decrypt passwordData.password with idData.password
+        const password = CryptoJS.AES.decrypt(
+          passwordData.password,
+          idData.password,
+        );
+        const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
+        const pwForEncryption = idData.password + passwordDecrypted;
         const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
         const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
         const addrInfo = generateMultisigAddress(
@@ -319,11 +350,26 @@ function Home({ navigation }: Props) {
   };
 
   const generateAddressesForSyncIdentity = (suppliedXpubWallet: string) => {
-    getUniqueId()
-      .then(async (id) => {
-        // get password from encrypted storage
-        const password = await EncryptedStorage.getItem('ssp_key_pw');
-        const pwForEncryption = id + password;
+    Keychain.getGenericPassword({
+      service: 'enc_key',
+      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+    })
+      .then(async (idData) => {
+        // clean up password from encrypted storage
+        const passwordData = await Keychain.getGenericPassword({
+          service: 'sspkey_pw',
+          rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+        });
+        if (!passwordData || !idData) {
+          throw new Error('Unable to decrypt stored data');
+        }
+        // decrypt passwordData.password with idData.password
+        const password = CryptoJS.AES.decrypt(
+          passwordData.password,
+          idData.password,
+        );
+        const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
+        const pwForEncryption = idData.password + passwordDecrypted;
         const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
         const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
         const addrInfo = generateMultisigAddress(
@@ -514,9 +560,27 @@ function Home({ navigation }: Props) {
         const nonce = generatePublicNonce();
         ppNonces.push(nonce);
       }
-      const id = await getUniqueId();
-      const password = await EncryptedStorage.getItem('ssp_key_pw');
-      const pwForEncryption = id + password;
+      // get from keychain
+      // encryption key
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+      });
+      if (!passwordData || !encryptionKey) {
+        throw new Error('Unable to decrypt stored data');
+      }
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const passwordDecryptedString = passwordDecrypted.toString(
+        CryptoJS.enc.Utf8,
+      );
+      const pwForEncryption = encryptionKey.password + passwordDecryptedString;
       const stringifiedNonces = JSON.stringify(ppNonces);
       const encryptedNonces = CryptoJS.AES.encrypt(
         stringifiedNonces,
@@ -568,9 +632,27 @@ function Home({ navigation }: Props) {
     try {
       console.log('tx request');
       setSubmittingTransaction(true);
-      const id = await getUniqueId();
-      const password = await EncryptedStorage.getItem('ssp_key_pw');
-      const pwForEncryption = id + password;
+      // get from keychain
+      // encryption key
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+      });
+      if (!passwordData || !encryptionKey) {
+        throw new Error('Unable to decrypt stored data');
+      }
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const passwordDecryptedString = passwordDecrypted.toString(
+        CryptoJS.enc.Utf8,
+      );
+      const pwForEncryption = encryptionKey.password + passwordDecryptedString;
 
       const xpubk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
       const xpubKeyDecrypted = xpubk.toString(CryptoJS.enc.Utf8);
@@ -980,6 +1062,11 @@ function Home({ navigation }: Props) {
     }
   };
 
+  const handleReceiveModalAction = () => {
+    console.log('receive modal close.');
+    setReceiveModalOpen(false);
+  };
+
   const handleAuthenticationOpen = (status: boolean) => {
     console.log(status);
     console.log('authentication modal close.');
@@ -1037,6 +1124,22 @@ function Home({ navigation }: Props) {
           )}
           {!submittingTransaction && !rawTx && !syncReq && !publicNoncesReq && (
             <>
+              <TouchableOpacity
+                onPressIn={() => setReceiveModalOpen(true)}
+                style={[Layout.row, { height: 30, marginTop: -30 }]}
+              >
+                <IconB name="qrcode" size={30} color={Colors.textGray400} />
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBold,
+                    Gutters.tinyTinyTMargin,
+                    Gutters.tinyTinyLMargin,
+                  ]}
+                >
+                  {t('common:receive')}
+                </Text>
+              </TouchableOpacity>
               <View
                 style={[
                   Layout.fill,
@@ -1186,10 +1289,14 @@ function Home({ navigation }: Props) {
             <Authentication
               actionStatus={handleAuthenticationOpen}
               type="sensitive"
+              biomatricsAllowed={true}
             />
           )}
           {manualInputModalOpen && (
             <ManualInput actionStatus={handleManualInput} />
+          )}
+          {receiveModalOpen && (
+            <Receive actionStatus={handleReceiveModalAction} />
           )}
           {isMenuModalOpen && (
             <MenuModal actionStatus={handleMenuModalAction} />

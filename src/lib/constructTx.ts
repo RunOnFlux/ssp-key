@@ -333,14 +333,11 @@ export async function signAndBroadcastEVM(
         chain: CHAIN,
         combinedAddress: combinedAddresses,
         salt: accountAbstraction.helpers.create2Helpers.saltToHex(accountSalt),
-        // @ts-expect-error 'error' is of type 'unknown'
         entryPoint: getEntryPoint(CHAIN),
       });
 
     const smartAccountClient = createSmartAccountClient({
-      // @ts-expect-error 'error' is of type 'unknown'
       transport,
-      // @ts-expect-error 'error' is of type 'unknown'
       chain: CHAIN,
       account: multiSigSmartAccount,
     });

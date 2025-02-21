@@ -11,11 +11,11 @@ import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-import { getUniqueId } from 'react-native-device-info';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import * as Keychain from 'react-native-keychain';
 import { useAppSelector } from '../../hooks';
 import { cryptos } from '../../types';
 import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
+import BlurOverlay from '../../BlurOverlay';
 
 import { blockchains } from '@storage/blockchains';
 
@@ -36,18 +36,33 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const [xpubVisible, setXpubVisible] = useState(false);
   const [xprivVisible, setXprivVisible] = useState(false);
   const [mnemonicVisible, setMnemonicVisible] = useState(false);
-  const { t } = useTranslation(['home', 'common']);
+  const { t } = useTranslation(['home', 'common', 'cr']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const blockchainConfig = blockchains[selectedChain];
   const [activityLoading, setActivityLoading] = useState(false);
 
   useEffect(() => {
-    getUniqueId()
-      .then(async (id) => {
-        console.log('here');
+    Keychain.getGenericPassword({
+      service: 'enc_key',
+      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+    })
+      .then(async (idData) => {
         // clean up password from encrypted storage
-        const password = await EncryptedStorage.getItem('ssp_key_pw');
-        const pwForEncryption = id + password;
+        const passwordData = await Keychain.getGenericPassword({
+          service: 'sspkey_pw',
+          rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+        });
+        if (!passwordData || !idData) {
+          throw new Error('Unable to decrypt stored data');
+        }
+        // decrypt passwordData.password with idData.password
+        const password = CryptoJS.AES.decrypt(
+          passwordData.password,
+          idData.password,
+        );
+        const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
+
+        const pwForEncryption = idData.password + passwordDecrypted;
         const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
         const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
         const xpubk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
@@ -130,6 +145,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
         visible={isMainModalOpen}
         onRequestClose={() => close()}
       >
+        <BlurOverlay />
         <ScrollView
           keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}
@@ -250,19 +266,57 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 >
                   {t('home:chain_xpriv_desc', { chain: blockchainConfig.name })}
                 </Text>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Gutters.tinyTMargin,
+                    Fonts.textJustify,
+                    Fonts.textError,
+                  ]}
+                >
+                  {t('home:sensitive_data_warning', {
+                    sensitive_data: t('home:chain_xpriv', {
+                      chain: blockchainConfig.name,
+                    }),
+                  })}
+                </Text>
                 <View>
                   {activityLoading && <ActivityIndicator size={'large'} />}
                   {!activityLoading && (
-                    <Text
-                      selectable={true}
-                      style={[
-                        Fonts.textTiny,
-                        Fonts.textCenter,
-                        Gutters.smallMargin,
-                      ]}
-                    >
-                      {xprivVisible ? deryptedXpriv : '*** *** *** *** *** ***'}
-                    </Text>
+                    <>
+                      <Text
+                        selectable={true}
+                        style={[
+                          Fonts.textTiny,
+                          Fonts.textCenter,
+                          Gutters.tinyMargin,
+                        ]}
+                      >
+                        {xprivVisible
+                          ? deryptedXpriv.slice(
+                              0,
+                              Math.floor(deryptedXpriv.length / 2),
+                            )
+                          : '*** *** *** *** *** ***'}
+                      </Text>
+                      <Text
+                        selectable={true}
+                        style={[
+                          Fonts.textTiny,
+                          Fonts.textCenter,
+                          Gutters.tinyMargin,
+                          Gutters.smallBMargin,
+                        ]}
+                      >
+                        {xprivVisible
+                          ? deryptedXpriv.slice(
+                              Math.floor(deryptedXpriv.length / 2),
+                              deryptedXpriv.length,
+                            )
+                          : '*** *** *** *** *** ***'}
+                      </Text>
+                    </>
                   )}
                 </View>
               </View>
@@ -293,18 +347,84 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 >
                   {t('home:ssp_key_mnemonic_desc')}
                 </Text>
-                <View>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Gutters.tinyTMargin,
+                    Fonts.textJustify,
+                    Fonts.textError,
+                  ]}
+                >
+                  {t('cr:ssp_key_mnemonic_sec')}
+                </Text>
+                <View
+                  style={[
+                    { borderWidth: 1, borderColor: Colors.textInput },
+                    Gutters.smallTMargin,
+                    Gutters.smallBMargin,
+                  ]}
+                >
                   <Text
                     selectable={true}
                     style={[
-                      Fonts.textTiny,
+                      Fonts.textSmall,
                       Fonts.textCenter,
-                      Gutters.smallMargin,
+                      Gutters.tinyMargin,
+                      Fonts.textBold,
                     ]}
                   >
                     {mnemonicVisible
                       ? decryptedMnemonic
-                      : '*** *** *** *** *** ***'}
+                          .split(' ')
+                          .slice(
+                            0,
+                            Math.round(decryptedMnemonic.split(' ').length / 3),
+                          )
+                          .join(' ')
+                      : '*** *** *** *** *** *** *** ***'}
+                  </Text>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textCenter,
+                      Gutters.tinyMargin,
+                      Fonts.textBold,
+                    ]}
+                  >
+                    {mnemonicVisible
+                      ? decryptedMnemonic
+                          .split(' ')
+                          .slice(
+                            Math.round(decryptedMnemonic.split(' ').length / 3),
+                            Math.round(
+                              (decryptedMnemonic.split(' ').length / 3) * 2,
+                            ),
+                          )
+                          .join(' ')
+                      : '*** *** *** *** *** *** *** ***'}
+                  </Text>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textCenter,
+                      Gutters.tinyMargin,
+                      Fonts.textBold,
+                    ]}
+                  >
+                    {mnemonicVisible
+                      ? decryptedMnemonic
+                          .split(' ')
+                          .slice(
+                            Math.round(
+                              (decryptedMnemonic.split(' ').length / 3) * 2,
+                            ),
+                            decryptedMnemonic.split(' ').length,
+                          )
+                          .join(' ')
+                      : '*** *** *** *** *** *** *** ***'}
                   </Text>
                 </View>
               </View>
@@ -339,6 +459,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
         visible={isChainSelectOpen}
         onRequestClose={() => setIsChainSelectOpen(false)}
       >
+        <BlurOverlay />
         <ScrollView
           keyboardShouldPersistTaps="always"
           style={[Layout.fill, Common.modalBackdrop]}

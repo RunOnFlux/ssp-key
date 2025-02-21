@@ -200,7 +200,11 @@ const TransactionRequest = (props: {
         </TouchableOpacity>
       </View>
       {authenticationOpen && (
-        <Authentication actionStatus={handleAuthenticationOpen} type="tx" />
+        <Authentication
+          actionStatus={handleAuthenticationOpen}
+          type="tx"
+          biomatricsAllowed={true}
+        />
       )}
     </>
   );
