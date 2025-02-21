@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.Window
 import android.view.WindowManager
 import android.provider.Settings
 import android.widget.Toast
@@ -25,80 +24,58 @@ class MainActivity : ReactActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Apply tapjacking protection
-        applyTapjackingProtection()
-
-        // Retrieve the root view of the activity
-        val rootView = findViewById<View>(android.R.id.content).rootView
-        
-        // Set the filterTouchesWhenObscured property to true
-        rootView.filterTouchesWhenObscured = true
-
-        // Block screenshots & overlays
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        )
+        applySecurityFeatures()
     }
 
     override fun onResume() {
         super.onResume()
-
-        // Apply tapjacking protection
-        applyTapjackingProtection()
-
-        // Detect active overlays and warn users
         if (isOverlayEnabled(this)) {
-            Toast.makeText(this, "Warning: Screen overlays detected! Disable them for security.", Toast.LENGTH_LONG).show()
-
-            // Block user interaction when overlay is active
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-            )
+            warnAndBlockUser()
         } else {
-            // Re-enable user interaction if no overlays
-            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+            allowUserInteraction()
         }
     }
 
-    private fun applyTapjackingProtection() {
-        val rootView = findViewById<View>(android.R.id.content)
-        setFilterTouchesWhenObscured(rootView)
+    private fun applySecurityFeatures() {
+        // Block screenshots & screen recording
+        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
 
-        // Prevent tapjacking by setting flags
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-        )
+        // Prevent tapjacking by filtering touch events
+        enforceTapjackingProtection(findViewById(android.R.id.content))
     }
 
-    private fun setFilterTouchesWhenObscured(view: View?) {
+    private fun enforceTapjackingProtection(view: View?) {
         if (view is ViewGroup) {
             for (i in 0 until view.childCount) {
-                setFilterTouchesWhenObscured(view.getChildAt(i))
+                enforceTapjackingProtection(view.getChildAt(i))
             }
         }
-        view?.filterTouchesWhenObscured = true
+        view?.filterTouchesWhenObscured = true // Prevent touches if obscured by overlay
     }
 
     private fun isOverlayEnabled(context: Context): Boolean {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val runningServices = activityManager.runningAppProcesses
-        for (process in runningServices) {
-            if (process.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
-                return Settings.canDrawOverlays(context) || process.processName.contains("system_alert_window")
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return Settings.canDrawOverlays(context)
         }
         return false
     }
 
+    private fun warnAndBlockUser() {
+        Toast.makeText(this, "Security warning: Screen overlays detected! Please disable them.", Toast.LENGTH_LONG).show()
+        // Fully block user interaction when an overlay is active
+        window.setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+    }
+
+    private fun allowUserInteraction() {
+        // Restore user interaction
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+    }
+
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API 29+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (event.flags and MotionEvent.FLAG_WINDOW_IS_OBSCURED != 0) {
-                Toast.makeText(this, "Touch ignored due to security overlay", Toast.LENGTH_SHORT).show()
-                return false // Ignore the touch event
+                Toast.makeText(this, "Security alert: Touch ignored due to screen overlay.", Toast.LENGTH_SHORT).show()
+                return false
             }
         }
         return super.dispatchTouchEvent(event)
