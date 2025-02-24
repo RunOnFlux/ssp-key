@@ -1,22 +1,18 @@
 package io.runonflux.sspkey
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.provider.Settings
-import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.Toast
+import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
+import android.util.Log
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 class MainActivity : ReactActivity() {
-
-    private val securityHandler = Handler(Looper.getMainLooper())
 
     override fun getMainComponentName(): String = "SSPKey"
 
@@ -27,105 +23,55 @@ class MainActivity : ReactActivity() {
         super.onCreate(savedInstanceState)
 
         // Block screenshots & overlays
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
 
-        // Apply maximum tapjacking protection
-        applyTapjackingProtection()
-
-        // Start continuous overlay detection
-        startOverlayDetection()
+        // Start Accessibility Service for overlay detection
+        startOverlayDetectionService()
     }
 
     override fun onResume() {
         super.onResume()
 
-        // Reapply tapjacking protection
-        applyTapjackingProtection()
-
-        // Handle overlays if detected
-        handleOverlayDetection()
-    }
-
-    private fun applyTapjackingProtection() {
-        val rootView = findViewById<View>(android.R.id.content)
-        protectAllViews(rootView)
-    }
-
-    private fun protectAllViews(view: View?) {
-        if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                protectAllViews(view.getChildAt(i))
-            }
-        }
-        view?.filterTouchesWhenObscured = true
-    }
-
-    private fun isOverlayEnabled(): Boolean {
-        return Settings.canDrawOverlays(this)
-    }
-
-    private fun handleOverlayDetection() {
-        if (isOverlayEnabled() || detectHiddenOverlays()) {
+        // Check if overlays are detected
+        if (OverlayDetectionService.isOverlayActive(applicationContext)) {
+            disableUserInteraction()
             showOverlayWarning()
-            disableTouchEvents()
         } else {
-            enableTouchEvents()
+            enableUserInteraction()
         }
     }
 
-    private fun detectHiddenOverlays(): Boolean {
-        val accessibilityEnabled = Settings.Secure.getInt(
-            contentResolver,
-            Settings.Secure.ACCESSIBILITY_ENABLED,
-            0
+    private fun startOverlayDetectionService() {
+        val intent = Intent(this, OverlayDetectionService::class.java)
+        startService(intent)
+    }
+
+    private fun disableUserInteraction() {
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         )
-        return accessibilityEnabled == 1
     }
 
-    private fun showOverlayWarning() {
-        Toast.makeText(this, "Security Warning: Screen overlays detected! Disable them for maximum security.", Toast.LENGTH_LONG).show()
+    private fun enableUserInteraction() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
     }
 
-    private fun disableTouchEvents() {
-        findViewById<View>(android.R.id.content)?.apply {
-            isClickable = false
-            isFocusable = false
-            isEnabled = false
-            alpha = 0.5f  // Dim screen as a warning
+private fun showOverlayWarning() {
+    val alertDialog = AlertDialog.Builder(this)
+        .setTitle("Security Warning")
+        .setMessage("⚠️ Overlays detected! Please disable them in settings.")
+        .setCancelable(false)
+        .setPositiveButton("Open Settings") { dialog, _ ->
+            dialog.dismiss()
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+            startActivity(intent)
         }
-    }
-
-    private fun enableTouchEvents() {
-        findViewById<View>(android.R.id.content)?.apply {
-            isClickable = true
-            isFocusable = true
-            isEnabled = true
-            alpha = 1.0f
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-
-        if (!hasFocus && isOverlayEnabled()) {
-            showOverlayWarning()
-            disableTouchEvents()
-        } else {
-            enableTouchEvents()
-        }
-    }
-
-    private fun startOverlayDetection() {
-        securityHandler.postDelayed(object : Runnable {
-            override fun run() {
-                handleOverlayDetection()
-                securityHandler.postDelayed(this, 2000) // Check every 2 seconds
-            }
-        }, 2000)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        securityHandler.removeCallbacksAndMessages(null)
-    }
+        .setNegativeButton("Ignore") { dialog, _ -> dialog.dismiss() }
+        .create()
+    alertDialog.show()
+}
 }

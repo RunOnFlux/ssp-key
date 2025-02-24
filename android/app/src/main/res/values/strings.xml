@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">SSP Key</string>
+    <string name="accessibility_service_description">Overlay detection service running</string>
 </resources>
