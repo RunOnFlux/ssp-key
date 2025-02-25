@@ -1,16 +1,16 @@
 package io.runonflux.sspkey
 
 import android.os.Bundle
-import android.view.View
 import android.view.WindowManager
-import android.provider.Settings
-import android.widget.Toast
+import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
+import android.util.Log
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
-import android.view.ViewGroup
 
 class MainActivity : ReactActivity() {
 
@@ -27,35 +27,51 @@ class MainActivity : ReactActivity() {
             WindowManager.LayoutParams.FLAG_SECURE,
             WindowManager.LayoutParams.FLAG_SECURE
         )
+
+        // Start Accessibility Service for overlay detection
+        startOverlayDetectionService()
     }
 
     override fun onResume() {
         super.onResume()
 
-        // Apply tapjacking protection
-        applyTapjackingProtection()
-
-        // Detect active overlays and warn users
-        if (isOverlayEnabled(this)) {
-            Toast.makeText(this, "Warning: Screen overlays detected! Disable them for security.", Toast.LENGTH_LONG).show()
+        // Check if overlays are detected
+        if (OverlayDetectionService.isOverlayActive(applicationContext)) {
+            disableUserInteraction()
+            showOverlayWarning()
+        } else {
+            enableUserInteraction()
         }
     }
 
-    private fun applyTapjackingProtection() {
-        val rootView = findViewById<View>(android.R.id.content)
-        setFilterTouchesWhenObscured(rootView)
+    private fun startOverlayDetectionService() {
+        val intent = Intent(this, OverlayDetectionService::class.java)
+        startService(intent)
     }
 
-    private fun setFilterTouchesWhenObscured(view: View?) {
-        if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                setFilterTouchesWhenObscured(view.getChildAt(i))
-            }
+    private fun disableUserInteraction() {
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        )
+    }
+
+    private fun enableUserInteraction() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+    }
+
+private fun showOverlayWarning() {
+    val alertDialog = AlertDialog.Builder(this)
+        .setTitle("Security Warning")
+        .setMessage("⚠️ Overlays detected! Please disable them in settings.")
+        .setCancelable(false)
+        .setPositiveButton("Open Settings") { dialog, _ ->
+            dialog.dismiss()
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+            startActivity(intent)
         }
-        view?.filterTouchesWhenObscured = true
-    }
-
-    private fun isOverlayEnabled(context: Context): Boolean {
-        return Settings.canDrawOverlays(context)
-    }
+        .setNegativeButton("Ignore") { dialog, _ -> dialog.dismiss() }
+        .create()
+    alertDialog.show()
+}
 }
