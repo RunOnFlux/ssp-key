@@ -15,10 +15,10 @@
     "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process' --yarn --hack && patch-package"
   },
   "resolutions": {
-    "viem": "2.23.2"
+    "viem": "2.23.3"
   },
   "overrides": {
-    "viem": "2.23.2"
+    "viem": "2.23.3"
   },
   "dependencies": {
     "@alchemy/aa-core": "3.19.0",
@@ -31,7 +31,7 @@
     "@react-navigation/native": "7.0.14",
     "@react-navigation/stack": "7.1.1",
     "@reduxjs/toolkit": "2.5.1",
-    "@runonflux/aa-schnorr-multisig-sdk": "1.1.1",
+    "@runonflux/aa-schnorr-multisig-sdk": "1.2.0",
     "@runonflux/react-native-step-indicator": "1.0.0",
     "@runonflux/utxo-lib": "1.0.1",
     "@scure/bip32": "1.6.2",
@@ -77,7 +77,7 @@
     "socket.io-client": "4.8.1",
     "stream-browserify": "3.0.0",
     "util": "0.12.5",
-    "viem": "2.23.2"
+    "viem": "2.23.3"
   },
   "devDependencies": {
     "@babel/core": "7.26.9",
