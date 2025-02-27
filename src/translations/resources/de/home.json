@@ -80,7 +80,7 @@
   "select_chain": "Blockchain auswählen",
   "selected_chain": "Ausgewählte Blockchain",
   "selected_chain_wallet": "Ausgewählte Blockchain und Wallet",
-  "chain_not_synced_scan": "Die Blockchain ist nicht mit der SSP Wallet synchronisiert. Scannen Sie den SSP Wallet QR-Code, um sie zu synchronisieren.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Transaktion wird übermittelt...",
   "err_generate_address": "Fehler beim Generieren der Adresse.",
   "public_nonces_request": "Öffentliche Nonces Anfrage",
