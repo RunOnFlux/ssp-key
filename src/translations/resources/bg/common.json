@@ -17,5 +17,6 @@
   "confirm": "Потвърди",
   "ask_me_later": "Попитай по-късно",
   "chain": "Мрежа",
-  "wallet": "Портфейл"
+  "wallet": "Портфейл",
+  "receive": "Receive"
 }
