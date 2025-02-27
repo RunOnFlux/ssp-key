@@ -1,14 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import * as Keychain from 'react-native-keychain';
-import {
-  generateAddressKeypair,
-  generateMultisigAddress,
-} from '../../lib/wallet';
+import QRCode from 'react-native-qrcode-svg';
+import { generateMultisigAddress } from '../../lib/wallet';
 import { useAppSelector } from '../../hooks';
 import { cryptos } from '../../types';
 import BlurOverlay from '../../BlurOverlay';
@@ -17,7 +14,7 @@ import { blockchains } from '@storage/blockchains';
 
 import * as CryptoJS from 'crypto-js';
 
-const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
+const Receive = (props: { actionStatus: (status: boolean) => void }) => {
   const { identityChain } = useAppSelector((state) => state.ssp);
   const [isMainModalOpen, setIsMainModalOpen] = useState(true);
   const [isChainSelectOpen, setIsChainSelectOpen] = useState(false);
@@ -25,16 +22,11 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
     useState<keyof cryptos>(identityChain);
   const [selectedPath, setSelectedPath] = useState('0-0');
   const [selectedWallet, setSelectedWallet] = useState('0');
-  const [decryptedRedeemScript, setDecryptedRedeemScript] = useState('');
-  const [decryptedWitnessScript, setDecryptedWitnessScript] = useState('');
-  const [decryptedPrivateKey, setDecryptedPrivateKey] = useState('');
   const [address, setAddress] = useState('');
-  const [redeemScriptVisible, setRedeemScriptVisible] = useState(false);
-  const [witnessScriptVisible, setWitnessScriptVisible] = useState(false);
-  const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
-  const { xprivKey, xpubKey, xpubWallet } = useAppSelector(
+  const { Fonts, Gutters, Layout, Colors, Common, Images, darkMode } =
+    useTheme();
+  const { xpubKey, xpubWallet } = useAppSelector(
     (state) => state[selectedChain],
   );
   const blockchainConfig = blockchains[selectedChain];
@@ -66,25 +58,10 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
         const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
 
         const pwForEncryption = idData.password + passwordDecrypted;
-        const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
-        const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
         const xpubk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
         const xpubKeyDecrypted = xpubk.toString(CryptoJS.enc.Utf8);
         const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
         const xpubKeyWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
-
-        const splittedDerPath = selectedPath.split('-');
-        const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
-        const addressIndex = Number(splittedDerPath[1]);
-
-        const keyPair = generateAddressKeypair(
-          xprivKeyDecrypted,
-          typeIndex,
-          addressIndex,
-          selectedChain,
-        );
-        const privateKey = keyPair.privKey;
-        setDecryptedPrivateKey(privateKey);
 
         const addressDetails = generateAddressDetails(
           selectedChain,
@@ -92,16 +69,11 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
           xpubKeyWalletDecrypted,
           xpubKeyDecrypted,
         );
-        setDecryptedRedeemScript(addressDetails.redeemScript ?? '');
-        setDecryptedWitnessScript(addressDetails.witnessScript ?? '');
         setAddress(addressDetails.address);
       })
       .catch((error) => {
         console.log(error);
-        setDecryptedRedeemScript(t('home:chain_not_synced_scan'));
-        setDecryptedWitnessScript(t('home:chain_not_synced_scan'));
         setAddress(t('home:chain_not_synced_scan'));
-        setDecryptedPrivateKey(t('home:chain_not_synced_scan'));
       });
   }, [selectedPath, selectedChain]);
 
@@ -131,12 +103,6 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
 
   const close = () => {
     console.log('Close');
-    setPrivateKeyVisible(false);
-    setRedeemScriptVisible(false);
-    setWitnessScriptVisible(false);
-    setDecryptedPrivateKey('');
-    setDecryptedRedeemScript('');
-    setDecryptedWitnessScript('');
     props.actionStatus(false);
   };
 
@@ -238,6 +204,19 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 >
                   {t('home:wallet_address_desc')}
                 </Text>
+                {address && address !== t('home:chain_not_synced_scan') && (
+                  <View style={[Gutters.smallTMargin, Layout.alignItemsCenter]}>
+                    <QRCode
+                      value={address}
+                      logo={
+                        darkMode ? Images.ssp.logoWhite : Images.ssp.logoBlack
+                      }
+                      color={Colors.textGray800}
+                      backgroundColor={Colors.modalBackground}
+                      size={150}
+                    />
+                  </View>
+                )}
                 <Text
                   selectable={true}
                   style={[
@@ -248,201 +227,6 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 >
                   {address}
                 </Text>
-              </View>
-              {decryptedRedeemScript && (
-                <View>
-                  <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                    <TouchableOpacity
-                      onPress={() =>
-                        setRedeemScriptVisible(!redeemScriptVisible)
-                      }
-                      style={Common.inputIcon}
-                    >
-                      <Icon
-                        name={redeemScriptVisible ? 'eye' : 'eye-off'}
-                        size={20}
-                        color={Colors.bluePrimary}
-                      />
-                    </TouchableOpacity>
-                    <Text
-                      style={[
-                        Fonts.textBold,
-                        Fonts.textSmall,
-                        Fonts.textCenter,
-                      ]}
-                    >
-                      {t('home:wallet_redeem_script')}:
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      Fonts.textTinyTiny,
-                      Fonts.textLight,
-                      Fonts.textJustify,
-                    ]}
-                  >
-                    {t('home:wallet_redeem_script_desc')}
-                  </Text>
-                  <View>
-                    <Text
-                      selectable={true}
-                      style={[
-                        Fonts.textTiny,
-                        Fonts.textCenter,
-                        Gutters.smallMargin,
-                      ]}
-                    >
-                      {redeemScriptVisible
-                        ? decryptedRedeemScript
-                        : '*** *** *** *** *** ***'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {decryptedWitnessScript && (
-                <View>
-                  <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                    <TouchableOpacity
-                      onPress={() =>
-                        setWitnessScriptVisible(!witnessScriptVisible)
-                      }
-                      style={Common.inputIcon}
-                    >
-                      <Icon
-                        name={witnessScriptVisible ? 'eye' : 'eye-off'}
-                        size={20}
-                        color={Colors.bluePrimary}
-                      />
-                    </TouchableOpacity>
-                    <Text
-                      style={[
-                        Fonts.textBold,
-                        Fonts.textSmall,
-                        Fonts.textCenter,
-                      ]}
-                    >
-                      {t('home:wallet_witness_script')}:
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      Fonts.textTinyTiny,
-                      Fonts.textLight,
-                      Fonts.textJustify,
-                    ]}
-                  >
-                    {t('home:wallet_witness_script_desc')}
-                  </Text>
-                  <View>
-                    <Text
-                      selectable={true}
-                      style={[
-                        Fonts.textTiny,
-                        Fonts.textCenter,
-                        Gutters.smallMargin,
-                      ]}
-                    >
-                      {witnessScriptVisible
-                        ? decryptedWitnessScript
-                        : '*** *** *** *** *** ***'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              <View>
-                <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
-                  <TouchableOpacity
-                    onPress={() => setPrivateKeyVisible(!privateKeyVisible)}
-                    style={Common.inputIcon}
-                  >
-                    <Icon
-                      name={privateKeyVisible ? 'eye' : 'eye-off'}
-                      size={20}
-                      color={Colors.bluePrimary}
-                    />
-                  </TouchableOpacity>
-                  <Text
-                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                  >
-                    {t('home:wallet_private_key')}:
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    Fonts.textTinyTiny,
-                    Fonts.textLight,
-                    Fonts.textJustify,
-                  ]}
-                >
-                  {t('home:wallet_priv_key_desc')}
-                </Text>
-                <Text
-                  style={[
-                    Fonts.textTinyTiny,
-                    Fonts.textLight,
-                    Gutters.tinyTMargin,
-                    Fonts.textJustify,
-                    Fonts.textError,
-                  ]}
-                >
-                  {t('home:sensitive_data_warning', {
-                    sensitive_data: t('home:wallet_private_key'),
-                  })}
-                </Text>
-                <View>
-                  {decryptedPrivateKey == t('home:chain_not_synced_scan') && (
-                    <Text
-                      selectable={true}
-                      style={[
-                        Fonts.textTiny,
-                        Fonts.textCenter,
-                        Gutters.tinyMargin,
-                        Gutters.smallBMargin,
-                        Gutters.smallTMargin,
-                      ]}
-                    >
-                      {privateKeyVisible
-                        ? decryptedPrivateKey
-                        : '*** *** *** *** *** ***'}
-                    </Text>
-                  )}
-                  {decryptedPrivateKey !== t('home:chain_not_synced_scan') && (
-                    <>
-                      <Text
-                        selectable={true}
-                        style={[
-                          Fonts.textTiny,
-                          Fonts.textCenter,
-                          Gutters.tinyMargin,
-                          Gutters.smallTMargin,
-                        ]}
-                      >
-                        {privateKeyVisible
-                          ? decryptedPrivateKey.slice(
-                              0,
-                              Math.floor(decryptedPrivateKey.length / 2),
-                            )
-                          : '*** *** *** *** *** ***'}
-                      </Text>
-                      <Text
-                        selectable={true}
-                        style={[
-                          Fonts.textTiny,
-                          Fonts.textCenter,
-                          Gutters.tinyMargin,
-                          Gutters.smallBMargin,
-                        ]}
-                      >
-                        {privateKeyVisible
-                          ? decryptedPrivateKey.slice(
-                              Math.floor(decryptedPrivateKey.length / 2),
-                              decryptedPrivateKey.length,
-                            )
-                          : '*** *** *** *** *** ***'}
-                      </Text>
-                    </>
-                  )}
-                </View>
               </View>
             </View>
             <View style={[Layout.justifyContentEnd]}>
@@ -546,4 +330,4 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   );
 };
 
-export default AddressDetails;
+export default Receive;

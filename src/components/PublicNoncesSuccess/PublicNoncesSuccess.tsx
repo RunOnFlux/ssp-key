@@ -4,6 +4,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import BlurOverlay from '../../BlurOverlay';
 
 const PublicNoncesSuccess = (props: {
   actionStatus: (status: boolean) => void;
@@ -29,6 +30,7 @@ const PublicNoncesSuccess = (props: {
       visible={true}
       onRequestClose={() => close()}
     >
+      <BlurOverlay />
       <ScrollView
         keyboardShouldPersistTaps="always"
         style={[Layout.fill, Common.modalBackdrop]}

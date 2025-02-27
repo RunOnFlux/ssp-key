@@ -12,18 +12,18 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
-import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics';
+import * as CryptoJS from 'crypto-js';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import * as Keychain from 'react-native-keychain';
 import { useTheme } from '../../hooks';
 import ToastNotif from '../Toast/Toast';
-
-const rnBiometrics = new ReactNativeBiometrics();
+import BlurOverlay from '../../BlurOverlay';
 
 const Authentication = (props: {
   actionStatus: (status: boolean) => void;
   type: string;
+  biomatricsAllowed: boolean;
 }) => {
   // focusability of inputs
   const textInputA = useRef<TextInput | null>(null);
@@ -32,35 +32,34 @@ const Authentication = (props: {
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(false);
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
+  const [setupBiometrics, setSetupBiometrics] = useState(false);
 
   useEffect(() => {
+    if (!props.biomatricsAllowed) {
+      return;
+    }
     console.log('entered auth');
-    rnBiometrics
-      .isSensorAvailable()
-      .then((resultObject) => {
-        const { available, biometryType } = resultObject;
-        if (available && biometryType === BiometryTypes.TouchID) {
-          console.log('TouchID is supported');
-          setBiometricsAvailable(true);
-          // keep timeout
-          // iOS freezes if we call biometrics right away
-          setTimeout(() => {
-            initiateFingerprint();
-          }, 250);
-        } else if (available && biometryType === BiometryTypes.FaceID) {
-          console.log('FaceID is supported');
-          setBiometricsAvailable(true);
-          setTimeout(() => {
-            initiateFingerprint();
-          }, 250);
-        } else if (available && biometryType === BiometryTypes.Biometrics) {
+    Keychain.getSupportedBiometryType()
+      .then(async (resultObject) => {
+        if (resultObject) {
           console.log('Biometrics is supported');
-          setBiometricsAvailable(true);
-          setTimeout(() => {
-            initiateFingerprint();
-          }, 250);
+          // check if we have it
+          const bioExists = await Keychain.hasGenericPassword({
+            service: 'sspkey_pw_bio',
+          });
+          if (bioExists) {
+            setBiometricsAvailable(true);
+            // keep timeout
+            // iOS freezes if we call biometrics right away
+            // toggle biometrics immediately? reevaluate
+            setTimeout(() => {
+              initiateFingerprint();
+            }, 250);
+          } else {
+            console.log('Biometrics not set');
+            setBiometricsAvailable(false);
+          }
         } else {
-          // here we show fallback mechanism if none of the above succeed
           console.log('Biometrics not supported');
           setBiometricsAvailable(false);
         }
@@ -80,25 +79,41 @@ const Authentication = (props: {
       textForPrompt = t('home:auth_confirm_public_nonces');
     }
     console.log('Initiate Fingerprint');
-    rnBiometrics
-      .simplePrompt({
-        promptMessage: textForPrompt,
-      })
-      .then((resultObject) => {
-        const { success } = resultObject;
+    // if success continue, if fail, show error message and only allow password authentication
+    // get from keychain
+    const options = {
+      service: 'sspkey_pw_bio',
+      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+      authenticationPrompt: {
+        title: textForPrompt,
+        // subtitle: textForPrompt, // android only
+        // description: textForPrompt, // android only
+        cancel: t('common:cancel'),
+      },
+      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
+    };
 
-        if (success) {
-          setTimeout(() => {
-            console.log('successful biometrics provided');
+    Keychain.getGenericPassword(options) // This does NOT work in simulator, library issues, direct access may be granted in simulator but not on real device!
+      .then((data) => {
+        setTimeout(() => {
+          if (data && data.password) {
             setPassword('');
             setPasswordVisibility(false);
             props.actionStatus(true);
-          }, 250);
-        } else {
-          console.log('user cancelled biometric prompt');
-        }
+          } else {
+            // biometrics failed, were tempered with, disable biometrics option and only allow for password authentication
+            setPassword('');
+            setPasswordVisibility(false);
+            displayMessage('error', t('home:err_auth_biometrics_pw_needed'));
+            setSetupBiometrics(true);
+          }
+        }, 250);
       })
       .catch((error) => {
+        // some other failure, cancellation of biometrics
+        setPassword('');
+        setPasswordVisibility(false);
+        // setSetupBiometrics(true); // do not setup again, it is already setup. If enabled it forces android users to authenticate again.
         console.log(error);
       });
   };
@@ -119,13 +134,86 @@ const Authentication = (props: {
   const grantAccess = async () => {
     try {
       console.log('Grant Access');
-      const storedPassword = await EncryptedStorage.getItem('ssp_key_pw');
-      if (password !== storedPassword) {
+      // get from keychain
+      const passwordHash = await Keychain.getGenericPassword({
+        service: 'sspkey_pw_hash',
+        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+      });
+      // get salt
+      const saltData = await Keychain.getGenericPassword({
+        service: 'salt',
+        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+      });
+      // from user password create hash
+      if (!passwordHash || !saltData) {
+        throw new Error('Unable to decrypt stored data');
+      }
+      // generate hash of our password
+      const key256Bits1000Iterations = CryptoJS.PBKDF2(
+        password,
+        saltData.password,
+        {
+          keySize: 256 / 32,
+          iterations: 1000, // more is too slow, favor performance, this is already 0.1 seconds
+        },
+      );
+      const pwHash = key256Bits1000Iterations.toString();
+      if (passwordHash.password !== pwHash) {
         displayMessage('error', t('home:err_auth_pw_incorrect'));
         return;
       }
+      let isBioSet = false;
+      // check if we have it
+      try {
+        const bioExists = await Keychain.hasGenericPassword({
+          service: 'sspkey_pw_bio',
+        });
+        console.log('passwordData', bioExists);
+        if (bioExists) {
+          isBioSet = true;
+        }
+      } catch (error) {
+        console.log(error);
+      }
+      // if we do not have biometrics or we want to setup biometrics, we can try to set it
+      if (setupBiometrics || !isBioSet) {
+        try {
+          // if we authenticated with password, check if biometrics is available and store the secret so bio can be used next time
+          const isBiometricsSupported =
+            await Keychain.getSupportedBiometryType();
+          if (isBiometricsSupported) {
+            const passwordData = await Keychain.getGenericPassword({
+              service: 'sspkey_pw',
+              rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
+            });
+            if (passwordData) {
+              await Keychain.setGenericPassword(
+                'sspkey_pw_bio',
+                passwordData.password,
+                {
+                  service: 'sspkey_pw_bio',
+                  storage: Keychain.STORAGE_TYPE.AES_GCM, // force biometrics encryption, on android setGenericPassword PROMPTS for biometric inputs using AES_GCM, RSA does not prompt for it. iOS does not prompt.
+                  accessible:
+                    Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY, // iOS only
+                  accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET, // all  recognized by Android as a requirement for Biometric enabled storage (Till we got a better implementation);. On android only prompts biometrics, does not check for updates of biometrics. Face not supported.
+                  securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE, // android only, default is any
+                  authenticationPrompt: {
+                    title: t('cr:setup_biometrics'),
+                    // subtitle: textForPrompt, // android only
+                    // description: textForPrompt, // android only
+                    cancel: t('common:cancel'),
+                  },
+                },
+              );
+            }
+          }
+        } catch (error) {
+          console.log(error); // catch error to still allow password authentication as this is not crucial
+        }
+      }
       setPassword('');
       setPasswordVisibility(false);
+      setSetupBiometrics(false);
       props.actionStatus(true);
     } catch (error) {
       console.log(error);
@@ -144,6 +232,7 @@ const Authentication = (props: {
       visible={true}
       onRequestClose={() => close()}
     >
+      <BlurOverlay />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[Layout.fill, Common.modalBackdrop]}
@@ -182,17 +271,28 @@ const Authentication = (props: {
                     ? t('home:auth_sync_ssp')
                     : props.type === 'pubnonces'
                       ? t('home:auth_sync_pub_nonces')
-                      : t('home:auth_sensitive_inf')}
+                      : props.type === 'delete'
+                        ? t('home:auth_delete_ssp_key_data')
+                        : t('home:auth_sensitive_inf')}
               </Text>
-              <Text style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}>
-                {props.type === 'tx'
-                  ? t('home:auth_confirm_with_pw')
-                  : props.type === 'sync'
+              {props.type !== 'delete' && (
+                <Text
+                  style={[
+                    Fonts.textBold,
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.smallTMargin,
+                  ]}
+                >
+                  {props.type === 'tx'
                     ? t('home:auth_confirm_with_pw')
-                    : props.type === 'pubnonces'
+                    : props.type === 'sync'
                       ? t('home:auth_confirm_with_pw')
-                      : t('home:auth_grant_access_pw')}
-              </Text>
+                      : props.type === 'pubnonces'
+                        ? t('home:auth_confirm_with_pw')
+                        : t('home:auth_grant_access_pw')}
+                </Text>
+              )}
 
               {biometricsAvailable && (
                 <IconB

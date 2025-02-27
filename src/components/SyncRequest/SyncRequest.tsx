@@ -110,7 +110,11 @@ const SyncRequest = (props: {
         </TouchableOpacity>
       </View>
       {authenticationOpen && (
-        <Authentication actionStatus={handleAuthenticationOpen} type="sync" />
+        <Authentication
+          actionStatus={handleAuthenticationOpen}
+          type="sync"
+          biomatricsAllowed={true}
+        />
       )}
     </>
   );

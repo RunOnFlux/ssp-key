@@ -1,48 +1,31 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  Linking,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-import { backends } from '@storage/backends';
 import BlurOverlay from '../../BlurOverlay';
 
-import { cryptos } from '../../types';
-
-const TxSent = (props: {
-  txid: string;
-  chain: keyof cryptos;
+const WeakPassword = (props: {
+  isOpen: boolean;
   actionStatus: (status: boolean) => void;
 }) => {
-  // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
-  const { t } = useTranslation(['home', 'common']);
+  const { t } = useTranslation(['cr', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
 
-  const close = () => {
-    console.log('Close');
+  const reject = () => {
     props.actionStatus(false);
   };
 
-  const openExplorer = () => {
-    console.log('Open Explorer');
-    const backendConfig = backends()[props.chain];
-    Linking.openURL(
-      `https://${backendConfig.explorer ?? backendConfig.node}/tx/${props.txid}`,
-    );
+  const approve = () => {
+    props.actionStatus(true);
   };
 
   return (
     <Modal
       animationType="fade"
       transparent={true}
-      visible={true}
-      onRequestClose={() => close()}
+      visible={props.isOpen}
+      onRequestClose={() => reject()}
     >
       <BlurOverlay />
       <ScrollView
@@ -63,7 +46,7 @@ const TxSent = (props: {
               Layout.alignItemsCenter,
             ]}
           >
-            <Icon name="check-circle" size={60} color={Colors.textGray400} />
+            <Icon name="alert-circle" size={60} color={Colors.textGray400} />
             <Text
               style={[
                 Fonts.textBold,
@@ -72,10 +55,25 @@ const TxSent = (props: {
                 Fonts.textCenter,
               ]}
             >
-              {t('home:transaction_sent')}
+              {t('cr:weak_password')}
             </Text>
-            <Text style={[Fonts.textSmall, Fonts.textCenter]}>
-              {props.txid}
+            <Text
+              style={[
+                Fonts.textSmall,
+                Fonts.textCenter,
+                Gutters.regularTMargin,
+              ]}
+            >
+              {t('cr:weak_password_info')}
+            </Text>
+            <Text
+              style={[
+                Fonts.textSmall,
+                Fonts.textCenter,
+                Gutters.regularTMargin,
+              ]}
+            >
+              {t('cr:weak_password_confirm')}
             </Text>
           </View>
           <View style={[Layout.justifyContentEnd]}>
@@ -86,21 +84,21 @@ const TxSent = (props: {
                 Gutters.regularBMargin,
                 Gutters.smallTMargin,
               ]}
-              onPress={() => openExplorer()}
+              onPress={() => reject()}
             >
               <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                {t('home:show_in_explorer')}
+                {t('cr:weak_password_confirm_cancel')}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => close()}>
+            <TouchableOpacity onPress={() => approve()}>
               <Text
                 style={[
-                  Fonts.textSmall,
+                  Fonts.textTiny,
                   Fonts.textBluePrimary,
                   Fonts.textCenter,
                 ]}
               >
-                {t('home:close')}
+                {t('cr:weak_password_confirm_ok')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -110,4 +108,4 @@ const TxSent = (props: {
   );
 };
 
-export default TxSent;
+export default WeakPassword;

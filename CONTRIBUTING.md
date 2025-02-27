@@ -2,7 +2,7 @@
 
 We’re thrilled that you’re considering contributing to SSP Key! Your efforts are vital in improving this powerful two-factor authentication tool and its seamless integration with **[SSP Wallet](https://sspwallet.io)**. Whether you’re reporting bugs, suggesting features, or enhancing the codebase, your contributions are deeply valued.
 
-For detailed technical information, please refer to the [SSP Documentation](https://sspwallet.gitbook.io/docs).
+For detailed technical information, please refer to the [SSP Documentation](https://docs.sspwallet.io).
 
 ---
 
@@ -25,7 +25,7 @@ If you find a bug:
 Got an idea to improve SSP Key? Submit a feature request in the [issues section](https://github.com/RunOnFlux/ssp-key/issues). Be as detailed as possible and explain the problem it solves.
 
 ### 3. Improve Documentation
-Help make SSP Key accessible to everyone by contributing to guides, FAQs, or translations. Visit [Crowdin](https://translatekey.sspwallet.io) to contribute to translations. For technical documentation, check the [SSP Documentation](https://sspwallet.gitbook.io/docs).
+Help make SSP Key accessible to everyone by contributing to guides, FAQs, or translations. Visit [Crowdin](https://translatekey.sspwallet.io) to contribute to translations. For technical documentation, check the [SSP Documentation](https://docs.sspwallet.io).
 
 ### 4. Submit Code Contributions
 Assist in building new features, fixing bugs, or refining the codebase by submitting a pull request (PR).
@@ -54,7 +54,7 @@ Assist in building new features, fixing bugs, or refining the codebase by submit
    yarn start
    ```
 
-Refer to the [SSP Documentation](https://sspwallet.gitbook.io/docs/) for further setup details.
+Refer to the [SSP Documentation](https://docs.sspwallet.io/) for further setup details.
 
 ---
 
@@ -124,7 +124,7 @@ Follow these steps to submit a PR:
 
 ## Resources
 
-- [SSP Documentation](https://sspwallet.gitbook.io/docs)  
+- [SSP Documentation](https://docs.sspwallet.io)  
 - [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)  
 - [GitHub Help](https://help.github.com)  
 
@@ -134,7 +134,7 @@ Follow these steps to submit a PR:
 
 If you have questions or encounter issues:
 - Open an issue on GitHub.
-- Consult the [SSP Documentation](https://sspwallet.gitbook.io/docs).  
+- Consult the [SSP Documentation](https://docs.sspwallet.io).  
 - Join the community via [SSP Wallet Discord](https://discord.gg/runonflux).
 
 We’re excited to have you on board. Together, let’s make SSP Key a secure, simple, and powerful tool for the crypto community!
