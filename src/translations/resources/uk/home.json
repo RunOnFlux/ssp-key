@@ -80,7 +80,7 @@
   "select_chain": "Оберіть мережу",
   "selected_chain": "Обрана мережа",
   "selected_chain_wallet": "Виберіть мережу і гаманець",
-  "chain_not_synced_scan": "Мережа не синхронізується з SSP гаманцем. Скануйте QR-код SSP для синхронізації.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Надсилання транзакції...",
   "err_generate_address": "Помилка під час генерації адреси.",
   "public_nonces_request": "Публічний запит Nonces",
