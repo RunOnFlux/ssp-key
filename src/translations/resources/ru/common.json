@@ -17,5 +17,6 @@
   "confirm": "Подтвердить",
   "ask_me_later": "Спросить позже",
   "chain": "Цепочка",
-  "wallet": "Кошелек"
+  "wallet": "Кошелек",
+  "receive": "Receive"
 }

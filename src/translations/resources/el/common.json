@@ -17,5 +17,6 @@
   "confirm": "Επιβεβαίωση",
   "ask_me_later": "Ρωτήστε με αργότερα",
   "chain": "Αλυσίδα",
-  "wallet": "Πορτοφόλι"
+  "wallet": "Πορτοφόλι",
+  "receive": "Receive"
 }

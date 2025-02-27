@@ -73,6 +73,7 @@
   "auth_sync_ssp": "Anda akan menyinkronkan Dompet SSP dengan Kunci SSP!",
   "auth_sensitive_inf": "Anda akan mengakses informasi sensitif!",
   "auth_sync_pub_nonces": "Anda akan menyinkronkan Nonce Publik dengan SSP Wallet!",
+  "auth_delete_ssp_key_data": "You are about to delete all your SSP Key Data! You will need to set up your SSP Key again or restore it from your seed phrase. Make sure you have saved your seed phrase before proceeding. This action is destructive and irreversible!",
   "auth_confirm_with_pw": "Konfirmasikan dengan kata sandi.",
   "auth_grant_access_pw": "Berikan akses dengan kata sandi.",
   "select_wallet": "Pilih Dompet",
@@ -92,5 +93,10 @@
   "copy_to_clipboard": "Salin ke papan klip",
   "change_language": "Ganti Bahasa",
   "language": "Bahasa",
-  "use_system_language": "Gunakan Bahasa Sistem"
+  "use_system_language": "Gunakan Bahasa Sistem",
+  "err_auth_biometrics_pw_needed": "Biometrics restricted, use password authentication instead.",
+  "sensitive_data_warning": "WARNING: For security reasons, the {{sensitive_data}} is displayed in 2 parts. Please join them together to get the full {{sensitive_data}}. It is highly discouraged to copy the {{sensitive_data}} into your clipboard, any application or website has access to clipboard and can see your {{sensitive_data}}. Remember to delete the {{sensitive_data}} from your clipboard after copying!",
+  "delete_ssp_key_data": "Delete SSP Key Data",
+  "delete_ssp_key": "Delete SSP Key",
+  "delete_ssp_key_data_desc": "WARNING: This will delete all data associated with your SSP Key including your seed phrase from the device. This action is irreversible!"
 }
