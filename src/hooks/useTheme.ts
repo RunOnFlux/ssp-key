@@ -116,25 +116,17 @@ const formatTheme = <F, G, I, L, C>(
 const mergeVariables = (
   themeConfig: Partial<ThemeVariables>,
   darkThemeConfig: Partial<ThemeVariables>,
-) => {
-  return Object.entries(DefaultVariables).reduce((acc, [group, vars]) => {
-    const theme:
-      | Record<keyof typeof DefaultVariables, typeof vars>
-      | undefined = (themeConfig as any)[group];
-    const darkTheme:
-      | Record<keyof typeof DefaultVariables, typeof vars>
-      | undefined = (darkThemeConfig as any)[group];
-
-    return {
-      ...acc,
-      [group]: {
+) =>
+  Object.fromEntries(
+    Object.entries(DefaultVariables).map(([group, vars]) => [
+      group,
+      {
         ...vars,
-        ...(theme || {}),
-        ...(darkTheme || {}),
+        ...(themeConfig[group] || {}),
+        ...(darkThemeConfig[group] || {}),
       },
-    };
-  }, DefaultVariables);
-};
+    ]),
+  );
 
 /**
  * Provide all the theme exposed with useTheme()
