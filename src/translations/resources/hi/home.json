@@ -80,7 +80,7 @@
   "select_chain": "चेन चुनें",
   "selected_chain": "चुना गया चेन",
   "selected_chain_wallet": "चुना गया चेन और वॉलेट",
-  "chain_not_synced_scan": "चेन एस. एस. पी. वॉलेट के साथ सिंक नहीं है। इसे सिंक करने के लिए एस. एस. पी. वॉलेट का क्यूआर कोड स्कैन करें।",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "ट्रांजैक्शन सबमिट किया जा रहा है...",
   "err_generate_address": "पता जनरेट करते समय त्रुटि।",
   "public_nonces_request": "पब्लिक नॉन्सेस रिक्वेस्ट",
