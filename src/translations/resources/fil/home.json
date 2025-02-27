@@ -80,7 +80,7 @@
   "select_chain": "Pumili ng Chain",
   "selected_chain": "Napiling Chain",
   "selected_chain_wallet": "Napiling Chain at Wallet",
-  "chain_not_synced_scan": "Chain Not Synced sa SSP Wallet. I-scan ang QR Code ng SSP Wallet upang I-sync ito.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Nagsusubmit ng Transaction...",
   "err_generate_address": "Error habang bumubuo ng address.",
   "public_nonces_request": "Paghiling ng Pampublikong Nonces",

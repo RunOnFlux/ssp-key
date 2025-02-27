@@ -80,7 +80,7 @@
   "select_chain": "Seleziona Catena",
   "selected_chain": "Catena Selezionata",
   "selected_chain_wallet": "Catena e portafoglio selezionati",
-  "chain_not_synced_scan": "Catena non sincronizzata con il portafoglio SSP. Scansiona il codice QR del portafoglio SSP per sincronizzarlo.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Invio Transazione...",
   "err_generate_address": "Errore durante la generazione dell'indirizzo.",
   "public_nonces_request": "Public Nonces richiesti",

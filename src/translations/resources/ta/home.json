@@ -80,7 +80,7 @@
   "select_chain": "செயினை தேர்வு செய்யவும்",
   "selected_chain": "தேர்ந்தெடுக்கப்பட்ட சங்கிலி",
   "selected_chain_wallet": "தேர்ந்தெடுக்கப்பட்ட சங்கிலி மற்றும் பணப்பை",
-  "chain_not_synced_scan": "சங்கிலி SSP பணப்பையுடன் ஒத்திசைக்கப்படவில்லை. அதை ஒத்திசைக்க SSP பணப்பையின் QR குறியீட்டை ஸ்கேன் செய்யவும்.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "விவரத்தைச் சமர்ப்பித்து கொண்டிருக்கிறது...",
   "err_generate_address": "முகவரி உருவாக்கும்போது பிழை ஏற்பட்டது.",
   "public_nonces_request": "பொது நோன்ஸ்கள் கோரிக்கை",

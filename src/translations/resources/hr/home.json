@@ -80,7 +80,7 @@
   "select_chain": "Odaberite Chain",
   "selected_chain": "Odabrani Chain",
   "selected_chain_wallet": "Odabrani Chain i Novčanik",
-  "chain_not_synced_scan": "Chain nije sinkroniziran s SSP novčanikom. Skenirajte SSP novčanik QR kod za sinkronizaciju.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Podnošenje transakcije...",
   "err_generate_address": "Error pri generiranju adrese.",
   "public_nonces_request": "Zahtjev za javne nonce",

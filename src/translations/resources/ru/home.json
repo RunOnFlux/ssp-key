@@ -80,7 +80,7 @@
   "select_chain": "Выберите цепочку",
   "selected_chain": "Выбранная цепочка",
   "selected_chain_wallet": "Выбранная цепочка и кошелек",
-  "chain_not_synced_scan": "Цепочка не синхронизирована с кошельком SSP. Сканируйте QR-код кошелька SSP для синхронизации.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Отправка транзакции...",
   "err_generate_address": "Ошибка при генерации адреса.",
   "public_nonces_request": "Запрос публичных Nonces",

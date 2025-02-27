@@ -80,7 +80,7 @@
   "select_chain": "চেইন নির্বাচন করুন",
   "selected_chain": "নির্বাচিত চেইন",
   "selected_chain_wallet": "নির্বাচিত চেইন এবং ওয়ালেট",
-  "chain_not_synced_scan": "চেইন SSP Wallet এর সাথে সিঙ্ক হয়নি। এটি সিঙ্ক করার জন্য SSP Wallet QR কোড স্ক্যান করুন.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "লেনদেন জমা দেওয়া হচ্ছে...",
   "err_generate_address": "ঠিকানা তৈরি করার সময় ত্রুটি হয়েছে.",
   "public_nonces_request": "পাবলিক ননস রিকোয়েস্ট",

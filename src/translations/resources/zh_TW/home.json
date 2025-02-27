@@ -80,7 +80,7 @@
   "select_chain": "選擇鏈",
   "selected_chain": "已選擇的鏈",
   "selected_chain_wallet": "已選擇的鏈和錢包",
-  "chain_not_synced_scan": "鏈未與 SSP 錢包同步。掃描 SSP 錢包 QR 代碼以進行同步.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "提交交易中...",
   "err_generate_address": "生成地址時出錯.",
   "public_nonces_request": "公開 Nonces 請求",
