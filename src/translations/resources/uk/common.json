@@ -17,5 +17,6 @@
   "confirm": "Підтвердити",
   "ask_me_later": "Запитайте мене пізніше",
   "chain": "Блокчейн",
-  "wallet": "Гаманець"
+  "wallet": "Гаманець",
+  "receive": "Receive"
 }
