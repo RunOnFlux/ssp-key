@@ -80,7 +80,7 @@
   "select_chain": "Pilih Rantai",
   "selected_chain": "Rantai yang Dipilih",
   "selected_chain_wallet": "Rantai dan Dompet yang Dipilih",
-  "chain_not_synced_scan": "Rantai Tidak Disinkronkan dengan Dompet SSP. Pindai Kode QR Dompet SSP untuk Menyinkronkannya.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Mengirimkan Transaksi...",
   "err_generate_address": "Terjadi kesalahan saat membuat alamat.",
   "public_nonces_request": "Permintaan Nonce Publik",
