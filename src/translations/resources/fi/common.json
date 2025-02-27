@@ -17,5 +17,6 @@
   "confirm": "Vahvista",
   "ask_me_later": "Kysy myöhemmin",
   "chain": "Ketju",
-  "wallet": "Lompakko"
+  "wallet": "Lompakko",
+  "receive": "Receive"
 }
