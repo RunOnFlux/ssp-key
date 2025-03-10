@@ -1,22 +1,22 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "Cheie SSP",
+    "moto": "Secur. Simplu. Puternic."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Înapoi",
+  "cancel": "Anulează",
+  "key_seed_phrase": "Fraza seed a cheii",
+  "refresh": "Reîmprospătează",
+  "settings": "Setări",
+  "restore": "Restaurează",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Alimentat de",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet",
-  "receive": "Receive"
+  "help": "Ajutor",
+  "save": "Salvează",
+  "confirm": "Confirmă",
+  "ask_me_later": "Întreabă-mă mai târziu",
+  "chain": "Lanț",
+  "wallet": "Portofel",
+  "receive": "Primește"
 }
