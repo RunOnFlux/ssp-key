@@ -80,7 +80,7 @@
   "select_chain": "チェーンを選択",
   "selected_chain": "選択されたチェーン",
   "selected_chain_wallet": "選択されたチェーンとウォレット",
-  "chain_not_synced_scan": "チェーンがSSPウォレットと同期されていません。SSPウォレットのQRコードをスキャンして同期してください.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "トランザクションを送信しています...",
   "err_generate_address": "アドレス生成中にエラーが発生しました.",
   "public_nonces_request": "公開ナンス要求",

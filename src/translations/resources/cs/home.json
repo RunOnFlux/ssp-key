@@ -80,7 +80,7 @@
   "select_chain": "Vybrat Chain",
   "selected_chain": "Vybraný Chain",
   "selected_chain_wallet": "Vybraný Chain a Peněženka",
-  "chain_not_synced_scan": "Chain Není synchronizovaný s SSP Peněženkou. Naskenujte QR kód SSP Peněženky pro synchronizaci.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Odesílání Transakce...",
   "err_generate_address": "Chyba při generování adresy.",
   "public_nonces_request": "Požadavek o Veřejné Nonce",

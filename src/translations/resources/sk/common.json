@@ -1,22 +1,22 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP Kľúč",
+    "moto": "Bezpečné. Jednoduché. Výkonné."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Späť",
+  "cancel": "Zrušiť",
+  "key_seed_phrase": "Hlavná Seed Fráza",
+  "refresh": "Obnoviť",
+  "settings": "Nastavenia",
+  "restore": "Obnoviť",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Poháňané",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet",
-  "receive": "Receive"
+  "help": "Pomoc",
+  "save": "Uložiť",
+  "confirm": "Potvrdiť",
+  "ask_me_later": "Spýtať sa neskôr",
+  "chain": "Reťazec",
+  "wallet": "Peňaženka",
+  "receive": "Prijať"
 }

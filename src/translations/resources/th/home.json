@@ -80,7 +80,7 @@
   "select_chain": "เลือกเครือข่าย",
   "selected_chain": "เครือข่ายที่เลือก",
   "selected_chain_wallet": "เครือข่ายและกระเป๋าเงินที่เลือก",
-  "chain_not_synced_scan": "เครือข่ายยังไม่ได้ซิงค์กับ SSP Wallet กรุณาสแกน QR โค้ดของ SSP Wallet เพื่อซิงค์",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "กำลังส่งธุรกรรม...",
   "err_generate_address": "เกิดข้อผิดพลาดในการสร้างที่อยู่",
   "public_nonces_request": "คำขอ Public Nonces",

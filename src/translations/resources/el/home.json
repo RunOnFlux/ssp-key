@@ -80,7 +80,7 @@
   "select_chain": "Επιλέξτε Αλυσίδα",
   "selected_chain": "Επιλεγμένη Αλυσίδα",
   "selected_chain_wallet": "Επιλεγμένη αλυσίδα και πορτοφόλι",
-  "chain_not_synced_scan": "Η Αλυσίδα δεν συγχρονίζεται με το πορτοφόλι SSP. Σάρωση κώδικα QR του πορτοφολιού SSP για τον συγχρονισμό της.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Υποβολή Συναλλαγής...",
   "err_generate_address": "Σφάλμα κατά τη δημιουργία διεύθυνσης.",
   "public_nonces_request": "Αίτηση Δημοσίων Nonces",

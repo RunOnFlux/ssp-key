@@ -80,7 +80,7 @@
   "select_chain": "Select Chain",
   "selected_chain": "Selected Chain",
   "selected_chain_wallet": "Selected Chain and Wallet",
-  "chain_not_synced_scan": "Chain Not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Submitting Transaction...",
   "err_generate_address": "Error while generating address.",
   "public_nonces_request": "Public Nonces Request",

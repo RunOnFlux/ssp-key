@@ -80,7 +80,7 @@
   "select_chain": "Izberite verigo",
   "selected_chain": "Izbrana veriga",
   "selected_chain_wallet": "Izbrana veriga in denarnica",
-  "chain_not_synced_scan": "Veriga ni sinhronizirana z SSP denarnico. Skenirajte QR kodo SSP denarnice za sinhronizacijo.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Pošiljanje transakcije...",
   "err_generate_address": "Napaka pri ustvarjanju naslova.",
   "public_nonces_request": "Zahteva za javne nonce",

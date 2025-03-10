@@ -80,7 +80,7 @@
   "select_chain": "Valitse lohkoketju",
   "selected_chain": "Valittu ketju",
   "selected_chain_wallet": "Valittu ketju ja lompakko",
-  "chain_not_synced_scan": "Ketju ei ole synkronoitu SSP-lompakon kanssa. Skannaa SSP-lompakon QR-koodi synkronointia varten.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Lähetetään tapahtumaa...",
   "err_generate_address": "Virhe osoitetta luotaessa.",
   "public_nonces_request": "Pyyntö julkisista nonce-arvoista",
