@@ -1,22 +1,22 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "Clau SSP",
+    "moto": "Segur. Simple. Potent."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Enrere",
+  "cancel": "Cancel·lar",
+  "key_seed_phrase": "Frase semilla de la clau",
+  "refresh": "Actualitzar",
+  "settings": "Configuració",
+  "restore": "Restaurar",
   "flux": "Flux",
-  "powered_by": "Powered by",
-  "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet",
-  "receive": "Receive"
+  "powered_by": "Impulsat per",
+  "ok": "D'acord",
+  "help": "Ajuda",
+  "save": "Desa",
+  "confirm": "Confirma",
+  "ask_me_later": "Pregunta-m’ho més tard",
+  "chain": "Cadena",
+  "wallet": "Moneder",
+  "receive": "Rebre"
 }
