@@ -1,22 +1,22 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP-nyckel",
+    "moto": "Säker. Enkel. Kraftfull."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Tillbaka",
+  "cancel": "Avbryt",
+  "key_seed_phrase": "Nyckelfras",
+  "refresh": "Uppdatera",
+  "settings": "Inställningar",
+  "restore": "Återställ",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Drivs av",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet",
-  "receive": "Receive"
+  "help": "Hjälp",
+  "save": "Spara",
+  "confirm": "Bekräfta",
+  "ask_me_later": "Fråga mig senare",
+  "chain": "Kedja",
+  "wallet": "Plånbok",
+  "receive": "Ta emot"
 }
