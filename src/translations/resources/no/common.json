@@ -1,22 +1,22 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP-nøkkel",
+    "moto": "Sikker. Enkel. Kraftfull."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Tilbake",
+  "cancel": "Avbryt",
+  "key_seed_phrase": "Nøkkel-frøsetning",
+  "refresh": "Oppdater",
+  "settings": "Innstillinger",
+  "restore": "Gjenopprett",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Drevet av",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet",
-  "receive": "Receive"
+  "help": "Hjelp",
+  "save": "Lagre",
+  "confirm": "Bekreft",
+  "ask_me_later": "Spør meg senere",
+  "chain": "Kjede",
+  "wallet": "Lommebok",
+  "receive": "Motta"
 }
