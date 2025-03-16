@@ -1112,7 +1112,12 @@ function Home({ navigation }: Props) {
             >
               <Icon name="send" size={60} color={Colors.textGray400} />
               <Text
-                style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
+                style={[
+                  Fonts.textBold,
+                  Fonts.textCenter,
+                  Fonts.textRegular,
+                  Gutters.smallMargin,
+                ]}
               >
                 {t('home:submitting_transaction')}
               </Text>

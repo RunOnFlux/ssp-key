@@ -59,7 +59,12 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
           >
             <Icon name="link" size={60} color={Colors.textGray400} />
             <Text
-              style={[Fonts.textBold, Fonts.textRegular, Gutters.smallMargin]}
+              style={[
+                Fonts.textBold,
+                Fonts.textCenter,
+                Fonts.textRegular,
+                Gutters.smallMargin,
+              ]}
             >
               {t('home:sync_needed')}
             </Text>
