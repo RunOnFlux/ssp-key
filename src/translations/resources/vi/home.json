@@ -80,7 +80,7 @@
   "select_chain": "Lựa chọn chuỗi khối",
   "selected_chain": "Chuỗi khối được lựa chọn",
   "selected_chain_wallet": "Ví và chuỗi khối được lựa chọn",
-  "chain_not_synced_scan": "Chuỗi khối không được đồng bộ với Ví SSP. Hãy quét mã QR Ví SSP để đồng bộ nó.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Đang xem xét giao dịch...",
   "err_generate_address": "Gặp lỗi khi khởi tạo địa chỉ.",
   "public_nonces_request": "Yêu cầu các số Nonce công cộng",

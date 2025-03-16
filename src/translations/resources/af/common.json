@@ -1,22 +1,22 @@
 {
   "appName": {
-    "full": "SSP Key",
-    "moto": "Secure. Simple. Powerful."
+    "full": "SSP Sleutel",
+    "moto": "Veilig. Eenvoudig. Kragtig."
   },
-  "back": "Back",
-  "cancel": "Cancel",
-  "key_seed_phrase": "Key Seed Phrase",
-  "refresh": "Refresh",
-  "settings": "Settings",
-  "restore": "Restore",
+  "back": "Terug",
+  "cancel": "Kanselleer",
+  "key_seed_phrase": "Sleutel Saadfrase",
+  "refresh": "Herlaai",
+  "settings": "Instellings",
+  "restore": "Herstel",
   "flux": "Flux",
-  "powered_by": "Powered by",
+  "powered_by": "Aangedryf deur",
   "ok": "OK",
-  "help": "Help",
-  "save": "Save",
-  "confirm": "Confirm",
-  "ask_me_later": "Ask me later",
-  "chain": "Chain",
-  "wallet": "Wallet",
-  "receive": "Receive"
+  "help": "Hulp",
+  "save": "Stoor",
+  "confirm": "Bevestig",
+  "ask_me_later": "Vra my later",
+  "chain": "Ketting",
+  "wallet": "Beursie",
+  "receive": "Ontvang"
 }

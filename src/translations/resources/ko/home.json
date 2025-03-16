@@ -80,7 +80,7 @@
   "select_chain": "체인 선택",
   "selected_chain": "선택된 체인",
   "selected_chain_wallet": "선택된 체인 및 지갑",
-  "chain_not_synced_scan": "체인이 SSP 지갑과 동기화되지 않았습니다. SSP 지갑 QR 코드를 스캔하여 동기화하세요.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "거래 제출 중...",
   "err_generate_address": "주소 생성 중 오류가 발생했습니다.",
   "public_nonces_request": "공개 Nonces 요청",

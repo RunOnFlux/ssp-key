@@ -80,7 +80,7 @@
   "select_chain": "Изберете мрежа",
   "selected_chain": "Избраната мрежа",
   "selected_chain_wallet": "Избрани мрежа и портфейл",
-  "chain_not_synced_scan": "Мрежата не е синхронизирана с SSP портфейла. Сканирайте QR код на SSP портфейла, за да я синхронизирате.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Изпращане на транзакцията...",
   "err_generate_address": "Грешка при генериране на адреса.",
   "public_nonces_request": "Заявка за публични nonce (единични произволни стойности).",

@@ -73,7 +73,7 @@
   "auth_sync_ssp": "Chystáte se synchronizovat SSP Peněženku s SSP Klíčem!",
   "auth_sensitive_inf": "Chystáte se zobrazit citlivé informace!",
   "auth_sync_pub_nonces": "Chystáte se synchronizovat Veřejné Nonce s SSP Peněženkou!",
-  "auth_delete_ssp_key_data": "You are about to delete all your SSP Key Data! You will need to set up your SSP Key again or restore it from your seed phrase. Make sure you have saved your seed phrase before proceeding. This action is destructive and irreversible!",
+  "auth_delete_ssp_key_data": "Chystáte se odstranit všechna data vašeho SSP klíče! Budete muset znovu nastavit svůj SSP klíč nebo jej obnovit z Vaší seed fráze. Před pokračováním se ujistěte, že máte Vaši seed frázi bezpečně uloženou. Tato akce je destruktivní a nevratná!",
   "auth_confirm_with_pw": "Potvrďte heslem.",
   "auth_grant_access_pw": "Potvrďte přístup heslem.",
   "select_wallet": "Vybrat Peněženku",
@@ -94,9 +94,9 @@
   "change_language": "Změnit Jazyk",
   "language": "Jazyk",
   "use_system_language": "Použít Systémový Jazyk",
-  "err_auth_biometrics_pw_needed": "Biometrics restricted, use password authentication instead.",
-  "sensitive_data_warning": "WARNING: For security reasons, the {{sensitive_data}} is displayed in 2 parts. Please join them together to get the full {{sensitive_data}}. It is highly discouraged to copy the {{sensitive_data}} into your clipboard, any application or website has access to clipboard and can see your {{sensitive_data}}. Remember to delete the {{sensitive_data}} from your clipboard after copying!",
-  "delete_ssp_key_data": "Delete SSP Key Data",
-  "delete_ssp_key": "Delete SSP Key",
-  "delete_ssp_key_data_desc": "WARNING: This will delete all data associated with your SSP Key including your seed phrase from the device. This action is irreversible!"
+  "err_auth_biometrics_pw_needed": "Biometrika je omezená, použijte ověření pomocí hesla.",
+  "sensitive_data_warning": "VAROVÁNÍ: Z bezpečnostních důvodů se {{sensitive_data}} zobrazí ve dvou částech. Pro získání celé {{sensitive_data}} je zapotřebí obě části spojit dohromady. Je důrazně nedoporučeno kopírování {{sensitive_data}} do vaší schránky, každá aplikace nebo webová stránka má přístup ke schránce a může vidět Vaši {{sensitive_data}}. Nezapomeňte po kopírování odstranit {{sensitive_data}} ze schránky!",
+  "delete_ssp_key_data": "Smazat Data SSP Klíče",
+  "delete_ssp_key": "Smazat SSP Klíč",
+  "delete_ssp_key_data_desc": "VAROVÁNÍ: Tímto smažete všechna data spojená s SSP klíčem ze zařízení a to včetně Vaší seed fráze. Tato akce je nevratná!"
 }

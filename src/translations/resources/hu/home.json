@@ -80,7 +80,7 @@
   "select_chain": "Lánc kiválasztása",
   "selected_chain": "Választott lánc",
   "selected_chain_wallet": "Választott lánc és tárca",
-  "chain_not_synced_scan": "A lánc nincs szinkronizálva az SSP tárcával. Olvasd be az SSP tárca QR-kódját a szinkronizáláshoz.",
+  "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Tranzakció benyújtása...",
   "err_generate_address": "Hiba történt a cím generálása során.",
   "public_nonces_request": "Nyilvános Nonces felkérés",
