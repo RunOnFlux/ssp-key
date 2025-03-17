@@ -106,6 +106,7 @@ const SettingsSection = (props: {
     { value: 'no', label: 'no', desc: 'Norwegian' },
     { value: 'ja', label: 'ja', desc: '日本語' },
     { value: 'pl', label: 'pl', desc: 'Polish' },
+    { value: 'pt', label: 'pt', desc: 'Português' },
     { value: 'ru', label: 'ru', desc: 'Русский' },
     { value: 'ro', label: 'ro', desc: 'Romanian' },
     { value: 'sk', label: 'sk', desc: 'Slovak' },
