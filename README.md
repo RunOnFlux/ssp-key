@@ -31,7 +31,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
 
 ### **Performance and Reliability**
 - Built with:
-  - **React 18** and **React Native 0.76**
+  - **React 19** and **React Native 0.78**
   - **TypeScript** for modern, type-safe development.
 - Compatible with:
   - **iOS 15.1+** and **Android 7+**
@@ -68,7 +68,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
 ## Requirements
 
 - **Node.js**: Version 20 or higher  
-- **React Native**: Version 0.76
+- **React Native**: Version 0.78
 - **Mobile OS**:
   - iOS: Minimum version 15.1
   - Android: Minimum version 7  
