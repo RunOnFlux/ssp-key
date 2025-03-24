@@ -98,5 +98,6 @@
   "sensitive_data_warning": "AVÍS: Per motius de seguretat, el {{sensitive_data}} es mostra en 2 parts. Si us plau, uneix-les per obtenir el {{sensitive_data}} complet. Es desaconsella copiar el {{sensitive_data}} al porta-retalls, ja que qualsevol aplicació o lloc web pot accedir-hi i veure el {{sensitive_data}}. Recorda eliminar el {{sensitive_data}} del porta-retalls després de copiar-lo!",
   "delete_ssp_key_data": "Elimina les dades de la clau SSP",
   "delete_ssp_key": "Elimina la clau SSP",
-  "delete_ssp_key_data_desc": "AVÍS: Això eliminarà totes les dades associades a la teva clau SSP, inclosa la teva frase semilla del dispositiu. Aquesta acció és irreversible!"
+  "delete_ssp_key_data_desc": "AVÍS: Això eliminarà totes les dades associades a la teva clau SSP, inclosa la teva frase semilla del dispositiu. Aquesta acció és irreversible!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }
