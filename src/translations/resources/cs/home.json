@@ -98,5 +98,6 @@
   "sensitive_data_warning": "VAROVÁNÍ: Z bezpečnostních důvodů se {{sensitive_data}} zobrazí ve dvou částech. Pro získání celé {{sensitive_data}} je zapotřebí obě části spojit dohromady. Je důrazně nedoporučeno kopírování {{sensitive_data}} do vaší schránky, každá aplikace nebo webová stránka má přístup ke schránce a může vidět Vaši {{sensitive_data}}. Nezapomeňte po kopírování odstranit {{sensitive_data}} ze schránky!",
   "delete_ssp_key_data": "Smazat Data SSP Klíče",
   "delete_ssp_key": "Smazat SSP Klíč",
-  "delete_ssp_key_data_desc": "VAROVÁNÍ: Tímto smažete všechna data spojená s SSP klíčem ze zařízení a to včetně Vaší seed fráze. Tato akce je nevratná!"
+  "delete_ssp_key_data_desc": "VAROVÁNÍ: Tímto smažete všechna data spojená s SSP klíčem ze zařízení a to včetně Vaší seed fráze. Tato akce je nevratná!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }
