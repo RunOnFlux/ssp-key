@@ -99,5 +99,5 @@
   "delete_ssp_key_data": "Hapus Data Kunci SSP",
   "delete_ssp_key": "Hapus Kunci SSP",
   "delete_ssp_key_data_desc": "PERINGATAN: Ini akan menghapus semua data yang terkait dengan Kunci SSP milik Anda termasuk frasa awal dari perangkat. Tindakan ini tidak dapat diubah!",
-  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
+  "warning_chain_only": "PERINGATAN: Alamat ini hanya khusus untuk blockchain {{chain_name}} ({{chain_symbol}}). Hanya setorkan aset pada rantai {{chain_name}} ({{chain_symbol}}) ke alamat ini. Menyetor dari rantai lain akan mengakibatkan hilangnya dana!"
 }
