@@ -98,5 +98,6 @@
   "sensitive_data_warning": "OSTRZEŻENIE: Ze względów bezpieczeństwa {{sensitive_data}} jest wyświetlane w 2 częściach. Połącz je, aby uzyskać pełne {{sensitive_data}}. Zdecydowanie odradza się kopiowanie {{sensitive_data}} do schowka, ponieważ każda aplikacja lub strona internetowa ma dostęp do schowka i może zobaczyć Twoje {{sensitive_data}}. Pamiętaj, aby usunąć {{sensitive_data}} ze schowka po skopiowaniu!",
   "delete_ssp_key_data": "Usuń dane klucza SSP",
   "delete_ssp_key": "Usuń klucz SSP",
-  "delete_ssp_key_data_desc": "OSTRZEŻENIE: Spowoduje to usunięcie wszystkich danych powiązanych z Twoim kluczem SSP, w tym frazy seed, z urządzenia. Ta operacja jest nieodwracalna!"
+  "delete_ssp_key_data_desc": "OSTRZEŻENIE: Spowoduje to usunięcie wszystkich danych powiązanych z Twoim kluczem SSP, w tym frazy seed, z urządzenia. Ta operacja jest nieodwracalna!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }
