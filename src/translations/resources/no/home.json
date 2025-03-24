@@ -98,5 +98,6 @@
   "sensitive_data_warning": "ADVARSEL: Av sikkerhetsgrunner vises {{sensitive_data}} i 2 deler. Vennligst sett dem sammen for å få den fullstendige {{sensitive_data}}. Det frarådes sterkt å kopiere {{sensitive_data}} til utklippstavlen din, da enhver applikasjon eller nettside har tilgang til utklippstavlen og kan se din {{sensitive_data}}. Husk å slette {{sensitive_data}} fra utklippstavlen etter kopiering!",
   "delete_ssp_key_data": "Slett SSP-nøkkeldata",
   "delete_ssp_key": "Slett SSP-nøkkel",
-  "delete_ssp_key_data_desc": "ADVARSEL: Dette vil slette alle data knyttet til din SSP-nøkkel, inkludert frøsetningen din fra enheten. Denne handlingen er irreversibel!"
+  "delete_ssp_key_data_desc": "ADVARSEL: Dette vil slette alle data knyttet til din SSP-nøkkel, inkludert frøsetningen din fra enheten. Denne handlingen er irreversibel!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }
