@@ -98,5 +98,6 @@
   "sensitive_data_warning": "AVERTISMENT: Din motive de securitate, {{sensitive_data}} este afișat în 2 părți. Te rog să le unești pentru a obține {{sensitive_data}} complet. Este foarte descurajată copierea {{sensitive_data}} în clipboard, orice aplicație sau site web are acces la clipboard și poate vedea {{sensitive_data}}. Nu uita să ștergi {{sensitive_data}} din clipboard după copiere!",
   "delete_ssp_key_data": "Șterge datele cheii SSP",
   "delete_ssp_key": "Șterge cheia SSP",
-  "delete_ssp_key_data_desc": "AVERTISMENT: Aceasta va șterge toate datele asociate cheii tale SSP, inclusiv fraza seed de pe dispozitiv. Această acțiune este ireversibilă!"
+  "delete_ssp_key_data_desc": "AVERTISMENT: Aceasta va șterge toate datele asociate cheii tale SSP, inclusiv fraza seed de pe dispozitiv. Această acțiune este ireversibilă!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }
