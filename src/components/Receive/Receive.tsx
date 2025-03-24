@@ -227,6 +227,15 @@ const Receive = (props: { actionStatus: (status: boolean) => void }) => {
                 >
                   {address}
                 </Text>
+                <Text
+                  selectable={true}
+                  style={[Fonts.textTinyTiny, Fonts.textJustify]}
+                >
+                  {t('home:warning_chain_only', {
+                    chain_name: blockchainConfig.name,
+                    chain_symbol: blockchainConfig.symbol,
+                  })}
+                </Text>
               </View>
             </View>
             <View style={[Layout.justifyContentEnd]}>
