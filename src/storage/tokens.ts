@@ -12,7 +12,7 @@ function sepolia() {
       name: 'Fake Flux',
       symbol: 'TEST-FLUX',
       decimals: 8,
-      logo: require('../assets/flux.svg'),
+      logo: require('../assets/ethsepoliat.svg'),
     },
   ];
   return tokens;
@@ -32,7 +32,7 @@ function eth() {
       name: 'Flux',
       symbol: 'FLUX',
       decimals: 8,
-      logo: require('../assets/flux.svg'),
+      logo: require('../assets/etht.svg'),
     },
     {
       contract: '0xdac17f958d2ee523a2206206994597c13d831ec7',
@@ -738,7 +738,35 @@ function eth() {
   return tokens;
 }
 
+function amoy() {
+  const tokens = [
+    {
+      contract: '', // first is always the native 'no contract' token 0x0000000000000000000000000000000000000000
+      name: 'Testnet Polygon Amoy',
+      symbol: 'TEST-POL',
+      decimals: 18,
+      logo: require('../assets/tpol.svg'),
+    },
+  ];
+  return tokens;
+}
+
+function polygon() {
+  const tokens = [
+    {
+      contract: '', // first is always the native 'no contract' token 0x0000000000000000000000000000000000000000
+      name: 'Polygon',
+      symbol: 'POL',
+      decimals: 18,
+      logo: require('../assets/pol.svg'),
+    },
+  ];
+  return tokens;
+}
+
 export const tokens = {
   eth,
   sepolia,
+  amoy,
+  polygon,
 };

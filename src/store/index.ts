@@ -31,6 +31,8 @@ const chains = {
   btcSignet: chainSliceBase('btcSignet'),
   sepolia: chainSliceBase('sepolia'),
   eth: chainSliceBase('eth'),
+  amoy: chainSliceBase('amoy'),
+  polygon: chainSliceBase('polygon'),
 };
 // ********** Import chains **********
 

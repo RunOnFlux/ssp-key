@@ -423,6 +423,8 @@ export interface cryptos {
   btcSignet: number;
   sepolia: number;
   eth: number;
+  amoy: number;
+  polygon: number;
 }
 
 export interface externalIdentity {
