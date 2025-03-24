@@ -98,5 +98,6 @@
   "sensitive_data_warning": "AMARAN: Atas sebab keselamatan, {{sensitive_data}} dipaparkan dalam 2 bahagian. Sila gabungkannya untuk mendapatkan {{sensitive_data}} penuh. Adalah sangat tidak digalakkan untuk menyalin {{sensitive_data}} ke dalam papan klip anda, kerana mana-mana aplikasi atau laman web boleh mengakses papan klip dan melihat {{sensitive_data}} anda. Ingat untuk memadam {{sensitive_data}} daripada papan klip anda selepas menyalinnya!",
   "delete_ssp_key_data": "Padam Data Kunci SSP",
   "delete_ssp_key": "Padam Kunci SSP",
-  "delete_ssp_key_data_desc": "AMARAN: Ini akan memadam semua data yang berkaitan dengan Kunci SSP anda termasuk frasa benih daripada peranti. Tindakan ini tidak boleh dipulihkan!"
+  "delete_ssp_key_data_desc": "AMARAN: Ini akan memadam semua data yang berkaitan dengan Kunci SSP anda termasuk frasa benih daripada peranti. Tindakan ini tidak boleh dipulihkan!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }
