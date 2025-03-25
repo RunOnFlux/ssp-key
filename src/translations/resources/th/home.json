@@ -98,5 +98,6 @@
   "sensitive_data_warning": "คำเตือน: ausามีเหตุผลด้านความปลอดภัย {{sensitive_data}} จะแสดงใน 2 ส่วน กรุณารวมส่วนต่างๆ เพื่อให้ได้ {{sensitive_data}} ทั้งหมด การคัดลอก {{sensitive_data}} ลงในคลิปบอร์ดไม่แนะนำ เพราะแอปพลิเคชันหรือเว็บไซต์ใดๆ สามารถเข้าถึงคลิปบอร์ดและเห็น {{sensitive_data}} ของคุณได้ อย่าลืมลบ {{sensitive_data}} จากคลิปบอร์ดหลังจากคัดลอก!",
   "delete_ssp_key_data": "ลบข้อมูล SSP Key",
   "delete_ssp_key": "ลบ SSP Key",
-  "delete_ssp_key_data_desc": "คำเตือน: การกระทำนี้จะลบข้อมูลทั้งหมดที่เกี่ยวข้องกับ SSP Key ของคุณ รวมถึงคำสำคัญจากอุปกรณ์ การกระทำนี้ไม่สามารถย้อนกลับได้!"
+  "delete_ssp_key_data_desc": "คำเตือน: การกระทำนี้จะลบข้อมูลทั้งหมดที่เกี่ยวข้องกับ SSP Key ของคุณ รวมถึงคำสำคัญจากอุปกรณ์ การกระทำนี้ไม่สามารถย้อนกลับได้!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }

@@ -98,5 +98,6 @@
   "sensitive_data_warning": "VARNING: Av säkerhetsskäl visas {{sensitive_data}} i 2 delar. Vänligen sätt ihop dem för att få hela {{sensitive_data}}. Det avråds starkt från att kopiera {{sensitive_data}} till urklippet, eftersom alla applikationer eller webbplatser har tillgång till urklippet och kan se din {{sensitive_data}}. Kom ihåg att radera {{sensitive_data}} från urklippet efter kopiering!",
   "delete_ssp_key_data": "Radera SSP-nyckeldata",
   "delete_ssp_key": "Radera SSP-nyckel",
-  "delete_ssp_key_data_desc": "VARNING: Detta kommer att radera all data kopplad till din SSP-nyckel, inklusive din seed-fras, från enheten. Denna åtgärd är oåterkallelig!"
+  "delete_ssp_key_data_desc": "VARNING: Detta kommer att radera all data kopplad till din SSP-nyckel, inklusive din seed-fras, från enheten. Denna åtgärd är oåterkallelig!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }

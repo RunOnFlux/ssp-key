@@ -98,5 +98,6 @@
   "sensitive_data_warning": "AVISO: Por motivos de segurança, os {{sensitive_data}} são apresentados em 2. Por favor, junte-os para obter os {{sensitive_data}} completos. É altamente desencorajado copiar os {{sensitive_data}} para a sua área de transferência, qualquer aplicação ou website tem acesso ao clipboard e pode aceder aos {{sensitive_data}}. Lembre-se de eliminar os {{sensitive_data}} da sua área de transferência após copiar!",
   "delete_ssp_key_data": "Apagar dados da chave SSP",
   "delete_ssp_key": "Apagar chave SSP",
-  "delete_ssp_key_data_desc": "AVISO: Isto irá eliminar todos os dados associados à sua chave SSP, incluindo a sua frase inicial, do dispositivo. Esta ação é irreversível!"
+  "delete_ssp_key_data_desc": "AVISO: Isto irá eliminar todos os dados associados à sua chave SSP, incluindo a sua frase inicial, do dispositivo. Esta ação é irreversível!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }

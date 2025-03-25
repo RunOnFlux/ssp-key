@@ -98,5 +98,6 @@
   "sensitive_data_warning": "WAARSCHUWING: Om veiligheidsredenen wordt de {{sensitive_data}} in 2 delen weergegeven. Voeg ze samen om de volledige {{sensitive_data}} te krijgen. Het wordt sterk afgeraden om de {{sensitive_data}} in je klembord te kopiëren, elke applicatie of website heeft toegang tot je klembord en kan je {{sensitive_data}} zien. Vergeet niet de {{sensitive_data}} uit je klembord te verwijderen na het kopiëren!",
   "delete_ssp_key_data": "Verwijder SSP-sleutelgegevens",
   "delete_ssp_key": "Verwijder SSP-sleutel",
-  "delete_ssp_key_data_desc": "WAARSCHUWING: Dit verwijdert alle gegevens die zijn gekoppeld aan je SSP-sleutel, inclusief je herstelzin, van het apparaat. Deze actie is onomkeerbaar!"
+  "delete_ssp_key_data_desc": "WAARSCHUWING: Dit verwijdert alle gegevens die zijn gekoppeld aan je SSP-sleutel, inclusief je herstelzin, van het apparaat. Deze actie is onomkeerbaar!",
+  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
 }
