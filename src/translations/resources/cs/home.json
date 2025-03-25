@@ -99,5 +99,5 @@
   "delete_ssp_key_data": "Smazat Data SSP Klíče",
   "delete_ssp_key": "Smazat SSP Klíč",
   "delete_ssp_key_data_desc": "VAROVÁNÍ: Tímto smažete všechna data spojená s SSP klíčem ze zařízení a to včetně Vaší seed fráze. Tato akce je nevratná!",
-  "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!"
+  "warning_chain_only": "VAROVÁNÍ: Tato adresa je určena pouze pro {{chain_name}} ({{chain_symbol}}) blockchain. Na tuto adresu pošlete zde pouze aktiva na blockchainu {{chain_name}} ({{chain_symbol}}). Vklady a transakce z jiného blockchainu na tuto adresu povede ke ztrátě daných prostředků!"
 }
