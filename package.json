@@ -1,6 +1,6 @@
 {
   "name": "ssp-key",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -15,10 +15,10 @@
     "postinstall": "node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process' --yarn --hack && patch-package"
   },
   "resolutions": {
-    "viem": "2.23.3"
+    "viem": "2.24.2"
   },
   "overrides": {
-    "viem": "2.23.3"
+    "viem": "2.24.2"
   },
   "dependencies": {
     "@alchemy/aa-core": "3.19.0",
@@ -31,7 +31,7 @@
     "@react-navigation/native": "7.0.18",
     "@react-navigation/stack": "7.2.2",
     "@reduxjs/toolkit": "2.6.1",
-    "@runonflux/aa-schnorr-multisig-sdk": "1.2.0",
+    "@runonflux/aa-schnorr-multisig-sdk": "1.2.1",
     "@runonflux/react-native-step-indicator": "1.0.0",
     "@runonflux/utxo-lib": "1.0.1",
     "@scure/bip32": "1.6.2",
@@ -76,7 +76,7 @@
     "socket.io-client": "4.8.1",
     "stream-browserify": "3.0.0",
     "util": "0.12.5",
-    "viem": "2.23.3"
+    "viem": "2.24.2"
   },
   "devDependencies": {
     "@babel/core": "7.26.10",
@@ -117,7 +117,7 @@
     "rn-nodeify": "10.3.0",
     "sinon": "19.0.4",
     "typescript": "5.8.2",
-    "typescript-eslint": "8.27.0"
+    "typescript-eslint": "8.28.0"
   },
   "engines": {
     "node": ">=20"
