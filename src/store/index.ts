@@ -33,6 +33,9 @@ const chains = {
   eth: chainSliceBase('eth'),
   amoy: chainSliceBase('amoy'),
   polygon: chainSliceBase('polygon'),
+  base: chainSliceBase('base'),
+  avax: chainSliceBase('avax'),
+  bsc: chainSliceBase('bsc'),
 };
 // ********** Import chains **********
 
