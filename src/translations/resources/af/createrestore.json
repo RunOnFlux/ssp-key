@@ -41,5 +41,7 @@
   "rooted_device_title": "Geroote Toestel Bespeur",
   "jailbroken_device_title": "Jailbroken Toestel Bespeur",
   "rooted_device": "Dit lyk of jou toestel geroote is! Dit kompromitteer die sekuriteit van die SSP Sleutel aansienlik!",
-  "jailbroken_device": "Dit lyk of jou toestel jailbroken is! Dit kompromitteer die sekuriteit van die SSP Sleutel aansienlik!"
+  "jailbroken_device": "Dit lyk of jou toestel jailbroken is! Dit kompromitteer die sekuriteit van die SSP Sleutel aansienlik!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }
