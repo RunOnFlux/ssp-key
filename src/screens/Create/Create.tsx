@@ -10,6 +10,7 @@ import {
   Modal,
   Switch,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Icon from 'react-native-vector-icons/Feather';
@@ -370,6 +371,32 @@ function Create({ navigation }: Props) {
           <Text style={[Fonts.titleSmall, Gutters.tinyBMargin]}>
             {t('cr:secure_key')}
           </Text>
+          <Text
+            style={[
+              Fonts.textSmall,
+              Gutters.tinyBMargin,
+              Fonts.textCenter,
+              Gutters.smallLMargin,
+              Gutters.smallRMargin,
+            ]}
+          >
+            {t('cr:ssp_key_2fa')}
+          </Text>
+          <TouchableOpacity
+            onPressIn={() => Linking.openURL('https://sspwallet.io/guide')}
+          >
+            <Text
+              style={[
+                Fonts.textTinyTiny,
+                Gutters.tinyBMargin,
+                Fonts.textCenter,
+                Gutters.largeLMargin,
+                Gutters.largeRMargin,
+              ]}
+            >
+              {t('cr:ssp_key_2fa_info')}
+            </Text>
+          </TouchableOpacity>
           <View
             style={[
               Layout.rowCenter,

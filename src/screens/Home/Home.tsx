@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Linking,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Icon from 'react-native-vector-icons/Feather';
@@ -1171,16 +1177,35 @@ function Home({ navigation }: Props) {
                 </Text>
                 {(!sspWalletKeyInternalIdentity ||
                   !sspWalletInternalIdentity) && (
-                  <Text
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textCenter,
-                      Gutters.smallLMargin,
-                      Gutters.smallRMargin,
-                    ]}
-                  >
-                    {t('home:sync_qr_needed')}
-                  </Text>
+                  <>
+                    <Text
+                      style={[
+                        Fonts.textSmall,
+                        Fonts.textCenter,
+                        Gutters.smallLMargin,
+                        Gutters.smallRMargin,
+                      ]}
+                    >
+                      {t('home:sync_qr_needed')}
+                    </Text>
+                    <TouchableOpacity
+                      onPressIn={() =>
+                        Linking.openURL('https://sspwallet.io/guide')
+                      }
+                    >
+                      <Text
+                        style={[
+                          Fonts.textTiny,
+                          Fonts.textCenter,
+                          Gutters.regularTMargin,
+                          Gutters.smallLMargin,
+                          Gutters.smallRMargin,
+                        ]}
+                      >
+                        {t('home:dont_have_ssp_wallet')}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
                 )}
                 {isRefreshing && (
                   <ActivityIndicator

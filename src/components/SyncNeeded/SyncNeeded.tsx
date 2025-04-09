@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+  Linking,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -78,6 +85,21 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
             >
               {t('home:sync_qr_needed')}
             </Text>
+            <TouchableOpacity
+              onPressIn={() => Linking.openURL('https://sspwallet.io/guide')}
+            >
+              <Text
+                style={[
+                  Fonts.textTinyTiny,
+                  Fonts.textCenter,
+                  Gutters.regularTMargin,
+                  Gutters.smallLMargin,
+                  Gutters.smallRMargin,
+                ]}
+              >
+                {t('home:dont_have_ssp_wallet')}
+              </Text>
+            </TouchableOpacity>
           </View>
           <View style={[Layout.justifyContentEnd]}>
             <TouchableOpacity
