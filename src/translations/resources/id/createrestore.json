@@ -41,5 +41,7 @@
   "rooted_device_title": "Perangkat yang telah Di-Root Terdeteksi",
   "jailbroken_device_title": "Perangkat yang Di-Jailbreak telah Terdeteksi",
   "rooted_device": "Perangkat Anda tampaknya telah di-root! Hal ini secara signifikan dapat membahayakan keamanan Kunci SSP!",
-  "jailbroken_device": "Perangkat Anda tampaknya sudah di-jailbreak! Hal ini secara signifikan dapat membahayakan keamanan Kunci SSP!"
+  "jailbroken_device": "Perangkat Anda tampaknya sudah di-jailbreak! Hal ini secara signifikan dapat membahayakan keamanan Kunci SSP!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }
