@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Nhập thủ công không hợp lệ.",
   "err_invalid_scanned_data": "Dữ liệu được quét không hợp lệ.",
   "sync_qr_needed": "Hãy quét mã QR để đồng bộ với Khóa SSP của bạn trước.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Mã hóa giao dịch gặp lỗi. Đã từ chối.",
   "sending_request": "Đang gửi {{amount}} {{symbol}} đến {{address}}",
   "sending": "Đang gửi",
