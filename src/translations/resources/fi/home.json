@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Virheellinen manuaalinen syöte.",
   "err_invalid_scanned_data": "Virheelliset skannatut tiedot.",
   "sync_qr_needed": "Skannaa QR-koodi synkronoidaksesi SSP-avaimen ensin.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Virhe tapahtuman purkamisessa. Hylätty.",
   "sending_request": "Lähetetään {{amount}} {{symbol}} osoitteeseen {{address}}",
   "sending": "Lähetetään",
