@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Neplatné manuální zadání.",
   "err_invalid_scanned_data": "Naskenovaná data nejsou platná.",
   "sync_qr_needed": "Prosím nejdříve naskenujte QR kód k synchronizování SSP Klíče.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Chyba při dekódování transakce. Transakce Odmítnuta.",
   "sending_request": "Odesílání {{amount}} {{symbol}} do {{address}}",
   "sending": "Odesílání",
