@@ -41,5 +41,7 @@
   "rooted_device_title": "Rooted Device Detected",
   "jailbroken_device_title": "Jailbroken Device Detected",
   "rooted_device": "Your device appears to be rooted! This significantly compromises the security of the SSP Key!",
-  "jailbroken_device": "Your device appears to be jailbroken! This significantly compromises the security of the SSP Key!"
+  "jailbroken_device": "Your device appears to be jailbroken! This significantly compromises the security of the SSP Key!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }
