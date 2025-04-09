@@ -41,5 +41,7 @@
   "rooted_device_title": "Peranti Berstatus Root Dikesan",
   "jailbroken_device_title": "Peranti Berstatus Jailbreak Dikesan",
   "rooted_device": "Peranti anda kelihatan berstatus root! Ini menjejaskan keselamatan Kunci SSP dengan ketara!",
-  "jailbroken_device": "Peranti anda kelihatan berstatus jailbreak! Ini menjejaskan keselamatan Kunci SSP dengan ketara!"
+  "jailbroken_device": "Peranti anda kelihatan berstatus jailbreak! Ini menjejaskan keselamatan Kunci SSP dengan ketara!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }
