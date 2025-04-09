@@ -35,7 +35,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
   - **TypeScript** for modern, type-safe development.
 - Compatible with:
   - **iOS 15.1+** and **Android 7+**
-- Requires **Node.js 20+** for development.
+- Requires **Node.js 22+** for development.
 
 ---
 
@@ -49,7 +49,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
    ```
 
 2. **Install Dependencies**  
-   Ensure Node.js (20 or higher) is installed, then run:
+   Ensure Node.js (22 or higher) is installed, then run:
    ```bash
    yarn install
    ```
@@ -67,7 +67,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
 
 ## Requirements
 
-- **Node.js**: Version 20 or higher  
+- **Node.js**: Version 22 or higher  
 - **React Native**: Version 0.78
 - **Mobile OS**:
   - iOS: Minimum version 15.1

@@ -35,7 +35,7 @@ Assist in building new features, fixing bugs, or refining the codebase by submit
 ## Development Environment
 
 ### Prerequisites
-- **Node.js**: Version 20 or higher
+- **Node.js**: Version 22 or higher
 - **Yarn**: Latest version
 - **React Native CLI**: Ensure the CLI is properly installed.
 
