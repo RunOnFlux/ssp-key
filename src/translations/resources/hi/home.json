@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "अमान्य मैन्युअल इनपुट।",
   "err_invalid_scanned_data": "अमान्य स्कैन किया गया डेटा।",
   "sync_qr_needed": "कृपया पहले अपन एस. एस. पी. कुंजी को सिंक्रनाइज़ करने के लिए क्यूआर कोड स्कैन करें।",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "ट्रांजैक्शन डिकोड करने में त्रुटि हुई। अस्वीकृत।",
   "sending_request": "{{address}} पर {{amount}} {{symbol}} भेजा जा रहा है",
   "sending": "भेजा जा रहा है",
