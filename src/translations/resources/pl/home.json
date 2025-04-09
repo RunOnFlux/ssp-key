@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Nieprawidłowe wprowadzenie ręczne.",
   "err_invalid_scanned_data": "Nieprawidłowe zeskanowane dane.",
   "sync_qr_needed": "Zeskanuj kod QR, aby najpierw zsynchronizować swój klucz SSP.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Błąd dekodowania transakcji. Odrzucono.",
   "sending_request": "Wysyłanie {{amount}} {{symbol}} do {{address}}",
   "sending": "Wysyłanie",
