@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Input manuale non valido.",
   "err_invalid_scanned_data": "Dati Scansionati Non Validi.",
   "sync_qr_needed": "Scansiona prima il codice QR per sincronizzare la tua chiave SSP.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Errore di decodifica della transazione. Rifiutata.",
   "sending_request": "Invio {{amount}} {{symbol}} a {{address}}",
   "sending": "Invio in corso",
