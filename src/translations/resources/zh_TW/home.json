@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "手動輸入無效.",
   "err_invalid_scanned_data": "掃描數據無效.",
   "sync_qr_needed": "請掃描 QR 代碼以先同步您的 SSP 金鑰.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "解碼交易時出錯.已拒絕.",
   "sending_request": "正在發送 {{amount}} {{symbol}} 到 {{address}}",
   "sending": "發送中",
