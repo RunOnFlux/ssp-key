@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Introducere manuală invalidă.",
   "err_invalid_scanned_data": "Date scanate invalide.",
   "sync_qr_needed": "Te rog scanează codul QR pentru a sincroniza mai întâi cheia SSP.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Eroare la decodificarea tranzacției. Respinsă.",
   "sending_request": "Se trimite {{amount}} {{symbol}} către {{address}}",
   "sending": "Se trimite",

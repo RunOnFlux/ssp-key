@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Μη έγκυρη χειροκίνητη εισαγωγή.",
   "err_invalid_scanned_data": "Μη Έγκυρα Σαρωμένα Δεδομένα.",
   "sync_qr_needed": "Παρακαλώ σαρώστε πρώτα τον κωδικό QR για να συγχρονίσετε το κλειδί SSP σας.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Σφάλμα αποκωδικοποίησης συναλλαγής. Απορρίφθηκε.",
   "sending_request": "Αποστολή {{amount}} {{symbol}} στο {{address}}",
   "sending": "Αποστολή",

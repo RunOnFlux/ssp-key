@@ -41,5 +41,7 @@
   "rooted_device_title": "Rootet enhet oppdaget",
   "jailbroken_device_title": "Jailbreaket enhet oppdaget",
   "rooted_device": "Enheten din ser ut til å være rootet! Dette kompromitterer sikkerheten til SSP-nøkkelen betydelig!",
-  "jailbroken_device": "Enheten din ser ut til å være jailbreaket! Dette kompromitterer sikkerheten til SSP-nøkkelen betydelig!"
+  "jailbroken_device": "Enheten din ser ut til å være jailbreaket! Dette kompromitterer sikkerheten til SSP-nøkkelen betydelig!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }

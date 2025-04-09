@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Ugyldig manuell inntasting.",
   "err_invalid_scanned_data": "Ugyldig skannet data.",
   "sync_qr_needed": "Vennligst skann QR-koden for å synkronisere SSP-nøkkelen din først.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Feil ved dekoding av transaksjon. Avvist.",
   "sending_request": "Sender {{amount}} {{symbol}} til {{address}}",
   "sending": "Sender",

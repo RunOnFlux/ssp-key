@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Saisie manuelle invalide.",
   "err_invalid_scanned_data": "Données numérisées non valides.",
   "sync_qr_needed": "Veuillez d'abord scanner le code QR pour synchroniser votre clé SSP.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Erreur lors du décodage de la transaction. Rejetée.",
   "sending_request": "Envoi de {{amount}} {{symbol}} vers {{address}}",
   "sending": "Envoi en cours",

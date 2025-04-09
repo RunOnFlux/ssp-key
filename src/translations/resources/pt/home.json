@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Dados manuais inválidos.",
   "err_invalid_scanned_data": "Digitalização inválida.",
   "sync_qr_needed": "Primeiro, digitalize o código QR para sincronizar com a sua chave SSP.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Erro a descodificar transação. Rejeitado.",
   "sending_request": "Enviar {{amount}}{{symbol}} para {{address}}",
   "sending": "A enviar",

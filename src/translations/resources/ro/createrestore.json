@@ -41,5 +41,7 @@
   "rooted_device_title": "Dispozitiv rootat detectat",
   "jailbroken_device_title": "Dispozitiv jailbroken detectat",
   "rooted_device": "Dispozitivul tău pare a fi rootat! Acest lucru compromite semnificativ securitatea cheii SSP!",
-  "jailbroken_device": "Dispozitivul tău pare a fi jailbroken! Acest lucru compromite semnificativ securitatea cheii SSP!"
+  "jailbroken_device": "Dispozitivul tău pare a fi jailbroken! Acest lucru compromite semnificativ securitatea cheii SSP!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }

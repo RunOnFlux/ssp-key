@@ -41,5 +41,7 @@
   "rooted_device_title": "Dispositiu arrelat detectat",
   "jailbroken_device_title": "Dispositiu amb jailbreak detectat",
   "rooted_device": "Sembla que el teu dispositiu està arrelat! Això compromet greument la seguretat de la clau SSP!",
-  "jailbroken_device": "Sembla que el teu dispositiu té jailbreak! Això compromet greument la seguretat de la clau SSP!"
+  "jailbroken_device": "Sembla que el teu dispositiu té jailbreak! Això compromet greument la seguretat de la clau SSP!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }

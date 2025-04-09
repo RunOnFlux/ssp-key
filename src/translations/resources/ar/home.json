@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Invalid manual input.",
   "err_invalid_scanned_data": "Invalid Scanned Data.",
   "sync_qr_needed": "Please scan QR code to synchronise your SSP Key first.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Error decoding transaction. Rejected.",
   "sending_request": "Sending {{amount}} {{symbol}} to {{address}}",
   "sending": "Sending",

@@ -41,5 +41,7 @@
   "rooted_device_title": "Zistené rootnuté zariadenie",
   "jailbroken_device_title": "Zistené jailbreaknuté zariadenie",
   "rooted_device": "Zdá sa, že vaše zariadenie je rootnuté! To výrazne ohrozuje bezpečnosť SSP kľúča!",
-  "jailbroken_device": "Zdá sa, že vaše zariadenie je jailbreaknuté! To výrazne ohrozuje bezpečnosť SSP kľúča!"
+  "jailbroken_device": "Zdá sa, že vaše zariadenie je jailbreaknuté! To výrazne ohrozuje bezpečnosť SSP kľúča!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }

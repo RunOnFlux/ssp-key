@@ -41,5 +41,7 @@
   "rooted_device_title": "ตรวจพบอุปกรณ์ที่รูทแล้ว",
   "jailbroken_device_title": "ตรวจพบอุปกรณ์ที่เจลเบรคแล้ว",
   "rooted_device": "อุปกรณ์ของคุณดูเหมือนจะถูกรูทแล้ว! นี่จะทำให้ความปลอดภัยของ SSP Key ถูกละเมิดอย่างรุนแรง!",
-  "jailbroken_device": "อุปกรณ์ของคุณดูเหมือนจะถูกเจลเบรคแล้ว! นี่จะทำให้ความปลอดภัยของ SSP Key ถูกละเมิดอย่างรุนแรง!"
+  "jailbroken_device": "อุปกรณ์ของคุณดูเหมือนจะถูกเจลเบรคแล้ว! นี่จะทำให้ความปลอดภัยของ SSP Key ถูกละเมิดอย่างรุนแรง!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }

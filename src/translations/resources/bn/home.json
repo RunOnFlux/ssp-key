@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "অবৈধ ম্যানুয়াল ইনপুট.",
   "err_invalid_scanned_data": "অবৈধ স্ক্যান করা ডেটা.",
   "sync_qr_needed": "দয়া করে আপনার SSP কী সিঙ্ক্রোনাইজ করার জন্য প্রথমে QR কোড স্ক্যান করুন.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "লেনদেন ডিকোড করার সময় ত্রুটি হয়েছে। প্রত্যাখ্যান করা হয়েছে.",
   "sending_request": "{{amount}} {{symbol}} {{address}}-এ পাঠানো হচ্ছে",
   "sending": "পাঠানো হচ্ছে",

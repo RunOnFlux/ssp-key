@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Недействительный ручной ввод.",
   "err_invalid_scanned_data": "Недействительные данные сканирования.",
   "sync_qr_needed": "Пожалуйста, отсканируйте QR-код для первоначальной синхронизации вашего ключа SSP.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Ошибка декодирования транзакции. Отклонено.",
   "sending_request": "Отправка {{amount}} {{symbol}} на {{address}}",
   "sending": "Отправка",

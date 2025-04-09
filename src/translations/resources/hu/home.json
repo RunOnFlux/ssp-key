@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Érvénytelen manuális bevitel.",
   "err_invalid_scanned_data": "Érvénytelen szkennelt adat.",
   "sync_qr_needed": "Kérjük szkennelje be a QR-kódot az SSP kulccsal.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Hiba lépett fel a tranzakció dekódolásánál. Elutasítva.",
   "sending_request": "{{amount}}{{symbol}} küldése {{address}} számára",
   "sending": "Küldés",

@@ -41,5 +41,7 @@
   "rooted_device_title": "Perangkat yang telah Di-Root Terdeteksi",
   "jailbroken_device_title": "Perangkat yang Di-Jailbreak telah Terdeteksi",
   "rooted_device": "Perangkat Anda tampaknya telah di-root! Hal ini secara signifikan dapat membahayakan keamanan Kunci SSP!",
-  "jailbroken_device": "Perangkat Anda tampaknya sudah di-jailbreak! Hal ini secara signifikan dapat membahayakan keamanan Kunci SSP!"
+  "jailbroken_device": "Perangkat Anda tampaknya sudah di-jailbreak! Hal ini secara signifikan dapat membahayakan keamanan Kunci SSP!",
+  "ssp_key_2fa": "Kunci SSP adalah 2FA untuk Dompet SSP Milik Anda.",
+  "ssp_key_2fa_info": "Instal ekstensi peramban Dompet SSP terlebih dahulu, lalu selesaikan pengaturan Kunci SSP ini. Butuh bantuan? Ketuk di sini."
 }

@@ -41,5 +41,7 @@
   "rooted_device_title": "Wykryto zrootowane urządzenie",
   "jailbroken_device_title": "Wykryto urządzenie po jailbreaku",
   "rooted_device": "Twoje urządzenie wydaje się być zrootowane! To znacząco zagraża bezpieczeństwu klucza SSP!",
-  "jailbroken_device": "Twoje urządzenie wydaje się być po jailbreaku! To znacząco zagraża bezpieczeństwu klucza SSP!"
+  "jailbroken_device": "Twoje urządzenie wydaje się być po jailbreaku! To znacząco zagraża bezpieczeństwu klucza SSP!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }
