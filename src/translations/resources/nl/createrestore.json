@@ -41,5 +41,7 @@
   "rooted_device_title": "Geroote Apparaat Gedetecteerd",
   "jailbroken_device_title": "Jailbroken Apparaat Gedetecteerd",
   "rooted_device": "Je apparaat lijkt geroote te zijn! Dit brengt de beveiliging van de SSP Sleutel ernstig in gevaar!",
-  "jailbroken_device": "Je apparaat lijkt gejailbreakt te zijn! Dit brengt de beveiliging van de SSP Sleutel ernstig in gevaar!"
+  "jailbroken_device": "Je apparaat lijkt gejailbreakt te zijn! Dit brengt de beveiliging van de SSP Sleutel ernstig in gevaar!",
+  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
 }
