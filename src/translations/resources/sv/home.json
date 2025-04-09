@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "Ogiltig manuell inmatning.",
   "err_invalid_scanned_data": "Ogiltig skannad data.",
   "sync_qr_needed": "Vänligen skanna QR-koden för att först synkronisera din SSP-nyckel.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Fel vid avkodning av transaktion. Avvisad.",
   "sending_request": "Skickar {{amount}} {{symbol}} till {{address}}",
   "sending": "Skickar",
