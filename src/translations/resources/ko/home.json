@@ -47,6 +47,7 @@
   "err_invalid_manual_input": "잘못된 수동 입력입니다.",
   "err_invalid_scanned_data": "잘못된 스캔 데이터입니다.",
   "sync_qr_needed": "먼저 SSP 키를 동기화하기 위해 QR 코드를 스캔하세요.",
+  "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "거래 디코딩 중 오류 발생. 거부되었습니다.",
   "sending_request": "{{amount}} {{symbol}}을(를) {{address}}로 전송 중",
   "sending": "전송 중",
