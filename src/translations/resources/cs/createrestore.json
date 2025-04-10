@@ -42,6 +42,6 @@
   "jailbroken_device_title": "Detekováno zařízení s Jailbreakem",
   "rooted_device": "Vaše zařázení je rootnuté. To významně ohrožuje bezpečnost vašeho SSP Klíče!",
   "jailbroken_device": "Vaše zařázení má jailbreak. To významně ohrožuje bezpečnost vašeho SSP Klíče!",
-  "ssp_key_2fa": "SSP Key is 2FA for your SSP Wallet.",
-  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
+  "ssp_key_2fa": "SSP Klíč je 2FA pro vaši SSP Peněženku.",
+  "ssp_key_2fa_info": "Nejprve nainstalujte SSP Peněženku do vašeho prohlížeče, poté dokončete toto nastavení SSP Klíče. Potřebujete pomoc? Klikněte zde."
 }
