@@ -92,7 +92,6 @@ export async function getFCMToken() {
   try {
     const token = await Keychain.getGenericPassword({
       service: 'fcm_key_token',
-      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
     });
 
     // our token may not be valid anymore, on app boot run refresh function

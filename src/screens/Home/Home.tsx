@@ -197,13 +197,11 @@ function Home({ navigation }: Props) {
       // just a precaution to make sure xpub and xpriv are set. Should acutally never end up here
       Keychain.getGenericPassword({
         service: 'enc_key',
-        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       })
         .then(async (idData) => {
           // clean up password from encrypted storage
           const passwordData = await Keychain.getGenericPassword({
             service: 'sspkey_pw',
-            rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
           });
           if (!passwordData || !idData) {
             throw new Error('Unable to decrypt stored data');
@@ -269,13 +267,11 @@ function Home({ navigation }: Props) {
   ) => {
     Keychain.getGenericPassword({
       service: 'enc_key',
-      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
     })
       .then(async (idData) => {
         // clean up password from encrypted storage
         const passwordData = await Keychain.getGenericPassword({
           service: 'sspkey_pw',
-          rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
         });
         if (!passwordData || !idData) {
           throw new Error('Unable to decrypt stored data');
@@ -358,13 +354,11 @@ function Home({ navigation }: Props) {
   const generateAddressesForSyncIdentity = (suppliedXpubWallet: string) => {
     Keychain.getGenericPassword({
       service: 'enc_key',
-      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
     })
       .then(async (idData) => {
         // clean up password from encrypted storage
         const passwordData = await Keychain.getGenericPassword({
           service: 'sspkey_pw',
-          rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
         });
         if (!passwordData || !idData) {
           throw new Error('Unable to decrypt stored data');
@@ -570,11 +564,9 @@ function Home({ navigation }: Props) {
       // encryption key
       const encryptionKey = await Keychain.getGenericPassword({
         service: 'enc_key',
-        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       });
       const passwordData = await Keychain.getGenericPassword({
         service: 'sspkey_pw',
-        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       });
       if (!passwordData || !encryptionKey) {
         throw new Error('Unable to decrypt stored data');
@@ -642,11 +634,9 @@ function Home({ navigation }: Props) {
       // encryption key
       const encryptionKey = await Keychain.getGenericPassword({
         service: 'enc_key',
-        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       });
       const passwordData = await Keychain.getGenericPassword({
         service: 'sspkey_pw',
-        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       });
       if (!passwordData || !encryptionKey) {
         throw new Error('Unable to decrypt stored data');

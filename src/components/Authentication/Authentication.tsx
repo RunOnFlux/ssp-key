@@ -83,7 +83,6 @@ const Authentication = (props: {
     // get from keychain
     const options = {
       service: 'sspkey_pw_bio',
-      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       authenticationPrompt: {
         title: textForPrompt,
         // subtitle: textForPrompt, // android only
@@ -137,12 +136,10 @@ const Authentication = (props: {
       // get from keychain
       const passwordHash = await Keychain.getGenericPassword({
         service: 'sspkey_pw_hash',
-        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       });
       // get salt
       const saltData = await Keychain.getGenericPassword({
         service: 'salt',
-        rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
       });
       // from user password create hash
       if (!passwordHash || !saltData) {
@@ -184,7 +181,6 @@ const Authentication = (props: {
           if (isBiometricsSupported) {
             const passwordData = await Keychain.getGenericPassword({
               service: 'sspkey_pw',
-              rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
             });
             if (passwordData) {
               await Keychain.setGenericPassword(
