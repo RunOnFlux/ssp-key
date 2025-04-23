@@ -1897,7 +1897,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNKeychain (10.0.0):
+  - RNKeychain (9.2.3):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2537,7 +2537,7 @@ SPEC CHECKSUMS:
   RNFBApp: 4105e54d9ca4a1c10893a032268470f670181110
   RNFBMessaging: 6857871d9dff8f26b0c325fc7d97ba69cb77d213
   RNGestureHandler: dcb1b1db024f3744b03af56d132f4f72c4c27195
-  RNKeychain: 455cc7002480eac3d24f67b4329ec80c7d901edc
+  RNKeychain: 8d45ee314f242a6fb81fa9677ed8e0bf39dcecc3
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNPermissions: 6d7dff9925088281a527bf4d53b8d66751c5e251
   RNReanimated: 1c921bf41725bcfd6db6eaf074252aaaef775ca1
