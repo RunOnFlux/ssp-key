@@ -43,6 +43,7 @@
     "bignumber.js": "9.3.0",
     "buffer": "6.0.3",
     "crypto-js": "4.2.0",
+    "ethers": "6.13.5",
     "events": "3.3.0",
     "fastestsmallesttextencoderdecoder": "1.0.22",
     "i18next": "25.0.1",

@@ -3,36 +3,41 @@ import io, { Socket } from 'socket.io-client';
 import { useAppSelector } from '../hooks';
 import { sspConfig } from '@storage/ssp';
 import { AppState } from 'react-native';
-import { cryptos, utxo } from '../types';
+import { evmSigningRequest } from '../types';
+
+interface TxRequest {
+  rawTx: string;
+  chain: string;
+  path: string;
+  utxos: any[];
+}
 
 interface SocketContextType {
   socket: Socket | null;
-  newTx: adjustedServeResponseTx;
-  publicNoncesRequest: boolean;
+  newTx: TxRequest;
   clearTx?: () => void;
+  publicNoncesRequest: boolean;
   clearPublicNoncesRequest?: () => void;
-}
-
-interface serverResponse {
-  payload: string;
-  action: string;
-  wkIdentity: string;
-  chain: keyof cryptos;
-  path: string;
-  utxos: utxo[];
-}
-
-interface adjustedServeResponseTx {
-  rawTx: string;
-  chain: keyof cryptos;
-  path: string;
-  utxos: utxo[];
+  evmSigningRequest: evmSigningRequest | null;
+  clearEvmSigningRequest?: () => void;
+  sendEvmSigningResponse?: (response: {
+    requestId: string;
+    approved: boolean;
+    result?: unknown;
+    error?: string;
+  }) => void;
 }
 
 const defaultValue: SocketContextType = {
   socket: null,
-  newTx: {} as adjustedServeResponseTx,
+  newTx: {
+    rawTx: '',
+    chain: '',
+    path: '',
+    utxos: [],
+  },
   publicNoncesRequest: false,
+  evmSigningRequest: null,
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
@@ -42,12 +47,19 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     (state) => state.ssp,
   );
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [newTx, setNewTx] = useState({} as adjustedServeResponseTx);
+  const [newTx, setNewTx] = useState<TxRequest>({
+    rawTx: '',
+    chain: '',
+    path: '',
+    utxos: [],
+  });
   const [publicNoncesRequest, setPublicNoncesRequest] = useState(false);
+  const [evmSigningRequest, setEvmSigningRequest] =
+    useState<evmSigningRequest | null>(null);
   const [socketIdentiy, setSocketIdentity] = useState('');
 
   useEffect(() => {
-    console.log('socket init');
+    console.log('[Socket] Initializing SSP Key socket connection');
     if (!wkIdentity) {
       return;
     }
@@ -58,42 +70,63 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       timeout: 10000,
     });
 
-    newSocket.on('connect_error', (error) => {
-      console.error('Connection Error', error);
+    newSocket.on('connect', () => {
+      console.log('[Socket] Connected to SSP Relay');
     });
 
-    // leave if identity changed
+    newSocket.on('connect_error', (error) => {
+      console.error('[Socket] Connection Error', error);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('[Socket] Disconnected from SSP Relay');
+    });
+
+    // Leave previous session if identity changed
     if (socketIdentiy) {
       newSocket.emit('leave', { wkIdentity: socketIdentiy });
     }
     setSocketIdentity(wkIdentity);
 
-    newSocket.emit('join', {
-      wkIdentity,
+    // Join new session
+    newSocket.emit('join', { wkIdentity });
+
+    // Handle transaction requests
+    newSocket.on('tx', (data: any) => {
+      console.log('[Socket] Transaction request received:', data);
+      setNewTx({
+        rawTx: data.payload,
+        chain: data.chain,
+        path: data.path,
+        utxos: data.utxos || [],
+      });
     });
 
-    newSocket.on('tx', (tx: serverResponse) => {
-      console.log('incoming tx');
-      console.log(tx);
-      const adjustedTx = {
-        chain: tx.chain,
-        path: tx.path,
-        rawTx: tx.payload,
-        utxos: tx.utxos,
-      };
-      setNewTx(adjustedTx);
-    });
-
+    // Handle public nonces requests
     newSocket.on('publicnoncesrequest', () => {
-      console.log('incoming public nonces request');
+      console.log('[Socket] Public nonces request received');
       setPublicNoncesRequest(true);
     });
 
+    // Handle EVM Signing Request requests from the enhanced action API
+    newSocket.on(
+      'evmsigningrequest',
+      (data: { chain: string; path: string; payload: string }) => {
+        console.log(
+          '[Socket] EVM Signing request received via action API:',
+          data,
+        );
+        setEvmSigningRequest(JSON.parse(data.payload) as evmSigningRequest);
+      },
+    );
+
     setSocket(newSocket);
+
     return () => {
+      console.log('[Socket] Cleaning up socket connection');
       newSocket.close();
     };
-  }, [wkIdentity]);
+  }, [wkIdentity, socketIdentiy]);
 
   useEffect(() => {
     if (socket) {
@@ -110,11 +143,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   }, [socket, wkIdentity]);
 
   const clearTx = () => {
-    setNewTx({} as adjustedServeResponseTx);
+    setNewTx({
+      rawTx: '',
+      chain: '',
+      path: '',
+      utxos: [],
+    });
   };
 
   const clearPublicNoncesRequest = () => {
     setPublicNoncesRequest(false);
+  };
+
+  const clearEvmSigningRequest = () => {
+    setEvmSigningRequest(null);
   };
 
   return (
@@ -125,6 +167,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         clearTx,
         publicNoncesRequest,
         clearPublicNoncesRequest,
+        evmSigningRequest,
+        clearEvmSigningRequest,
       }}
     >
       {children}
