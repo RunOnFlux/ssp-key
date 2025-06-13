@@ -93,7 +93,7 @@
   "public_nonces_request_approved_info": "Public Nonces were generated and sent for syncing with SSP Wallet.",
   "evm_signing_request": "EVM Signing Request",
   "evm_signing_request_info": "SSP Wallet would like to sign EVM Chain Data. This action may be requested by a dApp.",
-  "data_to_sign": "Data to sign:",
+  "data_to_sign": "Data to sign",
   "evm_signing_request_approved": "EVM Signing Request Approved!",
   "evm_signing_request_approved_info": "EVM Signing Request was approved and sent back to your SSP Wallet.",
   "err_sharing_public_nonces": "Error while sharing Public Nonces.",

@@ -75,9 +75,23 @@ const EvmSigningRequest = (props: {
             Fonts.textCenter,
             Gutters.smallLMargin,
             Gutters.smallRMargin,
+            Gutters.regularTMargin,
           ]}
         >
-          {t('home:data_to_sign')}
+          {t('home:data_to_sign')}:
+        </Text>
+        <Text
+          style={[
+            Fonts.textTiny,
+            Fonts.textCenter,
+            Gutters.smallLMargin,
+            Gutters.smallRMargin,
+            { fontFamily: 'monospace' },
+          ]}
+        >
+          {props.dataToSign.length > 100
+            ? props.dataToSign.substring(0, 100) + '...'
+            : props.dataToSign}
         </Text>
       </View>
       <View style={[Layout.justifyContentEnd]}>

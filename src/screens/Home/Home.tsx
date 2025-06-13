@@ -190,6 +190,7 @@ function Home({ navigation }: Props) {
   useEffect(() => {
     if (evmSigningRequest) {
       console.log('[EVM Signing] Received request:', evmSigningRequest);
+      setActiveChain(evmSigningRequest.chain as keyof cryptos);
       setEvmSigningData(evmSigningRequest);
     }
   }, [evmSigningRequest]);
@@ -798,7 +799,9 @@ function Home({ navigation }: Props) {
           setIsManualInputModalOpen(false);
         });
       } else if (manualInput.startsWith('evmsigningrequest')) {
-        handleEvmSigningRequest(JSON.parse(manualInput) as evmSigningRequest);
+        handleEvmSigningRequest(
+          JSON.parse(manualInput.replace('evmsigningrequest', '')),
+        );
         setTimeout(() => {
           setIsManualInputModalOpen(false);
         });
@@ -888,10 +891,12 @@ function Home({ navigation }: Props) {
         handlePublicNoncesRequest(identityChain);
         return;
       }
+      // evmsigningrequest{chain: string, path: string, payload: string}
       if (scannedData.startsWith('evmsigningrequest')) {
-        // this is a evm signing request
-        const potentialWCData = JSON.parse(scannedData);
-        console.log(potentialWCData);
+        // this is a evm signing request, remove evmsigningrequest prefix
+        handleEvmSigningRequest(
+          JSON.parse(scannedData.replace('evmsigningrequest', '')),
+        );
         return;
       }
       if (splittedInput[1]) {
@@ -969,7 +974,7 @@ function Home({ navigation }: Props) {
         } else if (result.data.action === 'publicnoncesrequest') {
           handlePublicNoncesRequest(result.data.chain);
         } else if (result.data.action === 'evmsigningrequest') {
-          handleEvmSigningRequest(result.data);
+          handleEvmSigningRequest(JSON.parse(result.data.payload));
         }
       } else {
         // here open sync needed modal
@@ -1246,6 +1251,10 @@ function Home({ navigation }: Props) {
       const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
       const addressIndex = Number(splittedDerPath[1]);
 
+      console.log(`activeChain`, activeChain);
+      console.log(`typeIndex`, typeIndex);
+      console.log(`addressIndex`, addressIndex);
+
       const keyPair = generateAddressKeypair(
         xprivKeyDecrypted,
         typeIndex,
@@ -1259,9 +1268,6 @@ function Home({ navigation }: Props) {
       console.log(`keyPair:`, keyPair);
 
       console.log(`xpubWallet`, xpubKeyWalletDecrypted);
-      console.log(`activeChain`, activeChain);
-      console.log(`typeIndex`, typeIndex);
-      console.log(`addressIndex`, addressIndex);
 
       const publicKeyWallet = deriveEVMPublicKey(
         xpubKeyWalletDecrypted,
@@ -1317,6 +1323,7 @@ function Home({ navigation }: Props) {
       console.error('[EVM Signing] Error handling request:', error);
       displayMessage('error', 'Error processing request');
     } finally {
+      setActiveChain(identityChain);
       setEvmSigningData(null);
 
       // Clear the appropriate request
