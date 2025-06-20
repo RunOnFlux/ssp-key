@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -48,7 +54,7 @@ const EvmSigningRequest = (props: {
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="signature" size={60} color={Colors.textGray400} />
+        <Icon name="edit" size={60} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -80,19 +86,41 @@ const EvmSigningRequest = (props: {
         >
           {t('home:data_to_sign')}:
         </Text>
-        <Text
+        <View
           style={[
-            Fonts.textTiny,
-            Fonts.textCenter,
+            {
+              height: 100, // Approximately 5 lines
+              maxHeight: 100,
+              backgroundColor: Colors.inputBackground,
+              borderRadius: 8,
+              padding: 10,
+              borderWidth: 1,
+              borderColor: Colors.textGray200,
+            },
             Gutters.smallLMargin,
             Gutters.smallRMargin,
-            { fontFamily: 'monospace' },
           ]}
         >
-          {props.dataToSign.length > 100
-            ? props.dataToSign.substring(0, 100) + '...'
-            : props.dataToSign}
-        </Text>
+          <ScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+          >
+            <Text
+              style={[
+                Fonts.textTiny,
+                {
+                  fontFamily: 'monospace',
+                  lineHeight: 16,
+                  color: Colors.textGray800,
+                },
+              ]}
+              selectable={true}
+            >
+              {props.dataToSign}
+            </Text>
+          </ScrollView>
+        </View>
       </View>
       <View style={[Layout.justifyContentEnd]}>
         <TouchableOpacity
