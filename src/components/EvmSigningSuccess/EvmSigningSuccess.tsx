@@ -64,7 +64,9 @@ const EvmSigningSuccess = (props: {
             <Text style={[Fonts.textTiny, Fonts.textCenter]}>
               {t('home:evm_signing_request_approved_info')}
             </Text>
-            <Text style={[Fonts.textTiny, Fonts.textCenter]}>
+            <Text
+              style={[Fonts.textTiny, Fonts.textCenter, Gutters.smallTMargin]}
+            >
               {t('home:signature')}: {props.signature}
             </Text>
           </View>

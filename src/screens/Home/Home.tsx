@@ -1546,6 +1546,8 @@ function Home({ navigation }: Props) {
             <EvmSigningRequest
               activityStatus={activityStatus}
               dataToSign={evmSigningData.data || ''}
+              chain={evmSigningData.chain as keyof cryptos}
+              walletInUse={evmSigningData.walletInUse}
               actionStatus={handleEvmSigningRequestAction}
             />
           )}
