@@ -271,6 +271,7 @@ export async function decodeEVMTransactionForApproval(
       }
     } else {
       txInfo.tokenSymbol = blockchains[chain].symbol;
+      txInfo.data = decodedData.args[2] as `0x${string}`;
     }
 
     return txInfo;
