@@ -77,6 +77,7 @@ describe('Transactions Lib', () => {
         fee: 'decodingError',
         token: 'decodingError',
         tokenSymbol: 'decodingError',
+        data: 'decodingError',
       });
     });
 
@@ -114,6 +115,7 @@ describe('Transactions Lib', () => {
         fee: '0.000591584934602552',
         token: '',
         tokenSymbol: 'TEST-ETH',
+        data: '0x',
       });
     });
 
@@ -126,6 +128,7 @@ describe('Transactions Lib', () => {
         fee: 'decodingError',
         token: 'decodingError',
         tokenSymbol: 'decodingError',
+        data: 'decodingError',
       });
     });
   });
