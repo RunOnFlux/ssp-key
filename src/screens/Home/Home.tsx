@@ -39,6 +39,7 @@ import {
   syncSSPRelay,
   publicNonce,
   publicPrivateNonce,
+  evmSigningRequest,
 } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
@@ -51,6 +52,7 @@ import {
   generateInternalIdentityAddress,
   generateAddressKeypair,
   generatePublicNonce,
+  deriveEVMPublicKey,
 } from '../../lib/wallet';
 
 import {
@@ -61,6 +63,8 @@ import {
   signAndBroadcastEVM,
   selectPublicNonce,
 } from '../../lib/constructTx';
+
+import { continueSigningSchnorrMultisig } from '../../lib/evmSigning';
 
 import {
   setXpubKey,
@@ -79,6 +83,8 @@ import { useAppSelector, useAppDispatch } from '../../hooks';
 import { useSocket } from '../../hooks/useSocket';
 import { getFCMToken, refreshFCMToken } from '../../lib/fcmHelper';
 import { changeTheme } from '../../store/theme';
+import EvmSigningRequest from '../../components/EvmSigningRequest/EvmSigningRequest';
+import EvmSigningSuccess from '../../components/EvmSigningSuccess/EvmSigningSuccess';
 
 type Props = {
   navigation: any;
@@ -119,6 +125,11 @@ function Home({ navigation }: Props) {
   const [manualInputModalOpen, setIsManualInputModalOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
+  const [evmSigningData, setEvmSigningData] =
+    useState<evmSigningRequest | null>(null);
+  const [evmSigningSignature, setEvmSigningSignature] = useState<string | null>(
+    null,
+  );
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
@@ -126,8 +137,14 @@ function Home({ navigation }: Props) {
   const [activityStatus, setActivityStatus] = useState(false);
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
 
-  const { newTx, clearTx, publicNoncesRequest, clearPublicNoncesRequest } =
-    useSocket();
+  const {
+    newTx,
+    clearTx,
+    publicNoncesRequest,
+    clearPublicNoncesRequest,
+    evmSigningRequest,
+    clearEvmSigningRequest,
+  } = useSocket();
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -153,7 +170,12 @@ function Home({ navigation }: Props) {
 
   useEffect(() => {
     if (newTx.rawTx) {
-      handleTxRequest(newTx.rawTx, newTx.chain, newTx.path, newTx.utxos);
+      handleTxRequest(
+        newTx.rawTx,
+        newTx.chain as keyof cryptos,
+        newTx.path,
+        newTx.utxos,
+      );
       clearTx?.();
     }
   }, [newTx.rawTx]);
@@ -164,6 +186,14 @@ function Home({ navigation }: Props) {
       clearPublicNoncesRequest?.();
     }
   }, [publicNoncesRequest]);
+
+  useEffect(() => {
+    if (evmSigningRequest) {
+      console.log('[EVM Signing] Received request:', evmSigningRequest);
+      setActiveChain(evmSigningRequest.chain as keyof cryptos);
+      setEvmSigningData(evmSigningRequest);
+    }
+  }, [evmSigningRequest]);
 
   useEffect(() => {
     if (!xpubKey || !xpubWallet) {
@@ -553,6 +583,11 @@ function Home({ navigation }: Props) {
     setActiveChain(chain);
     setPublicNoncesReq(chain);
   };
+  const handleEvmSigningRequest = (data: evmSigningRequest) => {
+    console.log(data);
+    setActiveChain(data.chain as keyof cryptos);
+    setEvmSigningData(data);
+  };
   const handleSyncRequest = (xpubw: string, chain: keyof cryptos) => {
     setActiveChain(chain);
     setSyncReq(xpubw);
@@ -763,6 +798,13 @@ function Home({ navigation }: Props) {
         setTimeout(() => {
           setIsManualInputModalOpen(false);
         });
+      } else if (manualInput.startsWith('evmsigningrequest')) {
+        handleEvmSigningRequest(
+          JSON.parse(manualInput.replace('evmsigningrequest', '')),
+        );
+        setTimeout(() => {
+          setIsManualInputModalOpen(false);
+        });
       } else {
         const splittedInput = manualInput.split(':');
         let chain: keyof cryptos = identityChain;
@@ -849,6 +891,14 @@ function Home({ navigation }: Props) {
         handlePublicNoncesRequest(identityChain);
         return;
       }
+      // evmsigningrequest{chain: string, path: string, payload: string}
+      if (scannedData.startsWith('evmsigningrequest')) {
+        // this is a evm signing request, remove evmsigningrequest prefix
+        handleEvmSigningRequest(
+          JSON.parse(scannedData.replace('evmsigningrequest', '')),
+        );
+        return;
+      }
       if (splittedInput[1]) {
         // all is default
         chain = splittedInput[0] as keyof cryptos;
@@ -915,7 +965,6 @@ function Home({ navigation }: Props) {
         );
         console.log('result', result.data);
         if (result.data.action === 'tx') {
-          // only this action is valid for us
           handleTxRequest(
             result.data.payload,
             result.data.chain,
@@ -923,8 +972,9 @@ function Home({ navigation }: Props) {
             result.data.utxos,
           );
         } else if (result.data.action === 'publicnoncesrequest') {
-          // only this action is valid for us
           handlePublicNoncesRequest(result.data.chain);
+        } else if (result.data.action === 'evmsigningrequest') {
+          handleEvmSigningRequest(JSON.parse(result.data.payload));
         }
       } else {
         // here open sync needed modal
@@ -1022,10 +1072,38 @@ function Home({ navigation }: Props) {
     }
   };
 
+  const handleEvmSigningRequestAction = async (status: boolean) => {
+    try {
+      setActivityStatus(true);
+      if (status === true) {
+        await handleSignEVMAction();
+      } else {
+        // reject
+        setEvmSigningData(null);
+        await postAction(
+          'evmsigningrejected',
+          '{}',
+          activeChain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setActivityStatus(false);
+    }
+  };
+
   const handlePublicNoncesSharedModalAction = () => {
     console.log('public nonces modal close.');
     setPublicNoncesShared(false);
     setPNonces('');
+  };
+
+  const handleEvmSigningSuccessModalAction = () => {
+    console.log('evm signing success modal close.');
+    setEvmSigningSignature(null);
   };
 
   const handleTxSentModalAction = () => {
@@ -1090,6 +1168,171 @@ function Home({ navigation }: Props) {
     }
   };
 
+  const handleSignEVMAction = async () => {
+    // Handle both socket-received and scanned/manual EVM signing requests requests
+    if (!evmSigningData) return;
+
+    try {
+      console.log(evmSigningData);
+      // EVM signing with nonce management - same as approveTransaction
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+        rules: Keychain.SECURITY_RULES.NONE,
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+        rules: Keychain.SECURITY_RULES.NONE,
+      });
+
+      if (!passwordData || !encryptionKey) {
+        throw new Error('Unable to decrypt stored data');
+      }
+
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const passwordDecryptedString = passwordDecrypted.toString(
+        CryptoJS.enc.Utf8,
+      );
+      const pwForEncryption = encryptionKey.password + passwordDecryptedString;
+
+      // Use the same nonce management as normal transactions
+      const pNs = CryptoJS.AES.decrypt(publicNonces, pwForEncryption);
+      const pNsDecrypted = pNs.toString(CryptoJS.enc.Utf8);
+      const pubNonces = JSON.parse(pNsDecrypted) as publicPrivateNonce[];
+
+      // const EVMSigningRequest = {
+      //   sigOne: result.sigOne,
+      //   challenge: result.challenge,
+      //   pubNoncesOne: result.pubNoncesOne, // this is wallet
+      //   pubNoncesTwo: result.pubNoncesTwo, // this is key
+      //   data: message,
+      //   chain: activeChain,
+      //   walletInUse: walletInUse,
+      //   requestId: requestId,
+      // };
+
+      const publicNonceKey = evmSigningData.pubNoncesTwo;
+      console.log(`publicNonceKey:`, publicNonceKey);
+
+      const noncesToUse = pubNonces.find(
+        (nonce) =>
+          nonce.kPublic === publicNonceKey?.kPublic &&
+          nonce.kTwoPublic === publicNonceKey?.kTwoPublic,
+      );
+      console.log(`noncesToUse:`, noncesToUse);
+
+      if (!noncesToUse) {
+        throw new Error('Nonces not found');
+      }
+
+      // crucial delete nonce from publicNonces - same as normal transactions
+      const newPublicNonces = pubNonces.filter(
+        (nonce: publicPrivateNonce) =>
+          nonce.kPublic !== publicNonceKey?.kPublic,
+      );
+
+      // encrypt and save new publicNonces
+      const stringifiedNonces = JSON.stringify(newPublicNonces);
+      const encryptedNonces = CryptoJS.AES.encrypt(
+        stringifiedNonces,
+        pwForEncryption,
+      ).toString();
+      dispatch(setSspKeyPublicNonces(encryptedNonces));
+
+      const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
+      const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+
+      const splittedDerPath = evmSigningData.walletInUse.split('-');
+      if (!splittedDerPath) {
+        throw new Error('Invalid walletInUse');
+      }
+      const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
+      const addressIndex = Number(splittedDerPath[1]);
+
+      console.log(`activeChain`, activeChain);
+      console.log(`typeIndex`, typeIndex);
+      console.log(`addressIndex`, addressIndex);
+
+      const keyPair = generateAddressKeypair(
+        xprivKeyDecrypted,
+        typeIndex,
+        addressIndex,
+        evmSigningData.chain as keyof cryptos,
+      );
+
+      const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
+      const xpubKeyWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
+
+      console.log(`keyPair:`, keyPair);
+
+      console.log(`xpubWallet`, xpubKeyWalletDecrypted);
+
+      const publicKeyWallet = deriveEVMPublicKey(
+        xpubKeyWalletDecrypted,
+        typeIndex,
+        addressIndex,
+        activeChain,
+      ); // ssp key
+
+      const result = continueSigningSchnorrMultisig(
+        evmSigningData.data || '',
+        keyPair,
+        publicKeyWallet,
+        evmSigningData.pubNoncesOne || {
+          kPublic: '',
+          kTwoPublic: '',
+        }, // public wallet nonces
+        noncesToUse, // our key nonces with pks
+        evmSigningData.sigOne || '',
+        evmSigningData.challenge || '',
+      );
+      setEvmSigningSignature(result);
+
+      const dataToSend = {
+        signature: result,
+        requestId: evmSigningData.requestId,
+        chain: evmSigningData.chain,
+        walletInUse: evmSigningData.walletInUse,
+        data: evmSigningData.data,
+      };
+
+      try {
+        await postAction(
+          'evmsigned',
+          JSON.stringify(dataToSend),
+          evmSigningData.chain,
+          evmSigningData.walletInUse,
+          sspWalletKeyInternalIdentity,
+        );
+      } catch (error) {
+        // we can ignore this error and show success message as user can copy the nonces
+        displayMessage(
+          'error',
+          // @ts-expect-error 'error' is of type 'unknown'
+          error.message ?? 'home:err_sharing_public_nonces',
+        );
+        console.log(error);
+      }
+
+      // Send successful response - try API first, fallback to socket
+      // result is the signature.
+      // todo if this is wallet connect there should be some id attached
+    } catch (error) {
+      console.error('[EVM Signing] Error handling request:', error);
+      displayMessage('error', 'Error processing request');
+    } finally {
+      setActiveChain(identityChain);
+      setEvmSigningData(null);
+
+      // Clear the appropriate request
+      if (evmSigningRequest) {
+        clearEvmSigningRequest?.();
+      }
+    }
+  };
+
   return (
     <View style={[Layout.fill, Layout.colCenter, Layout.scrollSpaceBetween]}>
       <Navbar openSettingsTrigger={openSettings} />
@@ -1133,132 +1376,144 @@ function Home({ navigation }: Props) {
               />
             </View>
           )}
-          {!submittingTransaction && !rawTx && !syncReq && !publicNoncesReq && (
-            <>
-              <TouchableOpacity
-                onPressIn={() => setReceiveModalOpen(true)}
-                style={[Layout.row, { height: 30, marginTop: -30 }]}
-              >
-                <IconB name="qrcode" size={30} color={Colors.textGray400} />
-                <Text
+          {!submittingTransaction &&
+            !rawTx &&
+            !syncReq &&
+            !publicNoncesReq &&
+            !evmSigningData && (
+              <>
+                <TouchableOpacity
+                  onPressIn={() => setReceiveModalOpen(true)}
+                  style={[Layout.row, { height: 30, marginTop: -30 }]}
+                >
+                  <IconB name="qrcode" size={30} color={Colors.textGray400} />
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBold,
+                      Gutters.tinyTinyTMargin,
+                      Gutters.tinyTinyLMargin,
+                    ]}
+                  >
+                    {t('common:receive')}
+                  </Text>
+                </TouchableOpacity>
+                <View
                   style={[
-                    Fonts.textSmall,
-                    Fonts.textBold,
-                    Gutters.tinyTinyTMargin,
-                    Gutters.tinyTinyLMargin,
+                    Layout.fill,
+                    Layout.relative,
+                    Layout.fullWidth,
+                    Layout.justifyContentCenter,
+                    Layout.alignItemsCenter,
                   ]}
                 >
-                  {t('common:receive')}
-                </Text>
-              </TouchableOpacity>
-              <View
-                style={[
-                  Layout.fill,
-                  Layout.relative,
-                  Layout.fullWidth,
-                  Layout.justifyContentCenter,
-                  Layout.alignItemsCenter,
-                ]}
-              >
-                <Icon name="key" size={60} color={Colors.textGray400} />
-                <Text
-                  style={[
-                    Fonts.textBold,
-                    Fonts.textRegular,
-                    Gutters.smallMargin,
-                  ]}
-                >
-                  {!sspWalletKeyInternalIdentity ||
-                  !sspWalletInternalIdentity ? (
-                    <>{t('home:sync_needed')}!</>
-                  ) : (
-                    t('home:no_pending_actions')
-                  )}
-                </Text>
-                {(!sspWalletKeyInternalIdentity ||
-                  !sspWalletInternalIdentity) && (
-                  <>
-                    <Text
-                      style={[
-                        Fonts.textSmall,
-                        Fonts.textCenter,
-                        Gutters.smallLMargin,
-                        Gutters.smallRMargin,
-                      ]}
-                    >
-                      {t('home:sync_qr_needed')}
-                    </Text>
-                    <TouchableOpacity
-                      onPressIn={() =>
-                        Linking.openURL('https://sspwallet.io/guide')
-                      }
-                    >
+                  <Icon name="key" size={60} color={Colors.textGray400} />
+                  <Text
+                    style={[
+                      Fonts.textBold,
+                      Fonts.textRegular,
+                      Gutters.smallMargin,
+                    ]}
+                  >
+                    {!sspWalletKeyInternalIdentity ||
+                    !sspWalletInternalIdentity ? (
+                      <>{t('home:sync_needed')}!</>
+                    ) : (
+                      t('home:no_pending_actions')
+                    )}
+                  </Text>
+                  {(!sspWalletKeyInternalIdentity ||
+                    !sspWalletInternalIdentity) && (
+                    <>
                       <Text
                         style={[
-                          Fonts.textTiny,
+                          Fonts.textSmall,
                           Fonts.textCenter,
-                          Gutters.regularTMargin,
                           Gutters.smallLMargin,
                           Gutters.smallRMargin,
                         ]}
                       >
-                        {t('home:dont_have_ssp_wallet')}
+                        {t('home:sync_qr_needed')}
+                      </Text>
+                      <TouchableOpacity
+                        onPressIn={() =>
+                          Linking.openURL('https://sspwallet.io/guide')
+                        }
+                      >
+                        <Text
+                          style={[
+                            Fonts.textTiny,
+                            Fonts.textCenter,
+                            Gutters.regularTMargin,
+                            Gutters.smallLMargin,
+                            Gutters.smallRMargin,
+                          ]}
+                        >
+                          {t('home:dont_have_ssp_wallet')}
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {isRefreshing && (
+                    <ActivityIndicator
+                      size={'large'}
+                      style={[
+                        Layout.row,
+                        Gutters.regularVMargin,
+                        { height: 30 },
+                      ]}
+                    />
+                  )}
+                  {!isRefreshing && (
+                    <TouchableOpacity
+                      onPressIn={() => handleRefresh()}
+                      style={[
+                        Layout.row,
+                        Gutters.regularVMargin,
+                        { height: 30 },
+                      ]}
+                    >
+                      <IconB
+                        name="gesture-tap"
+                        size={30}
+                        color={Colors.bluePrimary}
+                      />
+                      <Text
+                        style={[
+                          Fonts.textSmall,
+                          Fonts.textBold,
+                          Fonts.textBluePrimary,
+                          Gutters.tinyTMargin,
+                          Gutters.tinyLMargin,
+                        ]}
+                      >
+                        {t('common:refresh')}
                       </Text>
                     </TouchableOpacity>
-                  </>
-                )}
-                {isRefreshing && (
-                  <ActivityIndicator
-                    size={'large'}
-                    style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
-                  />
-                )}
-                {!isRefreshing && (
+                  )}
+                </View>
+                <View>
                   <TouchableOpacity
-                    onPressIn={() => handleRefresh()}
-                    style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
+                    style={[
+                      Common.button.outlineRounded,
+                      Common.button.secondaryButton,
+                      Gutters.smallBMargin,
+                    ]}
+                    onPressIn={() => scanCode()}
                   >
-                    <IconB
-                      name="gesture-tap"
-                      size={30}
-                      color={Colors.bluePrimary}
-                    />
                     <Text
                       style={[
                         Fonts.textSmall,
-                        Fonts.textBold,
                         Fonts.textBluePrimary,
-                        Gutters.tinyTMargin,
-                        Gutters.tinyLMargin,
+                        Gutters.regularHPadding,
                       ]}
                     >
-                      {t('common:refresh')}
+                      {t('home:scan_code')}
                     </Text>
                   </TouchableOpacity>
-                )}
-              </View>
-              <View>
-                <TouchableOpacity
-                  style={[
-                    Common.button.outlineRounded,
-                    Common.button.secondaryButton,
-                    Gutters.smallBMargin,
-                  ]}
-                  onPressIn={() => scanCode()}
-                >
-                  <Text
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textBluePrimary,
-                      Gutters.regularHPadding,
-                    ]}
-                  >
-                    {t('home:scan_code')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
+                </View>
+              </>
+            )}
           {!submittingTransaction && rawTx && xpubWallet && xpubKey && (
             <TransactionRequest
               rawTx={rawTx}
@@ -1285,6 +1540,21 @@ function Home({ navigation }: Props) {
             <PublicNoncesSuccess
               actionStatus={handlePublicNoncesSharedModalAction}
               nonces={pNonces}
+            />
+          )}
+          {evmSigningData && (
+            <EvmSigningRequest
+              activityStatus={activityStatus}
+              dataToSign={evmSigningData.data || ''}
+              chain={evmSigningData.chain as keyof cryptos}
+              walletInUse={evmSigningData.walletInUse}
+              actionStatus={handleEvmSigningRequestAction}
+            />
+          )}
+          {evmSigningSignature && (
+            <EvmSigningSuccess
+              actionStatus={handleEvmSigningSuccessModalAction}
+              signature={evmSigningSignature}
             />
           )}
           {txid && (

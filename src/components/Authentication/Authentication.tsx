@@ -77,6 +77,8 @@ const Authentication = (props: {
       textForPrompt = t('home:auth_confirm_sync');
     } else if (props.type === 'pubnonces') {
       textForPrompt = t('home:auth_confirm_public_nonces');
+    } else if (props.type === 'evmsigning') {
+      textForPrompt = t('home:auth_confirm_evm_signing');
     }
     console.log('Initiate Fingerprint');
     // if success continue, if fail, show error message and only allow password authentication
@@ -271,9 +273,11 @@ const Authentication = (props: {
                     ? t('home:auth_sync_ssp')
                     : props.type === 'pubnonces'
                       ? t('home:auth_sync_pub_nonces')
-                      : props.type === 'delete'
-                        ? t('home:auth_delete_ssp_key_data')
-                        : t('home:auth_sensitive_inf')}
+                      : props.type === 'evmsigning'
+                        ? t('home:auth_sync_evm_signing')
+                        : props.type === 'delete'
+                          ? t('home:auth_delete_ssp_key_data')
+                          : t('home:auth_sensitive_inf')}
               </Text>
               {props.type !== 'delete' && (
                 <Text
@@ -290,7 +294,9 @@ const Authentication = (props: {
                       ? t('home:auth_confirm_with_pw')
                       : props.type === 'pubnonces'
                         ? t('home:auth_confirm_with_pw')
-                        : t('home:auth_grant_access_pw')}
+                        : props.type === 'evmsigning'
+                          ? t('home:auth_confirm_with_pw')
+                          : t('home:auth_grant_access_pw')}
                 </Text>
               )}
 

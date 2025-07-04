@@ -552,3 +552,20 @@ export interface chainStateKey {
   xpubKey: string;
   xprivKey: string;
 }
+
+interface evmSigningRequest {
+  sigOne: string;
+  challenge: string;
+  pubNoncesOne: {
+    kPublic: string;
+    kTwoPublic: string;
+  };
+  pubNoncesTwo: {
+    kPublic: string;
+    kTwoPublic: string;
+  };
+  data: string; // this is the data, message to sign
+  chain: string;
+  walletInUse: string; // this is walletInUse
+  requestId: string; // this is the requestId - usually walletconnect requestId
+}

@@ -1,5 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
@@ -25,6 +31,7 @@ const TransactionRequest = (props: {
   const [senderAddress, setSenderAddress] = useState('');
   const [token, setToken] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
+  const [txData, setTxData] = useState('');
   const [fee, setFee] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
@@ -73,6 +80,7 @@ const TransactionRequest = (props: {
         setSenderAddress(txInfo.sender);
         setToken(txInfo.token || '');
         setTokenSymbol(txInfo.tokenSymbol);
+        setTxData(txInfo.data || '');
         if (
           (props.utxos && props.utxos.length) ||
           blockchains[props.chain].chainType === 'evm'
@@ -148,6 +156,49 @@ const TransactionRequest = (props: {
         <Text style={[Fonts.textTiny, Fonts.textBold, Fonts.textCenter]}>
           {receiverAddress}
         </Text>
+        {txData && txData !== '0x' && (
+          <>
+            <Text
+              style={[Fonts.textSmall, Fonts.textCenter, Gutters.smallTMargin]}
+            >
+              {t('home:tx_data')}
+            </Text>
+            <View
+              style={[
+                {
+                  backgroundColor: Colors.inputBackground,
+                  borderRadius: 8,
+                  padding: 10,
+                  marginHorizontal: 20,
+                  marginTop: 8,
+                  borderWidth: 1,
+                  borderColor: Colors.textGray200,
+                  maxHeight: 100,
+                },
+              ]}
+            >
+              <ScrollView
+                style={{ flex: 1 }}
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}
+              >
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    {
+                      fontFamily: 'monospace',
+                      lineHeight: 16,
+                      color: Colors.textGray800,
+                    },
+                  ]}
+                  selectable={true}
+                >
+                  {txData}
+                </Text>
+              </ScrollView>
+            </View>
+          </>
+        )}
         <Text
           style={[Fonts.textTinyTiny, Fonts.textCenter, Gutters.smallTMargin]}
         >

@@ -23,6 +23,7 @@ interface tokenInfo {
   fee: string;
   tokenSymbol: string;
   token?: string;
+  data?: string;
 }
 
 export async function decodeTransactionForApproval(
@@ -196,6 +197,8 @@ export async function decodeEVMTransactionForApproval(
       data: callData,
     }) as decodedAbiData; // Cast decodedData to decodedAbiData type.
 
+    console.log(decodedData);
+
     let txReceiver = 'decodingError';
     let amount = '0';
 
@@ -220,9 +223,11 @@ export async function decodeEVMTransactionForApproval(
       fee: totalFeeWei.toFixed(),
       token: '',
       tokenSymbol: '',
+      data: '',
     };
 
     if (amount === '0') {
+      // token transfer or contract execution
       txInfo.token = decodedData.args[0];
 
       // find the token in our token list
@@ -237,35 +242,36 @@ export async function decodeEVMTransactionForApproval(
         )) as Token; // this is actually a tokenDataSSPRelay missing contract but we need only decimals
       }
 
-      if (!token || !token.name || !token.symbol) {
-        throw new Error('Token information not found.');
-      }
-
-      if (token) {
+      if (token && token.name && token.symbol) {
         decimals = token.decimals;
         txInfo.tokenSymbol = token.symbol;
-      }
-      const contractData: `0x${string}` = decodedData.args[2] as `0x${string}`;
-      // most likely we are dealing with a contract call, sending some erc20 token
-      // docode args[2] which is operation
-      const decodedDataContract: decodedAbiData = decodeFunctionData({
-        abi: erc20Abi,
-        data: contractData,
-      }) as unknown as decodedAbiData; // Cast decodedDataContract to decodedAbiData type.
-      console.log(decodedDataContract);
-      if (
-        decodedDataContract &&
-        decodedDataContract.functionName === 'transfer' &&
-        decodedDataContract.args &&
-        decodedDataContract.args.length >= 2
-      ) {
-        txInfo.receiver = decodedDataContract.args[0];
-        txInfo.amount = new BigNumber(decodedDataContract.args[1].toString())
-          .dividedBy(new BigNumber(10 ** decimals))
-          .toFixed();
+        const contractData: `0x${string}` = decodedData
+          .args[2] as `0x${string}`;
+        // most likely we are dealing with a contract call, sending some erc20 token
+        // docode args[2] which is operation
+        const decodedDataContract: decodedAbiData = decodeFunctionData({
+          abi: erc20Abi,
+          data: contractData,
+        }) as unknown as decodedAbiData; // Cast decodedDataContract to decodedAbiData type.
+        console.log(decodedDataContract);
+        if (
+          decodedDataContract &&
+          decodedDataContract.functionName === 'transfer' &&
+          decodedDataContract.args &&
+          decodedDataContract.args.length >= 2
+        ) {
+          txInfo.receiver = decodedDataContract.args[0];
+          txInfo.amount = new BigNumber(decodedDataContract.args[1].toString())
+            .dividedBy(new BigNumber(10 ** decimals))
+            .toFixed();
+        }
+      } else {
+        // this is not a standard token transfer, treat it as a contract execution and only display data information
+        txInfo.data = decodedData.args[2] as `0x${string}`;
       }
     } else {
       txInfo.tokenSymbol = blockchains[chain].symbol;
+      txInfo.data = decodedData.args[2] as `0x${string}`;
     }
 
     return txInfo;
@@ -278,6 +284,7 @@ export async function decodeEVMTransactionForApproval(
       fee: 'decodingError',
       token: 'decodingError',
       tokenSymbol: 'decodingError',
+      data: 'decodingError',
     };
     return txInfo;
   }
