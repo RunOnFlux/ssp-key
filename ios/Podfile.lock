@@ -1,5 +1,6 @@
 PODS:
   - boost (1.84.0)
+  - CocoaAsyncSocket (7.6.5)
   - DoubleConversion (1.1.6)
   - fast_float (8.0.0)
   - FBLazyVector (0.80.1)
@@ -1953,6 +1954,9 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-tcp-socket (6.3.0):
+    - CocoaAsyncSocket
+    - React-Core
   - React-NativeModulesApple (0.80.1):
     - boost
     - DoubleConversion
@@ -2941,6 +2945,7 @@ DEPENDENCIES:
   - react-native-mmkv (from `../node_modules/react-native-mmkv`)
   - react-native-quick-crypto (from `../node_modules/react-native-quick-crypto`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-tcp-socket (from `../node_modules/react-native-tcp-socket`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
@@ -2990,6 +2995,7 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - CocoaAsyncSocket
     - Firebase
     - FirebaseAnalytics
     - FirebaseCore
@@ -3101,6 +3107,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-quick-crypto"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-tcp-socket:
+    :path: "../node_modules/react-native-tcp-socket"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-oscompat:
@@ -3194,6 +3202,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
+  CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
   DoubleConversion: cb417026b2400c8f53ae97020b2be961b59470cb
   fast_float: b32c788ed9c6a8c584d114d0047beda9664e7cc6
   FBLazyVector: 09f03e4b6f42f955734b64a118f86509cc719427
@@ -3253,6 +3262,7 @@ SPEC CHECKSUMS:
   react-native-mmkv: 7fb4729ad5cb787a4394e6c4bd48e4b8ec30f25c
   react-native-quick-crypto: dcc80d5e37cbcc5336c2a7abc4226f85e3b30051
   react-native-safe-area-context: 68d1363b8354472a961aa6861ba8451beaf9a810
+  react-native-tcp-socket: 120072c8020262032773f80f0daaf3964aaa08a1
   React-NativeModulesApple: 983f3483ef0a3446b56d490f09d579fba2442e17
   React-oscompat: 114036cd8f064558c9c1a0c04fc9ae5e1453706a
   React-perflogger: e7287fee27c16e3c8bd4d470f2361572b63be16b
