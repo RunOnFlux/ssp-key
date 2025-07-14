@@ -32,7 +32,9 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const { t } = useTranslation(['home', 'common']);
   const dispatch = useDispatch();
-  dispatch(changeTheme({ theme: 'default', darkMode: true })); // make our theme dark
+  setTimeout(() => {
+    dispatch(changeTheme({ theme: 'default', darkMode: true })); // make our theme dark
+  }, 0);
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
