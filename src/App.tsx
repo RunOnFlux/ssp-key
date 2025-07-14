@@ -7,21 +7,12 @@ import { PersistGate } from 'redux-persist/lib/integration/react';
 import { store, persistor } from './store';
 import ApplicationNavigator from './navigators/Application';
 import './translations';
-import { btoa, atob } from 'react-native-quick-base64';
 import { Buffer } from 'buffer';
 import 'fastestsmallesttextencoderdecoder';
 import { SocketProvider } from './contexts/SocketContext';
 import { notificationListener, requestUserPermission } from './lib/fcmHelper';
 import ToastNotif from './components/Toast/Toast';
 import BlurOverlay from './BlurOverlay';
-
-if (!global.btoa) {
-  global.btoa = btoa;
-}
-
-if (!global.atob) {
-  global.atob = atob;
-}
 
 if (!global.Buffer) {
   global.Buffer = Buffer;

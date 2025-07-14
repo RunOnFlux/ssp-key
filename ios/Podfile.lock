@@ -1832,8 +1832,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-quick-base64 (2.2.0):
-    - React-Core
   - react-native-quick-crypto (0.7.15):
     - boost
     - DoubleConversion
@@ -2941,7 +2939,6 @@ DEPENDENCIES:
   - react-native-encrypted-storage (from `../node_modules/react-native-encrypted-storage`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-mmkv (from `../node_modules/react-native-mmkv`)
-  - react-native-quick-base64 (from `../node_modules/react-native-quick-base64`)
   - react-native-quick-crypto (from `../node_modules/react-native-quick-crypto`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -3100,8 +3097,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-get-random-values"
   react-native-mmkv:
     :path: "../node_modules/react-native-mmkv"
-  react-native-quick-base64:
-    :path: "../node_modules/react-native-quick-base64"
   react-native-quick-crypto:
     :path: "../node_modules/react-native-quick-crypto"
   react-native-safe-area-context:
@@ -3256,7 +3251,6 @@ SPEC CHECKSUMS:
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-mmkv: 7fb4729ad5cb787a4394e6c4bd48e4b8ec30f25c
-  react-native-quick-base64: 17dc4b8daee50e680d5f57cc3ee6773b6ee0110a
   react-native-quick-crypto: dcc80d5e37cbcc5336c2a7abc4226f85e3b30051
   react-native-safe-area-context: 68d1363b8354472a961aa6861ba8451beaf9a810
   React-NativeModulesApple: 983f3483ef0a3446b56d490f09d579fba2442e17
