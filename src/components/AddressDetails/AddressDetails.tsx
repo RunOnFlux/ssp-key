@@ -47,13 +47,11 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
   useEffect(() => {
     Keychain.getGenericPassword({
       service: 'enc_key',
-      rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
     })
       .then(async (idData) => {
         // clean up password from encrypted storage
         const passwordData = await Keychain.getGenericPassword({
           service: 'sspkey_pw',
-          rules: Keychain.SECURITY_RULES.NONE, // prevent automatic update
         });
         if (!passwordData || !idData) {
           throw new Error('Unable to decrypt stored data');

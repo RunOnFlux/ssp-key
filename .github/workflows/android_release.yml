@@ -60,7 +60,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
       - name: Build Android ABB Release
         run: |
-          cd android && ./gradlew bundleRelease
+          cd android ./gradlew bundleRelease
         env:
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
