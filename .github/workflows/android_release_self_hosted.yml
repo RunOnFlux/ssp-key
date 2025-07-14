@@ -36,7 +36,7 @@ jobs:
           encodedString: ${{ secrets.ANDROID_SIGNING_KEY }}
       - name: Build Android APK Release
         run: |
-          cd android && ./gradlew assembleRelease
+          cd android && ./gradlew clean && ./gradlew generateCodegenArtifactsFromSchema --rerun-tasks && ./gradlew assembleRelease
         env:
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
