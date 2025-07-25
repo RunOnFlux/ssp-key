@@ -56,11 +56,9 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
         // Get decryption keys from keychain
         const encryptionKey = await Keychain.getGenericPassword({
           service: 'enc_key',
-          rules: Keychain.SECURITY_RULES.NONE,
         });
         const passwordData = await Keychain.getGenericPassword({
           service: 'sspkey_pw',
-          rules: Keychain.SECURITY_RULES.NONE,
         });
 
         if (!passwordData || !encryptionKey) {

@@ -1167,11 +1167,9 @@ function Home({ navigation }: Props) {
       // EVM signing with nonce management - same as approveTransaction
       const encryptionKey = await Keychain.getGenericPassword({
         service: 'enc_key',
-        rules: Keychain.SECURITY_RULES.NONE,
       });
       const passwordData = await Keychain.getGenericPassword({
         service: 'sspkey_pw',
-        rules: Keychain.SECURITY_RULES.NONE,
       });
 
       if (!passwordData || !encryptionKey) {
