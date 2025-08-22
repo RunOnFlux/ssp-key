@@ -1,34 +1,46 @@
-import messaging, {
+import {
   FirebaseMessagingTypes,
+  getMessaging,
+  requestPermission,
+  registerDeviceForRemoteMessages,
+  onNotificationOpenedApp,
+  getInitialNotification,
+  onMessage,
+  setBackgroundMessageHandler,
+  getToken,
+  AuthorizationStatus,
 } from '@react-native-firebase/messaging';
 import * as Keychain from 'react-native-keychain';
 import notifee from '@notifee/react-native';
 import { AppState, Platform } from 'react-native';
 
 export async function requestUserPermission() {
-  const authStatus = await messaging().requestPermission();
+  const messaging = getMessaging();
+  const authStatus = await requestPermission(messaging);
   const enabled =
-    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    authStatus === AuthorizationStatus.AUTHORIZED ||
+    authStatus === AuthorizationStatus.PROVISIONAL;
 
   if (enabled) {
     console.log('Authorization status:', authStatus);
   }
   if (Platform.OS === 'android') {
     // on ios already autoregistered
-    await messaging().registerDeviceForRemoteMessages();
+    await registerDeviceForRemoteMessages(messaging);
   }
   await notifee.requestPermission();
 }
 
 export function notificationListener() {
+  const messaging = getMessaging();
+
   // eslint-disable-next-line @typescript-eslint/require-await
   notifee.onBackgroundEvent(async ({ type, detail }) => {
     console.log('type ', type);
     console.log('detail ', detail);
   });
 
-  messaging().onNotificationOpenedApp((remoteMessage) => {
+  onNotificationOpenedApp(messaging, (remoteMessage) => {
     //we can use this event to move particular screen when user click the notification and app is killed state
     console.log(
       'Notification caused app to open from background state:',
@@ -37,22 +49,21 @@ export function notificationListener() {
   });
 
   // Check whether an initial notification is available
-  messaging()
-    .getInitialNotification()
-    .then((remoteMessage) => {
-      if (remoteMessage) {
-        console.log(
-          'Notification caused app to open from quit state:',
-          remoteMessage.notification,
-        );
-      }
-    });
+  getInitialNotification(messaging).then((remoteMessage) => {
+    if (remoteMessage) {
+      console.log(
+        'Notification caused app to open from quit state:',
+        remoteMessage.notification,
+      );
+    }
+  });
 
-  messaging().onMessage(onMessageReceived);
+  onMessage(messaging, onMessageReceived);
 }
 
 export function onBackgroundMessageHandler() {
-  messaging().setBackgroundMessageHandler(onMessageReceived);
+  const messaging = getMessaging();
+  setBackgroundMessageHandler(messaging, onMessageReceived);
 }
 
 async function onMessageReceived(
@@ -99,7 +110,8 @@ export async function getFCMToken() {
       return token.password;
     }
 
-    const newToken = await messaging().getToken();
+    const messaging = getMessaging();
+    const newToken = await getToken(messaging);
     await Keychain.setGenericPassword('fcm_key_token', newToken, {
       service: 'fcm_key_token',
       storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
@@ -115,7 +127,8 @@ export async function getFCMToken() {
 
 export async function refreshFCMToken() {
   try {
-    const token = await messaging().getToken();
+    const messaging = getMessaging();
+    const token = await getToken(messaging);
     if (token) {
       await Keychain.setGenericPassword('fcm_key_token', token, {
         service: 'fcm_key_token',

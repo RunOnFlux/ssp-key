@@ -1,10 +1,43 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck need to fix
 import { restore, stub } from 'sinon';
-import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
-import notifee from '@notifee/react-native';
-import EncryptedStorage from 'react-native-encrypted-storage';
+
+// Mock notifee module
+const mockNotifee = {
+  onBackgroundEvent: jest.fn(),
+  requestPermission: jest.fn(),
+  createChannel: jest.fn(),
+  displayNotification: jest.fn(),
+};
+jest.mock('@notifee/react-native', () => mockNotifee);
+
+// Mock keychain module
+const mockKeychain = {
+  getGenericPassword: jest.fn(),
+  setGenericPassword: jest.fn(),
+  STORAGE_TYPE: { AES_GCM_NO_AUTH: 'AESGCMNoAuth' },
+  ACCESSIBLE: { WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WhenUnlockedThisDeviceOnly' },
+};
+jest.mock('react-native-keychain', () => mockKeychain);
+
+// Mock Firebase messaging module
+const mockMessagingInstance = {};
+
+const mockMessaging = {
+  getMessaging: jest.fn().mockReturnValue(mockMessagingInstance),
+  requestPermission: jest.fn(),
+  registerDeviceForRemoteMessages: jest.fn(),
+  onNotificationOpenedApp: jest.fn(),
+  getInitialNotification: jest.fn(),
+  onMessage: jest.fn(),
+  setBackgroundMessageHandler: jest.fn(),
+  getToken: jest.fn(),
+  AuthorizationStatus: {
+    AUTHORIZED: 1,
+    PROVISIONAL: 2,
+  },
+};
+
+jest.mock('@react-native-firebase/messaging', () => mockMessaging);
 
 import {
   requestUserPermission,
@@ -16,71 +49,105 @@ import {
 
 describe('FCM Helper Lib', () => {
   describe('Verifies helper', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
     afterEach(() => {
       restore();
     });
 
     test('should return success data when requestUserPermission', async () => {
-      stub(messaging, 'requestPermission').returns(1);
-      stub(Platform, 'OS').returns('android');
+      mockMessaging.requestPermission.mockResolvedValue(1);
+      stub(Platform, 'OS').value('android');
+      mockMessaging.registerDeviceForRemoteMessages.mockResolvedValue(
+        undefined,
+      );
+      mockNotifee.requestPermission.mockResolvedValue(undefined);
+
       await requestUserPermission();
+
+      expect(mockMessaging.getMessaging).toHaveBeenCalled();
+      expect(mockMessaging.requestPermission).toHaveBeenCalledWith(mockMessagingInstance);
+      expect(mockMessaging.registerDeviceForRemoteMessages).toHaveBeenCalledWith(mockMessagingInstance);
+      expect(mockNotifee.requestPermission).toHaveBeenCalled();
     });
 
     test('should return success data when notificationListener', () => {
-      stub(notifee, 'onBackgroundEvent').returns({
-        type: 'type',
-        detail: 'detail',
-      });
-      stub(messaging, 'onNotificationOpenedApp').returns({
+      mockMessaging.onNotificationOpenedApp.mockImplementation(() => {});
+      mockMessaging.getInitialNotification.mockResolvedValue({
         notification: 'Sample Notification',
       });
-      stub(messaging, 'getInitialNotification').returns({
-        notification: 'Sample Notification',
-      });
+      mockMessaging.onMessage.mockImplementation(() => {});
+      mockNotifee.onBackgroundEvent.mockImplementation(() => {});
+
       notificationListener();
+
+      expect(mockMessaging.getMessaging).toHaveBeenCalled();
+      expect(mockMessaging.onNotificationOpenedApp).toHaveBeenCalledWith(mockMessagingInstance, expect.any(Function));
+      expect(mockMessaging.getInitialNotification).toHaveBeenCalledWith(mockMessagingInstance);
+      expect(mockMessaging.onMessage).toHaveBeenCalledWith(mockMessagingInstance, expect.any(Function));
+      expect(mockNotifee.onBackgroundEvent).toHaveBeenCalled();
     });
 
     test('should return success data when onBackgroundMessageHandler', () => {
+      mockMessaging.setBackgroundMessageHandler.mockImplementation(() => {});
+
       onBackgroundMessageHandler();
+
+      expect(mockMessaging.getMessaging).toHaveBeenCalled();
+      expect(mockMessaging.setBackgroundMessageHandler).toHaveBeenCalledWith(mockMessagingInstance, expect.any(Function));
     });
 
-    test('should return success data when getFCMToken', async () => {
-      stub(EncryptedStorage, 'getItem').returns({ fcmkeytoken: 'token' });
-      const res = await getFCMToken();
-      expect(res).toBe('token');
-    });
-
-    test('should return success data when getFCMToken is undefined', async () => {
-      stub(EncryptedStorage, 'getItem').returns({
-        fcmkeytoken: undefined,
+    test('should return success data when getFCMToken with existing token', async () => {
+      mockKeychain.getGenericPassword.mockResolvedValue({
+        password: 'existing-token',
       });
-      stub(messaging, 'getToken').returns('token');
+
       const res = await getFCMToken();
-      expect(res).toBe('token');
+
+      expect(res).toBe('existing-token');
     });
 
-    test('should return success data when getFCMToken is empty', async () => {
-      stub(EncryptedStorage, 'getItem').returns({});
-      stub(messaging, 'getToken').returns('token');
+    test('should return success data when getFCMToken with new token', async () => {
+      mockKeychain.getGenericPassword.mockResolvedValue(false);
+      mockMessaging.getToken.mockResolvedValue('new-token');
+      mockKeychain.setGenericPassword.mockResolvedValue(true);
+
       const res = await getFCMToken();
-      expect(res).toBe('token');
+
+      expect(res).toBe('new-token');
+      expect(mockMessaging.getMessaging).toHaveBeenCalled();
+      expect(mockMessaging.getToken).toHaveBeenCalledWith(mockMessagingInstance);
     });
 
-    test.skip('should return error data when getFCMToken is not avail', async () => {
-      stub(EncryptedStorage, 'getItem').returns({});
-      stub(messaging, 'getToken').returns('token');
+    test('should return null when getFCMToken fails', async () => {
+      mockKeychain.getGenericPassword.mockRejectedValue(
+        new Error('Keychain error'),
+      );
+
       const res = await getFCMToken();
-      expect(res).toBe('Error: ');
+
+      expect(res).toBe(null);
     });
 
-    test('should return success data when refreshFCMToken is avail', async () => {
-      stub(messaging, 'getToken').returns('token');
+    test('should return success data when refreshFCMToken with token', async () => {
+      mockMessaging.getToken.mockResolvedValue('refresh-token');
+      mockKeychain.setGenericPassword.mockResolvedValue(true);
+
       await refreshFCMToken();
+
+      expect(mockMessaging.getMessaging).toHaveBeenCalled();
+      expect(mockMessaging.getToken).toHaveBeenCalledWith(mockMessagingInstance);
     });
 
-    test('should return success data when refreshFCMToken is undefined', async () => {
-      stub(messaging, 'getToken').returns(undefined);
+    test('should handle refreshFCMToken when no token', async () => {
+      mockMessaging.getToken.mockResolvedValue(undefined);
+
       await refreshFCMToken();
+
+      expect(mockMessaging.getMessaging).toHaveBeenCalled();
+      expect(mockMessaging.getToken).toHaveBeenCalledWith(mockMessagingInstance);
     });
   });
 });
