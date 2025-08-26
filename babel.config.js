@@ -17,7 +17,7 @@ module.exports = {
       },
     ],
     'inline-dotenv',
-    'react-native-reanimated/plugin',
+    'react-native-worklets/plugin',
   ],
   env: {
     production: {
