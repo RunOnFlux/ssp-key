@@ -82,7 +82,7 @@ describe('Transactions Lib', () => {
     });
 
     test('should return decodeTransactionForApproval data when value is invalid rawTx', async () => {
-      const res = await decodeTransactionForApproval(rawTxSepolia, 'flux');
+      const res = await decodeTransactionForApproval(rawTxSepolia, 'flux', []);
       expect(res).toEqual({
         sender: 'decodingError',
         receiver: 'decodingError',
@@ -93,7 +93,7 @@ describe('Transactions Lib', () => {
     });
 
     test('should return decodeTransactionForApproval data when value is valid', async () => {
-      const res = await decodeTransactionForApproval(rawTxFlux, 'flux');
+      const res = await decodeTransactionForApproval(rawTxFlux, 'flux', []);
       expect(res).toEqual({
         sender: 't3VhYxSXapJEq2mH1z5MmFUcVLYvrYNfqbv',
         receiver: 't3cwthwVvGg7WKkxhzw87xnDDsdb9kS92x3',

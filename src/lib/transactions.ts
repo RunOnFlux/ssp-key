@@ -29,7 +29,7 @@ interface tokenInfo {
 export async function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
-  utxos: utxo[],
+  utxos?: utxo[],
 ): Promise<tokenInfo> {
   try {
     if (blockchains[chain].chainType === 'evm') {
@@ -166,6 +166,11 @@ export async function decodeEVMTransactionForApproval(
   try {
     let decimals = blockchains[chain].decimals;
     const multisigUserOpJSON = JSON.parse(rawTx) as userOperation;
+    
+    if (!multisigUserOpJSON.userOpRequest) {
+      throw new Error('Invalid transaction format: missing userOpRequest');
+    }
+    
     const {
       callData,
       sender,

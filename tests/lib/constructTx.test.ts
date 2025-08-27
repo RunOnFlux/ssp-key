@@ -98,7 +98,7 @@ describe('ConstructTx Lib', () => {
       expect(res[0].confirmations).not.toBeNull();
       expect(res[0].confirmations).toBeDefined();
       expect(res[0].coinbase).toBe(false);
-    });
+    }, 15000);
 
     test('should return fetchUtxos data when value is valid flux', async () => {
       const res = await fetchUtxos(
