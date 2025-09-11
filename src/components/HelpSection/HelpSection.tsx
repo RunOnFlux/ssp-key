@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import BlurOverlay from '../../BlurOverlay';
+import packageJson from '../../../package.json';
 
 const HelpSection = (props: {
   actionStatus: (status: boolean) => void;
@@ -126,6 +127,14 @@ const HelpSection = (props: {
                 }
               />
             </TouchableOpacity>
+            <Text
+              style={[
+                Fonts.textTiny,
+                Fonts.textCenter
+              ]}
+            >
+              v{packageJson.version}
+            </Text>
           </View>
           <View style={[Layout.justifyContentEnd]}>
             <TouchableOpacity
