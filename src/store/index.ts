@@ -12,7 +12,7 @@ import {
   Storage,
 } from 'redux-persist';
 import autoMergeLevel2 from 'redux-persist/lib/stateReconciler/autoMergeLevel2'; // here we need to be careful with updates to our initial state!
-import { MMKV } from 'react-native-mmkv';
+import { createMMKV } from 'react-native-mmkv';
 import { cryptos, chainStateKey } from '../types';
 
 // ********** Import chains **********
@@ -57,7 +57,7 @@ const reducers = combineReducers({
   ),
 });
 
-export const storage = new MMKV();
+export const storage = createMMKV();
 export const reduxStorage: Storage = {
   setItem: (key, value) => {
     storage.set(key, value);
@@ -68,7 +68,7 @@ export const reduxStorage: Storage = {
     return Promise.resolve(value);
   },
   removeItem: (key) => {
-    storage.delete(key);
+    storage.remove(key);
     return Promise.resolve();
   },
 };

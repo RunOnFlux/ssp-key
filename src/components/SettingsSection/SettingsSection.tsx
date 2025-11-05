@@ -173,7 +173,7 @@ const SettingsSection = (props: {
       storage.set('sspConfig', JSON.stringify(sspConf));
     } else {
       // remove if present on mmkv
-      storage.delete('sspConfig');
+      storage.remove('sspConfig');
     }
 
     // adjust node, api, explorer
@@ -225,7 +225,7 @@ const SettingsSection = (props: {
     }
     // if entire config of backends is empty, delete it, otherwise save it
     if (Object.keys(storedBackends).length === 0) {
-      storage.delete('backends');
+      storage.remove('backends');
     } else {
       console.log('save backends');
       console.log(storedBackends);
