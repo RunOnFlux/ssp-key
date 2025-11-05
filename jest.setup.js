@@ -6,6 +6,30 @@ jest.mock('react-native-reanimated', () =>
   require('react-native-reanimated/mock'),
 );
 
+jest.mock('react-native-mmkv', () => {
+  const storage = new Map();
+  return {
+    MMKV: jest.fn().mockImplementation(() => ({
+      set: (key, value) => storage.set(key, value),
+      getString: (key) => storage.get(key),
+      getNumber: (key) => storage.get(key),
+      getBoolean: (key) => storage.get(key),
+      delete: (key) => storage.delete(key),
+      getAllKeys: () => Array.from(storage.keys()),
+      clearAll: () => storage.clear(),
+    })),
+    createMMKV: jest.fn().mockImplementation(() => ({
+      set: (key, value) => storage.set(key, value),
+      getString: (key) => storage.get(key),
+      getNumber: (key) => storage.get(key),
+      getBoolean: (key) => storage.get(key),
+      delete: (key) => storage.delete(key),
+      getAllKeys: () => Array.from(storage.keys()),
+      clearAll: () => storage.clear(),
+    })),
+  };
+});
+
 jest.mock('redux-persist', () => {
   const real = jest.requireActual('redux-persist');
   return {
