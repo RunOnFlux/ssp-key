@@ -1323,7 +1323,7 @@ function Home({ navigation }: Props) {
 
   return (
     <View style={[Layout.fill, Layout.colCenter, Layout.scrollSpaceBetween]}>
-      <Navbar openSettingsTrigger={openSettings} />
+      <Navbar openSettingsTrigger={openSettings} navigation={navigation} />
       <Divider color={Colors.textGray200} />
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="always"

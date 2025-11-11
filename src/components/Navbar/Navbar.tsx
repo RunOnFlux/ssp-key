@@ -5,7 +5,7 @@ import { useTheme } from '../../hooks';
 
 import HelpSection from '../../components/HelpSection/HelpSection';
 
-function Navbar(props: { openSettingsTrigger: () => void }) {
+function Navbar(props: { openSettingsTrigger: () => void; navigation?: any }) {
   const { darkMode, Gutters, Layout, Images, Colors } = useTheme();
   const [helpSectionModalOpen, setHelpSectionModalOpen] = useState(false);
   const openHelp = () => {
@@ -48,6 +48,7 @@ function Navbar(props: { openSettingsTrigger: () => void }) {
         <HelpSection
           actionStatus={handleHelpModalAction}
           visible={helpSectionModalOpen}
+          navigation={props.navigation}
         />
       </View>
     </>

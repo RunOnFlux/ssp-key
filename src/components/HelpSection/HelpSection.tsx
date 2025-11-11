@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -17,10 +17,12 @@ import packageJson from '../../../package.json';
 const HelpSection = (props: {
   actionStatus: (status: boolean) => void;
   visible: boolean;
+  navigation?: any;
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Common, Colors, darkMode, Images } =
     useTheme();
+  const [versionTapCount, setVersionTapCount] = useState(0);
 
   const close = () => {
     console.log('Close');
@@ -44,6 +46,20 @@ const HelpSection = (props: {
 
   const openFlux = () => {
     Linking.openURL('https://runonflux.io');
+  };
+
+  const handleVersionTap = () => {
+    const newCount = versionTapCount + 1;
+    setVersionTapCount(newCount);
+    if (newCount >= 5) {
+      setVersionTapCount(0);
+      close();
+      if (props.navigation) {
+        setTimeout(() => {
+          props.navigation.navigate('LavaMoatTest');
+        }, 100);
+      }
+    }
   };
 
   return (
@@ -127,14 +143,16 @@ const HelpSection = (props: {
                 }
               />
             </TouchableOpacity>
-            <Text
-              style={[
-                Fonts.textTiny,
-                Fonts.textCenter
-              ]}
-            >
-              v{packageJson.version}
-            </Text>
+            <TouchableOpacity onPress={handleVersionTap}>
+              <Text
+                style={[
+                  Fonts.textTiny,
+                  Fonts.textCenter
+                ]}
+              >
+                v{packageJson.version}
+              </Text>
+            </TouchableOpacity>
           </View>
           <View style={[Layout.justifyContentEnd]}>
             <TouchableOpacity

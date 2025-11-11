@@ -24,4 +24,6 @@ module.exports = {
       plugins: ['transform-remove-console'],
     },
   },
+  // Ignore SES files from transformation for LavaMoat compatibility
+  ignore: [/\/ses\.cjs$/, /\/ses-hermes\.cjs$/],
 };

@@ -1,6 +1,9 @@
 /**
  * @format
  */
+
+// LavaMoat lockdown is automatically injected by the Metro serializer
+// configured in metro.config.js - no manual import needed
 import './shim.js';
 import 'react-native-get-random-values';
 import { AppRegistry } from 'react-native';
