@@ -45,6 +45,34 @@ const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
     logTest('🚀 LavaMoat Security Test Suite', 'info');
     logTest('🔐 @lavamoat/react-native-lockdown v0.0.2', 'info');
     logTest('━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+
+    // Check if hardenIntrinsics is available in global scope
+    const hardenIntrinsicsExists = typeof (global as any).hardenIntrinsics === 'function';
+    logTest(
+      `🔍 hardenIntrinsics function: ${hardenIntrinsicsExists ? 'FOUND' : 'NOT FOUND'}`,
+      hardenIntrinsicsExists ? 'pass' : 'fail',
+    );
+
+    // Check if SES/Lockdown was initialized
+    const sesExists = typeof (global as any).lockdown === 'function';
+    logTest(
+      `🔍 lockdown function: ${sesExists ? 'FOUND' : 'NOT FOUND'}`,
+      sesExists ? 'pass' : 'fail',
+    );
+
+    // Check if prototypes are already frozen (which means hardenIntrinsics was called)
+    const functionPrototypeFrozen = Object.isFrozen(Function.prototype);
+    const objectPrototypeFrozen = Object.isFrozen(Object.prototype);
+    logTest(
+      `🔍 Function.prototype frozen: ${functionPrototypeFrozen ? 'YES' : 'NO'}`,
+      functionPrototypeFrozen ? 'pass' : 'fail',
+    );
+    logTest(
+      `🔍 Object.prototype frozen: ${objectPrototypeFrozen ? 'YES' : 'NO'}`,
+      objectPrototypeFrozen ? 'pass' : 'fail',
+    );
+
+    logTest('━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
     logTest('📋 SECURITY MODEL:', 'info');
     logTest('✅ Intrinsic Hardening - Core JS objects frozen', 'info');
     logTest('✅ Prototype Protection - Pollution attacks blocked', 'info');
@@ -53,66 +81,73 @@ const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
     logTest('━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
     logTest('NOTE: eval/Function/Proxy/Reflect warnings are expected.', 'info');
     logTest('React Native ecosystem requires these for compatibility.', 'info');
-    logTest('Same security model as MetaMask Mobile.', 'info');
     logTest('━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
 
     // Test 1: Function.prototype Modification Protection
     logTest('🧪 Test 1: Function.prototype Modification Protection', 'info');
-    try {
-      const originalApply = Function.prototype.apply;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      Function.prototype.apply = function (this: any) {} as any; // Should throw if locked down
-      Function.prototype.apply = originalApply; // restore
 
+    // Check if Function.prototype is frozen (works in both strict and sloppy mode)
+    const isFunctionPrototypeFrozen = Object.isFrozen(Function.prototype);
+
+    if (isFunctionPrototypeFrozen) {
+      // Verify by checking if property is writable
+      const applyDescriptor = Object.getOwnPropertyDescriptor(Function.prototype, 'apply');
+      const isProtected = applyDescriptor && !applyDescriptor.writable && !applyDescriptor.configurable;
+
+      if (isProtected) {
+        logTest(
+          '✅ PASS: Function.prototype is frozen and protected',
+          'pass',
+        );
+      } else {
+        logTest(
+          '⚠️  WARNING: Function.prototype is frozen but properties are writable',
+          'warning',
+        );
+      }
+    } else {
       logTest(
-        '❌ FAIL: Function.prototype can be modified - Lockdown may not be active',
+        '❌ FAIL: Function.prototype is not frozen - Lockdown not active',
         'fail',
-      );
-    } catch (error) {
-      logTest(
-        '✅ PASS: Function.prototype modification blocked - ' +
-          (error as Error).message,
-        'pass',
       );
     }
 
     // Test 2: Object.prototype Modification
     logTest('🧪 Test 2: Object.prototype Pollution Protection', 'info');
-    try {
-      Object.defineProperty(Object.prototype, '__malicious__', {
-        value: 'hacked',
-        writable: true,
-        enumerable: false,
-        configurable: true,
-      });
-      delete (Object.prototype as any).__malicious__;
 
-      logTest('❌ FAIL: Object.prototype can be polluted', 'fail');
-    } catch (error) {
+    const isObjectPrototypeFrozen = Object.isFrozen(Object.prototype);
+
+    if (isObjectPrototypeFrozen) {
       logTest(
-        '✅ PASS: Object.prototype modification blocked - ' +
-          (error as Error).message,
+        '✅ PASS: Object.prototype is frozen and protected from pollution',
         'pass',
       );
+    } else {
+      logTest('❌ FAIL: Object.prototype is not frozen', 'fail');
     }
 
     // Test 3: Array.prototype Modification
     logTest('🧪 Test 3: Array.prototype Protection', 'info');
-    try {
-      const originalPush = Array.prototype.push;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      Array.prototype.push = function (this: any) {
-        return 0;
-      } as any;
-      Array.prototype.push = originalPush; // restore
 
-      logTest('❌ FAIL: Array.prototype can be modified', 'fail');
-    } catch (error) {
-      logTest(
-        '✅ PASS: Array.prototype modification blocked - ' +
-          (error as Error).message,
-        'pass',
-      );
+    const isArrayPrototypeFrozen = Object.isFrozen(Array.prototype);
+
+    if (isArrayPrototypeFrozen) {
+      const pushDescriptor = Object.getOwnPropertyDescriptor(Array.prototype, 'push');
+      const isProtected = pushDescriptor && !pushDescriptor.writable && !pushDescriptor.configurable;
+
+      if (isProtected) {
+        logTest(
+          '✅ PASS: Array.prototype is frozen and protected',
+          'pass',
+        );
+      } else {
+        logTest(
+          '⚠️  WARNING: Array.prototype is frozen but properties are writable',
+          'warning',
+        );
+      }
+    } else {
+      logTest('❌ FAIL: Array.prototype is not frozen', 'fail');
     }
 
     // Test 4: Global Object Property Addition
