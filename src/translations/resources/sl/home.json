@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Potrebna je sinhronizacija z SSP denarnico.",
   "err_invalid_manual_input": "Neveljaven ročni vnos.",
   "err_invalid_scanned_data": "Neveljavni skenirani podatki.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Prosimo, najprej skenirajte QR kodo za sinhronizacijo vašega SSP ključa.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Napaka pri dekodiranju transakcije. Zavrnjen.",
