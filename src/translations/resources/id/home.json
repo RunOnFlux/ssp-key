@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Sinkronisasi dengan SSP Wallet diperlukan.",
   "err_invalid_manual_input": "Masukan manual tidak valid.",
   "err_invalid_scanned_data": "Data yang Dipindai Tidak Valid.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Silakan pindai kode QR untuk menyinkronkan Kunci SSP Anda terlebih dahulu.",
   "dont_have_ssp_wallet": "Tidak punya Dompet SSP? Klik di sini untuk panduan.",
   "err_tx_decode": "Kesalahan mendekode transaksi.",
