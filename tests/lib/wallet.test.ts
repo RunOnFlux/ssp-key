@@ -132,8 +132,21 @@ describe('Wallet Lib', () => {
       expect(res).toBe('t1UMukPYoA7hUn9GftBmHYF78Nwx6KErRBC');
     });
 
-    test.skip('should return generatePublicNonce data when value is valid', () => {
-      generatePublicNonce();
+    test('should return generatePublicNonce data when value is valid', () => {
+      const res = generatePublicNonce();
+      expect(res).toHaveProperty('k');
+      expect(res).toHaveProperty('kTwo');
+      expect(res).toHaveProperty('kPublic');
+      expect(res).toHaveProperty('kTwoPublic');
+      expect(typeof res.k).toBe('string');
+      expect(typeof res.kTwo).toBe('string');
+      expect(typeof res.kPublic).toBe('string');
+      expect(typeof res.kTwoPublic).toBe('string');
+      // Verify hex strings have content
+      expect(res.k.length).toBeGreaterThan(0);
+      expect(res.kTwo.length).toBeGreaterThan(0);
+      expect(res.kPublic.length).toBeGreaterThan(0);
+      expect(res.kTwoPublic.length).toBeGreaterThan(0);
     });
   });
 });

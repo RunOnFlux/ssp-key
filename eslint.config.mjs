@@ -63,4 +63,10 @@ export default [
       '@typescript-eslint/no-unsafe-return': 'off',
     },
   },
+  {
+    files: ['tests/**/*.ts', 'tests/**/*.tsx'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
 ];

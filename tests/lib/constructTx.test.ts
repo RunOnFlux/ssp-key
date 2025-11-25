@@ -111,43 +111,84 @@ describe('ConstructTx Lib', () => {
       );
     });
 
-    test.skip('should return signTransaction data when value is valid', () => {
-      signTransaction(
-        rawTxFlux,
+    test('should return signTransaction data when value is valid', () => {
+      // Pre-computed test data derived from mnemonic:
+      // 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+      // Using BIP48 derivation for Flux (coin 19167), accounts 0 and 1, p2sh script type
+      // Path: m/48'/19167'/0'/0'/0/0 and m/48'/19167'/1'/0'/0/0
+
+      // Private key (WIF) for first keypair
+      const privateKeyWIF =
+        'L4Y1DTXtz3EPUv4VGTj3zmyfNbMo9w44zS3iMR2mJSjHPF4cZZAf';
+
+      // 2-of-2 multisig redeem script from sorted pubkeys:
+      // 03246fe832ca2c161020db8fedf91a70540d3b6554bc105eb30f7fb67ce83867ca
+      // 037558d40625e76a85afc55040fdc4c13ee24b6dad4b2dddd7caf1275220a67493
+      const redeemScriptHex =
+        '522103246fe832ca2c161020db8fedf91a70540d3b6554bc105eb30f7fb67ce83867ca21037558d40625e76a85afc55040fdc4c13ee24b6dad4b2dddd7caf1275220a6749352ae';
+
+      // P2SH scriptPubKey derived from redeem script
+      const scriptPubKeyHex = 'a914eac01ecfa8d06a35114014d041710c6b7024ff3787';
+
+      // Unsigned transaction hex (spending from P2SH address t3fxsCXJHeGmaDP7Xu7UbjXUM7opop9Mf4K)
+      const unsignedTxHex =
+        '0400008085202f8901aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000ffffffff0150c300000000000017a914eac01ecfa8d06a35114014d041710c6b7024ff378700000000000000000000000000000000000000';
+
+      // UTXO txid matching the input
+      const fakeTxId =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+      // Sign the transaction
+      const signedTx = signTransaction(
+        unsignedTxHex,
         'flux',
-        '0x29c6fbfe8f749d4d122a3a8422e63977aaf943fb3674a927fb88f1a2833a53ad',
-        'test',
-        'test',
+        privateKeyWIF,
+        redeemScriptHex,
+        '', // no witness script for p2sh
         [
           {
-            txid: '9649b8ddc0e69237606bea21b886696bb90d7fa2afca1f318490054e69c5af2f',
-            vout: 1,
-            scriptPubKey: '76a914d12bbee355284f735f8d55e809fee9134c21acf088ac',
-            satoshis: '281250000',
-            confirmations: 5803,
+            txid: fakeTxId,
+            vout: 0,
+            scriptPubKey: scriptPubKeyHex,
+            satoshis: '100000',
+            confirmations: 100,
             coinbase: false,
           },
         ],
       );
+
+      expect(typeof signedTx).toBe('string');
+      expect(signedTx.length).toBeGreaterThan(unsignedTxHex.length);
+      expect(signedTx).not.toBe(unsignedTxHex);
     });
 
+    test('should return selectPublicNonce data when value is valid', () => {
+      // Use nonces that match those in rawTxSepolia.publicNonces
+      const res = selectPublicNonce(JSON.stringify(rawTxSepolia), [
+        {
+          k: 'someprivatek',
+          kTwo: 'someprivatektwo',
+          kPublic:
+            '022f8178611318387a91b287a5942278fb2f66942dfa72f2fdae5a2de4ba2a5e62',
+          kTwoPublic:
+            '037a0ba8f0d247907508520ba7df81a31c3f084eb2648f566c8ad902af7a798d63',
+        },
+      ]);
+      expect(res).toHaveProperty('k');
+      expect(res).toHaveProperty('kTwo');
+      expect(res).toHaveProperty('kPublic');
+      expect(res).toHaveProperty('kTwoPublic');
+      expect(res.kPublic).toBe(
+        '022f8178611318387a91b287a5942278fb2f66942dfa72f2fdae5a2de4ba2a5e62',
+      );
+    });
+
+    // Skipped: broadcastTx makes real network requests and would broadcast actual transactions
     test.skip('should return broadcastTx data when value is valid', async () => {
       await broadcastTx(JSON.stringify(rawTxSepolia), 'sepolia');
     });
 
-    test.skip('should return selectPublicNonce data when value is valid', () => {
-      selectPublicNonce(JSON.stringify(rawTxSepolia), [
-        {
-          k: '020e2cade92e0e199e6833e0081943a0e5226344b8bf17357a406a80ed762a5747',
-          kTwo: '030e2cade92e0e199e6833e0081943a0e5226344b8bf17357a406a80ed762a5747',
-          kPublic:
-            '020e2cade92e0e199e6833e0081943a0e5226344b8bf17357a406a80ed762a5747',
-          kTwoPublic:
-            '030e2cade92e0e199e6833e0081943a0e5226344b8bf17357a406a80ed762a5747',
-        },
-      ]);
-    });
-
+    // Skipped: signAndBroadcastEVM makes real network requests and would broadcast actual transactions
     test.skip('should return signAndBroadcastEVM data when value is valid', async () => {
       await signAndBroadcastEVM(
         JSON.stringify(rawTxSepolia),
