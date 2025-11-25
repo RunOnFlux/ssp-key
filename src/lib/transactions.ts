@@ -164,11 +164,11 @@ export async function decodeEVMTransactionForApproval(
   try {
     let decimals = blockchains[chain].decimals;
     const multisigUserOpJSON = JSON.parse(rawTx) as userOperation;
-    
+
     if (!multisigUserOpJSON.userOpRequest) {
       throw new Error('Invalid transaction format: missing userOpRequest');
     }
-    
+
     const {
       callData,
       sender,
