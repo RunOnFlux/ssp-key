@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Sinkronisasie met SSP Beursie benodig.",
   "err_invalid_manual_input": "Ongeldige handmatige invoer.",
   "err_invalid_scanned_data": "Ongeldige Geskandeerde Data.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Skandeer asseblief die QR-kode om eers jou SSP Sleutel te sinkroniseer.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Fout met die dekodering van transaksie. Verwerp.",
