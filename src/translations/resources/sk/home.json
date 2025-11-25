@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Potrebná synchronizácia s SSP peňaženkou.",
   "err_invalid_manual_input": "Neplatný manuálny vstup.",
   "err_invalid_scanned_data": "Neplatné naskenované údaje.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Prosím, najskôr naskenujte QR kód na synchronizáciu vášho SSP kľúča.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Chyba pri dekódovaní transakcie. Zamietnuté.",
