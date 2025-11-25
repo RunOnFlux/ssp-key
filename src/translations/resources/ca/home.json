@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Cal sincronitzar amb el moneder SSP.",
   "err_invalid_manual_input": "Entrada manual no vàlida.",
   "err_invalid_scanned_data": "Dades escanejades no vàlides.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Si us plau, escaneja el codi QR per sincronitzar primer la teva clau SSP.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Error en descodificar la transacció. Rebutjada.",
