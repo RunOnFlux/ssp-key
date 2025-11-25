@@ -146,8 +146,13 @@ export function generateMultisigAddress(
 
   const publicKey1 = externalAddress1.publicKey;
   const publicKey2 = externalAddress2.publicKey;
-  const pubKeyBuffer1 = Buffer.from(publicKey1!).toString('hex');
-  const pubKeyBuffer2 = Buffer.from(publicKey2!).toString('hex');
+
+  if (!publicKey1 || !publicKey2) {
+    throw new Error('Failed to derive public keys from extended keys');
+  }
+
+  const pubKeyBuffer1 = Buffer.from(publicKey1).toString('hex');
+  const pubKeyBuffer2 = Buffer.from(publicKey2).toString('hex');
 
   const sortedPublicKeys: string[] = [pubKeyBuffer1, pubKeyBuffer2].sort();
   const publicKeysBuffer: Buffer[] = sortedPublicKeys.map((hex: string) =>
@@ -245,10 +250,12 @@ export function generateMultisigAddressEVM(
   const publicKey1 = externalAddress1.publicKey;
   const publicKey2 = externalAddress2.publicKey;
 
-  const pubKeyBuffer1 = Buffer.from(publicKey1!);
-  const pubKeyBuffer2 = Buffer.from(publicKey2!);
+  if (!publicKey1 || !publicKey2) {
+    throw new Error('Failed to derive public keys from extended keys');
+  }
 
-  console.log(aaSchnorrMultisig);
+  const pubKeyBuffer1 = Buffer.from(publicKey1);
+  const pubKeyBuffer2 = Buffer.from(publicKey2);
 
   const keyPubKey1 = new aaSchnorrMultisig.types.Key(pubKeyBuffer1);
   const keyPubKey2 = new aaSchnorrMultisig.types.Key(pubKeyBuffer2);
@@ -295,9 +302,13 @@ export function generateAddressKeypairEVM(
     .deriveChild(typeIndex)
     .deriveChild(addressIndex);
 
-  const publicKey = Buffer.from(externalAddress.publicKey!).toString('hex');
+  if (!externalAddress.publicKey || !externalAddress.privateKey) {
+    throw new Error('Failed to derive keypair from extended private key');
+  }
+
+  const publicKey = Buffer.from(externalAddress.publicKey).toString('hex');
   const privateKey =
-    '0x' + Buffer.from(externalAddress.privateKey!).toString('hex');
+    '0x' + Buffer.from(externalAddress.privateKey).toString('hex');
 
   return { privKey: privateKey as `0x${string}`, pubKey: publicKey };
 }
@@ -371,7 +382,12 @@ export function generateInternalIdentityAddress(
     .deriveChild(addressIndex);
 
   const publicKey = externalAddress.publicKey;
-  const pubKeyBuffer = Buffer.from(publicKey!);
+
+  if (!publicKey) {
+    throw new Error('Failed to derive public key from extended public key');
+  }
+
+  const pubKeyBuffer = Buffer.from(publicKey);
 
   const network = utxolib.networks[libID];
 
@@ -408,7 +424,12 @@ export function deriveEVMPublicKey(
     .deriveChild(addressIndex);
 
   const publicKey2 = externalAddress2.publicKey;
-  const pubKeyBuffer2 = Buffer.from(publicKey2!);
+
+  if (!publicKey2) {
+    throw new Error('Failed to derive public key from extended public key');
+  }
+
+  const pubKeyBuffer2 = Buffer.from(publicKey2);
 
   return pubKeyBuffer2.toString('hex');
 }

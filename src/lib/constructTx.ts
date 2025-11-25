@@ -17,10 +17,7 @@ import {
 
 import { backends } from '@storage/backends';
 import { blockchains } from '@storage/blockchains';
-
-export function getLibId(chain: keyof cryptos): string {
-  return blockchains[chain].libid;
-}
+import { getLibId } from './wallet';
 
 export async function fetchUtxos(
   address: string,

@@ -1,7 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck test suite
 import {
-  getLibId,
   decodeTransactionForApproval,
   decodeEVMTransactionForApproval,
 } from '../../src/lib/transactions';
@@ -63,11 +62,6 @@ const rawTxFlux =
 
 describe('Transactions Lib', () => {
   describe('Verifies transactions', () => {
-    test('should return getLibId data when value is flux', () => {
-      const res = getLibId('flux');
-      expect(res).toBe('flux');
-    });
-
     test('should return decodeTransactionForApproval data when value is invalid', async () => {
       const res = await decodeTransactionForApproval('{}', 'sepolia');
       expect(res).toEqual({

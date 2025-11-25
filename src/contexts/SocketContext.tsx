@@ -2,14 +2,14 @@ import React, { createContext, useState, useEffect } from 'react';
 import io, { Socket } from 'socket.io-client';
 import { useAppSelector } from '../hooks';
 import { sspConfig } from '@storage/ssp';
-import { AppState } from 'react-native';
-import { evmSigningRequest } from '../types';
+import { AppState, NativeEventSubscription } from 'react-native';
+import { evmSigningRequest, utxo } from '../types';
 
 interface TxRequest {
   rawTx: string;
   chain: string;
   path: string;
-  utxos: any[];
+  utxos: utxo[];
 }
 
 interface SocketContextType {
@@ -56,7 +56,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [publicNoncesRequest, setPublicNoncesRequest] = useState(false);
   const [evmSigningRequest, setEvmSigningRequest] =
     useState<evmSigningRequest | null>(null);
-  const [socketIdentiy, setSocketIdentity] = useState('');
+  const [socketIdentity, setSocketIdentity] = useState('');
 
   useEffect(() => {
     console.log('[Socket] Initializing SSP Key socket connection');
@@ -83,8 +83,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     // Leave previous session if identity changed
-    if (socketIdentiy) {
-      newSocket.emit('leave', { wkIdentity: socketIdentiy });
+    if (socketIdentity) {
+      newSocket.emit('leave', { wkIdentity: socketIdentity });
     }
     setSocketIdentity(wkIdentity);
 
@@ -92,15 +92,26 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     newSocket.emit('join', { wkIdentity });
 
     // Handle transaction requests
-    newSocket.on('tx', (data: any) => {
-      console.log('[Socket] Transaction request received:', data);
-      setNewTx({
-        rawTx: data.payload,
-        chain: data.chain,
-        path: data.path,
-        utxos: data.utxos || [],
-      });
-    });
+    newSocket.on(
+      'tx',
+      (data: {
+        payload: string;
+        chain: string;
+        path: string;
+        utxos?: utxo[];
+      }) => {
+        console.log(
+          '[Socket] Transaction request received for chain:',
+          data.chain,
+        );
+        setNewTx({
+          rawTx: data.payload,
+          chain: data.chain,
+          path: data.path,
+          utxos: data.utxos || [],
+        });
+      },
+    );
 
     // Handle public nonces requests
     newSocket.on('publicnoncesrequest', () => {
@@ -112,11 +123,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     newSocket.on(
       'evmsigningrequest',
       (data: { chain: string; path: string; payload: string }) => {
-        console.log(
-          '[Socket] EVM Signing request received via action API:',
-          data,
-        );
-        setEvmSigningRequest(JSON.parse(data.payload) as evmSigningRequest);
+        console.log('[Socket] EVM Signing request received via action API');
+        try {
+          const parsedPayload = JSON.parse(data.payload) as evmSigningRequest;
+          setEvmSigningRequest(parsedPayload);
+        } catch {
+          console.error('[Socket] Failed to parse EVM signing request payload');
+        }
       },
     );
 
@@ -126,20 +139,29 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('[Socket] Cleaning up socket connection');
       newSocket.close();
     };
-  }, [wkIdentity, socketIdentiy]);
+  }, [wkIdentity, socketIdentity]);
 
   useEffect(() => {
+    let subscription: NativeEventSubscription | null = null;
+
     if (socket) {
-      AppState.addEventListener('change', (state) => {
+      subscription = AppState.addEventListener('change', (state) => {
         if (state === 'active') {
           socket.emit('join', {
             wkIdentity,
           });
         } else if (state === 'background') {
-          socket?.emit('leave', { wkIdentity });
+          socket.emit('leave', { wkIdentity });
         }
       });
     }
+
+    // Cleanup: remove the event listener when component unmounts or dependencies change
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
   }, [socket, wkIdentity]);
 
   const clearTx = () => {

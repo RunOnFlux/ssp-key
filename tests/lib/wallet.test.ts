@@ -27,6 +27,11 @@ describe('Wallet Lib', () => {
       expect(res).toBe('sepolia');
     });
 
+    test('should return getLibId data when value is blockbook', () => {
+      const res = getLibId('bch');
+      expect(res).toBe('bitcoincash');
+    });
+
     test('should return getScriptType data when value is p2sh', () => {
       const res = getScriptType('p2sh');
       expect(res).toBe(0);

@@ -144,12 +144,7 @@ const HelpSection = (props: {
               />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleVersionTap}>
-              <Text
-                style={[
-                  Fonts.textTiny,
-                  Fonts.textCenter
-                ]}
-              >
+              <Text style={[Fonts.textTiny, Fonts.textCenter]}>
                 v{packageJson.version}
               </Text>
             </TouchableOpacity>

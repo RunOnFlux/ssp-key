@@ -21,7 +21,7 @@ interface Props {
 }
 
 const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
-  const { darkMode, Colors } = useTheme();
+  const { darkMode } = useTheme();
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -47,7 +47,8 @@ const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
     logTest('━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
 
     // Check if hardenIntrinsics is available in global scope
-    const hardenIntrinsicsExists = typeof (global as any).hardenIntrinsics === 'function';
+    const hardenIntrinsicsExists =
+      typeof (global as any).hardenIntrinsics === 'function';
     logTest(
       `🔍 hardenIntrinsics function: ${hardenIntrinsicsExists ? 'FOUND' : 'NOT FOUND'}`,
       hardenIntrinsicsExists ? 'pass' : 'fail',
@@ -91,14 +92,17 @@ const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
 
     if (isFunctionPrototypeFrozen) {
       // Verify by checking if property is writable
-      const applyDescriptor = Object.getOwnPropertyDescriptor(Function.prototype, 'apply');
-      const isProtected = applyDescriptor && !applyDescriptor.writable && !applyDescriptor.configurable;
+      const applyDescriptor = Object.getOwnPropertyDescriptor(
+        Function.prototype,
+        'apply',
+      );
+      const isProtected =
+        applyDescriptor &&
+        !applyDescriptor.writable &&
+        !applyDescriptor.configurable;
 
       if (isProtected) {
-        logTest(
-          '✅ PASS: Function.prototype is frozen and protected',
-          'pass',
-        );
+        logTest('✅ PASS: Function.prototype is frozen and protected', 'pass');
       } else {
         logTest(
           '⚠️  WARNING: Function.prototype is frozen but properties are writable',
@@ -132,14 +136,17 @@ const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
     const isArrayPrototypeFrozen = Object.isFrozen(Array.prototype);
 
     if (isArrayPrototypeFrozen) {
-      const pushDescriptor = Object.getOwnPropertyDescriptor(Array.prototype, 'push');
-      const isProtected = pushDescriptor && !pushDescriptor.writable && !pushDescriptor.configurable;
+      const pushDescriptor = Object.getOwnPropertyDescriptor(
+        Array.prototype,
+        'push',
+      );
+      const isProtected =
+        pushDescriptor &&
+        !pushDescriptor.writable &&
+        !pushDescriptor.configurable;
 
       if (isProtected) {
-        logTest(
-          '✅ PASS: Array.prototype is frozen and protected',
-          'pass',
-        );
+        logTest('✅ PASS: Array.prototype is frozen and protected', 'pass');
       } else {
         logTest(
           '⚠️  WARNING: Array.prototype is frozen but properties are writable',
@@ -173,7 +180,7 @@ const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
     try {
       const FunctionConstructor = Function;
       const testFn = new FunctionConstructor('return 42');
-      const result = testFn();
+      testFn(); // Execute but don't store unused result
 
       logTest(
         '⚠️  WARNING: Function constructor available (evalTaming: unsafe-eval for RN)',
@@ -189,7 +196,7 @@ const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
     // Test 6: eval() Availability (Expected to work in RN)
     logTest('🧪 Test 6: eval() Availability', 'info');
     try {
-      const result = eval('"test"');
+      eval('"test"'); // Execute but don't store unused result
 
       logTest(
         '⚠️  WARNING: eval() available (evalTaming: unsafe-eval for RN)',
@@ -271,10 +278,10 @@ const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
       const testArray = [1, 2, 3, 4, 5];
       const doubled = testArray.map((x) => x * 2);
       const sum = doubled.reduce((a, b) => a + b, 0);
-      const result = JSON.stringify({ doubled, sum });
+      const output = JSON.stringify({ doubled, sum });
 
-      logTest('✅ PASS: Normal operations work - ' + result, 'pass');
-    } catch (error) {
+      logTest('✅ PASS: Normal operations work - ' + output, 'pass');
+    } catch {
       logTest('❌ FAIL: Basic operations broken!', 'fail');
     }
 

@@ -68,8 +68,12 @@ describe('FCM Helper Lib', () => {
       await requestUserPermission();
 
       expect(mockMessaging.getMessaging).toHaveBeenCalled();
-      expect(mockMessaging.requestPermission).toHaveBeenCalledWith(mockMessagingInstance);
-      expect(mockMessaging.registerDeviceForRemoteMessages).toHaveBeenCalledWith(mockMessagingInstance);
+      expect(mockMessaging.requestPermission).toHaveBeenCalledWith(
+        mockMessagingInstance,
+      );
+      expect(
+        mockMessaging.registerDeviceForRemoteMessages,
+      ).toHaveBeenCalledWith(mockMessagingInstance);
       expect(mockNotifee.requestPermission).toHaveBeenCalled();
     });
 
@@ -84,9 +88,17 @@ describe('FCM Helper Lib', () => {
       notificationListener();
 
       expect(mockMessaging.getMessaging).toHaveBeenCalled();
-      expect(mockMessaging.onNotificationOpenedApp).toHaveBeenCalledWith(mockMessagingInstance, expect.any(Function));
-      expect(mockMessaging.getInitialNotification).toHaveBeenCalledWith(mockMessagingInstance);
-      expect(mockMessaging.onMessage).toHaveBeenCalledWith(mockMessagingInstance, expect.any(Function));
+      expect(mockMessaging.onNotificationOpenedApp).toHaveBeenCalledWith(
+        mockMessagingInstance,
+        expect.any(Function),
+      );
+      expect(mockMessaging.getInitialNotification).toHaveBeenCalledWith(
+        mockMessagingInstance,
+      );
+      expect(mockMessaging.onMessage).toHaveBeenCalledWith(
+        mockMessagingInstance,
+        expect.any(Function),
+      );
       expect(mockNotifee.onBackgroundEvent).toHaveBeenCalled();
     });
 
@@ -96,7 +108,10 @@ describe('FCM Helper Lib', () => {
       onBackgroundMessageHandler();
 
       expect(mockMessaging.getMessaging).toHaveBeenCalled();
-      expect(mockMessaging.setBackgroundMessageHandler).toHaveBeenCalledWith(mockMessagingInstance, expect.any(Function));
+      expect(mockMessaging.setBackgroundMessageHandler).toHaveBeenCalledWith(
+        mockMessagingInstance,
+        expect.any(Function),
+      );
     });
 
     test('should return success data when getFCMToken with existing token', async () => {
@@ -118,7 +133,9 @@ describe('FCM Helper Lib', () => {
 
       expect(res).toBe('new-token');
       expect(mockMessaging.getMessaging).toHaveBeenCalled();
-      expect(mockMessaging.getToken).toHaveBeenCalledWith(mockMessagingInstance);
+      expect(mockMessaging.getToken).toHaveBeenCalledWith(
+        mockMessagingInstance,
+      );
     });
 
     test('should return null when getFCMToken fails', async () => {
@@ -138,7 +155,9 @@ describe('FCM Helper Lib', () => {
       await refreshFCMToken();
 
       expect(mockMessaging.getMessaging).toHaveBeenCalled();
-      expect(mockMessaging.getToken).toHaveBeenCalledWith(mockMessagingInstance);
+      expect(mockMessaging.getToken).toHaveBeenCalledWith(
+        mockMessagingInstance,
+      );
     });
 
     test('should handle refreshFCMToken when no token', async () => {
@@ -147,7 +166,9 @@ describe('FCM Helper Lib', () => {
       await refreshFCMToken();
 
       expect(mockMessaging.getMessaging).toHaveBeenCalled();
-      expect(mockMessaging.getToken).toHaveBeenCalledWith(mockMessagingInstance);
+      expect(mockMessaging.getToken).toHaveBeenCalledWith(
+        mockMessagingInstance,
+      );
     });
   });
 });

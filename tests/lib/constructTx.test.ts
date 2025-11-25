@@ -1,5 +1,4 @@
 import {
-  getLibId,
   fetchUtxos,
   finaliseTransaction,
   signTransaction,
@@ -65,21 +64,6 @@ const rawTxSepolia = {
 
 describe('ConstructTx Lib', () => {
   describe('Verifies constructTx', () => {
-    test('should return getLibId data when value is flux', () => {
-      const res = getLibId('flux');
-      expect(res).toBe('flux');
-    });
-
-    test('should return getLibId data when value is evm', () => {
-      const res = getLibId('sepolia');
-      expect(res).toBe('sepolia');
-    });
-
-    test('should return getLibId data when value is blockbook', () => {
-      const res = getLibId('bch');
-      expect(res).toBe('bitcoincash');
-    });
-
     test('should return fetchUtxos data when value is valid blockbook', async () => {
       const res = await fetchUtxos(
         'bitcoincash:qrq0l3x9mqy6cjzxz85q5avj2gu5wj359ygc8kqmtm',

@@ -4,13 +4,11 @@ import { decodeFunctionData, erc20Abi } from 'viem';
 import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
 import { getTokenMetadata } from './tokens';
+import { getLibId } from './wallet';
 import { cryptos, utxo } from '../types';
 
 import { blockchains, Token } from '@storage/blockchains';
 
-export function getLibId(chain: keyof cryptos): string {
-  return blockchains[chain].libid;
-}
 interface output {
   script: Buffer;
   value: number;

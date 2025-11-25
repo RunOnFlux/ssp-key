@@ -26,7 +26,7 @@ import ManualInput from '../../components/ManualInput/ManualInput';
 import MenuModal from '../../components/MenuModal/MenuModal';
 import Scanner from '../../components/Scanner/Scanner';
 import Navbar from '../../components/Navbar/Navbar';
-import PublicNoncesRequest from '../..//components/PublicNoncesRequest/PublicNoncesRequest';
+import PublicNoncesRequest from '../../components/PublicNoncesRequest/PublicNoncesRequest';
 import PublicNoncesSuccess from '../../components/PublicNoncesSuccess/PublicNoncesSuccess';
 import Receive from '../../components/Receive/Receive';
 import * as Keychain from 'react-native-keychain';
@@ -85,10 +85,9 @@ import { getFCMToken, refreshFCMToken } from '../../lib/fcmHelper';
 import { changeTheme } from '../../store/theme';
 import EvmSigningRequest from '../../components/EvmSigningRequest/EvmSigningRequest';
 import EvmSigningSuccess from '../../components/EvmSigningSuccess/EvmSigningSuccess';
+import { MainScreenProps } from '../../../@types/navigation';
 
-type Props = {
-  navigation: any;
-};
+type Props = MainScreenProps<'Home'>;
 
 const xpubRegex = /^([a-zA-Z]{2}ub[1-9A-HJ-NP-Za-km-z]{79,140})$/; // xpub start is the most usual, but can also be Ltub
 
@@ -162,7 +161,7 @@ function Home({ navigation }: Props) {
 
     checkXpubXpriv();
     checkFCMToken();
-  });
+  }, []);
 
   useEffect(() => {
     checkXpubXpriv();
@@ -789,12 +788,17 @@ function Home({ navigation }: Props) {
           setIsManualInputModalOpen(false);
         });
       } else if (manualInput.startsWith('evmsigningrequest')) {
-        handleEvmSigningRequest(
-          JSON.parse(manualInput.replace('evmsigningrequest', '')),
-        );
-        setTimeout(() => {
-          setIsManualInputModalOpen(false);
-        });
+        try {
+          const evmData = JSON.parse(
+            manualInput.replace('evmsigningrequest', ''),
+          );
+          handleEvmSigningRequest(evmData);
+          setTimeout(() => {
+            setIsManualInputModalOpen(false);
+          });
+        } catch {
+          displayMessage('error', t('home:err_invalid_manual_input'));
+        }
       } else {
         const splittedInput = manualInput.split(':');
         let chain: keyof cryptos = identityChain;
@@ -884,9 +888,16 @@ function Home({ navigation }: Props) {
       // evmsigningrequest{chain: string, path: string, payload: string}
       if (scannedData.startsWith('evmsigningrequest')) {
         // this is a evm signing request, remove evmsigningrequest prefix
-        handleEvmSigningRequest(
-          JSON.parse(scannedData.replace('evmsigningrequest', '')),
-        );
+        try {
+          const evmData = JSON.parse(
+            scannedData.replace('evmsigningrequest', ''),
+          );
+          handleEvmSigningRequest(evmData);
+        } catch {
+          setTimeout(() => {
+            displayMessage('error', t('home:err_invalid_scanned_data'));
+          }, 200);
+        }
         return;
       }
       if (splittedInput[1]) {
@@ -964,7 +975,12 @@ function Home({ navigation }: Props) {
         } else if (result.data.action === 'publicnoncesrequest') {
           handlePublicNoncesRequest(result.data.chain);
         } else if (result.data.action === 'evmsigningrequest') {
-          handleEvmSigningRequest(JSON.parse(result.data.payload));
+          try {
+            const evmData = JSON.parse(result.data.payload);
+            handleEvmSigningRequest(evmData);
+          } catch {
+            displayMessage('error', t('home:err_invalid_request'));
+          }
         }
       } else {
         // here open sync needed modal
