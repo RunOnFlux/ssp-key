@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Necessaria sincronizzazione con il Portafoglio SSP.",
   "err_invalid_manual_input": "Input manuale non valido.",
   "err_invalid_scanned_data": "Dati Scansionati Non Validi.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Scansiona prima il codice QR per sincronizzare la tua chiave SSP.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Errore di decodifica della transazione. Rifiutata.",
