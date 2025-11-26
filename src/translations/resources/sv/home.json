@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Synkronisering med SSP-plånbok krävs.",
   "err_invalid_manual_input": "Ogiltig manuell inmatning.",
   "err_invalid_scanned_data": "Ogiltig skannad data.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Vänligen skanna QR-koden för att först synkronisera din SSP-nyckel.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Fel vid avkodning av transaktion. Avvisad.",

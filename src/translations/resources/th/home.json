@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "ต้องซิงค์กับ SSP Wallet",
   "err_invalid_manual_input": "ข้อมูลที่ป้อนเองไม่ถูกต้อง",
   "err_invalid_scanned_data": "ข้อมูลที่สแกนไม่ถูกต้อง",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "กรุณาสแกน QR โค้ดเพื่อซิงค์ SSP Key ของคุณก่อน",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "ข้อผิดพลาดในการถอดรหัสธุรกรรม ถูกปฏิเสธ",

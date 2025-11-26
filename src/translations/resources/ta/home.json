@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "SSP வாலெட்டுடன் ஒத்திசைவு தேவை.",
   "err_invalid_manual_input": "தவறான கைமுறை உள்ளீடு.",
   "err_invalid_scanned_data": "தவறான ஸ்கேன் செய்யப்பட்ட தரவு.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "தயவுசெய்து உங்கள் SSP கீவை ஒத்திசைக்க QR குறியீட்டை முதலில் ஸ்கேன் செய்யவும்.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "பரிவர்த்தனையைக் குறியாக்கத்தில் பிழை. நிராகரிக்கப்பட்டது.",

@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Необходима синхронизация с кошельком SSP.",
   "err_invalid_manual_input": "Недействительный ручной ввод.",
   "err_invalid_scanned_data": "Недействительные данные сканирования.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Пожалуйста, отсканируйте QR-код для первоначальной синхронизации вашего ключа SSP.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Ошибка декодирования транзакции. Отклонено.",

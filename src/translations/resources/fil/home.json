@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Kailangan ang pag-synchronize sa SSP Wallet.",
   "err_invalid_manual_input": "Di-wastong manual input.",
   "err_invalid_scanned_data": "Di-wastong Na-scan na Data.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Paki-scan ang QR code upang i-synchronize muna ang iyong SSP Key.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Error sa pagde-decode ng transaksyon. Tinanggihan.",

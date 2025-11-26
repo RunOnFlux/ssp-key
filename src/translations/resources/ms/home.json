@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Penyegerakan dengan Dompet SSP diperlukan.",
   "err_invalid_manual_input": "Input manual tidak sah.",
   "err_invalid_scanned_data": "Data yang diimbas tidak sah.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Sila imbas kod QR untuk menyegerakkan Kunci SSP anda terlebih dahulu.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Ralat menyahkod transaksi. Ditolak.",

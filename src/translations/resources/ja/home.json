@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "SSPウォレットとの同期が必要です.",
   "err_invalid_manual_input": "手動入力が無効です.",
   "err_invalid_scanned_data": "スキャンしたデータが無効です.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "最初にQRコードをスキャンしてSSPキーを同期してください.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "トランザクションのデコードエラー. 拒否されました.",

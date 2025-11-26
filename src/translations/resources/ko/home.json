@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "SSP 지갑과의 동기화가 필요합니다.",
   "err_invalid_manual_input": "잘못된 수동 입력입니다.",
   "err_invalid_scanned_data": "잘못된 스캔 데이터입니다.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "먼저 SSP 키를 동기화하기 위해 QR 코드를 스캔하세요.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "거래 디코딩 중 오류 발생. 거부되었습니다.",

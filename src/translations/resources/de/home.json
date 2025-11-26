@@ -46,6 +46,7 @@
   "err_sync_with_ssp_needed": "Synchronisierung mit SSP Wallet erforderlich.",
   "err_invalid_manual_input": "Ungültige manuelle Eingabe.",
   "err_invalid_scanned_data": "Ungültige gescannte Daten.",
+  "err_invalid_request": "Invalid request.",
   "sync_qr_needed": "Bitte scannen Sie zuerst den QR-Code, um Ihren SSP Schlüssel zu synchronisieren.",
   "dont_have_ssp_wallet": "Don't have SSP Wallet? Tap here for a guide.",
   "err_tx_decode": "Fehler beim Dekodieren der Transaktion. Abgelehnt.",
