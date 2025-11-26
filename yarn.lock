@@ -2672,10 +2672,10 @@
   resolved "https://registry.yarnpkg.com/@runonflux/react-native-step-indicator/-/react-native-step-indicator-1.0.0.tgz#5acb0ead7ca09d093d7a8105278d2bc95dd21cb0"
   integrity sha512-Q8Y2IbXoar8jaD4v82B5nFm2FcgVNLrhbtbyNcKyehxMDLUe4v8xZtl/Idv8ZsyA7gvf8N7DZccxxnsCPIjCnQ==
 
-"@runonflux/utxo-lib@1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@runonflux/utxo-lib/-/utxo-lib-1.0.1.tgz#59aa7595454b2598eecb3a6deac58fde9e583ad6"
-  integrity sha512-3hfx8BfmiefcZ+y6VAtk65rLgmrP+YWgD290z72Vg7nUqWCex9sHsUx8yduobiOwXl8tUNwtCnkcaF1OsuxETA==
+"@runonflux/utxo-lib@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@runonflux/utxo-lib/-/utxo-lib-1.0.2.tgz#087ce8fc168b64a193b1be4cb378a63af58375cb"
+  integrity sha512-ajTwUT4K45MXIGN5LgBPUGZm/GePjFKX2wAf2+4Sjg3jApPBsTF5L1WlstxHywhDuCg/7lP2+/DaQc55dE69uA==
   dependencies:
     bech32 "0.0.3"
     bigi "^1.4.0"
