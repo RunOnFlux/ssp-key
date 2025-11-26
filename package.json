@@ -15,10 +15,12 @@
     "postinstall": "patch-package && node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process,http,https,url,net,tls,zlib,_stream_transform' --yarn --hack"
   },
   "resolutions": {
-    "viem": "2.38.5"
+    "viem": "2.38.5",
+    "@types/react": "19.1.1"
   },
   "overrides": {
-    "viem": "2.38.5"
+    "viem": "2.38.5",
+    "@types/react": "19.1.1"
   },
   "dependencies": {
     "@alchemy/aa-core": "3.19.0",

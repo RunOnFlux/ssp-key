@@ -49,6 +49,11 @@ export default [
     plugins: {
       'react-hooks': pluginReactHooks,
     },
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
     rules: {
       ...pluginReactHooks.configs.recommended.rules,
       'react-hooks/exhaustive-deps': 'off',
