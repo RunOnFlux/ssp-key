@@ -31,11 +31,11 @@ Both keys are required to authorize transactions, ensuring that your funds remai
 
 ### **Performance and Reliability**
 - Built with:
-  - **React 19** and **React Native 0.78**
+  - **React 19** and **React Native 0.82**
   - **TypeScript** for modern, type-safe development.
 - Compatible with:
   - **iOS 15.1+** and **Android 7+**
-- Requires **Node.js 22+** for development.
+- Requires **Node.js 4+** for development.
 
 ---
 
@@ -49,7 +49,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
    ```
 
 2. **Install Dependencies**  
-   Ensure Node.js (22 or higher) is installed, then run:
+   Ensure Node.js (24 or higher) is installed, then run:
    ```bash
    yarn install
    ```
@@ -67,8 +67,8 @@ Both keys are required to authorize transactions, ensuring that your funds remai
 
 ## Requirements
 
-- **Node.js**: Version 22 or higher  
-- **React Native**: Version 0.78
+- **Node.js**: Version 24 or higher  
+- **React Native**: Version 0.82
 - **Mobile OS**:
   - iOS: Minimum version 15.1
   - Android: Minimum version 7  
