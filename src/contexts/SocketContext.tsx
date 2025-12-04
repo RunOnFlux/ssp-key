@@ -56,7 +56,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [publicNoncesRequest, setPublicNoncesRequest] = useState(false);
   const [evmSigningRequest, setEvmSigningRequest] =
     useState<evmSigningRequest | null>(null);
-  const [socketIdentity, setSocketIdentity] = useState('');
 
   useEffect(() => {
     console.log('[Socket] Initializing SSP Key socket connection');
@@ -72,6 +71,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     newSocket.on('connect', () => {
       console.log('[Socket] Connected to SSP Relay');
+      newSocket.emit('join', { wkIdentity });
     });
 
     newSocket.on('connect_error', (error) => {
@@ -81,15 +81,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     newSocket.on('disconnect', () => {
       console.log('[Socket] Disconnected from SSP Relay');
     });
-
-    // Leave previous session if identity changed
-    if (socketIdentity) {
-      newSocket.emit('leave', { wkIdentity: socketIdentity });
-    }
-    setSocketIdentity(wkIdentity);
-
-    // Join new session
-    newSocket.emit('join', { wkIdentity });
 
     // Handle transaction requests
     newSocket.on(
@@ -139,7 +130,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('[Socket] Cleaning up socket connection');
       newSocket.close();
     };
-  }, [wkIdentity, socketIdentity]);
+  }, [wkIdentity]);
 
   useEffect(() => {
     let subscription: NativeEventSubscription | null = null;
