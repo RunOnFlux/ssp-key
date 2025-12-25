@@ -3,6 +3,8 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 export interface seedPhraseState {
   seedPhrase: string;
   sspWalletKeyInternalIdentity: string;
+  sspWalletKeyInternalIdentityWitnessScript: string;
+  sspWalletKeyInternalIdentityPubKey: string;
   sspWalletInternalIdentity: string;
   publicNonces: string;
   identityChain: 'btc';
@@ -11,6 +13,8 @@ export interface seedPhraseState {
 const initialStateSeedPhrase: seedPhraseState = {
   seedPhrase: '',
   sspWalletKeyInternalIdentity: '',
+  sspWalletKeyInternalIdentityWitnessScript: '',
+  sspWalletKeyInternalIdentityPubKey: '',
   sspWalletInternalIdentity: '',
   publicNonces: '',
   identityChain: 'btc',
@@ -27,6 +31,18 @@ const seedPhraseSlice = createSlice({
     setSspWalletKeyInternalIdentity: (state, action: PayloadAction<string>) => {
       state.sspWalletKeyInternalIdentity = action.payload;
     },
+    setSspWalletKeyInternalIdentityWitnessScript: (
+      state,
+      action: PayloadAction<string>,
+    ) => {
+      state.sspWalletKeyInternalIdentityWitnessScript = action.payload;
+    },
+    setSspWalletKeyInternalIdentityPubKey: (
+      state,
+      action: PayloadAction<string>,
+    ) => {
+      state.sspWalletKeyInternalIdentityPubKey = action.payload;
+    },
     setSspWalletInternalIdentity: (state, action: PayloadAction<string>) => {
       state.sspWalletInternalIdentity = action.payload;
     },
@@ -36,6 +52,8 @@ const seedPhraseSlice = createSlice({
     setSSPInitialState: (state) => {
       state.seedPhrase = '';
       state.sspWalletKeyInternalIdentity = '';
+      state.sspWalletKeyInternalIdentityWitnessScript = '';
+      state.sspWalletKeyInternalIdentityPubKey = '';
       state.sspWalletInternalIdentity = '';
       state.identityChain = 'btc';
       state.publicNonces = '';
@@ -46,6 +64,8 @@ const seedPhraseSlice = createSlice({
 export const {
   setSeedPhrase,
   setSspWalletKeyInternalIdentity,
+  setSspWalletKeyInternalIdentityWitnessScript,
+  setSspWalletKeyInternalIdentityPubKey,
   setSspWalletInternalIdentity,
   setSspKeyPublicNonces,
   setSSPInitialState,

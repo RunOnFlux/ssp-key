@@ -1,6 +1,7 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import io, { Socket } from 'socket.io-client';
 import { useAppSelector } from '../hooks';
+import { useRelayAuth } from '../hooks';
 import { sspConfig } from '@storage/ssp';
 import { AppState, NativeEventSubscription } from 'react-native';
 import { evmSigningRequest, utxo } from '../types';
@@ -46,6 +47,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { sspWalletKeyInternalIdentity: wkIdentity } = useAppSelector(
     (state) => state.ssp,
   );
+  const { createWkIdentityAuth, isAuthAvailable } = useRelayAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [newTx, setNewTx] = useState<TxRequest>({
     rawTx: '',
@@ -56,6 +58,37 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [publicNoncesRequest, setPublicNoncesRequest] = useState(false);
   const [evmSigningRequest, setEvmSigningRequest] =
     useState<evmSigningRequest | null>(null);
+
+  /**
+   * Emit an authenticated join event.
+   */
+  const emitAuthenticatedJoin = useCallback(
+    async (socketToUse: Socket, identity: string) => {
+      try {
+        if (isAuthAvailable) {
+          // Create join data to hash
+          const joinData = { wkIdentity: identity };
+          const auth = await createWkIdentityAuth('join', identity, joinData);
+          if (auth) {
+            console.log('[Socket] Emitting authenticated join');
+            socketToUse.emit('join', {
+              ...joinData,
+              ...auth,
+            });
+            return;
+          }
+        }
+        // Fallback to unauthenticated join (for backward compatibility during transition)
+        console.log('[Socket] Emitting unauthenticated join (auth not available)');
+        socketToUse.emit('join', { wkIdentity: identity });
+      } catch (error) {
+        console.error('[Socket] Error creating auth for join:', error);
+        // Fallback to unauthenticated join
+        socketToUse.emit('join', { wkIdentity: identity });
+      }
+    },
+    [createWkIdentityAuth, isAuthAvailable],
+  );
 
   useEffect(() => {
     console.log('[Socket] Initializing SSP Key socket connection');
@@ -71,7 +104,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     newSocket.on('connect', () => {
       console.log('[Socket] Connected to SSP Relay');
-      newSocket.emit('join', { wkIdentity });
+      emitAuthenticatedJoin(newSocket, wkIdentity);
     });
 
     newSocket.on('connect_error', (error) => {
@@ -135,12 +168,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let subscription: NativeEventSubscription | null = null;
 
-    if (socket) {
+    if (socket && wkIdentity) {
       subscription = AppState.addEventListener('change', (state) => {
         if (state === 'active') {
-          socket.emit('join', {
-            wkIdentity,
-          });
+          emitAuthenticatedJoin(socket, wkIdentity);
         } else if (state === 'background') {
           socket.emit('leave', { wkIdentity });
         }
@@ -153,7 +184,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         subscription.remove();
       }
     };
-  }, [socket, wkIdentity]);
+  }, [socket, wkIdentity, emitAuthenticatedJoin]);
 
   const clearTx = () => {
     setNewTx({

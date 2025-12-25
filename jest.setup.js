@@ -58,3 +58,78 @@ jest.mock('react-i18next', () => ({
     init: jest.fn(),
   },
 }));
+
+// Mock react-native-quick-crypto with simple implementations
+jest.mock('react-native-quick-crypto', () => ({
+  randomBytes: (size) => {
+    const arr = new Uint8Array(size);
+    for (let i = 0; i < size; i++) {
+      arr[i] = Math.floor(Math.random() * 256);
+    }
+    return Buffer.from(arr);
+  },
+  createHash: () => {
+    // Simple mock that returns a consistent hash format
+    let data = '';
+    return {
+      update: (input) => {
+        data += input;
+        return {
+          digest: (format) => {
+            // Return a mock hash based on input
+            let hash = 0;
+            for (let i = 0; i < data.length; i++) {
+              hash = (hash << 5) - hash + data.charCodeAt(i);
+              hash |= 0;
+            }
+            const hashHex = Math.abs(hash)
+              .toString(16)
+              .padStart(64, '0')
+              .slice(0, 64);
+            return format === 'hex' ? hashHex : Buffer.from(hashHex, 'hex');
+          },
+        };
+      },
+      digest: (format) => {
+        let hash = 0;
+        for (let i = 0; i < data.length; i++) {
+          hash = (hash << 5) - hash + data.charCodeAt(i);
+          hash |= 0;
+        }
+        const hashHex = Math.abs(hash)
+          .toString(16)
+          .padStart(64, '0')
+          .slice(0, 64);
+        return format === 'hex' ? hashHex : Buffer.from(hashHex, 'hex');
+      },
+    };
+  },
+}));
+
+// Mock @runonflux/flux-sdk
+jest.mock('@runonflux/flux-sdk', () => ({
+  fluxnode: {
+    signMessage: jest.fn(() => {
+      // Return a mock base64 signature
+      return Buffer.from(`mock-sig-${Date.now()}`).toString('base64');
+    }),
+  },
+}));
+
+// Mock blockchains for lib tests
+jest.mock('@storage/blockchains', () => ({
+  blockchains: {
+    btc: {
+      id: 'btc',
+      libid: 'bitcoin',
+      messagePrefix: '\x18Bitcoin Signed Message:\n',
+      bip32: { public: 0x0488b21e, private: 0x0488ade4 },
+    },
+    flux: {
+      id: 'flux',
+      libid: 'flux',
+      messagePrefix: '\x18Zelcash Signed Message:\n',
+      bip32: { public: 0x0488b21e, private: 0x0488ade4 },
+    },
+  },
+}));

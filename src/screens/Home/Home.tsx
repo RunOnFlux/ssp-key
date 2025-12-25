@@ -75,11 +75,13 @@ import {
 
 import {
   setSspWalletKeyInternalIdentity,
+  setSspWalletKeyInternalIdentityWitnessScript,
+  setSspWalletKeyInternalIdentityPubKey,
   setSspWalletInternalIdentity,
   setSspKeyPublicNonces,
 } from '../../store/ssp';
 
-import { useAppSelector, useAppDispatch } from '../../hooks';
+import { useAppSelector, useAppDispatch, useRelayAuth } from '../../hooks';
 import { useSocket } from '../../hooks/useSocket';
 import { getFCMToken, refreshFCMToken } from '../../lib/fcmHelper';
 import { changeTheme } from '../../store/theme';
@@ -144,6 +146,7 @@ function Home({ navigation }: Props) {
     evmSigningRequest,
     clearEvmSigningRequest,
   } = useSocket();
+  const { createWkIdentityAuth } = useRelayAuth();
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -401,6 +404,8 @@ function Home({ navigation }: Props) {
         const pwForEncryption = idData.password + passwordDecrypted;
         const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
         const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+        const xprk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
+        const xprivKeyDecrypted = xprk.toString(CryptoJS.enc.Utf8);
         const addrInfo = generateMultisigAddress(
           suppliedXpubWallet,
           xpubKeyDecrypted,
@@ -429,17 +434,31 @@ function Home({ navigation }: Props) {
         );
         if (
           !generatedSspWalletKeyInternalIdentity ||
-          !generatedSspWalletKeyInternalIdentity.address
+          !generatedSspWalletKeyInternalIdentity.address ||
+          !generatedSspWalletKeyInternalIdentity.witnessScript
         ) {
           throw new Error(
             'Could not generate SSP Wallet Key internal identity',
           );
         }
+        // Generate identity keypair predictively from xprivKey
+        const identityKeypair = generateAddressKeypair(
+          xprivKeyDecrypted,
+          10,
+          0,
+          identityChain,
+        );
         dispatch(
           setSspWalletKeyInternalIdentity(
             generatedSspWalletKeyInternalIdentity.address,
           ),
         );
+        dispatch(
+          setSspWalletKeyInternalIdentityWitnessScript(
+            generatedSspWalletKeyInternalIdentity.witnessScript,
+          ),
+        );
+        dispatch(setSspWalletKeyInternalIdentityPubKey(identityKeypair.pubKey));
         // generate ssp wallet identity
         const generatedSspWalletInternalIdentity =
           generateInternalIdentityAddress(suppliedXpubWallet, identityChain);
@@ -530,25 +549,57 @@ function Home({ navigation }: Props) {
     path: string,
     wkIdentity: string,
   ) => {
-    const data = {
+    const data: Record<string, unknown> = {
       action,
       payload,
       chain,
       path,
       wkIdentity,
     };
+
+    // Add authentication if available (includes hash of request body)
+    try {
+      const auth = await createWkIdentityAuth('action', wkIdentity, data);
+      if (auth) {
+        Object.assign(data, auth);
+      } else {
+        console.warn(
+          '[postAction] Auth not available, sending without signature',
+        );
+      }
+    } catch (error) {
+      console.error('[postAction] Error creating auth:', error);
+      // Continue without auth for backward compatibility
+    }
+
     const result = await axios.post(
       `https://${sspConfig().relay}/v1/action`,
       data,
     );
     console.log(result.data);
   };
-  const postSyncToken = (token: string, wkIdentity: string) => {
+  const postSyncToken = async (token: string, wkIdentity: string) => {
     // post fcm token tied to wkIdentity
-    const data = {
+    const data: Record<string, unknown> = {
       keyToken: token,
       wkIdentity,
     };
+
+    // Add authentication if available (includes hash of request body)
+    try {
+      const auth = await createWkIdentityAuth('token', wkIdentity, data);
+      if (auth) {
+        Object.assign(data, auth);
+      } else {
+        console.warn(
+          '[postSyncToken] Auth not available, sending without signature',
+        );
+      }
+    } catch (error) {
+      console.error('[postSyncToken] Error creating auth:', error);
+      // Continue without auth for backward compatibility
+    }
+
     axios
       .post(`https://${sspConfig().relay}/v1/token`, data)
       .then((res) => {

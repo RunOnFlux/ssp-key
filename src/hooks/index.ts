@@ -3,6 +3,7 @@ import type { TypedUseSelectorHook } from 'react-redux';
 import type { RootState, AppDispatch } from '../store';
 
 export { default as useTheme } from './useTheme';
+export { default as useRelayAuth } from './useRelayAuth';
 
 // Use throughout your app instead of plain `useDispatch` and `useSelector`
 export const useAppDispatch: () => AppDispatch = useDispatch;

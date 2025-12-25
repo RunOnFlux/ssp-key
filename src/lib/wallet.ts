@@ -291,7 +291,7 @@ export function generateMultisigAddressEVM(
 // given xpriv of our party, generate keypair consisting of privateKey in and public key belonging to it
 export function generateAddressKeypairEVM(
   xpriv: string,
-  typeIndex: 0 | 1,
+  typeIndex: 0 | 1 | 10,  // 0: normal, 1: change, 10: internal identity
   addressIndex: number,
   chain: keyof cryptos,
 ): keyPair {
@@ -316,7 +316,7 @@ export function generateAddressKeypairEVM(
 // given xpriv of our party, generate keypair consisting of privateKey in WIF format and public key belonging to it
 export function generateAddressKeypair(
   xpriv: string,
-  typeIndex: 0 | 1,
+  typeIndex: 0 | 1 | 10, // 0: normal, 1: change, 10: internal identity
   addressIndex: number,
   chain: keyof cryptos,
 ): keyPair {
@@ -432,4 +432,21 @@ export function deriveEVMPublicKey(
   const pubKeyBuffer2 = Buffer.from(publicKey2);
 
   return pubKeyBuffer2.toString('hex');
+}
+
+/**
+ * Convert a WIF private key to hex format.
+ *
+ * @param privateKeyWIF - Private key in WIF format
+ * @param chain - The blockchain
+ * @returns Private key in hex format
+ */
+export function wifToPrivateKey(
+  privateKeyWIF: string,
+  chain: keyof cryptos,
+): string {
+  const libID = getLibId(chain);
+  const network = utxolib.networks[libID];
+  const keyPair = utxolib.ECPair.fromWIF(privateKeyWIF, network);
+  return (keyPair as any).getPrivateKeyBuffer().toString('hex');
 }
