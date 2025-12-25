@@ -116,20 +116,3 @@ jest.mock('@runonflux/flux-sdk', () => ({
   },
 }));
 
-// Mock blockchains for lib tests
-jest.mock('@storage/blockchains', () => ({
-  blockchains: {
-    btc: {
-      id: 'btc',
-      libid: 'bitcoin',
-      messagePrefix: '\x18Bitcoin Signed Message:\n',
-      bip32: { public: 0x0488b21e, private: 0x0488ade4 },
-    },
-    flux: {
-      id: 'flux',
-      libid: 'flux',
-      messagePrefix: '\x18Zelcash Signed Message:\n',
-      bip32: { public: 0x0488b21e, private: 0x0488ade4 },
-    },
-  },
-}));
