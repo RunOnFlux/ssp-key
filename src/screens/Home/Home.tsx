@@ -99,6 +99,8 @@ function Home({ navigation }: Props) {
   const {
     seedPhrase,
     sspWalletKeyInternalIdentity,
+    sspWalletKeyInternalIdentityWitnessScript,
+    sspWalletKeyInternalIdentityPubKey,
     sspWalletInternalIdentity,
     identityChain,
   } = useAppSelector((state) => state.ssp);
@@ -134,6 +136,8 @@ function Home({ navigation }: Props) {
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
+  // Get identity chain state for migration
+  const identityChainState = useAppSelector((state) => state[identityChain]);
   const { publicNonces } = useAppSelector((state) => state.ssp);
   const [activityStatus, setActivityStatus] = useState(false);
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
@@ -165,6 +169,118 @@ function Home({ navigation }: Props) {
     checkXpubXpriv();
     checkFCMToken();
   }, []);
+
+  // Ensure auth fields (witnessScript and pubKey) are generated if missing
+  useEffect(() => {
+    const ensureAuthFields = async () => {
+      // Only run if synced but missing auth fields
+      if (
+        !sspWalletKeyInternalIdentity ||
+        (sspWalletKeyInternalIdentityWitnessScript &&
+          sspWalletKeyInternalIdentityPubKey)
+      ) {
+        return; // Not synced or already has auth fields
+      }
+
+      // Need xpubWallet, xpubKey, and xprivKey from identity chain
+      const {
+        xpubWallet: idXpubWallet,
+        xpubKey: idXpubKey,
+        xprivKey: idXprivKey,
+      } = identityChainState || {};
+      if (!idXpubWallet || !idXpubKey || !idXprivKey) {
+        console.log(
+          '[Auth] Missing required keys for auth field generation:',
+          !idXpubWallet ? 'xpubWallet' : '',
+          !idXpubKey ? 'xpubKey' : '',
+          !idXprivKey ? 'xprivKey' : '',
+        );
+        return;
+      }
+
+      try {
+        // Get decryption password
+        const encryptionKey = await Keychain.getGenericPassword({
+          service: 'enc_key',
+        });
+        const passwordData = await Keychain.getGenericPassword({
+          service: 'sspkey_pw',
+        });
+        if (!encryptionKey || !passwordData) {
+          console.log('[Auth] No encryption key or password available');
+          return;
+        }
+
+        const passwordDecrypted = CryptoJS.AES.decrypt(
+          passwordData.password,
+          encryptionKey.password,
+        );
+        const pwForEncryption =
+          encryptionKey.password +
+          passwordDecrypted.toString(CryptoJS.enc.Utf8);
+
+        // Decrypt xpubWallet
+        const xpubWalletDecrypted = CryptoJS.AES.decrypt(
+          idXpubWallet,
+          pwForEncryption,
+        ).toString(CryptoJS.enc.Utf8);
+
+        // Decrypt xpubKey
+        const xpubKeyDecrypted = CryptoJS.AES.decrypt(
+          idXpubKey,
+          pwForEncryption,
+        ).toString(CryptoJS.enc.Utf8);
+
+        // Decrypt xprivKey
+        const xprivKeyDecrypted = CryptoJS.AES.decrypt(
+          idXprivKey,
+          pwForEncryption,
+        ).toString(CryptoJS.enc.Utf8);
+
+        // Generate multisig address for internal identity (typeIndex=10)
+        const generatedIdentity = generateMultisigAddress(
+          xpubWalletDecrypted,
+          xpubKeyDecrypted,
+          10,
+          0,
+          identityChain,
+        );
+
+        if (!generatedIdentity?.witnessScript) {
+          console.error('[Auth] Could not generate witnessScript');
+          return;
+        }
+
+        // Generate identity keypair from xprivKey
+        const identityKeypair = generateAddressKeypair(
+          xprivKeyDecrypted,
+          10,
+          0,
+          identityChain,
+        );
+
+        // Store the generated auth fields
+        dispatch(
+          setSspWalletKeyInternalIdentityWitnessScript(
+            generatedIdentity.witnessScript,
+          ),
+        );
+        dispatch(setSspWalletKeyInternalIdentityPubKey(identityKeypair.pubKey));
+        console.log('[Auth] Successfully generated auth fields');
+      } catch (error) {
+        console.error('[Auth] Error generating auth fields:', error);
+      }
+    };
+
+    ensureAuthFields();
+  }, [
+    sspWalletKeyInternalIdentity,
+    sspWalletKeyInternalIdentityWitnessScript,
+    sspWalletKeyInternalIdentityPubKey,
+    identityChainState,
+    identityChain,
+    dispatch,
+  ]);
 
   useEffect(() => {
     checkXpubXpriv();
