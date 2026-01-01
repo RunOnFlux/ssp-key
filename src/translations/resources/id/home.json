@@ -70,6 +70,7 @@
   "auth_confirm_sync": "Konfirmasikan untuk menyinkronkan Dompet SSP dengan Kunci SSP.",
   "auth_confirm_public_nonces": "Konfirmasi untuk menyinkronkan Nonce Publik dengan SSP Wallet.",
   "auth_confirm_evm_signing": "Konfirmasi untuk menandatangani Data Rantai EVM.",
+  "auth_confirm_wk_signing": "Confirm authentication request.",
   "err_auth_pw_incorrect": "Kata sandi salah",
   "err_auth_pw_check": "Kesalahan saat memeriksa kata sandi. Silahkan coba lagi nanti",
   "auth_sign_tx": "Anda akan menandatangani dan mengirim transaksi!",
@@ -77,6 +78,7 @@
   "auth_sensitive_inf": "Anda akan mengakses informasi sensitif!",
   "auth_sync_pub_nonces": "Anda akan menyinkronkan Nonce Publik dengan SSP Wallet!",
   "auth_sync_evm_signing": "Anda akan menandatangani Data Rantai EVM dengan Kunci SSP! Berhati-hatilah karena tindakan ini mungkin diminta oleh dApp.",
+  "auth_sync_wk_signing": "You are about to approve an authentication request with SSP Key! Be careful as this action may be requested by a website.",
   "auth_delete_ssp_key_data": "Anda akan menghapus semua Data Kunci SSP milik Anda! Anda perlu menyiapkan Kunci SSP milik Anda kembali atau memulihkannya dari frasa awal milik Anda. Pastikan Anda telah menyimpan frasa awal Anda sebelum melanjutkan. Tindakan ini bersifat merusak dan tidak dapat diubah!",
   "auth_confirm_with_pw": "Konfirmasikan dengan kata sandi.",
   "auth_grant_access_pw": "Berikan akses dengan kata sandi.",
@@ -113,5 +115,15 @@
   "delete_ssp_key_data_desc": "PERINGATAN: Ini akan menghapus semua data yang terkait dengan Kunci SSP milik Anda termasuk frasa awal dari perangkat. Tindakan ini tidak dapat diubah!",
   "warning_chain_only": "PERINGATAN: Alamat ini hanya khusus untuk blockchain {{chain_name}} ({{chain_symbol}}). Hanya setorkan aset pada rantai {{chain_name}} ({{chain_symbol}}) ke alamat ini. Menyetor dari rantai lain akan mengakibatkan hilangnya dana!",
   "signature": "Tanda tangan",
-  "tx_data": "Data Transaksi"
+  "tx_data": "Data Transaksi",
+  "wk_signing_request": "SSP Authentication",
+  "wk_signing_request_info": "A website is requesting your signature to authenticate. Please review the details below.",
+  "ssp_identity": "SSP Identity",
+  "message_timestamp": "Message Timestamp",
+  "message_to_sign": "Message to Sign",
+  "wallet_pubkey": "Wallet Public Key",
+  "requesting_from": "Requesting from",
+  "verified_origin": "Verified Origin",
+  "wk_signing_success": "Authentication request signed successfully.",
+  "err_signing_failed": "Signing failed. Try again."
 }
