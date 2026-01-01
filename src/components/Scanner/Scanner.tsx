@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,7 +8,11 @@ import {
   StatusBar,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Camera, CameraType } from 'react-native-camera-kit';
+import {
+  Camera,
+  useCameraDevice,
+  useCodeScanner,
+} from 'react-native-vision-camera';
 import {
   request,
   check,
@@ -32,8 +36,11 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const { t } = useTranslation(['home', 'common']);
   const dispatch = useDispatch();
+  const device = useCameraDevice('back');
+  const isScanned = useRef(false);
+
   setTimeout(() => {
-    dispatch(changeTheme({ theme: 'default', darkMode: true })); // make our theme dark
+    dispatch(changeTheme({ theme: 'default', darkMode: true }));
   }, 0);
 
   const displayMessage = (type: string, content: string) => {
@@ -83,7 +90,6 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
             }, 300);
             onClose?.();
           } else {
-            // treat as we need to request permissions
             const cameraRequest = await request(
               PERMISSIONS.ANDROID.CAMERA,
               rationale,
@@ -123,7 +129,6 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
             }, 300);
             onClose?.();
           } else {
-            // treat as we need to request permissions
             const cameraRequest = await request(PERMISSIONS.IOS.CAMERA);
             if (cameraRequest === (RESULTS.GRANTED || RESULTS.LIMITED)) {
               setHasCameraPermission(true);
@@ -141,11 +146,38 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
     })();
   }, []);
 
-  const handleQRRead = (event: any) => {
-    console.log(event.nativeEvent.codeStringValue);
-    onRead?.(event.nativeEvent.codeStringValue);
-    onClose?.();
-  };
+  const codeScanner = useCodeScanner({
+    codeTypes: ['qr'],
+    onCodeScanned: useCallback(
+      (codes) => {
+        if (isScanned.current) return;
+        const value = codes[0]?.value;
+        if (value) {
+          isScanned.current = true;
+          console.log(value);
+          onRead?.(value);
+          onClose?.();
+        }
+      },
+      [onRead, onClose],
+    ),
+  });
+
+  if (!device) {
+    return (
+      <View style={styles.container}>
+        <StatusBar hidden />
+        <TouchableOpacity style={styles.backButton} onPressIn={onClose}>
+          <Icon name="chevron-left" size={32} color={Colors.white} />
+        </TouchableOpacity>
+        <View style={styles.camera}>
+          <Text style={{ color: Colors.white }}>
+            {t('home:err_camera_unavailable')}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -156,17 +188,10 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
       {hasCameraPermission ? (
         <Camera
           style={styles.camera}
-          cameraType={CameraType.Back}
-          flashMode="auto"
-          scanBarcode={true}
-          onReadCode={handleQRRead}
-          showFrame={true}
-          laserColor="green"
-          frameColor="white"
-          resizeMode="cover"
-          focusMode="on"
-          zoomMode="on"
-          scanThrottleDelay={0}
+          device={device}
+          isActive={true}
+          codeScanner={codeScanner}
+          enableZoomGesture={true}
         />
       ) : (
         <View style={styles.camera}>
