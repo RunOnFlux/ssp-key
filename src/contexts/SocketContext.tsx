@@ -4,7 +4,7 @@ import { useAppSelector } from '../hooks';
 import { useRelayAuth } from '../hooks';
 import { sspConfig } from '@storage/ssp';
 import { AppState, NativeEventSubscription } from 'react-native';
-import { evmSigningRequest, utxo } from '../types';
+import { evmSigningRequest, wkSigningRequest, utxo } from '../types';
 
 interface TxRequest {
   rawTx: string;
@@ -27,6 +27,8 @@ interface SocketContextType {
     result?: unknown;
     error?: string;
   }) => void;
+  wkSigningRequest: wkSigningRequest | null;
+  clearWkSigningRequest?: () => void;
 }
 
 const defaultValue: SocketContextType = {
@@ -39,6 +41,7 @@ const defaultValue: SocketContextType = {
   },
   publicNoncesRequest: false,
   evmSigningRequest: null,
+  wkSigningRequest: null,
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
@@ -58,6 +61,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [publicNoncesRequest, setPublicNoncesRequest] = useState(false);
   const [evmSigningRequest, setEvmSigningRequest] =
     useState<evmSigningRequest | null>(null);
+  const [wkSigningRequest, setWkSigningRequest] =
+    useState<wkSigningRequest | null>(null);
 
   /**
    * Emit an authenticated join event.
@@ -157,6 +162,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       },
     );
 
+    // Handle WK Signing Request for wk_sign authentication
+    newSocket.on(
+      'wksigningrequest',
+      (data: { chain: string; path: string; payload: string }) => {
+        console.log('[Socket] WK Signing request received');
+        try {
+          const parsedPayload = JSON.parse(data.payload) as wkSigningRequest;
+          setWkSigningRequest(parsedPayload);
+        } catch {
+          console.error('[Socket] Failed to parse WK signing request payload');
+        }
+      },
+    );
+
     setSocket(newSocket);
 
     return () => {
@@ -203,6 +222,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     setEvmSigningRequest(null);
   };
 
+  const clearWkSigningRequest = () => {
+    setWkSigningRequest(null);
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -213,6 +236,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         clearPublicNoncesRequest,
         evmSigningRequest,
         clearEvmSigningRequest,
+        wkSigningRequest,
+        clearWkSigningRequest,
       }}
     >
       {children}

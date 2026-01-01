@@ -568,3 +568,20 @@ interface evmSigningRequest {
   walletInUse: string; // this is walletInUse
   requestId: string; // this is the requestId - usually walletconnect requestId
 }
+
+interface WkSignRequesterInfo {
+  origin: string; // domain of requesting site
+  siteName?: string; // friendly name
+  description?: string; // what the auth is for
+  iconUrl?: string; // site icon URL (HTTPS only)
+}
+
+interface wkSigningRequest {
+  message: string; // hex message to sign
+  walletSignature: string; // wallet's signature
+  walletPubKey: string; // wallet's public key (hex)
+  witnessScript: string; // 2-of-2 witness script
+  wkIdentity: string; // the wkIdentity address
+  requestId: string; // unique request identifier
+  requesterInfo?: WkSignRequesterInfo; // optional requester info
+}

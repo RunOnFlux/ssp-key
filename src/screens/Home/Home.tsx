@@ -40,6 +40,7 @@ import {
   publicNonce,
   publicPrivateNonce,
   evmSigningRequest,
+  wkSigningRequest,
 } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
@@ -65,6 +66,7 @@ import {
 } from '../../lib/constructTx';
 
 import { continueSigningSchnorrMultisig } from '../../lib/evmSigning';
+import { signMessage } from '../../lib/relayAuth';
 
 import {
   setXpubKey,
@@ -87,6 +89,7 @@ import { getFCMToken, refreshFCMToken } from '../../lib/fcmHelper';
 import { changeTheme } from '../../store/theme';
 import EvmSigningRequest from '../../components/EvmSigningRequest/EvmSigningRequest';
 import EvmSigningSuccess from '../../components/EvmSigningSuccess/EvmSigningSuccess';
+import WkSigningRequest from '../../components/WkSigningRequest/WkSigningRequest';
 import { MainScreenProps } from '../../../@types/navigation';
 
 type Props = MainScreenProps<'Home'>;
@@ -133,6 +136,9 @@ function Home({ navigation }: Props) {
   const [evmSigningSignature, setEvmSigningSignature] = useState<string | null>(
     null,
   );
+  const [wkSigningData, setWkSigningData] = useState<wkSigningRequest | null>(
+    null,
+  );
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
@@ -149,6 +155,8 @@ function Home({ navigation }: Props) {
     clearPublicNoncesRequest,
     evmSigningRequest,
     clearEvmSigningRequest,
+    wkSigningRequest: socketWkSigningRequest,
+    clearWkSigningRequest,
   } = useSocket();
   const { createWkIdentityAuth } = useRelayAuth();
 
@@ -312,6 +320,13 @@ function Home({ navigation }: Props) {
       setEvmSigningData(evmSigningRequest);
     }
   }, [evmSigningRequest]);
+
+  useEffect(() => {
+    if (socketWkSigningRequest) {
+      console.log('[WK Signing] Received request:', socketWkSigningRequest);
+      setWkSigningData(socketWkSigningRequest);
+    }
+  }, [socketWkSigningRequest]);
 
   useEffect(() => {
     if (!xpubKey || !xpubWallet) {
@@ -748,6 +763,10 @@ function Home({ navigation }: Props) {
     setActiveChain(data.chain as keyof cryptos);
     setEvmSigningData(data);
   };
+  const handleWkSigningRequest = (data: wkSigningRequest) => {
+    console.log('[WK Sign] Request received:', data);
+    setWkSigningData(data);
+  };
   const handleSyncRequest = (xpubw: string, chain: keyof cryptos) => {
     setActiveChain(chain);
     setSyncReq(xpubw);
@@ -966,6 +985,18 @@ function Home({ navigation }: Props) {
         } catch {
           displayMessage('error', t('home:err_invalid_manual_input'));
         }
+      } else if (manualInput.startsWith('wksigningrequest')) {
+        try {
+          const wkData = JSON.parse(
+            manualInput.replace('wksigningrequest', ''),
+          );
+          handleWkSigningRequest(wkData);
+          setTimeout(() => {
+            setIsManualInputModalOpen(false);
+          });
+        } catch {
+          displayMessage('error', t('home:err_invalid_manual_input'));
+        }
       } else {
         const splittedInput = manualInput.split(':');
         let chain: keyof cryptos = identityChain;
@@ -1067,6 +1098,20 @@ function Home({ navigation }: Props) {
         }
         return;
       }
+      // wksigningrequest{...payload}
+      if (scannedData.startsWith('wksigningrequest')) {
+        try {
+          const wkData = JSON.parse(
+            scannedData.replace('wksigningrequest', ''),
+          );
+          handleWkSigningRequest(wkData);
+        } catch {
+          setTimeout(() => {
+            displayMessage('error', t('home:err_invalid_scanned_data'));
+          }, 200);
+        }
+        return;
+      }
       if (splittedInput[1]) {
         // all is default
         chain = splittedInput[0] as keyof cryptos;
@@ -1145,6 +1190,13 @@ function Home({ navigation }: Props) {
           try {
             const evmData = JSON.parse(result.data.payload);
             handleEvmSigningRequest(evmData);
+          } catch {
+            displayMessage('error', t('home:err_invalid_request'));
+          }
+        } else if (result.data.action === 'wksigningrequest') {
+          try {
+            const wkData = JSON.parse(result.data.payload);
+            handleWkSigningRequest(wkData);
           } catch {
             displayMessage('error', t('home:err_invalid_request'));
           }
@@ -1265,6 +1317,112 @@ function Home({ navigation }: Props) {
       console.log(error);
     } finally {
       setActivityStatus(false);
+    }
+  };
+
+  const handleWkSigningRequestAction = async (status: boolean) => {
+    try {
+      setActivityStatus(true);
+      if (status === true) {
+        await handleSignWkAction();
+      } else {
+        // reject
+        setWkSigningData(null);
+        clearWkSigningRequest?.();
+        await postAction(
+          'wksigningrejected',
+          '{}',
+          identityChain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setActivityStatus(false);
+    }
+  };
+
+  const handleSignWkAction = async () => {
+    if (!wkSigningData) return;
+
+    try {
+      // Get decryption keys from keychain
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+      });
+
+      if (!passwordData || !encryptionKey) {
+        throw new Error('Unable to decrypt stored data');
+      }
+
+      // Decrypt password
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const passwordDecryptedString = passwordDecrypted.toString(
+        CryptoJS.enc.Utf8,
+      );
+      const pwForEncryption = encryptionKey.password + passwordDecryptedString;
+
+      // Get the identity chain state
+      const { xprivKey: idXprivKey } = identityChainState || {};
+      if (!idXprivKey) {
+        throw new Error('xprivKey not available');
+      }
+
+      // Decrypt xpriv for signing
+      const xprivDecrypted = CryptoJS.AES.decrypt(idXprivKey, pwForEncryption);
+      const xprivKeyDecrypted = xprivDecrypted.toString(CryptoJS.enc.Utf8);
+      if (!xprivKeyDecrypted) {
+        throw new Error('Failed to decrypt xprivKey');
+      }
+
+      // Generate identity keypair for signing (typeIndex=10 for internal identity)
+      const identityKeypair = generateAddressKeypair(
+        xprivKeyDecrypted,
+        10,
+        0,
+        identityChain,
+      );
+
+      // Sign the message using Bitcoin message signing
+      // The message is hex-encoded, but we sign the hex string directly
+      const signature = signMessage(
+        wkSigningData.message,
+        identityKeypair.privKey,
+        identityChain,
+      );
+
+      // Create the response payload
+      const responsePayload = {
+        keySignature: signature,
+        keyPubKey: sspWalletKeyInternalIdentityPubKey,
+        requestId: wkSigningData.requestId,
+        message: wkSigningData.message,
+      };
+
+      // Post 'wksigned' action to relay
+      await postAction(
+        'wksigned',
+        JSON.stringify(responsePayload),
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+
+      displayMessage('success', t('home:wk_signing_success'));
+    } catch (error) {
+      console.error('[WK Signing] Error:', error);
+      displayMessage('error', t('home:err_signing_failed'));
+    } finally {
+      setWkSigningData(null);
+      clearWkSigningRequest?.();
     }
   };
 
@@ -1551,7 +1709,8 @@ function Home({ navigation }: Props) {
             !rawTx &&
             !syncReq &&
             !publicNoncesReq &&
-            !evmSigningData && (
+            !evmSigningData &&
+            !wkSigningData && (
               <>
                 <TouchableOpacity
                   onPressIn={() => setReceiveModalOpen(true)}
@@ -1726,6 +1885,15 @@ function Home({ navigation }: Props) {
             <EvmSigningSuccess
               actionStatus={handleEvmSigningSuccessModalAction}
               signature={evmSigningSignature}
+            />
+          )}
+          {wkSigningData && (
+            <WkSigningRequest
+              activityStatus={activityStatus}
+              message={wkSigningData.message}
+              wkIdentity={wkSigningData.wkIdentity}
+              requesterInfo={wkSigningData.requesterInfo}
+              actionStatus={handleWkSigningRequestAction}
             />
           )}
           {txid && (
