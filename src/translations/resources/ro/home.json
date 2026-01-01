@@ -123,7 +123,7 @@
   "message_to_sign": "Message to Sign",
   "wallet_pubkey": "Wallet Public Key",
   "requesting_from": "Requesting from",
-  "verified_origin": "Verified Origin",
+  "verified_origin": "Origin",
   "wk_signing_success": "Authentication request signed successfully.",
   "err_signing_failed": "Signing failed. Try again."
 }
