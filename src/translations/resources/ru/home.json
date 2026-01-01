@@ -70,6 +70,7 @@
   "auth_confirm_sync": "Подтвердите для синхронизации кошелька SSP с ключом SSP.",
   "auth_confirm_public_nonces": "Подтвердите для синхронизации публичных Nonces с кошельком SSP.",
   "auth_confirm_evm_signing": "Confirm to sign EVM Chain Data.",
+  "auth_confirm_wk_signing": "Confirm authentication request.",
   "err_auth_pw_incorrect": "Пароль неверен",
   "err_auth_pw_check": "Ошибка проверки пароля. Попробуйте позже.",
   "auth_sign_tx": "Вы собираетесь подписать и отправить транзакцию!",
@@ -77,6 +78,7 @@
   "auth_sensitive_inf": "Вы собираетесь получить доступ к конфиденциальной информации!",
   "auth_sync_pub_nonces": "Вы собираетесь синхронизировать публичные Nonces с кошельком SSP!",
   "auth_sync_evm_signing": "You are about to sign EVM Chain Data with SSP Key! Be careful as this action may be requested by a dApp.",
+  "auth_sync_wk_signing": "You are about to approve an authentication request with SSP Key! Be careful as this action may be requested by a website.",
   "auth_delete_ssp_key_data": "You are about to delete all your SSP Key Data! You will need to set up your SSP Key again or restore it from your seed phrase. Make sure you have saved your seed phrase before proceeding. This action is destructive and irreversible!",
   "auth_confirm_with_pw": "Подтвердите с помощью пароля.",
   "auth_grant_access_pw": "Предоставить доступ с помощью пароля.",
@@ -113,5 +115,15 @@
   "delete_ssp_key_data_desc": "WARNING: This will delete all data associated with your SSP Key including your seed phrase from the device. This action is irreversible!",
   "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!",
   "signature": "Signature",
-  "tx_data": "Transaction Data"
+  "tx_data": "Transaction Data",
+  "wk_signing_request": "SSP Authentication",
+  "wk_signing_request_info": "A website is requesting your signature to authenticate. Please review the details below.",
+  "ssp_identity": "SSP Identity",
+  "message_timestamp": "Message Timestamp",
+  "message_to_sign": "Message to Sign",
+  "wallet_pubkey": "Wallet Public Key",
+  "requesting_from": "Requesting from",
+  "verified_origin": "Verified Origin",
+  "wk_signing_success": "Authentication request signed successfully.",
+  "err_signing_failed": "Signing failed. Try again."
 }
