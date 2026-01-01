@@ -70,6 +70,7 @@
   "auth_confirm_sync": "Bevestig om de SSP-portemonnee te synchroniseren met de SSP-sleutel.",
   "auth_confirm_public_nonces": "Bevestig om openbare nonces te synchroniseren met de SSP-portemonnee.",
   "auth_confirm_evm_signing": "Confirm to sign EVM Chain Data.",
+  "auth_confirm_wk_signing": "Confirm authentication request.",
   "err_auth_pw_incorrect": "Wachtwoord is onjuist",
   "err_auth_pw_check": "Fout bij het controleren van het wachtwoord. Probeer later opnieuw.",
   "auth_sign_tx": "Je staat op het punt een transactie te ondertekenen en te verzenden!",
@@ -77,6 +78,7 @@
   "auth_sensitive_inf": "Je staat op het punt gevoelige informatie te bekijken!",
   "auth_sync_pub_nonces": "Je staat op het punt openbare nonces te synchroniseren met de SSP-portemonnee!",
   "auth_sync_evm_signing": "You are about to sign EVM Chain Data with SSP Key! Be careful as this action may be requested by a dApp.",
+  "auth_sync_wk_signing": "You are about to approve an authentication request with SSP Key! Be careful as this action may be requested by a website.",
   "auth_delete_ssp_key_data": "Je staat op het punt alle SSP-sleutelgegevens te verwijderen! Je moet je SSP-sleutel opnieuw instellen of herstellen met je herstelzin. Zorg ervoor dat je je herstelzin hebt opgeslagen voordat je doorgaat. Deze actie is destructief en onomkeerbaar!",
   "auth_confirm_with_pw": "Bevestig met wachtwoord.",
   "auth_grant_access_pw": "Verleen toegang met wachtwoord.",
@@ -113,5 +115,15 @@
   "delete_ssp_key_data_desc": "WAARSCHUWING: Dit verwijdert alle gegevens die zijn gekoppeld aan je SSP-sleutel, inclusief je herstelzin, van het apparaat. Deze actie is onomkeerbaar!",
   "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!",
   "signature": "Signature",
-  "tx_data": "Transaction Data"
+  "tx_data": "Transaction Data",
+  "wk_signing_request": "SSP Authentication",
+  "wk_signing_request_info": "A website is requesting your signature to authenticate. Please review the details below.",
+  "ssp_identity": "SSP Identity",
+  "message_timestamp": "Message Timestamp",
+  "message_to_sign": "Message to Sign",
+  "wallet_pubkey": "Wallet Public Key",
+  "requesting_from": "Requesting from",
+  "verified_origin": "Verified Origin",
+  "wk_signing_success": "Authentication request signed successfully.",
+  "err_signing_failed": "Signing failed. Try again."
 }
