@@ -21,7 +21,7 @@ interface WkSignRequesterInfo {
 
 interface WkSigningRequestProps {
   activityStatus: boolean;
-  message: string; // hex message to sign
+  message: string; // plain text message to sign
   wkIdentity: string;
   requesterInfo?: WkSignRequesterInfo;
   actionStatus: (status: boolean) => void;
@@ -37,32 +37,6 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
-
-  // Decode the hex message to readable text
-  const decodedMessage = useMemo(() => {
-    try {
-      // Convert hex to string
-      const decoded = Buffer.from(message, 'hex').toString('utf8');
-      return decoded;
-    } catch {
-      // If decoding fails, return the original hex
-      return message;
-    }
-  }, [message]);
-
-  // Extract timestamp from message (first 13 characters)
-  const messageTimestamp = useMemo(() => {
-    try {
-      const decoded = Buffer.from(message, 'hex').toString('utf8');
-      const timestamp = parseInt(decoded.substring(0, 13), 10);
-      if (!isNaN(timestamp)) {
-        return new Date(timestamp).toLocaleString();
-      }
-    } catch {
-      // Ignore decoding errors
-    }
-    return null;
-  }, [message]);
 
   // Truncate identity for display
   const truncatedIdentity = useMemo(() => {
@@ -245,29 +219,6 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
           </Text>
         </View>
 
-        {/* Timestamp Information */}
-        {messageTimestamp && (
-          <View style={[Gutters.smallTMargin, Layout.alignItemsCenter]}>
-            <Text
-              style={[
-                Fonts.textSmall,
-                Fonts.textBold,
-                { color: Colors.textGray400, marginBottom: 4 },
-              ]}
-            >
-              {t('home:message_timestamp')}:
-            </Text>
-            <Text
-              style={[
-                Fonts.textSmall,
-                { color: Colors.textGray800 },
-              ]}
-            >
-              {messageTimestamp}
-            </Text>
-          </View>
-        )}
-
         {/* Message to Sign */}
         <View style={[Gutters.regularTMargin, Layout.alignItemsCenter]}>
           <Text
@@ -311,7 +262,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
               ]}
               selectable={true}
             >
-              {decodedMessage}
+              {message}
             </Text>
           </ScrollView>
         </View>

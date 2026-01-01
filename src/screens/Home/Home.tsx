@@ -1392,7 +1392,6 @@ function Home({ navigation }: Props) {
       );
 
       // Sign the message using Bitcoin message signing
-      // The message is hex-encoded, but we sign the hex string directly
       const signature = signMessage(
         wkSigningData.message,
         identityKeypair.privKey,

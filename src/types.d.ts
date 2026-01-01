@@ -577,7 +577,7 @@ interface WkSignRequesterInfo {
 }
 
 interface wkSigningRequest {
-  message: string; // hex message to sign
+  message: string; // plain text message to sign (starts with 13-digit timestamp)
   walletSignature: string; // wallet's signature
   walletPubKey: string; // wallet's public key (hex)
   witnessScript: string; // 2-of-2 witness script
