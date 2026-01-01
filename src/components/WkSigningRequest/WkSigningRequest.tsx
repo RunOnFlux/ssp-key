@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
@@ -30,21 +29,12 @@ interface WkSigningRequestProps {
 const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
   activityStatus,
   message,
-  wkIdentity,
   requesterInfo,
   actionStatus,
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
-
-  // Truncate identity for display
-  const truncatedIdentity = useMemo(() => {
-    if (wkIdentity.length > 20) {
-      return `${wkIdentity.substring(0, 10)}...${wkIdentity.substring(wkIdentity.length - 10)}`;
-    }
-    return wkIdentity;
-  }, [wkIdentity]);
 
   const approve = () => {
     console.log('Approve WK signing request');
@@ -80,13 +70,12 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="shield" size={60} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
             Fonts.textCenter,
             Fonts.textRegular,
-            Gutters.smallMargin,
+            Gutters.smallBMargin,
           ]}
         >
           {t('home:wk_signing_request')}
@@ -113,15 +102,21 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                 backgroundColor: Colors.inputBackground,
                 borderRadius: 8,
                 padding: 12,
+                width: '90%',
                 borderWidth: 1,
                 borderColor: Colors.textGray200,
-                width: '90%',
               },
             ]}
           >
-            {/* Icon and Site Name (if provided - this comes from website, could be spoofed) */}
+            {/* Icon and Site Name */}
             {requesterInfo.siteName && (
-              <View style={[Layout.row, Layout.alignItemsCenter, { marginBottom: 8 }]}>
+              <View
+                style={[
+                  Layout.row,
+                  Layout.alignItemsCenter,
+                  { marginBottom: 8 },
+                ]}
+              >
                 {requesterInfo.iconUrl && (
                   <Image
                     source={{ uri: requesterInfo.iconUrl }}
@@ -135,25 +130,19 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                   />
                 )}
                 <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBold,
-                    { color: Colors.textGray800, flex: 1 },
-                  ]}
+                  style={[Fonts.textSmall, Fonts.textBold, { flex: 1 }]}
                   numberOfLines={1}
                 >
                   {requesterInfo.siteName}
                 </Text>
               </View>
             )}
-            {/* Origin - ALWAYS shown prominently (verified, can't be faked) */}
+            {/* Origin */}
             <View
               style={{
-                backgroundColor: Colors.white,
+                backgroundColor: Colors.bgInputAreaModalColor,
                 borderRadius: 4,
                 padding: 8,
-                borderWidth: 1,
-                borderColor: Colors.textGray200,
                 marginBottom: requesterInfo.description ? 8 : 0,
               }}
             >
@@ -163,13 +152,13 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                   { color: Colors.textGray400, marginBottom: 2 },
                 ]}
               >
-                {t('home:verified_origin')}:
+                {t('home:origin')}
               </Text>
               <Text
                 style={[
                   Fonts.textSmall,
                   Fonts.textBold,
-                  { fontFamily: 'monospace', color: Colors.textGray800 },
+                  { fontFamily: 'monospace' },
                 ]}
                 selectable={true}
               >
@@ -178,46 +167,10 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
             </View>
             {/* Description */}
             {requesterInfo.description && (
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  { color: Colors.textGray800 },
-                ]}
-              >
-                {requesterInfo.description}
-              </Text>
+              <Text style={[Fonts.textSmall]}>{requesterInfo.description}</Text>
             )}
           </View>
         )}
-
-        {/* Identity Information */}
-        <View style={[Gutters.regularTMargin, Layout.alignItemsCenter]}>
-          <Text
-            style={[
-              Fonts.textSmall,
-              Fonts.textBold,
-              { color: Colors.textGray400, marginBottom: 4 },
-            ]}
-          >
-            {t('home:ssp_identity')}:
-          </Text>
-          <Text
-            style={[
-              Fonts.textTiny,
-              Fonts.textCenter,
-              Fonts.textBold,
-              {
-                fontFamily: 'monospace',
-                color: Colors.textGray800,
-                lineHeight: 16,
-                paddingHorizontal: 20,
-              },
-            ]}
-            selectable={true}
-          >
-            {truncatedIdentity}
-          </Text>
-        </View>
 
         {/* Message to Sign */}
         <View style={[Gutters.regularTMargin, Layout.alignItemsCenter]}>
@@ -228,23 +181,20 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
               { color: Colors.textGray400, marginBottom: 4 },
             ]}
           >
-            {t('home:message_to_sign')}:
+            {t('home:message_to_sign')}
           </Text>
         </View>
         <View
-          style={[
-            {
-              height: 100,
-              maxHeight: 100,
-              backgroundColor: Colors.inputBackground,
-              borderRadius: 8,
-              padding: 10,
-              borderWidth: 1,
-              borderColor: Colors.textGray200,
-            },
-            Gutters.smallLMargin,
-            Gutters.smallRMargin,
-          ]}
+          style={{
+            height: 80,
+            maxHeight: 80,
+            backgroundColor: Colors.inputBackground,
+            borderRadius: 8,
+            padding: 10,
+            width: '90%',
+            borderWidth: 1,
+            borderColor: Colors.textGray200,
+          }}
         >
           <ScrollView
             style={{ flex: 1 }}
@@ -257,7 +207,6 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                 {
                   fontFamily: 'monospace',
                   lineHeight: 16,
-                  color: Colors.textGray800,
                 },
               ]}
               selectable={true}
@@ -266,7 +215,6 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
             </Text>
           </ScrollView>
         </View>
-
       </View>
 
       <View style={[Layout.justifyContentEnd]}>

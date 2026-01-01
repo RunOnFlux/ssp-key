@@ -959,8 +959,9 @@ function Home({ navigation }: Props) {
       setSubmittingTransaction(false);
     }
   };
-  const handleManualInput = (manualInput: string) => {
+  const handleManualInput = (inputValue: string) => {
     try {
+      const manualInput = inputValue?.trim() || '';
       if (!manualInput) {
         return;
       } else if (manualInput === 'cancel') {
@@ -987,14 +988,18 @@ function Home({ navigation }: Props) {
         }
       } else if (manualInput.startsWith('wksigningrequest')) {
         try {
-          const wkData = JSON.parse(
-            manualInput.replace('wksigningrequest', ''),
+          const jsonPart = manualInput.substring('wksigningrequest'.length);
+          console.log(
+            '[WK Manual Input] JSON part:',
+            jsonPart.substring(0, 100),
           );
+          const wkData = JSON.parse(jsonPart);
           handleWkSigningRequest(wkData);
           setTimeout(() => {
             setIsManualInputModalOpen(false);
           });
-        } catch {
+        } catch (error) {
+          console.error('[WK Manual Input] Parse error:', error);
           displayMessage('error', t('home:err_invalid_manual_input'));
         }
       } else {
@@ -1072,8 +1077,9 @@ function Home({ navigation }: Props) {
       dispatch(changeTheme({ theme: 'default', darkMode: null })); // make our theme dark
     }, 100);
   };
-  const handleScannedData = (scannedData: string) => {
+  const handleScannedData = (rawScannedData: string) => {
     try {
+      const scannedData = rawScannedData?.trim() || '';
       // https://apps.apple.com/us/app/ssp-key/id6463717332
       const splittedInput = scannedData.split(':');
       let chain: keyof cryptos = identityChain;
@@ -1101,11 +1107,12 @@ function Home({ navigation }: Props) {
       // wksigningrequest{...payload}
       if (scannedData.startsWith('wksigningrequest')) {
         try {
-          const wkData = JSON.parse(
-            scannedData.replace('wksigningrequest', ''),
-          );
+          const jsonPart = scannedData.substring('wksigningrequest'.length);
+          console.log('[WK QR Scan] JSON part:', jsonPart.substring(0, 100));
+          const wkData = JSON.parse(jsonPart);
           handleWkSigningRequest(wkData);
-        } catch {
+        } catch (error) {
+          console.error('[WK QR Scan] Parse error:', error);
           setTimeout(() => {
             displayMessage('error', t('home:err_invalid_scanned_data'));
           }, 200);

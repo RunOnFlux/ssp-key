@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import BlurOverlay from '../../BlurOverlay';
+import ToastNotif from '../Toast/Toast';
 const ManualInput = (props: { actionStatus: (data: string) => void }) => {
   const textInputA = useRef<TextInput | null>(null);
   const { t } = useTranslation(['home', 'common']);
@@ -122,6 +123,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <ToastNotif />
     </Modal>
   );
 };

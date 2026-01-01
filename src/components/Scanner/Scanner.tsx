@@ -164,6 +164,9 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
           laserColor="green"
           frameColor="white"
           resizeMode="cover"
+          focusMode="on"
+          zoomMode="on"
+          scanThrottleDelay={0}
         />
       ) : (
         <View style={styles.camera}>
