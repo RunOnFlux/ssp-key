@@ -70,6 +70,7 @@
   "auth_confirm_sync": "ยืนยันเพื่อซิงค์ SSP Wallet กับ SSP Key",
   "auth_confirm_public_nonces": "ยืนยันเพื่อซิงค์ Public Nonces กับ SSP Wallet",
   "auth_confirm_evm_signing": "Confirm to sign EVM Chain Data.",
+  "auth_confirm_wk_signing": "Confirm authentication request.",
   "err_auth_pw_incorrect": "รหัสผ่านไม่ถูกต้อง",
   "err_auth_pw_check": "เกิดข้อผิดพลาดในการตรวจสอบรหัสผ่าน กรุณาลองใหม่ภายหลัง",
   "auth_sign_tx": "คุณกำลังจะลงนามและส่งธุรกรรม!",
@@ -77,6 +78,7 @@
   "auth_sensitive_inf": "คุณกำลังจะเข้าถึงข้อมูลที่ละเอียดอ่อน!",
   "auth_sync_pub_nonces": "คุณกำลังจะซิงค์ Public Nonces กับ SSP Wallet!",
   "auth_sync_evm_signing": "You are about to sign EVM Chain Data with SSP Key! Be careful as this action may be requested by a dApp.",
+  "auth_sync_wk_signing": "You are about to approve an authentication request with SSP Key! Be careful as this action may be requested by a website.",
   "auth_delete_ssp_key_data": "คุณกำลังจะลบข้อมูลทั้งหมดของ SSP Key ของคุณ! คุณจะต้องตั้งค่า SSP Key ใหม่หรือกู้คืนจากคำสำคัญของคุณ โปรดตรวจสอบให้แน่ใจว่าคุณได้บันทึกคำสำคัญของคุณก่อนดำเนินการ ต่อไปนี้เป็นการกระทำที่ทำลายล้างและไม่สามารถย้อนกลับได้!",
   "auth_confirm_with_pw": "ยืนยันด้วยรหัสผ่าน",
   "auth_grant_access_pw": "อนุญาตให้เข้าถึงด้วยรหัสผ่าน",
@@ -113,5 +115,15 @@
   "delete_ssp_key_data_desc": "คำเตือน: การกระทำนี้จะลบข้อมูลทั้งหมดที่เกี่ยวข้องกับ SSP Key ของคุณ รวมถึงคำสำคัญจากอุปกรณ์ การกระทำนี้ไม่สามารถย้อนกลับได้!",
   "warning_chain_only": "WARNING: This address is for the {{chain_name}} ({{chain_symbol}}) blockchain only. Only deposit assets on the {{chain_name}} ({{chain_symbol}}) chain to this address. Depositing from another chain will result in a loss of funds!",
   "signature": "Signature",
-  "tx_data": "Transaction Data"
+  "tx_data": "Transaction Data",
+  "wk_signing_request": "SSP Authentication",
+  "wk_signing_request_info": "A website is requesting your signature to authenticate. Please review the details below.",
+  "ssp_identity": "SSP Identity",
+  "message_timestamp": "Message Timestamp",
+  "message_to_sign": "Message to Sign",
+  "wallet_pubkey": "Wallet Public Key",
+  "requesting_from": "Requesting from",
+  "verified_origin": "Verified Origin",
+  "wk_signing_success": "Authentication request signed successfully.",
+  "err_signing_failed": "Signing failed. Try again."
 }
