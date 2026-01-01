@@ -124,6 +124,7 @@
   "wallet_pubkey": "Wallet Public Key",
   "requesting_from": "Requesting from",
   "verified_origin": "Origin",
+  "origin": "Origin",
   "wk_signing_success": "Authentication request signed successfully.",
   "err_signing_failed": "Signing failed. Try again."
 }
