@@ -118,6 +118,7 @@
   "tx_data": "Data Transaksi",
   "wk_signing_request": "SSP Authentication",
   "wk_signing_request_info": "A website is requesting your signature to authenticate. Please review the details below.",
+  "requester_info": "Requester Information",
   "ssp_identity": "SSP Identity",
   "message_timestamp": "Message Timestamp",
   "message_to_sign": "Message to Sign",
