@@ -5,6 +5,7 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
+    "ios:device": "yarn ios --udid $MY_DEVICE_UDID",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "start": "react-native start",

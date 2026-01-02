@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
+  Animated,
+  Easing,
+  Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,6 +34,9 @@ interface QRScannerProps {
   onClose: () => void;
 }
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SCAN_AREA_SIZE = SCREEN_WIDTH * 0.7;
+
 const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   const { Colors } = useTheme();
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
@@ -38,10 +44,33 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   const dispatch = useDispatch();
   const device = useCameraDevice('back');
   const isScanned = useRef(false);
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
 
   setTimeout(() => {
     dispatch(changeTheme({ theme: 'default', darkMode: true }));
   }, 0);
+
+  // Animate scan line
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanLineAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanLineAnim, {
+          toValue: 0,
+          duration: 2000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [scanLineAnim]);
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -163,6 +192,51 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
     ),
   });
 
+  const scanLineTranslateY = scanLineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, SCAN_AREA_SIZE - 4],
+  });
+
+  const renderScanOverlay = () => (
+    <View style={styles.overlay}>
+      {/* Top overlay */}
+      <View style={styles.overlayTop} />
+
+      {/* Middle row */}
+      <View style={styles.overlayMiddle}>
+        {/* Left overlay */}
+        <View style={styles.overlaySide} />
+
+        {/* Scan area */}
+        <View style={styles.scanArea}>
+          {/* Corner markers */}
+          <View style={[styles.corner, styles.cornerTopLeft]} />
+          <View style={[styles.corner, styles.cornerTopRight]} />
+          <View style={[styles.corner, styles.cornerBottomLeft]} />
+          <View style={[styles.corner, styles.cornerBottomRight]} />
+
+          {/* Animated scan line */}
+          <Animated.View
+            style={[
+              styles.scanLine,
+              {
+                transform: [{ translateY: scanLineTranslateY }],
+              },
+            ]}
+          />
+        </View>
+
+        {/* Right overlay */}
+        <View style={styles.overlaySide} />
+      </View>
+
+      {/* Bottom overlay with text */}
+      <View style={styles.overlayBottom}>
+        <Text style={styles.scanText}>{t('home:scan_code')}</Text>
+      </View>
+    </View>
+  );
+
   if (!device) {
     return (
       <View style={styles.container}>
@@ -186,13 +260,16 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
         <Icon name="chevron-left" size={32} color={Colors.white} />
       </TouchableOpacity>
       {hasCameraPermission ? (
-        <Camera
-          style={styles.camera}
-          device={device}
-          isActive={true}
-          codeScanner={codeScanner}
-          enableZoomGesture={true}
-        />
+        <>
+          <Camera
+            style={styles.camera}
+            device={device}
+            isActive={true}
+            codeScanner={codeScanner}
+            enableZoomGesture={true}
+          />
+          {renderScanOverlay()}
+        </>
       ) : (
         <View style={styles.camera}>
           <Text>{t('home:scan_camra_permission_not_granted')}</Text>
@@ -231,5 +308,84 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 5,
+  },
+  overlayTop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  overlayMiddle: {
+    flexDirection: 'row',
+  },
+  overlaySide: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  scanArea: {
+    width: SCAN_AREA_SIZE,
+    height: SCAN_AREA_SIZE,
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+  },
+  overlayBottom: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    paddingTop: 30,
+  },
+  scanText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  corner: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderColor: '#00ff00',
+  },
+  cornerTopLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 4,
+  },
+  cornerTopRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 4,
+  },
+  cornerBottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 4,
+  },
+  cornerBottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 4,
+  },
+  scanLine: {
+    width: '100%',
+    height: 2,
+    backgroundColor: '#00ff00',
+    shadowColor: '#00ff00',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
 });

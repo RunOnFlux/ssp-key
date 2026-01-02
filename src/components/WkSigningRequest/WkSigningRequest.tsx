@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
+import Icon from 'react-native-vector-icons/Feather';
 
 interface WkSignRequesterInfo {
   origin: string;
@@ -35,6 +36,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
+  const [iconError, setIconError] = useState(false);
 
   const approve = () => {
     console.log('Approve WK signing request');
@@ -70,6 +72,8 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
           Layout.alignItemsCenter,
         ]}
       >
+        {/* Signing Icon */}
+        <Icon name="edit-3" size={40} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -93,21 +97,32 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
 
         {/* Requester Info */}
         {requesterInfo && (
-          <View
-            style={[
-              Gutters.regularTMargin,
-              Gutters.smallLMargin,
-              Gutters.smallRMargin,
-              {
-                backgroundColor: Colors.inputBackground,
-                borderRadius: 8,
-                padding: 12,
-                width: '90%',
-                borderWidth: 1,
-                borderColor: Colors.textGray200,
-              },
-            ]}
-          >
+          <>
+            <View style={[Gutters.regularTMargin, Layout.alignItemsCenter]}>
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textBold,
+                  { color: Colors.textGray400, marginBottom: 4 },
+                ]}
+              >
+                {t('home:requester_info')}:
+              </Text>
+            </View>
+            <View
+              style={[
+                Gutters.smallLMargin,
+                Gutters.smallRMargin,
+                {
+                  backgroundColor: Colors.inputBackground,
+                  borderRadius: 8,
+                  padding: 12,
+                  width: '90%',
+                  borderWidth: 1,
+                  borderColor: Colors.textGray200,
+                },
+              ]}
+            >
             {/* Icon and Site Name */}
             {requesterInfo.siteName && (
               <View
@@ -117,7 +132,9 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                   { marginBottom: 8 },
                 ]}
               >
-                {requesterInfo.iconUrl && (
+                {requesterInfo.iconUrl &&
+                !iconError &&
+                !requesterInfo.iconUrl.toLowerCase().endsWith('.svg') ? (
                   <Image
                     source={{ uri: requesterInfo.iconUrl }}
                     style={{
@@ -127,7 +144,28 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                       marginRight: 8,
                     }}
                     resizeMode="contain"
+                    onError={() => {
+                      console.log(
+                        '[WkSigningRequest] Icon failed to load:',
+                        requesterInfo.iconUrl,
+                      );
+                      setIconError(true);
+                    }}
                   />
+                ) : (
+                  <View
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 4,
+                      marginRight: 8,
+                      backgroundColor: Colors.textGray200,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Icon name="globe" size={14} color={Colors.textGray400} />
+                  </View>
                 )}
                 <Text
                   style={[Fonts.textSmall, Fonts.textBold, { flex: 1 }]}
@@ -140,9 +178,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
             {/* Origin */}
             <View
               style={{
-                backgroundColor: Colors.bgInputAreaModalColor,
-                borderRadius: 4,
-                padding: 8,
+                paddingTop: requesterInfo.siteName ? 4 : 0,
                 marginBottom: requesterInfo.description ? 8 : 0,
               }}
             >
@@ -169,7 +205,8 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
             {requesterInfo.description && (
               <Text style={[Fonts.textSmall]}>{requesterInfo.description}</Text>
             )}
-          </View>
+            </View>
+          </>
         )}
 
         {/* Message to Sign */}
@@ -181,7 +218,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
               { color: Colors.textGray400, marginBottom: 4 },
             ]}
           >
-            {t('home:message_to_sign')}
+            {t('home:message_to_sign')}:
           </Text>
         </View>
         <View
