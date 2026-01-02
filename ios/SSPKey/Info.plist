@@ -37,6 +37,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>SSP Key needs access to your Camera to scan QR codes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SSP Key may use your location to tag captured media with GPS information.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>SSP Key needs to use FaceID to streamline authentication.</string>
 	<key>RCTNewArchEnabled</key>
