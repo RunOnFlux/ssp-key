@@ -467,6 +467,11 @@ function Home({ navigation }: Props) {
           pwForEncryption,
         ).toString();
         setXpubWallet(chain, encryptedXpubWallet);
+        // Generate key's internal identity (single-sig from key's xpub)
+        const keyInternalIdentity = generateInternalIdentityAddress(
+          xpubKeyDecrypted,
+          identityChain,
+        );
         // tell ssp relay that we are synced, post data to ssp sync
         const syncData: syncSSPRelay = {
           chain,
@@ -475,6 +480,11 @@ function Home({ navigation }: Props) {
           wkIdentity: sspWalletKeyInternalIdentity,
           generatedAddress: addrInfo.address,
           keyToken: await getFCMToken(),
+          // Include additional fields for verification
+          walletXpub: suppliedXpubWallet,
+          keyIdentity: keyInternalIdentity,
+          redeemScript: addrInfo.redeemScript,
+          witnessScript: addrInfo.witnessScript,
         };
         // == EVM ==
         if (blockchains[chain].chainType === 'evm') {
@@ -599,6 +609,11 @@ function Home({ navigation }: Props) {
         dispatch(
           setSspWalletInternalIdentity(generatedSspWalletInternalIdentity),
         );
+        // Generate key's internal identity (single-sig from key's xpub)
+        const keyInternalIdentity = generateInternalIdentityAddress(
+          xpubKeyDecrypted,
+          identityChain,
+        );
         // tell ssp relay that we are synced, post data to ssp sync
         const syncData: syncSSPRelay = {
           chain: identityChain,
@@ -607,6 +622,11 @@ function Home({ navigation }: Props) {
           wkIdentity: generatedSspWalletKeyInternalIdentity.address,
           generatedAddress: addrInfo.address,
           keyToken: await getFCMToken(),
+          // Include additional fields for verification
+          walletXpub: suppliedXpubWallet,
+          keyIdentity: keyInternalIdentity,
+          redeemScript: generatedSspWalletKeyInternalIdentity.redeemScript,
+          witnessScript: generatedSspWalletKeyInternalIdentity.witnessScript,
         };
         console.log(syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
