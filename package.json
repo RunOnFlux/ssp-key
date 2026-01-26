@@ -17,11 +17,11 @@
   },
   "resolutions": {
     "viem": "2.42.1",
-    "@types/react": "19.2.7"
+    "@types/react": "19.2.9"
   },
   "overrides": {
     "viem": "2.42.1",
-    "@types/react": "19.2.7"
+    "@types/react": "19.2.9"
   },
   "dependencies": {
     "@alchemy/aa-core": "3.19.0",
@@ -97,9 +97,9 @@
     "@babel/runtime": "7.28.6",
     "@eslint/js": "9.39.2",
     "@lavamoat/allow-scripts": "3.4.2",
-    "@react-native-community/cli": "20.0.2",
-    "@react-native-community/cli-platform-android": "20.0.2",
-    "@react-native-community/cli-platform-ios": "20.0.2",
+    "@react-native-community/cli": "20.1.0",
+    "@react-native-community/cli-platform-android": "20.1.0",
+    "@react-native-community/cli-platform-ios": "20.1.0",
     "@react-native/babel-preset": "0.83.1",
     "@react-native/eslint-config": "0.83.1",
     "@react-native/metro-config": "0.83.1",
