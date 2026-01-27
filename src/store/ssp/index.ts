@@ -6,6 +6,7 @@ export interface seedPhraseState {
   sspWalletKeyInternalIdentityWitnessScript: string;
   sspWalletKeyInternalIdentityPubKey: string;
   sspWalletInternalIdentity: string;
+  sspKeyInternalIdentity: string;
   publicNonces: string;
   identityChain: 'btc';
 }
@@ -16,6 +17,7 @@ const initialStateSeedPhrase: seedPhraseState = {
   sspWalletKeyInternalIdentityWitnessScript: '',
   sspWalletKeyInternalIdentityPubKey: '',
   sspWalletInternalIdentity: '',
+  sspKeyInternalIdentity: '',
   publicNonces: '',
   identityChain: 'btc',
 };
@@ -46,6 +48,9 @@ const seedPhraseSlice = createSlice({
     setSspWalletInternalIdentity: (state, action: PayloadAction<string>) => {
       state.sspWalletInternalIdentity = action.payload;
     },
+    setSspKeyInternalIdentity: (state, action: PayloadAction<string>) => {
+      state.sspKeyInternalIdentity = action.payload;
+    },
     setSspKeyPublicNonces: (state, action: PayloadAction<string>) => {
       state.publicNonces = action.payload;
     },
@@ -55,6 +60,7 @@ const seedPhraseSlice = createSlice({
       state.sspWalletKeyInternalIdentityWitnessScript = '';
       state.sspWalletKeyInternalIdentityPubKey = '';
       state.sspWalletInternalIdentity = '';
+      state.sspKeyInternalIdentity = '';
       state.identityChain = 'btc';
       state.publicNonces = '';
     },
@@ -67,6 +73,7 @@ export const {
   setSspWalletKeyInternalIdentityWitnessScript,
   setSspWalletKeyInternalIdentityPubKey,
   setSspWalletInternalIdentity,
+  setSspKeyInternalIdentity,
   setSspKeyPublicNonces,
   setSSPInitialState,
 } = seedPhraseSlice.actions;

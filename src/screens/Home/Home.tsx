@@ -80,6 +80,7 @@ import {
   setSspWalletKeyInternalIdentityWitnessScript,
   setSspWalletKeyInternalIdentityPubKey,
   setSspWalletInternalIdentity,
+  setSspKeyInternalIdentity,
   setSspKeyPublicNonces,
 } from '../../store/ssp';
 
@@ -105,6 +106,7 @@ function Home({ navigation }: Props) {
     sspWalletKeyInternalIdentityWitnessScript,
     sspWalletKeyInternalIdentityPubKey,
     sspWalletInternalIdentity,
+    sspKeyInternalIdentity,
     identityChain,
   } = useAppSelector((state) => state.ssp);
   const dispatch = useAppDispatch();
@@ -467,12 +469,9 @@ function Home({ navigation }: Props) {
           pwForEncryption,
         ).toString();
         setXpubWallet(chain, encryptedXpubWallet);
-        // Generate key's internal identity (single-sig from key's xpub)
-        const keyInternalIdentity = generateInternalIdentityAddress(
-          xpubKeyDecrypted,
-          identityChain,
-        );
         // tell ssp relay that we are synced, post data to ssp sync
+        // sspKeyInternalIdentity is already set from identity chain sync
+        // Note: may be undefined for SSPs synced before this field was stored
         const syncData: syncSSPRelay = {
           chain,
           walletIdentity: sspWalletInternalIdentity,
@@ -482,7 +481,7 @@ function Home({ navigation }: Props) {
           keyToken: await getFCMToken(),
           // Include additional fields for verification
           walletXpub: suppliedXpubWallet,
-          keyIdentity: keyInternalIdentity,
+          keyIdentity: sspKeyInternalIdentity,
           redeemScript: addrInfo.redeemScript,
           witnessScript: addrInfo.witnessScript,
         };
@@ -614,6 +613,9 @@ function Home({ navigation }: Props) {
           xpubKeyDecrypted,
           identityChain,
         );
+        if (keyInternalIdentity) {
+          dispatch(setSspKeyInternalIdentity(keyInternalIdentity));
+        }
         // tell ssp relay that we are synced, post data to ssp sync
         const syncData: syncSSPRelay = {
           chain: identityChain,
