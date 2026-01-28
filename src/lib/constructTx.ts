@@ -4,7 +4,7 @@ import { getEntryPoint, createSmartAccountClient } from '@alchemy/aa-core';
 import { http as viemHttp } from 'viem';
 import * as viemChains from 'viem/chains';
 import { Buffer } from 'buffer';
-import api from './api';
+import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import {
   blockbookUtxo,
@@ -30,7 +30,7 @@ export async function fetchUtxos(
     if (blockchains[chain].backend === 'blockbook') {
       if (confirmationMode === 1) {
         const url = `https://${backendConfig.node}/api/v2/utxo/${address}?confirmed=true`;
-        const { data } = await api.get<blockbookUtxo[]>(url);
+        const { data } = await axios.get<blockbookUtxo[]>(url);
         const fetchedUtxos = data.filter((x) =>
           onlyConfirmed ? x.confirmations > 0 : true,
         );
@@ -46,8 +46,8 @@ export async function fetchUtxos(
       } else if (confirmationMode === 2) {
         const url = `https://${backendConfig.node}/api/v2/utxo/${address}?confirmed=true`;
         const urlB = `https://${backendConfig.node}/api/v2/utxo/${address}`;
-        const { data } = await api.get<blockbookUtxo[]>(url);
-        const responseB = await api.get<blockbookUtxo[]>(urlB);
+        const { data } = await axios.get<blockbookUtxo[]>(url);
+        const responseB = await axios.get<blockbookUtxo[]>(urlB);
         const dataB = responseB.data.filter((x) =>
           onlyConfirmed ? x.confirmations > 0 : true,
         );
@@ -65,7 +65,7 @@ export async function fetchUtxos(
         return utxos;
       } else {
         const url = `https://${backendConfig.node}/api/v2/utxo/${address}`;
-        const { data } = await api.get<blockbookUtxo[]>(url);
+        const { data } = await axios.get<blockbookUtxo[]>(url);
         const fetchedUtxos = data.filter((x) =>
           onlyConfirmed ? x.confirmations > 0 : true,
         );
@@ -82,7 +82,7 @@ export async function fetchUtxos(
     } else {
       if (confirmationMode === 1) {
         const url = `https://${backendConfig.node}/api/addrs/${address}/unspent`;
-        const { data } = await api.get<utxo[]>(url);
+        const { data } = await axios.get<utxo[]>(url);
         const fetchedUtxos = data.filter((x) =>
           onlyConfirmed ? x.confirmations > 0 : true,
         );
@@ -98,8 +98,8 @@ export async function fetchUtxos(
       } else if (confirmationMode === 2) {
         const url = `https://${backendConfig.node}/api/addrs/${address}/unspent`;
         const urlB = `https://${backendConfig.node}/api/addrs/${address}/utxo`;
-        const { data } = await api.get<utxo[]>(url);
-        const responseB = await api.get<utxo[]>(urlB);
+        const { data } = await axios.get<utxo[]>(url);
+        const responseB = await axios.get<utxo[]>(urlB);
         const dataB = responseB.data.filter((x) =>
           onlyConfirmed ? x.confirmations > 0 : true,
         );
@@ -117,7 +117,7 @@ export async function fetchUtxos(
         return utxos;
       } else {
         const url = `https://${backendConfig.node}/api/addrs/${address}/utxo`;
-        const { data } = await api.get<utxo[]>(url);
+        const { data } = await axios.get<utxo[]>(url);
         const fetchedUtxos = data.filter((x) =>
           onlyConfirmed ? x.confirmations > 0 : true,
         );
@@ -230,11 +230,11 @@ export async function broadcastTx(
     const backendConfig = backends()[chain];
     if (blockchains[chain].backend === 'blockbook') {
       const url = `https://${backendConfig.node}/api/v2/sendtx/`; // NB: the '/' symbol at the end is mandatory.
-      const response = await api.post<blockbookBroadcastTxResult>(url, txHex);
+      const response = await axios.post<blockbookBroadcastTxResult>(url, txHex);
       return response.data.result;
     } else {
       const url = `https://${backendConfig.node}/api/tx/send`;
-      const response = await api.post<broadcastTxResult>(url, {
+      const response = await axios.post<broadcastTxResult>(url, {
         rawtx: txHex,
       });
       return response.data.txid;

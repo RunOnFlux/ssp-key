@@ -1,6 +1,7 @@
 import 'react-native-reanimated';
 import 'react-native-gesture-handler';
 import 'react-native-quick-crypto';
+import './lib/axiosConfig'; // Setup axios interceptors for SSP infrastructure
 import React, { useEffect, useRef } from 'react';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/lib/integration/react';
