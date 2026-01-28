@@ -123,88 +123,90 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                 },
               ]}
             >
-            {/* Icon and Site Name */}
-            {requesterInfo.siteName && (
-              <View
-                style={[
-                  Layout.row,
-                  Layout.alignItemsCenter,
-                  { marginBottom: 8 },
-                ]}
-              >
-                {requesterInfo.iconUrl &&
-                !iconError &&
-                !requesterInfo.iconUrl.toLowerCase().endsWith('.svg') ? (
-                  <Image
-                    source={{ uri: requesterInfo.iconUrl }}
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 4,
-                      marginRight: 8,
-                    }}
-                    resizeMode="contain"
-                    onError={() => {
-                      console.log(
-                        '[WkSigningRequest] Icon failed to load:',
-                        requesterInfo.iconUrl,
-                      );
-                      setIconError(true);
-                    }}
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 4,
-                      marginRight: 8,
-                      backgroundColor: Colors.textGray200,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Icon name="globe" size={14} color={Colors.textGray400} />
-                  </View>
-                )}
-                <Text
-                  style={[Fonts.textSmall, Fonts.textBold, { flex: 1 }]}
-                  numberOfLines={1}
+              {/* Icon and Site Name */}
+              {requesterInfo.siteName && (
+                <View
+                  style={[
+                    Layout.row,
+                    Layout.alignItemsCenter,
+                    { marginBottom: 8 },
+                  ]}
                 >
-                  {requesterInfo.siteName}
+                  {requesterInfo.iconUrl &&
+                  !iconError &&
+                  !requesterInfo.iconUrl.toLowerCase().endsWith('.svg') ? (
+                    <Image
+                      source={{ uri: requesterInfo.iconUrl }}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 4,
+                        marginRight: 8,
+                      }}
+                      resizeMode="contain"
+                      onError={() => {
+                        console.log(
+                          '[WkSigningRequest] Icon failed to load:',
+                          requesterInfo.iconUrl,
+                        );
+                        setIconError(true);
+                      }}
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 4,
+                        marginRight: 8,
+                        backgroundColor: Colors.textGray200,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Icon name="globe" size={14} color={Colors.textGray400} />
+                    </View>
+                  )}
+                  <Text
+                    style={[Fonts.textSmall, Fonts.textBold, { flex: 1 }]}
+                    numberOfLines={1}
+                  >
+                    {requesterInfo.siteName}
+                  </Text>
+                </View>
+              )}
+              {/* Origin */}
+              <View
+                style={{
+                  paddingTop: requesterInfo.siteName ? 4 : 0,
+                  marginBottom: requesterInfo.description ? 8 : 0,
+                }}
+              >
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    { color: Colors.textGray400, marginBottom: 2 },
+                  ]}
+                >
+                  {t('home:origin')}
+                </Text>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textBold,
+                    { fontFamily: 'monospace' },
+                  ]}
+                  selectable={true}
+                >
+                  {requesterInfo.origin}
                 </Text>
               </View>
-            )}
-            {/* Origin */}
-            <View
-              style={{
-                paddingTop: requesterInfo.siteName ? 4 : 0,
-                marginBottom: requesterInfo.description ? 8 : 0,
-              }}
-            >
-              <Text
-                style={[
-                  Fonts.textTiny,
-                  { color: Colors.textGray400, marginBottom: 2 },
-                ]}
-              >
-                {t('home:origin')}
-              </Text>
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBold,
-                  { fontFamily: 'monospace' },
-                ]}
-                selectable={true}
-              >
-                {requesterInfo.origin}
-              </Text>
-            </View>
-            {/* Description */}
-            {requesterInfo.description && (
-              <Text style={[Fonts.textSmall]}>{requesterInfo.description}</Text>
-            )}
+              {/* Description */}
+              {requesterInfo.description && (
+                <Text style={[Fonts.textSmall]}>
+                  {requesterInfo.description}
+                </Text>
+              )}
             </View>
           </>
         )}

@@ -129,12 +129,7 @@ export function createMultisigAuth(
   dataHash?: string,
 ): AuthFields {
   // Derive private key for signing (typeIndex=10 for internal identity)
-  const identityKeypair = generateAddressKeypair(
-    xprivKey,
-    10,
-    0,
-    chain,
-  );
+  const identityKeypair = generateAddressKeypair(xprivKey, 10, 0, chain);
 
   // Create the payload with optional data hash
   const payload = createSignaturePayload(action, wkIdentity, dataHash);

@@ -291,7 +291,7 @@ export function generateMultisigAddressEVM(
 // given xpriv of our party, generate keypair consisting of privateKey in and public key belonging to it
 export function generateAddressKeypairEVM(
   xpriv: string,
-  typeIndex: 0 | 1 | 10,  // 0: normal, 1: change, 10: internal identity
+  typeIndex: 0 | 1 | 10, // 0: normal, 1: change, 10: internal identity
   addressIndex: number,
   chain: keyof cryptos,
 ): keyPair {

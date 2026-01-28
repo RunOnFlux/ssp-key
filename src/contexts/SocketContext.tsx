@@ -84,7 +84,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }
         // Fallback to unauthenticated join (for backward compatibility during transition)
-        console.log('[Socket] Emitting unauthenticated join (auth not available)');
+        console.log(
+          '[Socket] Emitting unauthenticated join (auth not available)',
+        );
         socketToUse.emit('join', { wkIdentity: identity });
       } catch (error) {
         console.error('[Socket] Error creating auth for join:', error);

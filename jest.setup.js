@@ -115,4 +115,3 @@ jest.mock('@runonflux/flux-sdk', () => ({
     }),
   },
 }));
-

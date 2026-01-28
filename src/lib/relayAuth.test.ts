@@ -24,7 +24,8 @@ jest.mock('./wallet', () => ({
   wifToPrivateKey: jest.fn((wif: string) => 'a'.repeat(64)),
   generateAddressKeypair: jest.fn(() => ({
     privKey: 'L1TnU2zbNaAqMoVh65Cyvmcjzbrj41Gs9iTLcWbpJCMynXuap6UN',
-    pubKey: '0278d4aa2a1c643fc68a0de5454e47c520cf59643526474e63b320144de9e0d59a',
+    pubKey:
+      '0278d4aa2a1c643fc68a0de5454e47c520cf59643526474e63b320144de9e0d59a',
   })),
 }));
 
@@ -99,7 +100,11 @@ describe('RelayAuth Lib', () => {
     });
 
     it('should include data hash when provided', () => {
-      const payload = createSignaturePayload('sync', 'my-identity', 'abc123hash');
+      const payload = createSignaturePayload(
+        'sync',
+        'my-identity',
+        'abc123hash',
+      );
 
       expect(payload.data).toBe('abc123hash');
     });
@@ -123,7 +128,8 @@ describe('RelayAuth Lib', () => {
   describe('signMessage', () => {
     it('should return a signature string', () => {
       const message = 'test message';
-      const privateKeyWIF = 'L1TnU2zbNaAqMoVh65Cyvmcjzbrj41Gs9iTLcWbpJCMynXuap6UN';
+      const privateKeyWIF =
+        'L1TnU2zbNaAqMoVh65Cyvmcjzbrj41Gs9iTLcWbpJCMynXuap6UN';
 
       const signature = signMessage(message, privateKeyWIF, 'btc');
 
