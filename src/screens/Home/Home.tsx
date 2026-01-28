@@ -31,7 +31,7 @@ import PublicNoncesSuccess from '../../components/PublicNoncesSuccess/PublicNonc
 import Receive from '../../components/Receive/Receive';
 import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
-import axios from 'axios';
+import api, { setWkIdentity } from '../../lib/api';
 import { sspConfig } from '@storage/ssp';
 import {
   cryptos,
@@ -161,6 +161,11 @@ function Home({ navigation }: Props) {
     clearWkSigningRequest,
   } = useSocket();
   const { createWkIdentityAuth } = useRelayAuth();
+
+  // Sync wkIdentity to api module for automatic header inclusion
+  useEffect(() => {
+    setWkIdentity(sspWalletKeyInternalIdentity || null);
+  }, [sspWalletKeyInternalIdentity]);
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -509,7 +514,7 @@ function Home({ navigation }: Props) {
         }
         // == EVM end
         console.log(syncData);
-        await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
+        await api.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
         setSyncSuccessOpen(true);
       })
@@ -631,7 +636,7 @@ function Home({ navigation }: Props) {
           witnessScript: generatedSspWalletKeyInternalIdentity.witnessScript,
         };
         console.log(syncData);
-        await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
+        await api.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
         setSyncSuccessOpen(true);
       })
@@ -725,7 +730,7 @@ function Home({ navigation }: Props) {
       // Continue without auth for backward compatibility
     }
 
-    const result = await axios.post(
+    const result = await api.post(
       `https://${sspConfig().relay}/v1/action`,
       data,
     );
@@ -753,12 +758,12 @@ function Home({ navigation }: Props) {
       // Continue without auth for backward compatibility
     }
 
-    axios
+    api
       .post(`https://${sspConfig().relay}/v1/token`, data)
-      .then((res) => {
+      .then((res: { data: unknown }) => {
         console.log(res.data);
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         console.log(error);
       });
   };
@@ -1200,7 +1205,7 @@ function Home({ navigation }: Props) {
       if (sspWalletKeyInternalIdentity) {
         // get some pending request on W-K identity
         console.log(sspWalletKeyInternalIdentity);
-        const result = await axios.get(
+        const result = await api.get(
           `https://${
             sspConfig().relay
           }/v1/action/${sspWalletKeyInternalIdentity}`,
