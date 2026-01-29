@@ -482,6 +482,7 @@ function Home({ navigation }: Props) {
           // Include additional fields for verification
           walletXpub: suppliedXpubWallet,
           keyIdentity: sspKeyInternalIdentity,
+          // Scripts from first address (index 0) - not strictly needed but extra assurance
           redeemScript: addrInfo.redeemScript,
           witnessScript: addrInfo.witnessScript,
         };
@@ -627,8 +628,9 @@ function Home({ navigation }: Props) {
           // Include additional fields for verification
           walletXpub: suppliedXpubWallet,
           keyIdentity: keyInternalIdentity,
-          redeemScript: generatedSspWalletKeyInternalIdentity.redeemScript,
-          witnessScript: generatedSspWalletKeyInternalIdentity.witnessScript,
+          // Scripts from first address (index 0) - not strictly needed but extra assurance
+          redeemScript: addrInfo.redeemScript,
+          witnessScript: addrInfo.witnessScript,
         };
         console.log(syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
