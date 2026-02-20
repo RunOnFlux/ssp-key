@@ -126,3 +126,121 @@ export function continueSigningSchnorrMultisig(
     throw error;
   }
 }
+
+/**
+ * Continue Schnorr multisig signing on the Key side for enterprise vault M-of-N.
+ *
+ * Accepts variable-length arrays for M-of-N signing:
+ * - allPublicKeys: ALL 2M public keys hex (canonical order)
+ * - allPublicNonces: ALL 2M public nonces (canonical order)
+ *
+ * Returns raw signerContribution (sumSigs of wallet + key partial sigs)
+ * and challenge hex. Backend handles ABI encoding for EVM submission.
+ */
+export function continueVaultSigningSchnorrMultisig(
+  messageToSign: string,
+  keyKeypair: keyPair,
+  keyNonce: publicPrivateNonce,
+  allPublicKeys: string[],
+  allPublicNonces: publicNonces[],
+  sigOneHex: string,
+): { signerContribution: string; challenge: string } {
+  if (
+    !allPublicKeys.length ||
+    !allPublicNonces.length ||
+    allPublicKeys.length !== allPublicNonces.length
+  ) {
+    throw new Error(
+      `Invalid signing arrays: ${allPublicKeys.length} keys vs ${allPublicNonces.length} nonces`,
+    );
+  }
+
+  try {
+    console.log('Vault Schnorr signing formatted message:', {
+      message: messageToSign,
+      messageLength: messageToSign.length,
+    });
+
+    // Create Schnorr signer from Key's private key
+    const schnorrSigner =
+      accountAbstraction.helpers.SchnorrHelpers.createSchnorrSigner(
+        keyKeypair.privKey as `0x${string}`,
+      );
+
+    // Restore pre-reserved nonce
+    const kPrivate = new accountAbstraction.types.Key(
+      Buffer.from(keyNonce.k, 'hex'),
+    );
+    const kTwoPrivate = new accountAbstraction.types.Key(
+      Buffer.from(keyNonce.kTwo, 'hex'),
+    );
+    schnorrSigner.restorePubNonces(kPrivate, kTwoPrivate);
+
+    // Build Key[] from hex inputs
+    const publicKeys = allPublicKeys.map(
+      (hex) => new accountAbstraction.types.Key(Buffer.from(hex, 'hex')),
+    );
+
+    // Replace this signer's pubkey entry with the signer's internal Key instance
+    const signerPubKey = schnorrSigner.getPubKey();
+    const signerPubKeyHex = signerPubKey.buffer.toString('hex');
+    const signerKeyIdx = allPublicKeys.findIndex(
+      (hex) => hex === signerPubKeyHex,
+    );
+    if (signerKeyIdx === -1) {
+      throw new Error(
+        'Key public key not found in allSignerKeys array — key mismatch',
+      );
+    }
+    publicKeys[signerKeyIdx] = signerPubKey;
+
+    // Build PublicNonces[] from hex inputs
+    const signerPubNonces = schnorrSigner.getPubNonces();
+    const signerNonceHex = signerPubNonces.kPublic.buffer.toString('hex');
+    const publicNoncesArr: accountAbstraction.types.PublicNonces[] =
+      allPublicNonces.map((n, i) => {
+        // For the signer's own nonce slot, use the signer's internal nonces
+        if (i === signerKeyIdx || n.kPublic === signerNonceHex) {
+          return signerPubNonces;
+        }
+        return {
+          kPublic: new accountAbstraction.types.Key(
+            Buffer.from(n.kPublic, 'hex'),
+          ),
+          kTwoPublic: new accountAbstraction.types.Key(
+            Buffer.from(n.kTwoPublic, 'hex'),
+          ),
+        };
+      });
+
+    console.log('🔐 Built public keys and nonces arrays');
+
+    // Sign: SDK finds this signer via nonce match
+    const { signature: sigTwo, challenge } = schnorrSigner.signMultiSigMsg(
+      messageToSign,
+      publicKeys,
+      publicNoncesArr,
+    );
+
+    console.log('🔐 Generated Key partial signature');
+
+    // Sum wallet's partial sig + key's partial sig = signer contribution
+    const sigOne = new accountAbstraction.types.SchnorrSignature(
+      Buffer.from(sigOneHex, 'hex'),
+    );
+    const signerContribution = accountAbstraction.signers.Schnorrkel.sumSigs([
+      sigOne,
+      sigTwo,
+    ]);
+
+    console.log('🔐 Signer contribution computed (wallet + key)');
+
+    return {
+      signerContribution: signerContribution.buffer.toString('hex'),
+      challenge: challenge.buffer.toString('hex'),
+    };
+  } catch (error) {
+    console.error('Error in Vault Schnorr MultiSig signing:', error);
+    throw error;
+  }
+}

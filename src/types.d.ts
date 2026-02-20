@@ -591,3 +591,47 @@ interface wkSigningRequest {
   requestId: string; // unique request identifier
   requesterInfo?: WkSignRequesterInfo; // optional requester info
 }
+
+interface vaultXpubRequest {
+  chain: string;
+  orgIndex: number;
+  vaultName: string;
+  orgName: string;
+  xpubWallet: string;
+  requestId: string;
+  wkIdentity: string;
+}
+
+interface vaultSigningRequest {
+  chain: string;
+  orgIndex: number;
+  vaultIndex: number;
+  recipients: Array<{ address: string; amount: string; label?: string }>;
+  fee: string;
+  feeLabel: string;
+  memo?: string;
+  rawUnsignedTx: string;
+  inputDetails: Array<{
+    index: number;
+    addressIndex: number;
+    witnessScript?: string;
+    amount: string;
+  }>;
+  walletSignatures: string[];
+  walletPubKey: string;
+  requestId: string;
+  wkIdentity: string;
+  // EVM nonce fields — present when signing EVM vault proposals
+  reservedNonce?: {
+    kPublic: string;
+    kTwoPublic: string;
+  };
+  // EVM Schnorr fields — present when wallet performed Schnorr partial signing
+  sigOne?: string;
+  // M-of-N signing arrays: ALL 2M public keys and nonces in canonical order
+  allSignerKeys?: string[];
+  allSignerNonces?: Array<{
+    kPublic: string;
+    kTwoPublic: string;
+  }>;
+}

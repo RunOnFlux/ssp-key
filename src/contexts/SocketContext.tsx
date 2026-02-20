@@ -4,7 +4,13 @@ import { useAppSelector } from '../hooks';
 import { useRelayAuth } from '../hooks';
 import { sspConfig } from '@storage/ssp';
 import { AppState, NativeEventSubscription } from 'react-native';
-import { evmSigningRequest, wkSigningRequest, utxo } from '../types';
+import {
+  evmSigningRequest,
+  wkSigningRequest,
+  vaultXpubRequest,
+  vaultSigningRequest,
+  utxo,
+} from '../types';
 
 interface TxRequest {
   rawTx: string;
@@ -29,6 +35,10 @@ interface SocketContextType {
   }) => void;
   wkSigningRequest: wkSigningRequest | null;
   clearWkSigningRequest?: () => void;
+  vaultXpubRequest: vaultXpubRequest | null;
+  clearVaultXpubRequest?: () => void;
+  vaultSigningRequest: vaultSigningRequest | null;
+  clearVaultSigningRequest?: () => void;
 }
 
 const defaultValue: SocketContextType = {
@@ -42,6 +52,8 @@ const defaultValue: SocketContextType = {
   publicNoncesRequest: false,
   evmSigningRequest: null,
   wkSigningRequest: null,
+  vaultXpubRequest: null,
+  vaultSigningRequest: null,
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
@@ -63,6 +75,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     useState<evmSigningRequest | null>(null);
   const [wkSigningRequest, setWkSigningRequest] =
     useState<wkSigningRequest | null>(null);
+  const [vaultXpubRequest, setVaultXpubRequest] =
+    useState<vaultXpubRequest | null>(null);
+  const [vaultSigningRequest, setVaultSigningRequest] =
+    useState<vaultSigningRequest | null>(null);
 
   /**
    * Emit an authenticated join event.
@@ -178,6 +194,40 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       },
     );
 
+    // Handle Enterprise Vault xpub request
+    newSocket.on(
+      'enterprisevaultxpub',
+      (data: { chain: string; path: string; payload: string }) => {
+        console.log('[Socket] Enterprise vault xpub request received');
+        try {
+          const parsedPayload = JSON.parse(data.payload) as vaultXpubRequest;
+          setVaultXpubRequest(parsedPayload);
+        } catch {
+          console.error(
+            '[Socket] Failed to parse enterprise vault xpub request payload',
+          );
+        }
+      },
+    );
+
+    // Handle Enterprise Vault signing request
+    newSocket.on(
+      'enterprisevaultsign',
+      (data: { chain: string; path: string; payload: string }) => {
+        console.log('[Socket] Enterprise vault signing request received');
+        try {
+          const parsedPayload = JSON.parse(
+            data.payload,
+          ) as vaultSigningRequest;
+          setVaultSigningRequest(parsedPayload);
+        } catch {
+          console.error(
+            '[Socket] Failed to parse enterprise vault signing request payload',
+          );
+        }
+      },
+    );
+
     setSocket(newSocket);
 
     return () => {
@@ -228,6 +278,14 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     setWkSigningRequest(null);
   };
 
+  const clearVaultXpubRequest = () => {
+    setVaultXpubRequest(null);
+  };
+
+  const clearVaultSigningRequest = () => {
+    setVaultSigningRequest(null);
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -240,6 +298,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         clearEvmSigningRequest,
         wkSigningRequest,
         clearWkSigningRequest,
+        vaultXpubRequest,
+        clearVaultXpubRequest,
+        vaultSigningRequest,
+        clearVaultSigningRequest,
       }}
     >
       {children}

@@ -41,6 +41,8 @@ import {
   publicPrivateNonce,
   evmSigningRequest,
   wkSigningRequest,
+  vaultXpubRequest,
+  vaultSigningRequest,
 } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
@@ -65,7 +67,10 @@ import {
   selectPublicNonce,
 } from '../../lib/constructTx';
 
-import { continueSigningSchnorrMultisig } from '../../lib/evmSigning';
+import {
+  continueSigningSchnorrMultisig,
+  continueVaultSigningSchnorrMultisig,
+} from '../../lib/evmSigning';
 import { signMessage } from '../../lib/relayAuth';
 
 import {
@@ -82,6 +87,7 @@ import {
   setSspWalletInternalIdentity,
   setSspKeyInternalIdentity,
   setSspKeyPublicNonces,
+  setSspKeyEnterprisePublicNonces,
 } from '../../store/ssp';
 
 import { useAppSelector, useAppDispatch, useRelayAuth } from '../../hooks';
@@ -91,6 +97,8 @@ import { changeTheme } from '../../store/theme';
 import EvmSigningRequest from '../../components/EvmSigningRequest/EvmSigningRequest';
 import EvmSigningSuccess from '../../components/EvmSigningSuccess/EvmSigningSuccess';
 import WkSigningRequest from '../../components/WkSigningRequest/WkSigningRequest';
+import VaultXpubRequest from '../../components/VaultXpubRequest/VaultXpubRequest';
+import VaultSignRequest from '../../components/VaultSignRequest/VaultSignRequest';
 import { MainScreenProps } from '../../../@types/navigation';
 
 type Props = MainScreenProps<'Home'>;
@@ -141,12 +149,17 @@ function Home({ navigation }: Props) {
   const [wkSigningData, setWkSigningData] = useState<wkSigningRequest | null>(
     null,
   );
+  const [vaultXpubData, setVaultXpubData] = useState<vaultXpubRequest | null>(
+    null,
+  );
+  const [vaultSigningData, setVaultSigningData] =
+    useState<vaultSigningRequest | null>(null);
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
   // Get identity chain state for migration
   const identityChainState = useAppSelector((state) => state[identityChain]);
-  const { publicNonces } = useAppSelector((state) => state.ssp);
+  const { publicNonces, enterprisePublicNonces } = useAppSelector((state) => state.ssp);
   const [activityStatus, setActivityStatus] = useState(false);
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
 
@@ -159,6 +172,10 @@ function Home({ navigation }: Props) {
     clearEvmSigningRequest,
     wkSigningRequest: socketWkSigningRequest,
     clearWkSigningRequest,
+    vaultXpubRequest: socketVaultXpubRequest,
+    clearVaultXpubRequest,
+    vaultSigningRequest: socketVaultSigningRequest,
+    clearVaultSigningRequest,
   } = useSocket();
   const { createWkIdentityAuth } = useRelayAuth();
 
@@ -329,6 +346,23 @@ function Home({ navigation }: Props) {
       setWkSigningData(socketWkSigningRequest);
     }
   }, [socketWkSigningRequest]);
+
+  useEffect(() => {
+    if (socketVaultXpubRequest) {
+      console.log('[Vault Xpub] Received request:', socketVaultXpubRequest);
+      setVaultXpubData(socketVaultXpubRequest);
+    }
+  }, [socketVaultXpubRequest]);
+
+  useEffect(() => {
+    if (socketVaultSigningRequest) {
+      console.log(
+        '[Vault Signing] Received request:',
+        socketVaultSigningRequest,
+      );
+      setVaultSigningData(socketVaultSigningRequest);
+    }
+  }, [socketVaultSigningRequest]);
 
   useEffect(() => {
     if (!xpubKey || !xpubWallet) {
@@ -1194,6 +1228,99 @@ function Home({ navigation }: Props) {
       });
     }
   };
+  /**
+   * Check enterprise nonce pool and replenish if below threshold.
+   * Generates nonces locally, stores private parts in Keychain,
+   * submits public parts to relay.
+   * @param replenishNeeded - If true, skip the status API call and replenish based on local count.
+   *   Used when the action response already told us replenishment is needed.
+   */
+  const checkAndReplenishEnterpriseNonces = async (
+    replenishNeeded?: boolean,
+  ) => {
+    if (!sspWalletKeyInternalIdentity) return;
+    try {
+      const TARGET_COUNT = 50;
+
+      if (!replenishNeeded) {
+        // Check pool status via API
+        const statusRes = await axios.get(
+          `https://${sspConfig().relay}/v1/nonces/status/${sspWalletKeyInternalIdentity}`,
+        );
+        const poolData = statusRes.data?.data;
+        if (!poolData || !poolData.replenishNeeded?.key) return;
+      }
+
+      // Get encryption key for local storage
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+      });
+      if (!encryptionKey || !passwordData) return;
+
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const pwForEncryption =
+        encryptionKey.password + passwordDecrypted.toString(CryptoJS.enc.Utf8);
+
+      // Load existing enterprise nonces from Redux store
+      let existingNonces: publicPrivateNonce[] = [];
+      try {
+        if (enterprisePublicNonces) {
+          const decrypted = CryptoJS.AES.decrypt(
+            enterprisePublicNonces,
+            pwForEncryption,
+          );
+          existingNonces = JSON.parse(
+            decrypted.toString(CryptoJS.enc.Utf8),
+          ) as publicPrivateNonce[];
+        }
+      } catch {
+        // No existing nonces or corrupt data — start fresh
+        existingNonces = [];
+      }
+
+      const toGenerate = TARGET_COUNT - existingNonces.length;
+      if (toGenerate <= 0) return;
+
+      // Generate new nonces
+      const newNonces: publicPrivateNonce[] = [];
+      for (let i = 0; i < toGenerate; i++) {
+        newNonces.push(generatePublicNonce());
+      }
+
+      // Merge and store locally (encrypted in Redux, persisted via MMKV)
+      const allNonces = [...existingNonces, ...newNonces];
+      const encryptedNonces = CryptoJS.AES.encrypt(
+        JSON.stringify(allNonces),
+        pwForEncryption,
+      ).toString();
+      dispatch(setSspKeyEnterprisePublicNonces(encryptedNonces));
+
+      // Submit public parts to relay
+      const publicParts = newNonces.map((n) => ({
+        kPublic: n.kPublic,
+        kTwoPublic: n.kTwoPublic,
+      }));
+      await axios.post(`https://${sspConfig().relay}/v1/nonces`, {
+        wkIdentity: sspWalletKeyInternalIdentity,
+        source: 'key',
+        nonces: publicParts,
+      });
+
+      console.log(
+        `[Enterprise Nonces] Key: Generated and submitted ${toGenerate} nonces`,
+      );
+    } catch (error) {
+      // Non-critical — don't block Key functionality
+      console.log('[Enterprise Nonces] Key replenish error:', error);
+    }
+  };
+
   const handleRefresh = async () => {
     // todo here can be a sync request too in the future?
     try {
@@ -1231,6 +1358,26 @@ function Home({ navigation }: Props) {
           } catch {
             displayMessage('error', t('home:err_invalid_request'));
           }
+        } else if (result.data.action === 'enterprisevaultsign') {
+          try {
+            const vaultSignData = JSON.parse(result.data.payload);
+            setVaultSigningData(vaultSignData);
+          } catch {
+            displayMessage('error', t('home:err_invalid_request'));
+          }
+        } else if (result.data.action === 'enterprisevaultxpub') {
+          try {
+            const vaultData = JSON.parse(result.data.payload);
+            setVaultXpubData(vaultData);
+          } catch {
+            displayMessage('error', t('home:err_invalid_request'));
+          }
+        }
+        // Check enterprise nonce pool using enriched action response (non-blocking)
+        if (result.data.enterpriseNoncesNeeded?.key) {
+          checkAndReplenishEnterpriseNonces(true).catch((e) =>
+            console.log('[Enterprise Nonces] check error:', e),
+          );
         }
       } else {
         // here open sync needed modal
@@ -1453,6 +1600,420 @@ function Home({ navigation }: Props) {
     } finally {
       setWkSigningData(null);
       clearWkSigningRequest?.();
+    }
+  };
+
+  const handleVaultXpubRequestAction = async (status: boolean) => {
+    try {
+      setActivityStatus(true);
+      if (status === true) {
+        await handleVaultXpubAction();
+      } else {
+        // reject
+        setVaultXpubData(null);
+        clearVaultXpubRequest?.();
+        await postAction(
+          'enterprisevaultxpubrejected',
+          '{}',
+          identityChain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setActivityStatus(false);
+    }
+  };
+
+  const handleVaultXpubAction = async () => {
+    if (!vaultXpubData) return;
+
+    try {
+      // Get decryption keys from keychain
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+      });
+
+      if (!passwordData || !encryptionKey) {
+        throw new Error('Unable to decrypt stored data');
+      }
+
+      // Decrypt password
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const passwordDecryptedString = passwordDecrypted.toString(
+        CryptoJS.enc.Utf8,
+      );
+      const pwForEncryption = encryptionKey.password + passwordDecryptedString;
+
+      // Decrypt mnemonic seed phrase
+      const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
+      const mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
+
+      if (!mnemonicPhrase) {
+        throw new Error('Failed to decrypt mnemonic');
+      }
+
+      // Determine chain config for the requested chain
+      const vaultChain = vaultXpubData.chain as keyof cryptos;
+      const blockchainConfig = blockchains[vaultChain];
+      if (!blockchainConfig) {
+        throw new Error('Unsupported chain: ' + vaultXpubData.chain);
+      }
+
+      // Derive xpub at m/48'/coin'/orgIndex'/scriptType'
+      const vaultXpub = getMasterXpub(
+        mnemonicPhrase,
+        48,
+        blockchainConfig.slip,
+        vaultXpubData.orgIndex,
+        blockchainConfig.scriptType,
+        vaultChain,
+      );
+
+      // Sign the keyXpub with identity key for verification
+      const { xprivKey: idXprivKey } = identityChainState || {};
+      if (!idXprivKey) {
+        throw new Error('xprivKey not available');
+      }
+      const xprivDecrypted = CryptoJS.AES.decrypt(idXprivKey, pwForEncryption);
+      const xprivKeyDecrypted = xprivDecrypted.toString(CryptoJS.enc.Utf8);
+      if (!xprivKeyDecrypted) {
+        throw new Error('Failed to decrypt xprivKey');
+      }
+      const identityKeypair = generateAddressKeypair(
+        xprivKeyDecrypted,
+        10,
+        0,
+        identityChain,
+      );
+      const xpubMessage = `SSP_VAULT_XPUB:key:${vaultXpub}:${vaultXpubData.chain}:${String(vaultXpubData.orgIndex)}`;
+      const keyXpubSignature = signMessage(
+        xpubMessage,
+        identityKeypair.privKey,
+        identityChain,
+      );
+
+      // Build response payload
+      const responsePayload = {
+        xpubKey: vaultXpub,
+        keyXpubSignature,
+        requestId: vaultXpubData.requestId,
+        chain: vaultXpubData.chain,
+        orgIndex: vaultXpubData.orgIndex,
+      };
+
+      // Post 'enterprisevaultxpubsigned' action to relay
+      await postAction(
+        'enterprisevaultxpubsigned',
+        JSON.stringify(responsePayload),
+        vaultXpubData.chain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+
+      displayMessage('success', t('home:vault_xpub_success'));
+    } catch (error) {
+      console.error('[Vault Xpub] Error:', error);
+      displayMessage('error', t('home:err_vault_xpub_failed'));
+    } finally {
+      setVaultXpubData(null);
+      clearVaultXpubRequest?.();
+    }
+  };
+
+  const handleVaultSigningRequestAction = async (status: boolean) => {
+    try {
+      setActivityStatus(true);
+      if (status === true) {
+        await handleVaultSignAction();
+      } else {
+        // reject
+        setVaultSigningData(null);
+        clearVaultSigningRequest?.();
+        await postAction(
+          'enterprisevaultsignrejected',
+          '{}',
+          identityChain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setActivityStatus(false);
+    }
+  };
+
+  const handleVaultSignAction = async () => {
+    if (!vaultSigningData) return;
+
+    try {
+      // Get decryption keys from keychain
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+      });
+
+      if (!passwordData || !encryptionKey) {
+        throw new Error('Unable to decrypt stored data');
+      }
+
+      // Decrypt password
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const passwordDecryptedString = passwordDecrypted.toString(
+        CryptoJS.enc.Utf8,
+      );
+      let pwForEncryption = encryptionKey.password + passwordDecryptedString;
+
+      // Decrypt mnemonic seed phrase
+      const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
+      let mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
+
+      if (!mnemonicPhrase) {
+        throw new Error('Failed to decrypt mnemonic');
+      }
+
+      // Determine chain config for the requested chain
+      const vaultChain = vaultSigningData.chain as keyof cryptos;
+      const blockchainConfig = blockchains[vaultChain];
+      if (!blockchainConfig) {
+        throw new Error('Unsupported chain: ' + vaultSigningData.chain);
+      }
+
+      // Derive xpriv at m/48'/coin'/orgIndex'/scriptType'
+      let vaultXpriv = getMasterXpriv(
+        mnemonicPhrase,
+        48,
+        blockchainConfig.slip,
+        vaultSigningData.orgIndex,
+        blockchainConfig.scriptType,
+        vaultChain,
+      );
+
+      // Clear mnemonic immediately — no longer needed
+      mnemonicPhrase = '';
+      // NOTE: pwForEncryption is still needed for nonce decryption/encryption below
+
+      // Sign each input at the correct vault derivation path
+      // For each input, derive key at /{vaultIndex}/{addressIndex}
+      const keySignatures: string[] = [];
+      let keyPubKey = '';
+
+      // EVM vault signing: use enterprise nonce for Schnorr partial signature
+      const isEvmChain = blockchainConfig.chainType === 'evm';
+      let usedEnterpriseNonce: publicPrivateNonce | null = null;
+
+      if (isEvmChain && vaultSigningData.reservedNonce) {
+        // Load enterprise nonces from Keychain
+        // Load enterprise nonces from Redux store
+        let enterpriseNonces: publicPrivateNonce[] = [];
+        try {
+          if (enterprisePublicNonces) {
+            const decrypted = CryptoJS.AES.decrypt(
+              enterprisePublicNonces,
+              pwForEncryption,
+            );
+            enterpriseNonces = JSON.parse(
+              decrypted.toString(CryptoJS.enc.Utf8),
+            ) as publicPrivateNonce[];
+          }
+        } catch {
+          throw new Error('Failed to load enterprise nonces');
+        }
+
+        // Find the reserved nonce by matching public parts
+        const reservedNonce = vaultSigningData.reservedNonce;
+        const matchIdx = enterpriseNonces.findIndex(
+          (n) =>
+            n.kPublic === reservedNonce.kPublic &&
+            n.kTwoPublic === reservedNonce.kTwoPublic,
+        );
+        if (matchIdx === -1) {
+          throw new Error('Reserved enterprise nonce not found in local store');
+        }
+        usedEnterpriseNonce = enterpriseNonces[matchIdx];
+
+        // Delete used nonce from local store immediately (never reuse)
+        enterpriseNonces.splice(matchIdx, 1);
+        const encryptedNonces = CryptoJS.AES.encrypt(
+          JSON.stringify(enterpriseNonces),
+          pwForEncryption,
+        ).toString();
+        dispatch(setSspKeyEnterprisePublicNonces(encryptedNonces));
+      }
+
+      // Parse M-of-N signing arrays (sent as JSON strings from wallet)
+      let parsedAllSignerKeys: string[] | undefined;
+      let parsedAllSignerNonces:
+        | Array<{ kPublic: string; kTwoPublic: string }>
+        | undefined;
+      if (vaultSigningData.allSignerKeys) {
+        parsedAllSignerKeys =
+          typeof vaultSigningData.allSignerKeys === 'string'
+            ? (JSON.parse(
+                vaultSigningData.allSignerKeys as unknown as string,
+              ) as string[])
+            : vaultSigningData.allSignerKeys;
+      }
+      if (vaultSigningData.allSignerNonces) {
+        parsedAllSignerNonces =
+          typeof vaultSigningData.allSignerNonces === 'string'
+            ? (JSON.parse(
+                vaultSigningData.allSignerNonces as unknown as string,
+              ) as Array<{ kPublic: string; kTwoPublic: string }>)
+            : vaultSigningData.allSignerNonces;
+      }
+
+      // Parse inputDetails from JSON string (wallet sends as serialized JSON in relay payload)
+      const parsedInputDetails: Array<{
+        index: number;
+        addressIndex: number;
+        witnessScript?: string;
+      }> =
+        typeof vaultSigningData.inputDetails === 'string'
+          ? (JSON.parse(vaultSigningData.inputDetails) as Array<{
+              index: number;
+              addressIndex: number;
+              witnessScript?: string;
+            }>)
+          : vaultSigningData.inputDetails;
+
+      if (
+        isEvmChain &&
+        usedEnterpriseNonce &&
+        vaultSigningData.sigOne &&
+        parsedAllSignerKeys &&
+        parsedAllSignerNonces
+      ) {
+        // EVM: Complete Schnorr multi-party signing (M-of-N vault)
+        // Derive keypair at the transaction's source address index
+        const evmAddressIndex = parsedInputDetails[0]?.addressIndex ?? 0;
+        const signingKeypair = generateAddressKeypair(
+          vaultXpriv,
+          0, // vaultIndex: always 0
+          evmAddressIndex,
+          vaultChain,
+        );
+        keyPubKey = signingKeypair.pubKey;
+
+        const vaultSchnorrResult = continueVaultSigningSchnorrMultisig(
+          vaultSigningData.rawUnsignedTx,
+          signingKeypair,
+          usedEnterpriseNonce,
+          parsedAllSignerKeys,
+          parsedAllSignerNonces,
+          vaultSigningData.sigOne,
+        );
+
+        // Build response with signerContribution + challenge for wallet to forward
+        const responsePayload: Record<string, unknown> = {
+          signerContribution: vaultSchnorrResult.signerContribution,
+          challenge: vaultSchnorrResult.challenge,
+          keyPubKey,
+          requestId: vaultSigningData.requestId,
+        };
+
+        if (usedEnterpriseNonce) {
+          responsePayload.usedNonce = {
+            kPublic: usedEnterpriseNonce.kPublic,
+            kTwoPublic: usedEnterpriseNonce.kTwoPublic,
+          };
+        }
+
+        await postAction(
+          'enterprisevaultsigned',
+          JSON.stringify(responsePayload),
+          vaultSigningData.chain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+
+        // Clear sensitive key material
+        vaultXpriv = '';
+        pwForEncryption = '';
+
+        displayMessage('success', t('home:vault_sign_success'));
+        return; // Early return — EVM vault response already sent (finally handles cleanup)
+      } else if (isEvmChain) {
+        // EVM chain but missing Schnorr data — cannot sign
+        throw new Error(
+          'Missing Schnorr signing data for EVM vault transaction',
+        );
+      } else {
+        // UTXO: Bitcoin message signature per input
+        // Message = rawUnsignedTx + ':' + inputIndex (must match wallet's format)
+        for (let i = 0; i < parsedInputDetails.length; i++) {
+          const input = parsedInputDetails[i];
+          const signingKeypair = generateAddressKeypair(
+            vaultXpriv,
+            0, // typeIndex: receive
+            input.addressIndex,
+            vaultChain,
+          );
+
+          if (!keyPubKey) {
+            keyPubKey = signingKeypair.pubKey;
+          }
+
+          const messageToSign = `${vaultSigningData.rawUnsignedTx}:${i}`;
+          const signature = signMessage(
+            messageToSign,
+            signingKeypair.privKey,
+            vaultChain,
+          );
+          keySignatures.push(signature);
+        }
+      }
+
+      // Clear sensitive key material
+      vaultXpriv = '';
+      pwForEncryption = '';
+
+      // Build response payload
+      const responsePayload: Record<string, unknown> = {
+        keySignatures,
+        keyPubKey,
+        requestId: vaultSigningData.requestId,
+      };
+
+      // Include nonce info for EVM so relay can verify
+      if (isEvmChain && usedEnterpriseNonce) {
+        responsePayload.usedNonce = {
+          kPublic: usedEnterpriseNonce.kPublic,
+          kTwoPublic: usedEnterpriseNonce.kTwoPublic,
+        };
+      }
+
+      // Post 'enterprisevaultsigned' action to relay
+      await postAction(
+        'enterprisevaultsigned',
+        JSON.stringify(responsePayload),
+        vaultSigningData.chain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+
+      displayMessage('success', t('home:vault_sign_success'));
+    } catch (error) {
+      console.error('[Vault Signing] Error:', error);
+      displayMessage('error', t('home:err_vault_sign_failed'));
+    } finally {
+      setVaultSigningData(null);
+      clearVaultSigningRequest?.();
     }
   };
 
@@ -1740,7 +2301,9 @@ function Home({ navigation }: Props) {
             !syncReq &&
             !publicNoncesReq &&
             !evmSigningData &&
-            !wkSigningData && (
+            !wkSigningData &&
+            !vaultXpubData &&
+            !vaultSigningData && (
               <>
                 <TouchableOpacity
                   onPressIn={() => setReceiveModalOpen(true)}
@@ -1924,6 +2487,26 @@ function Home({ navigation }: Props) {
               wkIdentity={wkSigningData.wkIdentity}
               requesterInfo={wkSigningData.requesterInfo}
               actionStatus={handleWkSigningRequestAction}
+            />
+          )}
+          {vaultXpubData && (
+            <VaultXpubRequest
+              activityStatus={activityStatus}
+              vaultName={vaultXpubData.vaultName}
+              orgName={vaultXpubData.orgName}
+              chain={vaultXpubData.chain}
+              actionStatus={handleVaultXpubRequestAction}
+            />
+          )}
+          {vaultSigningData && (
+            <VaultSignRequest
+              activityStatus={activityStatus}
+              recipients={vaultSigningData.recipients}
+              fee={vaultSigningData.fee}
+              feeLabel={vaultSigningData.feeLabel}
+              memo={vaultSigningData.memo}
+              chain={vaultSigningData.chain}
+              actionStatus={handleVaultSigningRequestAction}
             />
           )}
           {txid && (

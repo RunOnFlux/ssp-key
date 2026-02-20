@@ -155,7 +155,8 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
             Fonts.textBold,
             Fonts.textCenter,
             Fonts.textRegular,
-            Gutters.smallMargin,
+            Gutters.smallTMargin,
+            Gutters.smallBMargin,
           ]}
         >
           {t('home:evm_signing_request')}
@@ -164,8 +165,8 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           style={[
             Fonts.textSmall,
             Fonts.textCenter,
-            Gutters.smallLMargin,
-            Gutters.smallRMargin,
+            Gutters.regularLMargin,
+            Gutters.regularRMargin,
           ]}
         >
           {t('home:evm_signing_request_info')}
@@ -253,8 +254,8 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
               borderWidth: 1,
               borderColor: Colors.textGray200,
             },
-            Gutters.smallLMargin,
-            Gutters.smallRMargin,
+            Gutters.regularLMargin,
+            Gutters.regularRMargin,
           ]}
         >
           <ScrollView
@@ -278,7 +279,13 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           </ScrollView>
         </View>
       </View>
-      <View style={[Layout.justifyContentEnd]}>
+      <View
+        style={[
+          Layout.justifyContentEnd,
+          Gutters.regularLMargin,
+          Gutters.regularRMargin,
+        ]}
+      >
         <TouchableOpacity
           style={[
             Common.button.rounded,

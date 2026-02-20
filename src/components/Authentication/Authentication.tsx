@@ -81,6 +81,10 @@ const Authentication = (props: {
       textForPrompt = t('home:auth_confirm_evm_signing');
     } else if (props.type === 'wksigning') {
       textForPrompt = t('home:auth_confirm_wk_signing');
+    } else if (props.type === 'vaultxpub') {
+      textForPrompt = t('home:auth_confirm_vault_xpub');
+    } else if (props.type === 'vaultsigning') {
+      textForPrompt = t('home:auth_confirm_vault_signing');
     }
     console.log('Initiate Fingerprint');
     // if success continue, if fail, show error message and only allow password authentication
@@ -275,9 +279,13 @@ const Authentication = (props: {
                         ? t('home:auth_sync_evm_signing')
                         : props.type === 'wksigning'
                           ? t('home:auth_sync_wk_signing')
-                          : props.type === 'delete'
-                            ? t('home:auth_delete_ssp_key_data')
-                            : t('home:auth_sensitive_inf')}
+                          : props.type === 'vaultxpub'
+                            ? t('home:auth_confirm_vault_xpub_info')
+                            : props.type === 'vaultsigning'
+                              ? t('home:auth_confirm_vault_signing_info')
+                              : props.type === 'delete'
+                                ? t('home:auth_delete_ssp_key_data')
+                                : t('home:auth_sensitive_inf')}
               </Text>
               {props.type !== 'delete' && (
                 <Text
@@ -298,7 +306,11 @@ const Authentication = (props: {
                           ? t('home:auth_confirm_with_pw')
                           : props.type === 'wksigning'
                             ? t('home:auth_confirm_with_pw')
-                            : t('home:auth_grant_access_pw')}
+                            : props.type === 'vaultxpub'
+                              ? t('home:auth_confirm_with_pw')
+                              : props.type === 'vaultsigning'
+                                ? t('home:auth_confirm_with_pw')
+                                : t('home:auth_grant_access_pw')}
                 </Text>
               )}
 
