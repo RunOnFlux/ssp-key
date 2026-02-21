@@ -2506,6 +2506,8 @@ function Home({ navigation }: Props) {
               feeLabel={vaultSigningData.feeLabel}
               memo={vaultSigningData.memo}
               chain={vaultSigningData.chain}
+              vaultName={vaultSigningData.vaultName}
+              orgName={vaultSigningData.orgName}
               actionStatus={handleVaultSigningRequestAction}
             />
           )}

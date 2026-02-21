@@ -13,6 +13,26 @@ import Icon from 'react-native-vector-icons/Feather';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 
+/**
+ * Format a base-unit amount (satoshis/wei) to human-readable using chain decimals.
+ */
+function formatAmount(amount: string, decimals: number): string {
+  try {
+    const raw = BigInt(amount);
+    const divisor = 10n ** BigInt(decimals);
+    const wholePart = raw / divisor;
+    const fracPart = raw % divisor;
+    if (fracPart === 0n) {
+      return wholePart.toString();
+    }
+    const fracStr = fracPart.toString().padStart(decimals, '0');
+    const trimmed = fracStr.replace(/0+$/, '');
+    return `${wholePart.toString()}.${trimmed}`;
+  } catch {
+    return amount;
+  }
+}
+
 interface VaultSignRequestProps {
   activityStatus: boolean;
   recipients: Array<{ address: string; amount: string; label?: string }>;
@@ -20,6 +40,8 @@ interface VaultSignRequestProps {
   feeLabel: string;
   memo?: string;
   chain: string;
+  vaultName?: string;
+  orgName?: string;
   actionStatus: (status: boolean) => void;
 }
 
@@ -30,6 +52,8 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   feeLabel,
   memo,
   chain,
+  vaultName,
+  orgName,
   actionStatus,
 }) => {
   const { t } = useTranslation(['home', 'common']);
@@ -39,6 +63,8 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   const chainDisplay = chainConfig
     ? `${chainConfig.name} (${chainConfig.symbol})`
     : chain;
+  const chainDecimals = chainConfig?.decimals ?? 8;
+  const chainSymbol = chainConfig?.symbol ?? chain.toUpperCase();
 
   const approve = () => {
     console.log('Approve vault signing request');
@@ -97,6 +123,46 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
         >
           {t('home:vault_sign_request_info')}
         </Text>
+
+        {/* Vault & Org Info */}
+        {(vaultName || orgName) && (
+          <View
+            style={[
+              Gutters.regularTMargin,
+              Gutters.regularLMargin,
+              Gutters.regularRMargin,
+              {
+                backgroundColor: Colors.inputBackground,
+                borderRadius: 8,
+                padding: 12,
+                width: '90%',
+                borderWidth: 1,
+                borderColor: Colors.textGray200,
+              },
+            ]}
+          >
+            {vaultName && (
+              <View style={{ marginBottom: orgName ? 4 : 0 }}>
+                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+                  {t('home:vault')}
+                </Text>
+                <Text style={[Fonts.textSmall, Fonts.textBold]}>
+                  {vaultName}
+                </Text>
+              </View>
+            )}
+            {orgName && (
+              <View>
+                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+                  {t('home:organization')}
+                </Text>
+                <Text style={[Fonts.textSmall, Fonts.textBold]}>
+                  {orgName}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Chain Info */}
         <View
@@ -196,7 +262,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                     { marginTop: 2 },
                   ]}
                 >
-                  {recipient.amount}
+                  {formatAmount(recipient.amount, chainDecimals)} {chainSymbol}
                 </Text>
               </View>
             ))}
@@ -211,7 +277,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
               { color: Colors.textGray400 },
             ]}
           >
-            {t('home:vault_sign_fee')}: {fee} ({feeLabel})
+            {t('home:vault_sign_fee')}: {formatAmount(fee, chainDecimals)} {chainSymbol}
           </Text>
         </View>
 

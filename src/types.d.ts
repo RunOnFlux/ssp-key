@@ -606,6 +606,8 @@ interface vaultSigningRequest {
   chain: string;
   orgIndex: number;
   vaultIndex: number;
+  vaultName?: string;
+  orgName?: string;
   recipients: Array<{ address: string; amount: string; label?: string }>;
   fee: string;
   feeLabel: string;
