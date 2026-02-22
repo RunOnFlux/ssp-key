@@ -43,6 +43,10 @@ interface VaultSignRequestProps {
   vaultName?: string;
   orgName?: string;
   actionStatus: (status: boolean) => void;
+  // ERC-20 token metadata (EVM only, omit for native currency)
+  tokenContract?: string;
+  tokenSymbol?: string;
+  tokenDecimals?: number;
 }
 
 const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
@@ -55,6 +59,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   vaultName,
   orgName,
   actionStatus,
+  tokenContract,
+  tokenSymbol,
+  tokenDecimals,
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -65,6 +72,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
     : chain;
   const chainDecimals = chainConfig?.decimals ?? 8;
   const chainSymbol = chainConfig?.symbol ?? chain.toUpperCase();
+  // For token transfers, use token decimals/symbol for amounts; fee always uses chain decimals/symbol
+  const amountDecimals = tokenDecimals != null ? tokenDecimals : chainDecimals;
+  const amountSymbol = tokenSymbol || chainSymbol;
 
   const approve = () => {
     console.log('Approve vault signing request');
@@ -262,7 +272,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                     { marginTop: 2 },
                   ]}
                 >
-                  {formatAmount(recipient.amount, chainDecimals)} {chainSymbol}
+                  {formatAmount(recipient.amount, amountDecimals)} {amountSymbol}
                 </Text>
               </View>
             ))}

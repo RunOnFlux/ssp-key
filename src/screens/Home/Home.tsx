@@ -1361,6 +1361,26 @@ function Home({ navigation }: Props) {
         } else if (result.data.action === 'enterprisevaultsign') {
           try {
             const vaultSignData = JSON.parse(result.data.payload);
+            // Defensively parse fields that may arrive as JSON strings instead of arrays
+            // (e.g. from older wallet versions that double-stringified the payload)
+            if (typeof vaultSignData.recipients === 'string') {
+              vaultSignData.recipients = JSON.parse(vaultSignData.recipients);
+            }
+            if (typeof vaultSignData.inputDetails === 'string') {
+              vaultSignData.inputDetails = JSON.parse(
+                vaultSignData.inputDetails,
+              );
+            }
+            if (typeof vaultSignData.allSignerKeys === 'string') {
+              vaultSignData.allSignerKeys = JSON.parse(
+                vaultSignData.allSignerKeys,
+              );
+            }
+            if (typeof vaultSignData.allSignerNonces === 'string') {
+              vaultSignData.allSignerNonces = JSON.parse(
+                vaultSignData.allSignerNonces,
+              );
+            }
             setVaultSigningData(vaultSignData);
           } catch {
             displayMessage('error', t('home:err_invalid_request'));
@@ -2509,6 +2529,9 @@ function Home({ navigation }: Props) {
               vaultName={vaultSigningData.vaultName}
               orgName={vaultSigningData.orgName}
               actionStatus={handleVaultSigningRequestAction}
+              tokenContract={vaultSigningData.tokenContract}
+              tokenSymbol={vaultSigningData.tokenSymbol}
+              tokenDecimals={vaultSigningData.tokenDecimals}
             />
           )}
           {txid && (

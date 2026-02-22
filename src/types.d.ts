@@ -636,4 +636,8 @@ interface vaultSigningRequest {
     kPublic: string;
     kTwoPublic: string;
   }>;
+  // ERC-20 token metadata (EVM only, omit for native currency)
+  tokenContract?: string;
+  tokenSymbol?: string;
+  tokenDecimals?: number;
 }
