@@ -1,6 +1,6 @@
 import Variables from '../src/theme/Variables';
 import { Fonts, Gutters, Images, Layout } from '../src/theme';
-import { Theme as ReactNavigationTheme } from '@react-navigation/native/src/types';
+import type { Theme as ReactNavigationTheme } from '@react-navigation/native';
 
 export type ThemeVariables = {
   Colors: typeof Variables.Colors;
@@ -19,11 +19,12 @@ export type Theme<F, G, I, L, C> = ThemeVariables & {
 };
 
 type NavigationColors<T> = T extends { colors: infer U } ? U : never;
-type ThemeNavigationColors = NavigationColors<ReactNavigationTheme>;
+export type ThemeNavigationColors = NavigationColors<ReactNavigationTheme>;
 
 export type ThemeNavigationTheme = {
   dark: boolean;
   colors: ThemeNavigationColors;
+  fonts: ReactNavigationTheme['fonts'];
 };
 
 export type CommonParams<C> = ThemeVariables &

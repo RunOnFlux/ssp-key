@@ -116,6 +116,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log('[Socket] Initializing SSP Key socket connection');
     if (!wkIdentity) {
+      // Socket cleanup is handled by the effect's return function when wkIdentity changes
       return;
     }
 
@@ -216,9 +217,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       (data: { chain: string; path: string; payload: string }) => {
         console.log('[Socket] Enterprise vault signing request received');
         try {
-          const parsedPayload = JSON.parse(
-            data.payload,
-          ) as vaultSigningRequest;
+          const parsedPayload = JSON.parse(data.payload) as vaultSigningRequest;
           setVaultSigningRequest(parsedPayload);
         } catch {
           console.error(
@@ -228,10 +227,16 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       },
     );
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: socket initialization must store the instance for context consumers
     setSocket(newSocket);
 
     return () => {
       console.log('[Socket] Cleaning up socket connection');
+      // Clear socket state immediately to prevent stale reference usage
+      setSocket(null);
+      if (newSocket.connected) {
+        newSocket.emit('leave', { wkIdentity });
+      }
       newSocket.close();
     };
   }, [wkIdentity]);

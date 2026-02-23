@@ -129,6 +129,7 @@ function Create({ navigation }: Props) {
 
   useEffect(() => {
     if (mnemonic) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: show modal when mnemonic is generated
       showModal();
     }
   }, [mnemonic]);

@@ -21,7 +21,7 @@ jest.mock('@storage/blockchains', () => ({
 
 // Mock wallet functions
 jest.mock('./wallet', () => ({
-  wifToPrivateKey: jest.fn((wif: string) => 'a'.repeat(64)),
+  wifToPrivateKey: jest.fn((_wif: string) => 'a'.repeat(64)),
   generateAddressKeypair: jest.fn(() => ({
     privKey: 'L1TnU2zbNaAqMoVh65Cyvmcjzbrj41Gs9iTLcWbpJCMynXuap6UN',
     pubKey:

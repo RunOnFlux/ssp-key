@@ -2,8 +2,9 @@ import React from 'react';
 import { Home, Welcome, Create, Restore, LavaMoatTest } from '../screens';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAppSelector } from '../hooks';
+import type { MainParamsList } from '../../@types/navigation';
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<MainParamsList>();
 
 // @refresh reset
 const MainNavigator = () => {

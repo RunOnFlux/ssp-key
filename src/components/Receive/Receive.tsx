@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useTranslation } from 'react-i18next';
@@ -20,8 +20,8 @@ const Receive = (props: { actionStatus: (status: boolean) => void }) => {
   const [isChainSelectOpen, setIsChainSelectOpen] = useState(false);
   const [selectedChain, setSelectedChain] =
     useState<keyof cryptos>(identityChain);
-  const [selectedPath, setSelectedPath] = useState('0-0');
   const [selectedWallet, setSelectedWallet] = useState('0');
+  const selectedPath = useMemo(() => '0-' + selectedWallet, [selectedWallet]);
   const [address, setAddress] = useState('');
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common, Images, darkMode } =
@@ -31,10 +31,29 @@ const Receive = (props: { actionStatus: (status: boolean) => void }) => {
   );
   const blockchainConfig = blockchains[selectedChain];
 
-  useEffect(() => {
-    const path = '0-' + selectedWallet;
-    setSelectedPath(path);
-  }, [selectedWallet]);
+  const generateAddressDetails = (
+    chain: keyof cryptos,
+    path: string,
+    decryptedXpubWallet: string,
+    decryptedXpubKey: string,
+  ) => {
+    const splittedDerPath = path.split('-');
+    const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
+    const addressIndex = Number(splittedDerPath[1]);
+    const addrInfo = generateMultisigAddress(
+      decryptedXpubWallet,
+      decryptedXpubKey,
+      typeIndex,
+      addressIndex,
+      chain,
+    );
+    const addrDetails = {
+      address: addrInfo.address,
+      redeemScript: addrInfo.redeemScript,
+      witnessScript: addrInfo.witnessScript,
+    };
+    return addrDetails;
+  };
 
   useEffect(() => {
     Keychain.getGenericPassword({
@@ -74,30 +93,6 @@ const Receive = (props: { actionStatus: (status: boolean) => void }) => {
         setAddress(t('home:chain_not_synced_scan'));
       });
   }, [selectedPath, selectedChain]);
-
-  const generateAddressDetails = (
-    chain: keyof cryptos,
-    path: string,
-    decryptedXpubWallet: string,
-    decryptedXpubKey: string,
-  ) => {
-    const splittedDerPath = path.split('-');
-    const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
-    const addressIndex = Number(splittedDerPath[1]);
-    const addrInfo = generateMultisigAddress(
-      decryptedXpubWallet,
-      decryptedXpubKey,
-      typeIndex,
-      addressIndex,
-      chain,
-    );
-    const addrDetails = {
-      address: addrInfo.address,
-      redeemScript: addrInfo.redeemScript,
-      witnessScript: addrInfo.witnessScript,
-    };
-    return addrDetails;
-  };
 
   const close = () => {
     console.log('Close');

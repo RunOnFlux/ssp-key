@@ -159,7 +159,9 @@ function Home({ navigation }: Props) {
   );
   // Get identity chain state for migration
   const identityChainState = useAppSelector((state) => state[identityChain]);
-  const { publicNonces, enterprisePublicNonces } = useAppSelector((state) => state.ssp);
+  const { publicNonces, enterprisePublicNonces } = useAppSelector(
+    (state) => state.ssp,
+  );
   const [activityStatus, setActivityStatus] = useState(false);
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
 
@@ -543,7 +545,7 @@ function Home({ navigation }: Props) {
           syncData.publicNonces = pNs;
         }
         // == EVM end
-        console.log(syncData);
+        console.log('syncData', syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
         setSyncSuccessOpen(true);
@@ -666,7 +668,7 @@ function Home({ navigation }: Props) {
           redeemScript: addrInfo.redeemScript,
           witnessScript: addrInfo.witnessScript,
         };
-        console.log(syncData);
+        console.log('syncData', syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
         setSyncSuccessOpen(true);
@@ -765,7 +767,7 @@ function Home({ navigation }: Props) {
       `https://${sspConfig().relay}/v1/action`,
       data,
     );
-    console.log(result.data);
+    console.log('[postAction] response:', result.data);
   };
   const postSyncToken = async (token: string, wkIdentity: string) => {
     // post fcm token tied to wkIdentity
@@ -817,7 +819,7 @@ function Home({ navigation }: Props) {
     setPublicNoncesReq(chain);
   };
   const handleEvmSigningRequest = (data: evmSigningRequest) => {
-    console.log(data);
+    console.log('[EVM Signing] handleEvmSigningRequest:', data);
     setActiveChain(data.chain as keyof cryptos);
     setEvmSigningData(data);
   };
@@ -1293,15 +1295,7 @@ function Home({ navigation }: Props) {
         newNonces.push(generatePublicNonce());
       }
 
-      // Merge and store locally (encrypted in Redux, persisted via MMKV)
-      const allNonces = [...existingNonces, ...newNonces];
-      const encryptedNonces = CryptoJS.AES.encrypt(
-        JSON.stringify(allNonces),
-        pwForEncryption,
-      ).toString();
-      dispatch(setSspKeyEnterprisePublicNonces(encryptedNonces));
-
-      // Submit public parts to relay
+      // Submit public parts to relay FIRST (if this fails, don't save locally)
       const publicParts = newNonces.map((n) => ({
         kPublic: n.kPublic,
         kTwoPublic: n.kTwoPublic,
@@ -1311,6 +1305,14 @@ function Home({ navigation }: Props) {
         source: 'key',
         nonces: publicParts,
       });
+
+      // Merge and store locally (encrypted in Redux, persisted via MMKV)
+      const allNonces = [...existingNonces, ...newNonces];
+      const encryptedNonces = CryptoJS.AES.encrypt(
+        JSON.stringify(allNonces),
+        pwForEncryption,
+      ).toString();
+      dispatch(setSspKeyEnterprisePublicNonces(encryptedNonces));
 
       console.log(
         `[Enterprise Nonces] Key: Generated and submitted ${toGenerate} nonces`,
@@ -1503,6 +1505,7 @@ function Home({ navigation }: Props) {
       } else {
         // reject
         setEvmSigningData(null);
+        clearEvmSigningRequest?.();
         await postAction(
           'evmsigningrejected',
           '{}',
@@ -1671,13 +1674,14 @@ function Home({ navigation }: Props) {
       const passwordDecryptedString = passwordDecrypted.toString(
         CryptoJS.enc.Utf8,
       );
-      const pwForEncryption = encryptionKey.password + passwordDecryptedString;
+      let pwForEncryption = encryptionKey.password + passwordDecryptedString;
 
       // Decrypt mnemonic seed phrase
       const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
-      const mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
+      let mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
 
       if (!mnemonicPhrase) {
+        pwForEncryption = '';
         throw new Error('Failed to decrypt mnemonic');
       }
 
@@ -1704,7 +1708,7 @@ function Home({ navigation }: Props) {
         throw new Error('xprivKey not available');
       }
       const xprivDecrypted = CryptoJS.AES.decrypt(idXprivKey, pwForEncryption);
-      const xprivKeyDecrypted = xprivDecrypted.toString(CryptoJS.enc.Utf8);
+      let xprivKeyDecrypted = xprivDecrypted.toString(CryptoJS.enc.Utf8);
       if (!xprivKeyDecrypted) {
         throw new Error('Failed to decrypt xprivKey');
       }
@@ -1714,12 +1718,19 @@ function Home({ navigation }: Props) {
         0,
         identityChain,
       );
+      // Clear decrypted xpriv — no longer needed
+      xprivKeyDecrypted = '';
       const xpubMessage = `SSP_VAULT_XPUB:key:${vaultXpub}:${vaultXpubData.chain}:${String(vaultXpubData.orgIndex)}`;
       const keyXpubSignature = signMessage(
         xpubMessage,
         identityKeypair.privKey,
         identityChain,
       );
+
+      // Clear sensitive key material
+      identityKeypair.privKey = '';
+      mnemonicPhrase = '';
+      pwForEncryption = '';
 
       // Build response payload
       const responsePayload = {
@@ -2115,7 +2126,7 @@ function Home({ navigation }: Props) {
     if (!evmSigningData) return;
 
     try {
-      console.log(evmSigningData);
+      console.log('[EVM Signing] handleSignEVMAction:', evmSigningData);
       // EVM signing with nonce management - same as approveTransaction
       const encryptionKey = await Keychain.getGenericPassword({
         service: 'enc_key',
@@ -2204,17 +2215,14 @@ function Home({ navigation }: Props) {
 
       const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
       const xpubKeyWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
-
-      console.log(`keyPair:`, keyPair);
-
-      console.log(`xpubWallet`, xpubKeyWalletDecrypted);
+      console.log(`xpubKeyWalletDecrypted`, xpubKeyWalletDecrypted);
 
       const publicKeyWallet = deriveEVMPublicKey(
         xpubKeyWalletDecrypted,
         typeIndex,
         addressIndex,
-        activeChain,
-      ); // ssp key
+        evmSigningData.chain as keyof cryptos,
+      ); // ssp wallet
 
       const result = continueSigningSchnorrMultisig(
         evmSigningData.data || '',

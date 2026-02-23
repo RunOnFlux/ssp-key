@@ -37,7 +37,7 @@ interface VaultSignRequestProps {
   activityStatus: boolean;
   recipients: Array<{ address: string; amount: string; label?: string }>;
   fee: string;
-  feeLabel: string;
+  feeLabel?: string;
   memo?: string;
   chain: string;
   vaultName?: string;
@@ -53,13 +53,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   activityStatus,
   recipients,
   fee,
-  feeLabel,
   memo,
   chain,
   vaultName,
   orgName,
   actionStatus,
-  tokenContract,
+  // tokenContract is received but not directly used — it's part of the props interface for future use
   tokenSymbol,
   tokenDecimals,
 }) => {
@@ -166,9 +165,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                 <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
                   {t('home:organization')}
                 </Text>
-                <Text style={[Fonts.textSmall, Fonts.textBold]}>
-                  {orgName}
-                </Text>
+                <Text style={[Fonts.textSmall, Fonts.textBold]}>{orgName}</Text>
               </View>
             )}
           </View>
@@ -266,13 +263,10 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                   {recipient.address}
                 </Text>
                 <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBold,
-                    { marginTop: 2 },
-                  ]}
+                  style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
                 >
-                  {formatAmount(recipient.amount, amountDecimals)} {amountSymbol}
+                  {formatAmount(recipient.amount, amountDecimals)}{' '}
+                  {amountSymbol}
                 </Text>
               </View>
             ))}
@@ -281,25 +275,16 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
 
         {/* Fee */}
         <View style={[Gutters.smallTMargin, Layout.alignItemsCenter]}>
-          <Text
-            style={[
-              Fonts.textSmall,
-              { color: Colors.textGray400 },
-            ]}
-          >
-            {t('home:vault_sign_fee')}: {formatAmount(fee, chainDecimals)} {chainSymbol}
+          <Text style={[Fonts.textSmall, { color: Colors.textGray400 }]}>
+            {t('home:vault_sign_fee')}: {formatAmount(fee, chainDecimals)}{' '}
+            {chainSymbol}
           </Text>
         </View>
 
         {/* Memo */}
         {memo && (
           <View style={[Gutters.smallTMargin, Layout.alignItemsCenter]}>
-            <Text
-              style={[
-                Fonts.textSmall,
-                { color: Colors.textGray400 },
-              ]}
-            >
+            <Text style={[Fonts.textSmall, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_memo')}: {memo}
             </Text>
           </View>

@@ -31,10 +31,6 @@ const SyncSuccess = (props: {
   const { xpubKey, xpubWallet } = useAppSelector((state) => state[props.chain]);
   const [chainAddress, setChainAddress] = useState('');
 
-  useEffect(() => {
-    generateAddress();
-  }, [xpubKey, xpubWallet]);
-
   const displayMessage = (
     type: string,
     content: string,
@@ -87,6 +83,10 @@ const SyncSuccess = (props: {
         console.log(error.message);
       });
   };
+
+  useEffect(() => {
+    generateAddress();
+  }, [xpubKey, xpubWallet]);
 
   const close = () => {
     console.log('Close');

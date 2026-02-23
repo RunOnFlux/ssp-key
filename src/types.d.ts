@@ -610,7 +610,7 @@ interface vaultSigningRequest {
   orgName?: string;
   recipients: Array<{ address: string; amount: string; label?: string }>;
   fee: string;
-  feeLabel: string;
+  feeLabel?: string;
   memo?: string;
   rawUnsignedTx: string;
   inputDetails: Array<{

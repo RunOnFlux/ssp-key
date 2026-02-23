@@ -20,7 +20,7 @@ import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import * as Keychain from 'react-native-keychain';
 import { blockchains } from '@storage/blockchains';
-import { wordlist } from '@scure/bip39/wordlists/english';
+import { wordlist } from '@scure/bip39/wordlists/english.js';
 import ToastNotif from '../../components/Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';
 

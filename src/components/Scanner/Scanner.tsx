@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import {
   View,
   StyleSheet,
@@ -44,7 +50,7 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   const dispatch = useDispatch();
   const device = useCameraDevice('back');
   const isScanned = useRef(false);
-  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const scanLineAnim = useMemo(() => new Animated.Value(0), []);
 
   setTimeout(() => {
     dispatch(changeTheme({ theme: 'default', darkMode: true }));

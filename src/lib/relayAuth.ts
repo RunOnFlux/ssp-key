@@ -51,7 +51,7 @@ export function computeBodyHash(body: Record<string, unknown>): string {
   const jsonString = JSON.stringify(body);
   const hash = QuickCrypto.createHash('sha256');
   hash.update(jsonString);
-  return hash.digest('hex');
+  return hash.digest('hex').toString();
 }
 
 /**
