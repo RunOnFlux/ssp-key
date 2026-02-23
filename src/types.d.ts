@@ -617,10 +617,13 @@ interface vaultSigningRequest {
     index: number;
     addressIndex: number;
     witnessScript?: string;
+    redeemScript?: string;
     amount: string;
   }>;
   walletSignatures: string[];
   walletPubKey: string;
+  // UTXO progressive signing: wallet-signed TX hex for Key to add its SIGHASH sigs
+  walletSignedHex?: string;
   requestId: string;
   wkIdentity: string;
   // EVM nonce fields — present when signing EVM vault proposals

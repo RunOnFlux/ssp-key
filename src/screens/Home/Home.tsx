@@ -56,7 +56,9 @@ import {
   generateAddressKeypair,
   generatePublicNonce,
   deriveEVMPublicKey,
+  getLibId,
 } from '../../lib/wallet';
+import utxolib from '@runonflux/utxo-lib';
 
 import {
   signTransaction,
@@ -1787,6 +1789,10 @@ function Home({ navigation }: Props) {
   const handleVaultSignAction = async () => {
     if (!vaultSigningData) return;
 
+    // Hoist sensitive vars outside try so they can be cleared in catch/finally
+    let vaultXpriv = '';
+    let pwForEncryption = '';
+
     try {
       // Get decryption keys from keychain
       const encryptionKey = await Keychain.getGenericPassword({
@@ -1808,7 +1814,7 @@ function Home({ navigation }: Props) {
       const passwordDecryptedString = passwordDecrypted.toString(
         CryptoJS.enc.Utf8,
       );
-      let pwForEncryption = encryptionKey.password + passwordDecryptedString;
+      pwForEncryption = encryptionKey.password + passwordDecryptedString;
 
       // Decrypt mnemonic seed phrase
       const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
@@ -1826,7 +1832,7 @@ function Home({ navigation }: Props) {
       }
 
       // Derive xpriv at m/48'/coin'/orgIndex'/scriptType'
-      let vaultXpriv = getMasterXpriv(
+      vaultXpriv = getMasterXpriv(
         mnemonicPhrase,
         48,
         blockchainConfig.slip,
@@ -1839,9 +1845,7 @@ function Home({ navigation }: Props) {
       mnemonicPhrase = '';
       // NOTE: pwForEncryption is still needed for nonce decryption/encryption below
 
-      // Sign each input at the correct vault derivation path
-      // For each input, derive key at /{vaultIndex}/{addressIndex}
-      const keySignatures: string[] = [];
+      // Key's public key for this vault — set during signing
       let keyPubKey = '';
 
       // EVM vault signing: use enterprise nonce for Schnorr partial signature
@@ -1914,12 +1918,16 @@ function Home({ navigation }: Props) {
         index: number;
         addressIndex: number;
         witnessScript?: string;
+        redeemScript?: string;
+        amount?: string;
       }> =
         typeof vaultSigningData.inputDetails === 'string'
           ? (JSON.parse(vaultSigningData.inputDetails) as Array<{
               index: number;
               addressIndex: number;
               witnessScript?: string;
+              redeemScript?: string;
+              amount?: string;
             }>)
           : vaultSigningData.inputDetails;
 
@@ -1935,7 +1943,7 @@ function Home({ navigation }: Props) {
         const evmAddressIndex = parsedInputDetails[0]?.addressIndex ?? 0;
         const signingKeypair = generateAddressKeypair(
           vaultXpriv,
-          0, // vaultIndex: always 0
+          vaultSigningData.vaultIndex,
           evmAddressIndex,
           vaultChain,
         );
@@ -1985,13 +1993,48 @@ function Home({ navigation }: Props) {
           'Missing Schnorr signing data for EVM vault transaction',
         );
       } else {
-        // UTXO: Bitcoin message signature per input
-        // Message = rawUnsignedTx + ':' + inputIndex (must match wallet's format)
+        // UTXO: SIGHASH-based signing via TransactionBuilder
+        // Load the wallet-signed TX and add Key's signatures on top
+        const walletSignedHex = vaultSigningData.walletSignedHex;
+        if (!walletSignedHex) {
+          throw new Error(
+            'Missing wallet-signed TX hex for UTXO vault signing',
+          );
+        }
+
+        const libID = getLibId(vaultChain);
+        const network = utxolib.networks[libID];
+
+        // Determine hashType (BCH uses SIGHASH_BITCOINCASHBIP143)
+        let hashType = utxolib.Transaction.SIGHASH_ALL;
+        if (blockchainConfig.hashType) {
+          hashType =
+            utxolib.Transaction.SIGHASH_ALL |
+            utxolib.Transaction.SIGHASH_BITCOINCASHBIP143;
+        }
+
+        // Parse wallet-signed TX into TransactionBuilder
+        const txb = utxolib.TransactionBuilder.fromTransaction(
+          utxolib.Transaction.fromHex(walletSignedHex, network),
+          network,
+        );
+
+        // Validate input details match TX inputs
+        if (parsedInputDetails.length === 0) {
+          throw new Error('No input details provided for UTXO vault signing');
+        }
+        if (parsedInputDetails.length !== txb.inputs.length) {
+          throw new Error(
+            `Input details count (${parsedInputDetails.length}) does not match transaction inputs (${txb.inputs.length})`,
+          );
+        }
+
+        // Sign each input with Key's per-address keypair
         for (let i = 0; i < parsedInputDetails.length; i++) {
           const input = parsedInputDetails[i];
           const signingKeypair = generateAddressKeypair(
             vaultXpriv,
-            0, // typeIndex: receive
+            vaultSigningData.vaultIndex,
             input.addressIndex,
             vaultChain,
           );
@@ -2000,46 +2043,59 @@ function Home({ navigation }: Props) {
             keyPubKey = signingKeypair.pubKey;
           }
 
-          const messageToSign = `${vaultSigningData.rawUnsignedTx}:${i}`;
-          const signature = signMessage(
-            messageToSign,
+          const keyPair = utxolib.ECPair.fromWIF(
             signingKeypair.privKey,
-            vaultChain,
+            network,
           );
-          keySignatures.push(signature);
-        }
-      }
 
-      // Clear sensitive key material
+          const witnessScriptBuf = input.witnessScript
+            ? Buffer.from(input.witnessScript, 'hex')
+            : undefined;
+          const redeemScriptBuf = input.redeemScript
+            ? Buffer.from(input.redeemScript, 'hex')
+            : undefined;
+          const amount = input.amount ? Number(input.amount) : 0;
+
+          txb.sign(
+            i,
+            keyPair,
+            redeemScriptBuf,
+            hashType,
+            amount,
+            witnessScriptBuf,
+          );
+        }
+
+        // Build with both wallet + key sigs (still incomplete if M>1)
+        const signedHex = txb.buildIncomplete().toHex();
+
+        // Clear sensitive key material
+        vaultXpriv = '';
+        pwForEncryption = '';
+
+        // Build response payload with signedHex
+        const utxoResponsePayload: Record<string, unknown> = {
+          signedHex,
+          keyPubKey,
+          requestId: vaultSigningData.requestId,
+        };
+
+        // Post 'enterprisevaultsigned' action to relay
+        await postAction(
+          'enterprisevaultsigned',
+          JSON.stringify(utxoResponsePayload),
+          vaultSigningData.chain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+
+        displayMessage('success', t('home:vault_sign_success'));
+        return; // Early return — UTXO response already sent (finally handles cleanup)
+      }
+    } catch (error) {
+      // Clear sensitive key material on error path
       vaultXpriv = '';
       pwForEncryption = '';
-
-      // Build response payload
-      const responsePayload: Record<string, unknown> = {
-        keySignatures,
-        keyPubKey,
-        requestId: vaultSigningData.requestId,
-      };
-
-      // Include nonce info for EVM so relay can verify
-      if (isEvmChain && usedEnterpriseNonce) {
-        responsePayload.usedNonce = {
-          kPublic: usedEnterpriseNonce.kPublic,
-          kTwoPublic: usedEnterpriseNonce.kTwoPublic,
-        };
-      }
-
-      // Post 'enterprisevaultsigned' action to relay
-      await postAction(
-        'enterprisevaultsigned',
-        JSON.stringify(responsePayload),
-        vaultSigningData.chain,
-        '',
-        sspWalletKeyInternalIdentity,
-      );
-
-      displayMessage('success', t('home:vault_sign_success'));
-    } catch (error) {
       console.error('[Vault Signing] Error:', error);
       displayMessage('error', t('home:err_vault_sign_failed'));
     } finally {
