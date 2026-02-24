@@ -72,6 +72,7 @@ export default [
     files: ['tests/**/*.ts', 'tests/**/*.tsx'],
     rules: {
       '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/ban-ts-comment': 'off',
     },
   },
 ];
