@@ -361,10 +361,25 @@ function Home({ navigation }: Props) {
   useEffect(() => {
     if (socketVaultSigningRequest) {
       console.log(
-        '[Vault Signing] Received request:',
-        socketVaultSigningRequest,
+        '[Vault Signing] Received request for chain:',
+        socketVaultSigningRequest.chain,
       );
-      setVaultSigningData(socketVaultSigningRequest);
+      // Defensively parse fields that may arrive as JSON strings
+      // (matching the refresh/action path parsing at handleRefresh)
+      const data = { ...socketVaultSigningRequest };
+      if (typeof data.recipients === 'string') {
+        data.recipients = JSON.parse(data.recipients);
+      }
+      if (typeof data.inputDetails === 'string') {
+        data.inputDetails = JSON.parse(data.inputDetails);
+      }
+      if (typeof data.allSignerKeys === 'string') {
+        data.allSignerKeys = JSON.parse(data.allSignerKeys);
+      }
+      if (typeof data.allSignerNonces === 'string') {
+        data.allSignerNonces = JSON.parse(data.allSignerNonces);
+      }
+      setVaultSigningData(data);
     }
   }, [socketVaultSigningRequest]);
 
