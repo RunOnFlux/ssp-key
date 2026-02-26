@@ -364,22 +364,26 @@ function Home({ navigation }: Props) {
         '[Vault Signing] Received request for chain:',
         socketVaultSigningRequest.chain,
       );
-      // Defensively parse fields that may arrive as JSON strings
-      // (matching the refresh/action path parsing at handleRefresh)
-      const data = { ...socketVaultSigningRequest };
-      if (typeof data.recipients === 'string') {
-        data.recipients = JSON.parse(data.recipients);
+      try {
+        // Defensively parse fields that may arrive as JSON strings
+        // (matching the refresh/action path parsing at handleRefresh)
+        const data = { ...socketVaultSigningRequest };
+        if (typeof data.recipients === 'string') {
+          data.recipients = JSON.parse(data.recipients);
+        }
+        if (typeof data.inputDetails === 'string') {
+          data.inputDetails = JSON.parse(data.inputDetails);
+        }
+        if (typeof data.allSignerKeys === 'string') {
+          data.allSignerKeys = JSON.parse(data.allSignerKeys);
+        }
+        if (typeof data.allSignerNonces === 'string') {
+          data.allSignerNonces = JSON.parse(data.allSignerNonces);
+        }
+        setVaultSigningData(data);
+      } catch {
+        displayMessage('error', t('home:err_invalid_request'), 5000);
       }
-      if (typeof data.inputDetails === 'string') {
-        data.inputDetails = JSON.parse(data.inputDetails);
-      }
-      if (typeof data.allSignerKeys === 'string') {
-        data.allSignerKeys = JSON.parse(data.allSignerKeys);
-      }
-      if (typeof data.allSignerNonces === 'string') {
-        data.allSignerNonces = JSON.parse(data.allSignerNonces);
-      }
-      setVaultSigningData(data);
     }
   }, [socketVaultSigningRequest]);
 
@@ -1247,6 +1251,8 @@ function Home({ navigation }: Props) {
       });
     }
   };
+  const nonceReplenishInProgressRef = useRef(false);
+
   /**
    * Check enterprise nonce pool and replenish if below threshold.
    * Generates nonces locally, stores private parts in Keychain,
@@ -1258,6 +1264,8 @@ function Home({ navigation }: Props) {
     replenishNeeded?: boolean,
   ) => {
     if (!sspWalletKeyInternalIdentity) return;
+    if (nonceReplenishInProgressRef.current) return;
+    nonceReplenishInProgressRef.current = true;
     try {
       const TARGET_COUNT = 50;
 
@@ -1337,6 +1345,8 @@ function Home({ navigation }: Props) {
     } catch (error) {
       // Non-critical — don't block Key functionality
       console.log('[Enterprise Nonces] Key replenish error:', error);
+    } finally {
+      nonceReplenishInProgressRef.current = false;
     }
   };
 
@@ -1670,6 +1680,11 @@ function Home({ navigation }: Props) {
   const handleVaultXpubAction = async () => {
     if (!vaultXpubData) return;
 
+    // Hoist sensitive vars outside try so they can be cleared in catch
+    let pwForEncryption = '';
+    let mnemonicPhrase = '';
+    let xprivKeyDecrypted = '';
+
     try {
       // Get decryption keys from keychain
       const encryptionKey = await Keychain.getGenericPassword({
@@ -1691,14 +1706,13 @@ function Home({ navigation }: Props) {
       const passwordDecryptedString = passwordDecrypted.toString(
         CryptoJS.enc.Utf8,
       );
-      let pwForEncryption = encryptionKey.password + passwordDecryptedString;
+      pwForEncryption = encryptionKey.password + passwordDecryptedString;
 
       // Decrypt mnemonic seed phrase
       const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
-      let mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
+      mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
 
       if (!mnemonicPhrase) {
-        pwForEncryption = '';
         throw new Error('Failed to decrypt mnemonic');
       }
 
@@ -1725,7 +1739,7 @@ function Home({ navigation }: Props) {
         throw new Error('xprivKey not available');
       }
       const xprivDecrypted = CryptoJS.AES.decrypt(idXprivKey, pwForEncryption);
-      let xprivKeyDecrypted = xprivDecrypted.toString(CryptoJS.enc.Utf8);
+      xprivKeyDecrypted = xprivDecrypted.toString(CryptoJS.enc.Utf8);
       if (!xprivKeyDecrypted) {
         throw new Error('Failed to decrypt xprivKey');
       }
@@ -1735,8 +1749,6 @@ function Home({ navigation }: Props) {
         0,
         identityChain,
       );
-      // Clear decrypted xpriv — no longer needed
-      xprivKeyDecrypted = '';
       const xpubMessage = `SSP_VAULT_XPUB:key:${vaultXpub}:${vaultXpubData.chain}:${String(vaultXpubData.orgIndex)}`;
       const keyXpubSignature = signMessage(
         xpubMessage,
@@ -1746,6 +1758,7 @@ function Home({ navigation }: Props) {
 
       // Clear sensitive key material
       identityKeypair.privKey = '';
+      xprivKeyDecrypted = '';
       mnemonicPhrase = '';
       pwForEncryption = '';
 
@@ -1769,6 +1782,10 @@ function Home({ navigation }: Props) {
 
       displayMessage('success', t('home:vault_xpub_success'));
     } catch (error) {
+      // Clear sensitive key material on error path
+      xprivKeyDecrypted = '';
+      mnemonicPhrase = '';
+      pwForEncryption = '';
       console.error('[Vault Xpub] Error:', error);
       displayMessage('error', t('home:err_vault_xpub_failed'));
     } finally {
@@ -1807,6 +1824,7 @@ function Home({ navigation }: Props) {
     // Hoist sensitive vars outside try so they can be cleared in catch/finally
     let vaultXpriv = '';
     let pwForEncryption = '';
+    let mnemonicPhrase = '';
 
     try {
       // Get decryption keys from keychain
@@ -1833,7 +1851,7 @@ function Home({ navigation }: Props) {
 
       // Decrypt mnemonic seed phrase
       const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
-      let mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
+      mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
 
       if (!mnemonicPhrase) {
         throw new Error('Failed to decrypt mnemonic');
@@ -1973,6 +1991,9 @@ function Home({ navigation }: Props) {
           vaultSigningData.sigOne,
         );
 
+        // Clear EVM signing keypair private key
+        signingKeypair.privKey = '';
+
         // Build response with signerContribution + challenge for wallet to forward
         const responsePayload: Record<string, unknown> = {
           signerContribution: vaultSchnorrResult.signerContribution,
@@ -2079,6 +2100,9 @@ function Home({ navigation }: Props) {
             amount,
             witnessScriptBuf,
           );
+
+          // Clear per-input private key material
+          signingKeypair.privKey = '';
         }
 
         // Build with both wallet + key sigs (still incomplete if M>1)
@@ -2111,6 +2135,7 @@ function Home({ navigation }: Props) {
       // Clear sensitive key material on error path
       vaultXpriv = '';
       pwForEncryption = '';
+      mnemonicPhrase = '';
       console.error('[Vault Signing] Error:', error);
       displayMessage('error', t('home:err_vault_sign_failed'));
     } finally {
