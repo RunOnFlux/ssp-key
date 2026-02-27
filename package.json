@@ -17,11 +17,11 @@
   },
   "resolutions": {
     "viem": "2.42.1",
-    "@types/react": "19.2.9"
+    "@types/react": "19.2.14"
   },
   "overrides": {
     "viem": "2.42.1",
-    "@types/react": "19.2.9"
+    "@types/react": "19.2.14"
   },
   "dependencies": {
     "@alchemy/aa-core": "3.19.0",
