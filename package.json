@@ -11,17 +11,19 @@
     "start": "react-native start",
     "test": "jest",
     "test:report": "jest --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --coverage",
-    "podinstall": "cd ios && RCT_NEW_ARCH_ENABLED=1 bundle exec pod install && cd ..",
+    "podinstall": "cd ios && RCT_NEW_ARCH_ENABLED=1 RCT_HERMES_V1_ENABLED=0 RCT_USE_PREBUILT_RNCORE=0 bundle exec pod install && cd ..",
     "bundleinstall": "cd ios && bundle install && cd ..",
     "postinstall": "patch-package && node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process,http,https,url,net,tls,zlib,_stream_transform' --yarn --hack"
   },
   "resolutions": {
     "viem": "2.42.1",
-    "@types/react": "19.2.14"
+    "@types/react": "19.2.14",
+    "hermes-compiler": "0.15.0"
   },
   "overrides": {
     "viem": "2.42.1",
-    "@types/react": "19.2.14"
+    "@types/react": "19.2.14",
+    "hermes-compiler": "0.15.0"
   },
   "dependencies": {
     "@alchemy/aa-core": "3.19.0",
