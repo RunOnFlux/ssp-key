@@ -95,6 +95,13 @@ Help make SSP Key accessible globally:
 
 ---
 
+## SSP Enterprise
+
+SSP Enterprise extends SSP Wallet into a multi-party business cryptocurrency management platform with true self-custody across 15+ blockchains.
+[Learn more about SSP Enterprise](https://sspwallet.io/ssp-enterprise.html)
+
+---
+
 ## Acknowledgments
 
 We thank our amazing community for their contributions, which make SSP Key a reliable and secure tool for managing cryptocurrency.
