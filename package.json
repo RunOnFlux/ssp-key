@@ -11,19 +11,17 @@
     "start": "react-native start",
     "test": "jest",
     "test:report": "jest --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --coverage",
-    "podinstall": "cd ios && RCT_NEW_ARCH_ENABLED=1 RCT_HERMES_V1_ENABLED=0 RCT_USE_PREBUILT_RNCORE=0 bundle exec pod install && cd ..",
+    "podinstall": "cd ios && RCT_NEW_ARCH_ENABLED=1 bundle exec pod install && cd ..",
     "bundleinstall": "cd ios && bundle install && cd ..",
     "postinstall": "patch-package && node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process,http,https,url,net,tls,zlib,_stream_transform' --yarn --hack"
   },
   "resolutions": {
     "viem": "2.42.1",
-    "@types/react": "19.2.14",
-    "hermes-compiler": "0.15.0"
+    "@types/react": "19.2.14"
   },
   "overrides": {
     "viem": "2.42.1",
-    "@types/react": "19.2.14",
-    "hermes-compiler": "0.15.0"
+    "@types/react": "19.2.14"
   },
   "dependencies": {
     "@alchemy/aa-core": "3.19.0",
@@ -61,7 +59,7 @@
     "jail-monkey": "2.8.5",
     "postinstall-postinstall": "2.1.0",
     "process": "0.11.10",
-    "react": "19.2.4",
+    "react": "19.2.3",
     "react-i18next": "16.5.4",
     "react-native": "0.84.0",
     "react-native-device-info": "15.0.2",
@@ -129,7 +127,7 @@
     "patch-package": "8.0.1",
     "prettier": "3.8.1",
     "react-native-svg-transformer": "1.5.3",
-    "react-test-renderer": "19.2.4",
+    "react-test-renderer": "19.2.3",
     "rn-nodeify": "10.3.0",
     "sinon": "21.0.1",
     "typescript": "5.9.3",
