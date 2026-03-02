@@ -1352,6 +1352,7 @@ function Home({ navigation }: Props) {
 
   const handleRefresh = async () => {
     // todo here can be a sync request too in the future?
+    let noncesCheckedViaAction = false;
     try {
       console.log('refresh');
       setIsRefreshing(true);
@@ -1427,6 +1428,7 @@ function Home({ navigation }: Props) {
           checkAndReplenishEnterpriseNonces(true).catch((e) =>
             console.log('[Enterprise Nonces] check error:', e),
           );
+          noncesCheckedViaAction = true;
         }
       } else {
         // here open sync needed modal
@@ -1437,6 +1439,13 @@ function Home({ navigation }: Props) {
       console.log(error);
     } finally {
       setIsRefreshing(false);
+      // Proactive nonce check: if the action response didn't trigger a check
+      // (e.g. no pending action → 404, or flag wasn't set), check independently
+      if (!noncesCheckedViaAction && sspWalletKeyInternalIdentity) {
+        checkAndReplenishEnterpriseNonces().catch((e) =>
+          console.log('[Enterprise Nonces] proactive check error:', e),
+        );
+      }
     }
   };
 
