@@ -1272,6 +1272,8 @@ function Home({ navigation }: Props) {
     try {
       const TARGET_COUNT = 50;
 
+      // Check server-side pool status
+      let serverAvailable = 0;
       if (!replenishNeeded) {
         // Check pool status via API
         const statusRes = await axios.get(
@@ -1279,6 +1281,17 @@ function Home({ navigation }: Props) {
         );
         const poolData = statusRes.data?.data;
         if (!poolData || !poolData.replenishNeeded?.key) return;
+        serverAvailable = poolData.key?.available ?? 0;
+      } else {
+        // Called with replenishNeeded=true (from action response), fetch server count
+        try {
+          const statusRes = await axios.get(
+            `https://${sspConfig().relay}/v1/nonces/status/${sspWalletKeyInternalIdentity}`,
+          );
+          serverAvailable = statusRes.data?.data?.key?.available ?? 0;
+        } catch {
+          // Fall back to local count if status check fails
+        }
       }
 
       // Get encryption key for local storage
@@ -1314,7 +1327,44 @@ function Home({ navigation }: Props) {
         existingNonces = [];
       }
 
-      const toGenerate = TARGET_COUNT - existingNonces.length;
+      // Reconcile: tell server which nonces we actually have locally.
+      // This purges server-side 'available' nonces that we don't have
+      // (e.g. local storage cleared, app reinstalled).
+      if (existingNonces.length > 0 || serverAvailable > 0) {
+        try {
+          const localPublicKeys = existingNonces.map((n) => ({
+            kPublic: n.kPublic,
+            kTwoPublic: n.kTwoPublic,
+          }));
+          const reconcileRes = await axios.post(
+            `https://${sspConfig().relay}/v1/nonces/reconcile`,
+            {
+              wkIdentity: sspWalletKeyInternalIdentity,
+              source: 'key',
+              localNonces: localPublicKeys,
+            },
+          );
+          const purged =
+            (reconcileRes.data as { data?: { purged?: number } } | undefined)
+              ?.data?.purged ?? 0;
+          if (purged > 0) {
+            console.log(
+              `[Enterprise Nonces] Key: Purged ${purged} orphaned server nonces`,
+            );
+            serverAvailable = Math.max(serverAvailable - purged, 0);
+          }
+        } catch {
+          // Reconcile is best-effort — don't block replenishment
+        }
+      }
+
+      // Generate based on what the SERVER needs, not just local count.
+      // Handles the case where server nonces were deleted but local still has them.
+      const toGenerate = Math.max(
+        TARGET_COUNT - existingNonces.length,
+        TARGET_COUNT - serverAvailable,
+        0,
+      );
       if (toGenerate <= 0) return;
 
       // Generate new nonces
@@ -1343,7 +1393,7 @@ function Home({ navigation }: Props) {
       dispatch(setSspKeyEnterprisePublicNonces(encryptedNonces));
 
       console.log(
-        `[Enterprise Nonces] Key: Generated and submitted ${toGenerate} nonces`,
+        `[Enterprise Nonces] Key: Generated and submitted ${toGenerate} nonces (server had ${serverAvailable}, local had ${existingNonces.length})`,
       );
     } catch (error) {
       // Non-critical — don't block Key functionality
