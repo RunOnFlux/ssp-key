@@ -140,6 +140,7 @@
   "vault": "Vault",
   "organization": "Organization",
   "vault_sign_recipients": "Recipients",
+  "vault_sign_no_recipients": "No recipient data available",
   "vault_sign_fee": "Fee",
   "vault_sign_memo": "Memo",
   "vault_sign_partial_note": "Partial signature — M of N signers required.",
