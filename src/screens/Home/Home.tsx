@@ -2057,9 +2057,7 @@ function Home({ navigation }: Props) {
         if (!vaultSigningData.sigOne) missing.push('sigOne');
         if (!parsedAllSignerKeys) missing.push('signerKeys');
         if (!parsedAllSignerNonces) missing.push('signerNonces');
-        throw new Error(
-          `Missing Schnorr signing data: ${missing.join(', ')}`,
-        );
+        throw new Error(`Missing Schnorr signing data: ${missing.join(', ')}`);
       } else {
         // UTXO: SIGHASH-based signing via TransactionBuilder
         // Load the wallet-signed TX and add Key's signatures on top
@@ -2168,8 +2166,7 @@ function Home({ navigation }: Props) {
       vaultXpriv = '';
       pwForEncryption = '';
       mnemonicPhrase = '';
-      const errMsg =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error('[Vault Signing] Error:', errMsg);
       displayMessage('error', t('home:err_vault_sign_failed'));
     } finally {

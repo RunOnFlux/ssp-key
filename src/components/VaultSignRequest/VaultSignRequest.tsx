@@ -275,9 +275,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                 </View>
               ))
             ) : (
-              <Text
-                style={[Fonts.textTiny, { color: Colors.textGray400 }]}
-              >
+              <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
                 {t('home:vault_sign_no_recipients')}
               </Text>
             )}
