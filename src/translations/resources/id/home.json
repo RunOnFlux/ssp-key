@@ -140,6 +140,7 @@
   "vault": "Brankas",
   "organization": "Organisasi",
   "vault_sign_recipients": "Penerima",
+  "vault_sign_no_recipients": "No recipient data available",
   "vault_sign_fee": "Biaya",
   "vault_sign_memo": "Catatan",
   "vault_sign_partial_note": "Tanda tangan sebagian — Dibutuhkan tanda tangan dari M dari N penandatangan.",
