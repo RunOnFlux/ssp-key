@@ -371,6 +371,9 @@ function Home({ navigation }: Props) {
         if (typeof data.recipients === 'string') {
           data.recipients = JSON.parse(data.recipients);
         }
+        if (!Array.isArray(data.recipients)) {
+          data.recipients = [];
+        }
         if (typeof data.inputDetails === 'string') {
           data.inputDetails = JSON.parse(data.inputDetails);
         }
@@ -1396,6 +1399,9 @@ function Home({ navigation }: Props) {
             if (typeof vaultSignData.recipients === 'string') {
               vaultSignData.recipients = JSON.parse(vaultSignData.recipients);
             }
+            if (!Array.isArray(vaultSignData.recipients)) {
+              vaultSignData.recipients = [];
+            }
             if (typeof vaultSignData.inputDetails === 'string') {
               vaultSignData.inputDetails = JSON.parse(
                 vaultSignData.inputDetails,
@@ -1895,7 +1901,6 @@ function Home({ navigation }: Props) {
       let usedEnterpriseNonce: publicPrivateNonce | null = null;
 
       if (isEvmChain && vaultSigningData.reservedNonce) {
-        // Load enterprise nonces from Keychain
         // Load enterprise nonces from Redux store
         let enterpriseNonces: publicPrivateNonce[] = [];
         try {
@@ -1909,7 +1914,13 @@ function Home({ navigation }: Props) {
             ) as publicPrivateNonce[];
           }
         } catch {
-          throw new Error('Failed to load enterprise nonces');
+          throw new Error('Failed to decrypt enterprise nonces');
+        }
+
+        if (enterpriseNonces.length === 0) {
+          throw new Error(
+            'No enterprise nonces available. Please sync your SSP Key to generate nonces.',
+          );
         }
 
         // Find the reserved nonce by matching public parts
@@ -1920,7 +1931,14 @@ function Home({ navigation }: Props) {
             n.kTwoPublic === reservedNonce.kTwoPublic,
         );
         if (matchIdx === -1) {
-          throw new Error('Reserved enterprise nonce not found in local store');
+          console.log(
+            '[Vault Signing] Nonce mismatch: local pool has',
+            enterpriseNonces.length,
+            'nonces, none match reserved nonce',
+          );
+          throw new Error(
+            'Reserved nonce not found locally. Nonces may be out of sync. Re-sync SSP Key.',
+          );
         }
         usedEnterpriseNonce = enterpriseNonces[matchIdx];
 
@@ -1980,7 +1998,7 @@ function Home({ navigation }: Props) {
         parsedAllSignerKeys &&
         parsedAllSignerNonces
       ) {
-        // EVM: Complete Schnorr multi-party signing (M-of-N vault)
+        // EVM: Complete Schnorr multi-party signing
         // Derive keypair at the transaction's source address index
         const evmAddressIndex = parsedInputDetails[0]?.addressIndex ?? 0;
         const signingKeypair = generateAddressKeypair(
@@ -2034,8 +2052,13 @@ function Home({ navigation }: Props) {
         return; // Early return — EVM vault response already sent (finally handles cleanup)
       } else if (isEvmChain) {
         // EVM chain but missing Schnorr data — cannot sign
+        const missing = [];
+        if (!usedEnterpriseNonce) missing.push('nonce');
+        if (!vaultSigningData.sigOne) missing.push('sigOne');
+        if (!parsedAllSignerKeys) missing.push('signerKeys');
+        if (!parsedAllSignerNonces) missing.push('signerNonces');
         throw new Error(
-          'Missing Schnorr signing data for EVM vault transaction',
+          `Missing Schnorr signing data: ${missing.join(', ')}`,
         );
       } else {
         // UTXO: SIGHASH-based signing via TransactionBuilder
@@ -2145,7 +2168,9 @@ function Home({ navigation }: Props) {
       vaultXpriv = '';
       pwForEncryption = '';
       mnemonicPhrase = '';
-      console.error('[Vault Signing] Error:', error);
+      const errMsg =
+        error instanceof Error ? error.message : 'Unknown error';
+      console.error('[Vault Signing] Error:', errMsg);
       displayMessage('error', t('home:err_vault_sign_failed'));
     } finally {
       setVaultSigningData(null);

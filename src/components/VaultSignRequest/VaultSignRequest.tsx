@@ -240,36 +240,47 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             showsVerticalScrollIndicator={true}
             nestedScrollEnabled={true}
           >
-            {recipients.map((recipient, index) => (
-              <View
-                key={index}
-                style={{
-                  marginBottom: index < recipients.length - 1 ? 8 : 0,
-                }}
-              >
-                {recipient.label && (
-                  <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
-                    {recipient.label}
+            {Array.isArray(recipients) && recipients.length > 0 ? (
+              recipients.map((recipient, index) => (
+                <View
+                  key={index}
+                  style={{
+                    marginBottom: index < recipients.length - 1 ? 8 : 0,
+                  }}
+                >
+                  {recipient.label && (
+                    <Text
+                      style={[Fonts.textTiny, { color: Colors.textGray400 }]}
+                    >
+                      {recipient.label}
+                    </Text>
+                  )}
+                  <Text
+                    style={[
+                      Fonts.textTiny,
+                      { fontFamily: 'monospace', lineHeight: 16 },
+                    ]}
+                    selectable={true}
+                    numberOfLines={2}
+                    ellipsizeMode="middle"
+                  >
+                    {recipient.address}
                   </Text>
-                )}
-                <Text
-                  style={[
-                    Fonts.textTiny,
-                    { fontFamily: 'monospace', lineHeight: 16 },
-                  ]}
-                  selectable={true}
-                  numberOfLines={1}
-                >
-                  {recipient.address}
-                </Text>
-                <Text
-                  style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
-                >
-                  {formatAmount(recipient.amount, amountDecimals)}{' '}
-                  {amountSymbol}
-                </Text>
-              </View>
-            ))}
+                  <Text
+                    style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
+                  >
+                    {formatAmount(recipient.amount, amountDecimals)}{' '}
+                    {amountSymbol}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text
+                style={[Fonts.textTiny, { color: Colors.textGray400 }]}
+              >
+                {t('home:vault_sign_no_recipients')}
+              </Text>
+            )}
           </ScrollView>
         </View>
 
