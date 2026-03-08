@@ -147,5 +147,10 @@
   "auth_confirm_vault_signing": "Confirm to sign vault transaction.",
   "auth_confirm_vault_signing_info": "You are about to sign an enterprise vault transaction with SSP Key. Review the transaction details carefully.",
   "vault_sign_success": "Vault transaction signed successfully.",
-  "err_vault_sign_failed": "Failed to sign vault transaction. Try again."
+  "err_vault_sign_failed": "Failed to sign vault transaction. Try again.",
+  "enterprise_nonce_sync_request": "Nonce Sync Request",
+  "enterprise_nonce_sync_request_info": "SSP Wallet is requesting to synchronise enterprise signing nonces. This will generate fresh nonces for vault transaction signing. No funds will be moved.",
+  "enterprise_nonce_sync_started": "Syncing enterprise nonces...",
+  "enterprise_nonce_sync_success": "Enterprise nonces synced successfully.",
+  "enterprise_nonce_sync_failed": "Failed to sync enterprise nonces."
 }
