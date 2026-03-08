@@ -215,8 +215,10 @@ export function continueVaultSigningSchnorrMultisig(
 
     console.log('🔐 Built public keys and nonces arrays');
 
-    // Sign: SDK finds this signer via nonce match
-    const { signature: sigTwo, challenge } = schnorrSigner.signMultiSigMsg(
+    // Use signMultiSigHash (not signMultiSigMsg) because messageToSign is already
+    // a keccak256 hash (the ERC-4337 UserOp hash). signMultiSigMsg would double-hash
+    // it via _hashMessage, producing a signature the contract can't verify.
+    const { signature: sigTwo, challenge } = schnorrSigner.signMultiSigHash(
       messageToSign,
       publicKeys,
       publicNoncesArr,

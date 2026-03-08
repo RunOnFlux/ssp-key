@@ -105,8 +105,8 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           Layout.fill,
           Layout.relative,
           Layout.fullWidth,
-          Layout.justifyContentCenter,
           Layout.alignItemsCenter,
+          { paddingTop: 20 },
         ]}
       >
         {/* Vault Signing Icon */}

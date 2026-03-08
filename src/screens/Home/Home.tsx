@@ -372,6 +372,14 @@ function Home({ navigation }: Props) {
         // Defensively parse fields that may arrive as JSON strings
         // (matching the refresh/action path parsing at handleRefresh)
         const data = { ...socketVaultSigningRequest };
+        console.log(
+          '[Vault Signing] Recipients type:',
+          typeof data.recipients,
+          'isArray:',
+          Array.isArray(data.recipients),
+          'length:',
+          Array.isArray(data.recipients) ? data.recipients.length : 'N/A',
+        );
         if (typeof data.recipients === 'string') {
           data.recipients = JSON.parse(data.recipients);
         }
