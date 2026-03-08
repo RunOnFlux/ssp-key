@@ -85,6 +85,8 @@ const Authentication = (props: {
       textForPrompt = t('home:auth_confirm_vault_xpub');
     } else if (props.type === 'vaultsigning') {
       textForPrompt = t('home:auth_confirm_vault_signing');
+    } else if (props.type === 'noncesync') {
+      textForPrompt = t('home:auth_confirm_nonce_sync');
     }
     console.log('Initiate Fingerprint');
     // if success continue, if fail, show error message and only allow password authentication
@@ -283,9 +285,11 @@ const Authentication = (props: {
                             ? t('home:auth_confirm_vault_xpub_info')
                             : props.type === 'vaultsigning'
                               ? t('home:auth_confirm_vault_signing_info')
-                              : props.type === 'delete'
-                                ? t('home:auth_delete_ssp_key_data')
-                                : t('home:auth_sensitive_inf')}
+                              : props.type === 'noncesync'
+                                ? t('home:auth_confirm_nonce_sync_info')
+                                : props.type === 'delete'
+                                  ? t('home:auth_delete_ssp_key_data')
+                                  : t('home:auth_sensitive_inf')}
               </Text>
               {props.type !== 'delete' && (
                 <Text
@@ -310,7 +314,9 @@ const Authentication = (props: {
                               ? t('home:auth_confirm_with_pw')
                               : props.type === 'vaultsigning'
                                 ? t('home:auth_confirm_with_pw')
-                                : t('home:auth_grant_access_pw')}
+                                : props.type === 'noncesync'
+                                  ? t('home:auth_confirm_with_pw')
+                                  : t('home:auth_grant_access_pw')}
                 </Text>
               )}
 

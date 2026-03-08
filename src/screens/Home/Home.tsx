@@ -1277,7 +1277,19 @@ function Home({ navigation }: Props) {
    */
   const checkAndReplenishEnterpriseNonces = async (forceReplace = false) => {
     if (!sspWalletKeyInternalIdentity) return;
-    if (nonceReplenishInProgressRef.current) return;
+    if (nonceReplenishInProgressRef.current) {
+      if (!forceReplace) return;
+      // Force replace: wait for background replenish to finish before proceeding
+      const maxWait = 30_000;
+      const start = Date.now();
+      while (
+        nonceReplenishInProgressRef.current &&
+        Date.now() - start < maxWait
+      ) {
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      if (nonceReplenishInProgressRef.current) return; // timed out
+    }
     nonceReplenishInProgressRef.current = true;
     try {
       const TARGET_COUNT = 50;
@@ -2555,7 +2567,8 @@ function Home({ navigation }: Props) {
             !evmSigningData &&
             !wkSigningData &&
             !vaultXpubData &&
-            !vaultSigningData && (
+            !vaultSigningData &&
+            !keyNonceSyncDialogOpen && (
               <>
                 <TouchableOpacity
                   onPressIn={() => setReceiveModalOpen(true)}
