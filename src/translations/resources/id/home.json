@@ -147,5 +147,10 @@
   "auth_confirm_vault_signing": "Konfirmasi untuk menandatangani transaksi brankas.",
   "auth_confirm_vault_signing_info": "Anda akan segera menandatangani transaksi Brankas Enterprise dengan SSP Key. Periksa detail transaksi dengan cermat.",
   "vault_sign_success": "Transaksi brankas telah ditandatangani dengan sukses.",
-  "err_vault_sign_failed": "Transaksi brankas gagal ditandatangani. Coba lagi."
+  "err_vault_sign_failed": "Transaksi brankas gagal ditandatangani. Coba lagi.",
+  "enterprise_nonce_sync_request": "Nonce Sync Request",
+  "enterprise_nonce_sync_request_info": "SSP Wallet is requesting to synchronise enterprise signing nonces. This will generate fresh nonces for vault transaction signing. No funds will be moved.",
+  "enterprise_nonce_sync_started": "Syncing enterprise nonces...",
+  "enterprise_nonce_sync_success": "Enterprise nonces synced successfully.",
+  "enterprise_nonce_sync_failed": "Failed to sync enterprise nonces."
 }
