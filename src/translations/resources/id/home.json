@@ -146,6 +146,8 @@
   "vault_sign_partial_note": "Tanda tangan sebagian — Dibutuhkan tanda tangan dari M dari N penandatangan.",
   "auth_confirm_vault_signing": "Konfirmasi untuk menandatangani transaksi brankas.",
   "auth_confirm_vault_signing_info": "Anda akan segera menandatangani transaksi Brankas Enterprise dengan SSP Key. Periksa detail transaksi dengan cermat.",
+  "auth_confirm_nonce_sync": "Confirm to sync enterprise nonces.",
+  "auth_confirm_nonce_sync_info": "You are about to regenerate and sync enterprise signing nonces. This will replace all existing nonces.",
   "vault_sign_success": "Transaksi brankas telah ditandatangani dengan sukses.",
   "err_vault_sign_failed": "Transaksi brankas gagal ditandatangani. Coba lagi.",
   "enterprise_nonce_sync_request": "Nonce Sync Request",
