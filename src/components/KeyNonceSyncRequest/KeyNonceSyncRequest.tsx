@@ -70,52 +70,50 @@ const KeyNonceSyncRequest: React.FC<KeyNonceSyncRequestProps> = ({
         >
           {t('home:enterprise_nonce_sync_request_info')}
         </Text>
+      </View>
 
-        <View
+      <View
+        style={[
+          Layout.justifyContentEnd,
+          Gutters.regularLMargin,
+          Gutters.regularRMargin,
+        ]}
+      >
+        <TouchableOpacity
           style={[
-            Layout.justifyContentEnd,
-            Gutters.regularLMargin,
-            Gutters.regularRMargin,
-            Gutters.regularTMargin,
-            Layout.fullWidth,
+            Common.button.rounded,
+            Common.button.bluePrimary,
+            Gutters.regularBMargin,
+            Gutters.smallTMargin,
           ]}
+          disabled={authenticationOpen || activityStatus}
+          onPressIn={() => openAuthentication()}
         >
-          <TouchableOpacity
+          {(authenticationOpen || activityStatus) && (
+            <ActivityIndicator
+              size={'large'}
+              style={[{ position: 'absolute' }]}
+            />
+          )}
+          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+            {t('home:approve_request')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          disabled={authenticationOpen || activityStatus}
+          onPressIn={() => reject()}
+        >
+          <Text
             style={[
-              Common.button.rounded,
-              Common.button.bluePrimary,
+              Fonts.textSmall,
+              Fonts.textBluePrimary,
               Gutters.regularBMargin,
-              Gutters.smallTMargin,
+              Fonts.textCenter,
             ]}
-            disabled={authenticationOpen || activityStatus}
-            onPressIn={() => openAuthentication()}
           >
-            {(authenticationOpen || activityStatus) && (
-              <ActivityIndicator
-                size={'large'}
-                style={[{ position: 'absolute' }]}
-              />
-            )}
-            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-              {t('home:approve_request')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            disabled={authenticationOpen || activityStatus}
-            onPressIn={() => reject()}
-          >
-            <Text
-              style={[
-                Fonts.textSmall,
-                Fonts.textBluePrimary,
-                Gutters.regularBMargin,
-                Fonts.textCenter,
-              ]}
-            >
-              {t('home:reject')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+            {t('home:reject')}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {authenticationOpen && (
