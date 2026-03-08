@@ -39,6 +39,8 @@ interface SocketContextType {
   clearVaultXpubRequest?: () => void;
   vaultSigningRequest: vaultSigningRequest | null;
   clearVaultSigningRequest?: () => void;
+  keyNonceSyncRequest: boolean;
+  clearKeyNonceSyncRequest?: () => void;
 }
 
 const defaultValue: SocketContextType = {
@@ -54,6 +56,7 @@ const defaultValue: SocketContextType = {
   wkSigningRequest: null,
   vaultXpubRequest: null,
   vaultSigningRequest: null,
+  keyNonceSyncRequest: false,
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
@@ -79,6 +82,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     useState<vaultXpubRequest | null>(null);
   const [vaultSigningRequest, setVaultSigningRequest] =
     useState<vaultSigningRequest | null>(null);
+  const [keyNonceSyncRequest, setKeyNonceSyncRequest] = useState(false);
 
   /**
    * Emit an authenticated join event.
@@ -227,6 +231,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       },
     );
 
+    // Handle Enterprise Key Nonce Sync request
+    newSocket.on('enterprisekeynoncesync', () => {
+      console.log('[Socket] Enterprise key nonce sync request received');
+      setKeyNonceSyncRequest(true);
+    });
+
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: socket initialization must store the instance for context consumers
     setSocket(newSocket);
 
@@ -291,6 +301,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     setVaultSigningRequest(null);
   };
 
+  const clearKeyNonceSyncRequest = () => {
+    setKeyNonceSyncRequest(false);
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -307,6 +321,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         clearVaultXpubRequest,
         vaultSigningRequest,
         clearVaultSigningRequest,
+        keyNonceSyncRequest,
+        clearKeyNonceSyncRequest,
       }}
     >
       {children}

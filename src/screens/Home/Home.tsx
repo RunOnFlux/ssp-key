@@ -101,6 +101,7 @@ import EvmSigningSuccess from '../../components/EvmSigningSuccess/EvmSigningSucc
 import WkSigningRequest from '../../components/WkSigningRequest/WkSigningRequest';
 import VaultXpubRequest from '../../components/VaultXpubRequest/VaultXpubRequest';
 import VaultSignRequest from '../../components/VaultSignRequest/VaultSignRequest';
+import KeyNonceSyncRequest from '../../components/KeyNonceSyncRequest/KeyNonceSyncRequest';
 import { MainScreenProps } from '../../../@types/navigation';
 
 type Props = MainScreenProps<'Home'>;
@@ -156,6 +157,7 @@ function Home({ navigation }: Props) {
   );
   const [vaultSigningData, setVaultSigningData] =
     useState<vaultSigningRequest | null>(null);
+  const [keyNonceSyncDialogOpen, setKeyNonceSyncDialogOpen] = useState(false);
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
   );
@@ -180,6 +182,8 @@ function Home({ navigation }: Props) {
     clearVaultXpubRequest,
     vaultSigningRequest: socketVaultSigningRequest,
     clearVaultSigningRequest,
+    keyNonceSyncRequest: socketKeyNonceSyncRequest,
+    clearKeyNonceSyncRequest,
   } = useSocket();
   const { createWkIdentityAuth } = useRelayAuth();
 
@@ -389,6 +393,13 @@ function Home({ navigation }: Props) {
       }
     }
   }, [socketVaultSigningRequest]);
+
+  useEffect(() => {
+    if (socketKeyNonceSyncRequest) {
+      console.log('[Enterprise Nonces] Key nonce sync request received');
+      setKeyNonceSyncDialogOpen(true);
+    }
+  }, [socketKeyNonceSyncRequest]);
 
   useEffect(() => {
     if (!xpubKey || !xpubWallet) {
@@ -1260,12 +1271,11 @@ function Home({ navigation }: Props) {
    * Check enterprise nonce pool and replenish if below threshold.
    * Generates nonces locally, stores private parts in Keychain,
    * submits public parts to relay.
-   * @param replenishNeeded - If true, skip the status API call and replenish based on local count.
-   *   Used when the action response already told us replenishment is needed.
+   *
+   * @param forceReplace - If true, delete all existing nonces and generate a fresh full set.
+   *   Used by the manual "Sync Nonces" action triggered from the enterprise app.
    */
-  const checkAndReplenishEnterpriseNonces = async (
-    replenishNeeded?: boolean,
-  ) => {
+  const checkAndReplenishEnterpriseNonces = async (forceReplace = false) => {
     if (!sspWalletKeyInternalIdentity) return;
     if (nonceReplenishInProgressRef.current) return;
     nonceReplenishInProgressRef.current = true;
@@ -1274,24 +1284,15 @@ function Home({ navigation }: Props) {
 
       // Check server-side pool status
       let serverAvailable = 0;
-      if (!replenishNeeded) {
-        // Check pool status via API
+      try {
         const statusRes = await axios.get(
           `https://${sspConfig().relay}/v1/nonces/status/${sspWalletKeyInternalIdentity}`,
         );
         const poolData = statusRes.data?.data;
-        if (!poolData || !poolData.replenishNeeded?.key) return;
-        serverAvailable = poolData.key?.available ?? 0;
-      } else {
-        // Called with replenishNeeded=true (from action response), fetch server count
-        try {
-          const statusRes = await axios.get(
-            `https://${sspConfig().relay}/v1/nonces/status/${sspWalletKeyInternalIdentity}`,
-          );
-          serverAvailable = statusRes.data?.data?.key?.available ?? 0;
-        } catch {
-          // Fall back to local count if status check fails
-        }
+        if (!forceReplace && !poolData?.replenishNeeded?.key) return;
+        serverAvailable = poolData?.key?.available ?? 0;
+      } catch {
+        // If status check fails, proceed with replenishment based on local count
       }
 
       // Get encryption key for local storage
@@ -1327,34 +1328,49 @@ function Home({ navigation }: Props) {
         existingNonces = [];
       }
 
-      // Reconcile: tell server which nonces we actually have locally.
-      // This purges server-side 'available' nonces that we don't have
-      // (e.g. local storage cleared, app reinstalled).
-      if (existingNonces.length > 0 || serverAvailable > 0) {
+      if (forceReplace) {
+        // Force replace: purge ALL server nonces and clear local nonces
         try {
-          const localPublicKeys = existingNonces.map((n) => ({
-            kPublic: n.kPublic,
-            kTwoPublic: n.kTwoPublic,
-          }));
-          const reconcileRes = await axios.post(
-            `https://${sspConfig().relay}/v1/nonces/reconcile`,
-            {
-              wkIdentity: sspWalletKeyInternalIdentity,
-              source: 'key',
-              localNonces: localPublicKeys,
-            },
-          );
-          const purged =
-            (reconcileRes.data as { data?: { purged?: number } } | undefined)
-              ?.data?.purged ?? 0;
-          if (purged > 0) {
-            console.log(
-              `[Enterprise Nonces] Key: Purged ${purged} orphaned server nonces`,
-            );
-            serverAvailable = Math.max(serverAvailable - purged, 0);
-          }
+          await axios.post(`https://${sspConfig().relay}/v1/nonces/reconcile`, {
+            wkIdentity: sspWalletKeyInternalIdentity,
+            source: 'key',
+            localNonces: [], // empty = purge all server nonces
+          });
         } catch {
-          // Reconcile is best-effort — don't block replenishment
+          // Best-effort purge
+        }
+        existingNonces = [];
+        serverAvailable = 0;
+      } else {
+        // Reconcile: tell server which nonces we actually have locally.
+        // This purges server-side 'available' nonces that we don't have
+        // (e.g. local storage cleared, app reinstalled).
+        if (existingNonces.length > 0 || serverAvailable > 0) {
+          try {
+            const localPublicKeys = existingNonces.map((n) => ({
+              kPublic: n.kPublic,
+              kTwoPublic: n.kTwoPublic,
+            }));
+            const reconcileRes = await axios.post(
+              `https://${sspConfig().relay}/v1/nonces/reconcile`,
+              {
+                wkIdentity: sspWalletKeyInternalIdentity,
+                source: 'key',
+                localNonces: localPublicKeys,
+              },
+            );
+            const purged =
+              (reconcileRes.data as { data?: { purged?: number } } | undefined)
+                ?.data?.purged ?? 0;
+            if (purged > 0) {
+              console.log(
+                `[Enterprise Nonces] Key: Purged ${purged} orphaned server nonces`,
+              );
+              serverAvailable = Math.max(serverAvailable - purged, 0);
+            }
+          } catch {
+            // Reconcile is best-effort — don't block replenishment
+          }
         }
       }
 
@@ -1404,8 +1420,6 @@ function Home({ navigation }: Props) {
   };
 
   const handleRefresh = async () => {
-    // todo here can be a sync request too in the future?
-    let noncesCheckedViaAction = false;
     try {
       console.log('refresh');
       setIsRefreshing(true);
@@ -1478,13 +1492,8 @@ function Home({ navigation }: Props) {
           } catch {
             displayMessage('error', t('home:err_invalid_request'));
           }
-        }
-        // Check enterprise nonce pool using enriched action response (non-blocking)
-        if (result.data.enterpriseNoncesNeeded?.key) {
-          checkAndReplenishEnterpriseNonces(true).catch((e) =>
-            console.log('[Enterprise Nonces] check error:', e),
-          );
-          noncesCheckedViaAction = true;
+        } else if (result.data.action === 'enterprisekeynoncesync') {
+          setKeyNonceSyncDialogOpen(true);
         }
       } else {
         // here open sync needed modal
@@ -1495,11 +1504,10 @@ function Home({ navigation }: Props) {
       console.log(error);
     } finally {
       setIsRefreshing(false);
-      // Proactive nonce check: if the action response didn't trigger a check
-      // (e.g. no pending action → 404, or flag wasn't set), check independently
-      if (!noncesCheckedViaAction && sspWalletKeyInternalIdentity) {
+      // Non-blocking: replenish enterprise nonces on every refresh
+      if (sspWalletKeyInternalIdentity) {
         checkAndReplenishEnterpriseNonces().catch((e) =>
-          console.log('[Enterprise Nonces] proactive check error:', e),
+          console.log('[Enterprise Nonces] check error:', e),
         );
       }
     }
@@ -1508,6 +1516,45 @@ function Home({ navigation }: Props) {
   const handleRestore = () => {
     setIsMenuModalOpen(false);
     navigation.navigate('Restore');
+  };
+
+  const handleKeyNonceSyncAction = async (approved: boolean) => {
+    setKeyNonceSyncDialogOpen(false);
+    clearKeyNonceSyncRequest?.();
+
+    if (!approved) {
+      // User rejected — notify wallet
+      await postAction(
+        'enterprisekeynoncesyncrejected',
+        'enterprisekeynoncesyncrejected',
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      ).catch(() => {});
+      return;
+    }
+
+    try {
+      displayMessage('info', t('home:enterprise_nonce_sync_started'));
+      await checkAndReplenishEnterpriseNonces(true);
+      displayMessage('success', t('home:enterprise_nonce_sync_success'));
+      await postAction(
+        'enterprisekeynoncesynced',
+        'enterprisekeynoncesynced',
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+    } catch {
+      displayMessage('error', t('home:enterprise_nonce_sync_failed'));
+      await postAction(
+        'enterprisekeynoncesyncrejected',
+        'enterprisekeynoncesyncrejected',
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      ).catch(() => {});
+    }
   };
 
   const handleTransactionRequestAction = async (status: boolean) => {
@@ -2701,6 +2748,14 @@ function Home({ navigation }: Props) {
               orgName={vaultXpubData.orgName}
               chain={vaultXpubData.chain}
               actionStatus={handleVaultXpubRequestAction}
+            />
+          )}
+          {keyNonceSyncDialogOpen && (
+            <KeyNonceSyncRequest
+              activityStatus={activityStatus}
+              actionStatus={(status: boolean) => {
+                void handleKeyNonceSyncAction(status);
+              }}
             />
           )}
           {vaultSigningData && (
