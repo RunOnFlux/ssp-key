@@ -25,11 +25,16 @@ const mockSignMultiSigMsg = jest.fn(() => ({
   signature: { buffer: MOCK_SIG_BUFFER },
   challenge: { buffer: MOCK_CHALLENGE_BUFFER },
 }));
+const mockSignMultiSigHash = jest.fn(() => ({
+  signature: { buffer: MOCK_SIG_BUFFER },
+  challenge: { buffer: MOCK_CHALLENGE_BUFFER },
+}));
 const mockCreateSchnorrSigner = jest.fn(() => ({
   restorePubNonces: mockRestorePubNonces,
   getPubKey: mockGetPubKey,
   getPubNonces: mockGetPubNonces,
   signMultiSigMsg: mockSignMultiSigMsg,
+  signMultiSigHash: mockSignMultiSigHash,
 }));
 const mockGetCombinedPublicKey = jest.fn(() => ({
   buffer: MOCK_PUB_KEY_BUFFER,
@@ -143,11 +148,16 @@ describe('evmSigning', () => {
       signature: { buffer: MOCK_SIG_BUFFER },
       challenge: { buffer: MOCK_CHALLENGE_BUFFER },
     });
+    mockSignMultiSigHash.mockReturnValue({
+      signature: { buffer: MOCK_SIG_BUFFER },
+      challenge: { buffer: MOCK_CHALLENGE_BUFFER },
+    });
     mockCreateSchnorrSigner.mockReturnValue({
       restorePubNonces: mockRestorePubNonces,
       getPubKey: mockGetPubKey,
       getPubNonces: mockGetPubNonces,
       signMultiSigMsg: mockSignMultiSigMsg,
+      signMultiSigHash: mockSignMultiSigHash,
     });
     mockSumSigs.mockReturnValue({ buffer: MOCK_SIG_BUFFER });
     mockGetCombinedPublicKey.mockReturnValue({ buffer: MOCK_PUB_KEY_BUFFER });
@@ -555,9 +565,9 @@ describe('evmSigning', () => {
         MOCK_SIG_ONE_HEX,
       );
 
-      // signMultiSigMsg receives publicKeys array where the signer's slot
+      // signMultiSigHash receives publicKeys array where the signer's slot
       // is the internal Key instance (not a Key constructed from hex)
-      const [, pubKeys] = mockSignMultiSigMsg.mock.calls[0];
+      const [, pubKeys] = mockSignMultiSigHash.mock.calls[0];
       const signerIdx = makeAllPublicKeys2of2().indexOf(signerPubKeyHex);
       expect(pubKeys[signerIdx]).toBe(internalPubKey);
     });
@@ -578,13 +588,13 @@ describe('evmSigning', () => {
         MOCK_SIG_ONE_HEX,
       );
 
-      // signMultiSigMsg receives nonces array with internal nonces at signer index
-      const [, , pubNonces] = mockSignMultiSigMsg.mock.calls[0];
+      // signMultiSigHash receives nonces array with internal nonces at signer index
+      const [, , pubNonces] = mockSignMultiSigHash.mock.calls[0];
       const signerIdx = makeAllPublicKeys2of2().indexOf(signerPubKeyHex);
       expect(pubNonces[signerIdx]).toBe(internalNonces);
     });
 
-    test('should call signMultiSigMsg with all public keys and nonces', () => {
+    test('should call signMultiSigHash with all public keys and nonces', () => {
       continueVaultSigningSchnorrMultisig(
         MOCK_MESSAGE,
         makeKeyKeypair(),
@@ -594,8 +604,8 @@ describe('evmSigning', () => {
         MOCK_SIG_ONE_HEX,
       );
 
-      expect(mockSignMultiSigMsg).toHaveBeenCalledTimes(1);
-      const [msg, pubKeys, pubNonces] = mockSignMultiSigMsg.mock.calls[0];
+      expect(mockSignMultiSigHash).toHaveBeenCalledTimes(1);
+      const [msg, pubKeys, pubNonces] = mockSignMultiSigHash.mock.calls[0];
       expect(msg).toBe(MOCK_MESSAGE);
       expect(pubKeys).toHaveLength(2);
       expect(pubNonces).toHaveLength(2);
@@ -671,8 +681,8 @@ describe('evmSigning', () => {
         MOCK_SIG_ONE_HEX,
       );
 
-      expect(mockSignMultiSigMsg).toHaveBeenCalledTimes(1);
-      const [, pubKeys, pubNonces] = mockSignMultiSigMsg.mock.calls[0];
+      expect(mockSignMultiSigHash).toHaveBeenCalledTimes(1);
+      const [, pubKeys, pubNonces] = mockSignMultiSigHash.mock.calls[0];
       expect(pubKeys).toHaveLength(4);
       expect(pubNonces).toHaveLength(4);
       expect(result.signerContribution).toBe(MOCK_SIG_BUFFER.toString('hex'));
@@ -709,16 +719,16 @@ describe('evmSigning', () => {
         MOCK_SIG_ONE_HEX,
       );
 
-      expect(mockSignMultiSigMsg).toHaveBeenCalledTimes(1);
-      const [, pubKeys, pubNonces] = mockSignMultiSigMsg.mock.calls[0];
+      expect(mockSignMultiSigHash).toHaveBeenCalledTimes(1);
+      const [, pubKeys, pubNonces] = mockSignMultiSigHash.mock.calls[0];
       expect(pubKeys).toHaveLength(6);
       expect(pubNonces).toHaveLength(6);
       expect(result.signerContribution).toBeDefined();
       expect(result.challenge).toBeDefined();
     });
 
-    test('should propagate SDK errors from signMultiSigMsg', () => {
-      mockSignMultiSigMsg.mockImplementationOnce(() => {
+    test('should propagate SDK errors from signMultiSigHash', () => {
+      mockSignMultiSigHash.mockImplementationOnce(() => {
         throw new Error('Vault SDK signing error');
       });
 
