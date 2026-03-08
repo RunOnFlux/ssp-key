@@ -146,6 +146,8 @@
   "vault_sign_partial_note": "Partial signature — M of N signers required.",
   "auth_confirm_vault_signing": "Confirm to sign vault transaction.",
   "auth_confirm_vault_signing_info": "You are about to sign an enterprise vault transaction with SSP Key. Review the transaction details carefully.",
+  "auth_confirm_nonce_sync": "Confirm to sync enterprise nonces.",
+  "auth_confirm_nonce_sync_info": "You are about to regenerate and sync enterprise signing nonces. This will replace all existing nonces.",
   "vault_sign_success": "Vault transaction signed successfully.",
   "err_vault_sign_failed": "Failed to sign vault transaction. Try again.",
   "enterprise_nonce_sync_request": "Nonce Sync Request",
