@@ -146,6 +146,8 @@
   "vault_sign_amount": "Amount",
   "vault_sign_fee": "Biaya",
   "vault_sign_memo": "Catatan",
+  "vault_sign_decoded_notice": "Data below is decoded directly from the raw transaction you are signing. Always verify recipients and amounts before approving.",
+  "vault_sign_decode_error": "Could not fully decode transaction data. Proceed with caution.",
   "vault_sign_partial_note": "Multisig vault transaction. It will only be broadcast once all required signers have approved.",
   "auth_confirm_vault_signing": "Konfirmasi untuk menandatangani transaksi brankas.",
   "auth_confirm_vault_signing_info": "Anda akan segera menandatangani transaksi Brankas Enterprise dengan SSP Key. Periksa detail transaksi dengan cermat.",
