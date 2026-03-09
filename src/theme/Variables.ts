@@ -25,6 +25,7 @@ export const Colors = {
   textInput: '#4d4d4d',
   primary: '#E14032',
   success: '#28a745',
+  warning: '#f0ad4e',
   error: '#dc3545',
   bluePrimary: '#1677ff',
   //ComponentColors

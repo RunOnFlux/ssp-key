@@ -73,6 +73,10 @@ import {
   continueSigningSchnorrMultisig,
   continueVaultSigningSchnorrMultisig,
 } from '../../lib/evmSigning';
+import {
+  decodeVaultTransaction,
+  type VaultDecodedTx,
+} from '../../lib/transactions';
 import { signMessage } from '../../lib/relayAuth';
 
 import {
@@ -157,6 +161,9 @@ function Home({ navigation }: Props) {
   );
   const [vaultSigningData, setVaultSigningData] =
     useState<vaultSigningRequest | null>(null);
+  const [decodedVaultTx, setDecodedVaultTx] = useState<VaultDecodedTx | null>(
+    null,
+  );
   const [keyNonceSyncDialogOpen, setKeyNonceSyncDialogOpen] = useState(false);
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
@@ -396,6 +403,47 @@ function Home({ navigation }: Props) {
           data.allSignerNonces = JSON.parse(data.allSignerNonces);
         }
         setVaultSigningData(data);
+        // Decode raw transaction independently for trustless verification
+        if (data.chain) {
+          const chainConf = blockchains[data.chain as keyof cryptos];
+          if (chainConf?.chainType === 'evm' && data.evmUserOp) {
+            // EVM: rawUnsignedTx is a hash, decode from evmUserOp instead
+            try {
+              const parsed =
+                typeof data.evmUserOp === 'string'
+                  ? JSON.parse(data.evmUserOp)
+                  : data.evmUserOp;
+              const decodableJson = JSON.stringify({
+                userOpRequest: parsed,
+              });
+              setDecodedVaultTx(
+                decodeVaultTransaction(
+                  decodableJson,
+                  data.chain as keyof cryptos,
+                ),
+              );
+            } catch {
+              setDecodedVaultTx({
+                sender: '',
+                recipients: [],
+                fee: '0',
+                error: 'Failed to parse EVM UserOp data',
+              });
+            }
+          } else if (data.rawUnsignedTx) {
+            // UTXO: decode from raw TX hex
+            const inputAmounts = (
+              Array.isArray(data.inputDetails) ? data.inputDetails : []
+            ).map((inp: { amount?: string }) => inp.amount || '0');
+            setDecodedVaultTx(
+              decodeVaultTransaction(
+                data.rawUnsignedTx,
+                data.chain as keyof cryptos,
+                inputAmounts,
+              ),
+            );
+          }
+        }
       } catch {
         displayMessage('error', t('home:err_invalid_request'), 5000);
       }
@@ -1512,6 +1560,50 @@ function Home({ navigation }: Props) {
               );
             }
             setVaultSigningData(vaultSignData);
+            // Decode raw transaction independently for trustless verification
+            if (vaultSignData.chain) {
+              const chainConf =
+                blockchains[vaultSignData.chain as keyof cryptos];
+              if (chainConf?.chainType === 'evm' && vaultSignData.evmUserOp) {
+                // EVM: rawUnsignedTx is a hash, decode from evmUserOp instead
+                try {
+                  const parsed =
+                    typeof vaultSignData.evmUserOp === 'string'
+                      ? JSON.parse(vaultSignData.evmUserOp)
+                      : vaultSignData.evmUserOp;
+                  const decodableJson = JSON.stringify({
+                    userOpRequest: parsed,
+                  });
+                  setDecodedVaultTx(
+                    decodeVaultTransaction(
+                      decodableJson,
+                      vaultSignData.chain as keyof cryptos,
+                    ),
+                  );
+                } catch {
+                  setDecodedVaultTx({
+                    sender: '',
+                    recipients: [],
+                    fee: '0',
+                    error: 'Failed to parse EVM UserOp data',
+                  });
+                }
+              } else if (vaultSignData.rawUnsignedTx) {
+                // UTXO: decode from raw TX hex
+                const inputAmounts = (
+                  Array.isArray(vaultSignData.inputDetails)
+                    ? vaultSignData.inputDetails
+                    : []
+                ).map((inp: { amount?: string }) => inp.amount || '0');
+                setDecodedVaultTx(
+                  decodeVaultTransaction(
+                    vaultSignData.rawUnsignedTx,
+                    vaultSignData.chain as keyof cryptos,
+                    inputAmounts,
+                  ),
+                );
+              }
+            }
           } catch {
             displayMessage('error', t('home:err_invalid_request'));
           }
@@ -1944,6 +2036,7 @@ function Home({ navigation }: Props) {
       } else {
         // reject
         setVaultSigningData(null);
+        setDecodedVaultTx(null);
         clearVaultSigningRequest?.();
         await postAction(
           'enterprisevaultsignrejected',
@@ -2298,6 +2391,7 @@ function Home({ navigation }: Props) {
       displayMessage('error', t('home:err_vault_sign_failed'));
     } finally {
       setVaultSigningData(null);
+      setDecodedVaultTx(null);
       clearVaultSigningRequest?.();
     }
   };
@@ -2804,6 +2898,7 @@ function Home({ navigation }: Props) {
               tokenSymbol={vaultSigningData.tokenSymbol}
               tokenDecimals={vaultSigningData.tokenDecimals}
               sourceAddress={vaultSigningData.sourceAddress}
+              decodedTx={decodedVaultTx}
             />
           )}
           {txid && (

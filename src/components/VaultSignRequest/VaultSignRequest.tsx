@@ -13,6 +13,7 @@ import Authentication from '../Authentication/Authentication';
 import Icon from 'react-native-vector-icons/Feather';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
+import type { VaultDecodedTx } from '../../lib/transactions';
 
 /**
  * Format a base-unit amount (satoshis/wei) to human-readable using chain decimals.
@@ -50,11 +51,12 @@ interface VaultSignRequestProps {
   tokenDecimals?: number;
   // Source vault address for display
   sourceAddress?: string;
+  // Decoded transaction data — trustless verification from raw TX
+  decodedTx?: VaultDecodedTx | null;
 }
 
 const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   activityStatus,
-  recipients,
   fee,
   memo,
   chain,
@@ -63,7 +65,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   actionStatus,
   tokenSymbol,
   tokenDecimals,
-  sourceAddress,
+  decodedTx,
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -74,8 +76,15 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
     : chain;
   const chainDecimals = chainConfig?.decimals ?? 8;
   const chainSymbol = chainConfig?.symbol ?? chain.toUpperCase();
-  const amountDecimals = tokenDecimals != null ? tokenDecimals : chainDecimals;
-  const amountSymbol = tokenSymbol || chainSymbol;
+  const amountDecimals =
+    decodedTx?.tokenDecimals ??
+    (tokenDecimals != null ? tokenDecimals : chainDecimals);
+  const amountSymbol = decodedTx?.tokenSymbol || tokenSymbol || chainSymbol;
+
+  // Use decoded recipients/fee/sender — trustless verification only
+  const displayRecipients = decodedTx?.recipients ?? [];
+  const displayFee = decodedTx?.fee ?? fee;
+  const displaySender = decodedTx?.sender ?? '';
 
   const cardStyle = {
     backgroundColor: Colors.inputBackground,
@@ -175,8 +184,50 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </Text>
         </View>
 
-        {/* Source Address */}
-        {sourceAddress && (
+        {/* Decoded data notice */}
+        <Text
+          style={[
+            Fonts.textTiny,
+            {
+              color: Colors.textGray400,
+              textAlign: 'center',
+              paddingHorizontal: 24,
+              marginBottom: 12,
+            },
+          ]}
+        >
+          {t('home:vault_sign_decoded_notice')}
+        </Text>
+
+        {/* Decode error warning */}
+        {decodedTx?.error && (
+          <View
+            style={{
+              width: '90%',
+              marginBottom: 12,
+              backgroundColor: Colors.inputBackground,
+              borderRadius: 8,
+              padding: 10,
+              borderWidth: 1,
+              borderColor: Colors.error,
+            }}
+          >
+            <Text
+              style={[
+                Fonts.textTiny,
+                {
+                  color: Colors.error,
+                  textAlign: 'center',
+                },
+              ]}
+            >
+              {t('home:vault_sign_decode_error')}
+            </Text>
+          </View>
+        )}
+
+        {/* Source Address — decoded from raw transaction */}
+        {displaySender ? (
           <View style={[cardStyle, { marginBottom: 12 }]}>
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_source_address')}
@@ -192,14 +243,14 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
               ]}
               selectable={true}
             >
-              {sourceAddress}
+              {displaySender}
             </Text>
           </View>
-        )}
+        ) : null}
 
-        {/* Recipients */}
-        {Array.isArray(recipients) && recipients.length > 0 ? (
-          recipients.map((recipient, index) => (
+        {/* Recipients — decoded from raw transaction */}
+        {displayRecipients.length > 0 ? (
+          displayRecipients.map((recipient, index) => (
             <View key={index} style={[cardStyle, { marginBottom: 12 }]}>
               <Text
                 style={[
@@ -207,7 +258,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                   { color: Colors.textGray400, marginBottom: 6 },
                 ]}
               >
-                {recipient.label || t('home:vault_sign_recipients')}
+                {t('home:vault_sign_recipients')}
               </Text>
               <View style={{ paddingLeft: 10 }}>
                 <Text style={[styles.label, { color: Colors.textGray400 }]}>
@@ -255,17 +306,17 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </View>
         )}
 
-        {/* Fee Card */}
+        {/* Fee Card — decoded from raw transaction */}
         <View style={[cardStyle, { marginBottom: 12 }]}>
           <Text style={[styles.label, { color: Colors.textGray400 }]}>
             {t('home:vault_sign_fee')}
           </Text>
           <Text style={[Fonts.textSmall, Fonts.textBold]}>
-            {formatAmount(fee, chainDecimals)} {chainSymbol}
+            {formatAmount(displayFee, chainDecimals)} {chainSymbol}
           </Text>
         </View>
 
-        {/* Memo Card */}
+        {/* Memo Card — from metadata (not in raw transaction) */}
         {memo && (
           <View style={[cardStyle, { marginBottom: 12 }]}>
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
