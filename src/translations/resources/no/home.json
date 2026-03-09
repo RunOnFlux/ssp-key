@@ -146,6 +146,8 @@
   "vault_sign_amount": "Amount",
   "vault_sign_fee": "Fee",
   "vault_sign_memo": "Memo",
+  "vault_sign_decoded_notice": "Data below is decoded directly from the raw transaction you are signing. Always verify recipients and amounts before approving.",
+  "vault_sign_decode_error": "Could not fully decode transaction data. Proceed with caution.",
   "vault_sign_partial_note": "Multisig vault transaction. It will only be broadcast once all required signers have approved.",
   "auth_confirm_vault_signing": "Confirm to sign vault transaction.",
   "auth_confirm_vault_signing_info": "You are about to sign an enterprise vault transaction with SSP Key. Review the transaction details carefully.",
