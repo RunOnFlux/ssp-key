@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  StyleSheet,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -47,6 +48,8 @@ interface VaultSignRequestProps {
   tokenContract?: string;
   tokenSymbol?: string;
   tokenDecimals?: number;
+  // Source vault address for display
+  sourceAddress?: string;
 }
 
 const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
@@ -58,9 +61,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   vaultName,
   orgName,
   actionStatus,
-  // tokenContract is received but not directly used — it's part of the props interface for future use
   tokenSymbol,
   tokenDecimals,
+  sourceAddress,
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -71,27 +74,31 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
     : chain;
   const chainDecimals = chainConfig?.decimals ?? 8;
   const chainSymbol = chainConfig?.symbol ?? chain.toUpperCase();
-  // For token transfers, use token decimals/symbol for amounts; fee always uses chain decimals/symbol
   const amountDecimals = tokenDecimals != null ? tokenDecimals : chainDecimals;
   const amountSymbol = tokenSymbol || chainSymbol;
 
+  const cardStyle = {
+    backgroundColor: Colors.inputBackground,
+    borderRadius: 8,
+    padding: 12,
+    width: '90%' as const,
+    borderWidth: 1,
+    borderColor: Colors.textGray200,
+  };
+
   const approve = () => {
-    console.log('Approve vault signing request');
     actionStatus(true);
   };
 
   const openAuthentication = () => {
-    console.log('Open Authentication for vault signing');
     setAuthenticationOpen(true);
   };
 
   const reject = () => {
-    console.log('Reject vault signing request');
     actionStatus(false);
   };
 
   const handleAuthenticationOpen = (status: boolean) => {
-    console.log('Authentication result:', status);
     setAuthenticationOpen(false);
     if (status === true) {
       approve();
@@ -100,24 +107,22 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
 
   return (
     <>
-      <View
-        style={[
-          Layout.fill,
-          Layout.relative,
-          Layout.fullWidth,
+      <ScrollView
+        style={[Layout.fill, Layout.fullWidth]}
+        contentContainerStyle={[
           Layout.alignItemsCenter,
-          { paddingTop: 20 },
+          { paddingTop: 20, paddingBottom: 20 },
         ]}
+        showsVerticalScrollIndicator={true}
       >
-        {/* Vault Signing Icon */}
-        <Icon name="shield" size={40} color={Colors.textGray400} />
+        {/* Header */}
+        <Icon name="shield" size={36} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
             Fonts.textCenter,
             Fonts.textRegular,
-            Gutters.smallTMargin,
-            Gutters.smallBMargin,
+            { marginTop: 8, marginBottom: 4 },
           ]}
         >
           {t('home:vault_sign_request')}
@@ -126,33 +131,22 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           style={[
             Fonts.textSmall,
             Fonts.textCenter,
-            Gutters.regularLMargin,
-            Gutters.regularRMargin,
+            {
+              color: Colors.textGray400,
+              paddingHorizontal: 24,
+              marginBottom: 16,
+            },
           ]}
         >
           {t('home:vault_sign_request_info')}
         </Text>
 
-        {/* Vault & Org Info */}
+        {/* Vault & Org Card */}
         {(vaultName || orgName) && (
-          <View
-            style={[
-              Gutters.regularTMargin,
-              Gutters.regularLMargin,
-              Gutters.regularRMargin,
-              {
-                backgroundColor: Colors.inputBackground,
-                borderRadius: 8,
-                padding: 12,
-                width: '90%',
-                borderWidth: 1,
-                borderColor: Colors.textGray200,
-              },
-            ]}
-          >
+          <View style={[cardStyle, { marginBottom: 12 }]}>
             {vaultName && (
-              <View style={{ marginBottom: orgName ? 4 : 0 }}>
-                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+              <View style={{ marginBottom: orgName ? 8 : 0 }}>
+                <Text style={[styles.label, { color: Colors.textGray400 }]}>
                   {t('home:vault')}
                 </Text>
                 <Text style={[Fonts.textSmall, Fonts.textBold]}>
@@ -162,7 +156,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             )}
             {orgName && (
               <View>
-                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+                <Text style={[styles.label, { color: Colors.textGray400 }]}>
                   {t('home:organization')}
                 </Text>
                 <Text style={[Fonts.textSmall, Fonts.textBold]}>{orgName}</Text>
@@ -171,148 +165,129 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </View>
         )}
 
-        {/* Chain Info */}
-        <View
-          style={[
-            Gutters.regularTMargin,
-            Gutters.regularLMargin,
-            Gutters.regularRMargin,
-            Layout.alignItemsCenter,
-          ]}
-        >
-          <Text
-            style={[
-              Fonts.textSmall,
-              Fonts.textBold,
-              { color: Colors.textGray400, marginBottom: 4 },
-            ]}
-          >
-            {t('home:chain')}:
+        {/* Chain Card */}
+        <View style={[cardStyle, { marginBottom: 12 }]}>
+          <Text style={[styles.label, { color: Colors.textGray400 }]}>
+            {t('home:chain')}
           </Text>
-        </View>
-        <View
-          style={[
-            Gutters.regularLMargin,
-            Gutters.regularRMargin,
-            {
-              backgroundColor: Colors.inputBackground,
-              borderRadius: 8,
-              padding: 12,
-              width: '90%',
-              borderWidth: 1,
-              borderColor: Colors.textGray200,
-            },
-          ]}
-        >
-          <Text
-            style={[Fonts.textSmall, Fonts.textBold, Fonts.textCenter]}
-            selectable={true}
-          >
+          <Text style={[Fonts.textSmall, Fonts.textBold]} selectable={true}>
             {chainDisplay}
           </Text>
         </View>
 
-        {/* Recipients */}
-        <View style={[Gutters.regularTMargin, Layout.alignItemsCenter]}>
-          <Text
-            style={[
-              Fonts.textSmall,
-              Fonts.textBold,
-              { color: Colors.textGray400, marginBottom: 4 },
-            ]}
-          >
-            {t('home:vault_sign_recipients')}:
-          </Text>
-        </View>
-        <View
-          style={{
-            maxHeight: 120,
-            backgroundColor: Colors.inputBackground,
-            borderRadius: 8,
-            padding: 10,
-            width: '90%',
-            borderWidth: 1,
-            borderColor: Colors.textGray200,
-          }}
-        >
-          <ScrollView
-            style={{ flex: 1 }}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}
-          >
-            {Array.isArray(recipients) && recipients.length > 0 ? (
-              recipients.map((recipient, index) => (
-                <View
-                  key={index}
-                  style={{
-                    marginBottom: index < recipients.length - 1 ? 8 : 0,
-                  }}
-                >
-                  {recipient.label && (
-                    <Text
-                      style={[Fonts.textTiny, { color: Colors.textGray400 }]}
-                    >
-                      {recipient.label}
-                    </Text>
-                  )}
-                  <Text
-                    style={[
-                      Fonts.textTiny,
-                      { fontFamily: 'monospace', lineHeight: 16 },
-                    ]}
-                    selectable={true}
-                    numberOfLines={2}
-                    ellipsizeMode="middle"
-                  >
-                    {recipient.address}
-                  </Text>
-                  <Text
-                    style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
-                  >
-                    {formatAmount(recipient.amount, amountDecimals)}{' '}
-                    {amountSymbol}
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
-                {t('home:vault_sign_no_recipients')}
-              </Text>
-            )}
-          </ScrollView>
-        </View>
-
-        {/* Fee */}
-        <View style={[Gutters.smallTMargin, Layout.alignItemsCenter]}>
-          <Text style={[Fonts.textSmall, { color: Colors.textGray400 }]}>
-            {t('home:vault_sign_fee')}: {formatAmount(fee, chainDecimals)}{' '}
-            {chainSymbol}
-          </Text>
-        </View>
-
-        {/* Memo */}
-        {memo && (
-          <View style={[Gutters.smallTMargin, Layout.alignItemsCenter]}>
-            <Text style={[Fonts.textSmall, { color: Colors.textGray400 }]}>
-              {t('home:vault_sign_memo')}: {memo}
+        {/* Source Address */}
+        {sourceAddress && (
+          <View style={[cardStyle, { marginBottom: 12 }]}>
+            <Text style={[styles.label, { color: Colors.textGray400 }]}>
+              {t('home:vault_sign_source_address')}
+            </Text>
+            <Text
+              style={[
+                Fonts.textTiny,
+                {
+                  fontFamily: 'monospace',
+                  lineHeight: 18,
+                  marginTop: 2,
+                },
+              ]}
+              selectable={true}
+            >
+              {sourceAddress}
             </Text>
           </View>
         )}
 
-        {/* Partial signature note */}
-        <View style={[Gutters.smallTMargin, Layout.alignItemsCenter]}>
-          <Text
-            style={[
-              Fonts.textTiny,
-              Fonts.textCenter,
-              { color: Colors.textGray400 },
-            ]}
-          >
-            {t('home:vault_sign_partial_note')}
+        {/* Recipients */}
+        {Array.isArray(recipients) && recipients.length > 0 ? (
+          recipients.map((recipient, index) => (
+            <View key={index} style={[cardStyle, { marginBottom: 12 }]}>
+              <Text
+                style={[
+                  styles.label,
+                  { color: Colors.textGray400, marginBottom: 6 },
+                ]}
+              >
+                {recipient.label || t('home:vault_sign_recipients')}
+              </Text>
+              <View style={{ paddingLeft: 10 }}>
+                <Text style={[styles.label, { color: Colors.textGray400 }]}>
+                  {t('home:vault_sign_address')}
+                </Text>
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    Fonts.textBold,
+                    {
+                      fontFamily: 'monospace',
+                      lineHeight: 18,
+                      marginTop: 2,
+                    },
+                  ]}
+                  selectable={true}
+                >
+                  {recipient.address}
+                </Text>
+                <Text
+                  style={[
+                    styles.label,
+                    { color: Colors.textGray400, marginTop: 8 },
+                  ]}
+                >
+                  {t('home:vault_sign_amount')}
+                </Text>
+                <Text
+                  style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
+                >
+                  {formatAmount(recipient.amount, amountDecimals)}{' '}
+                  {amountSymbol}
+                </Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <View style={[cardStyle, { marginBottom: 12 }]}>
+            <Text style={[styles.label, { color: Colors.textGray400 }]}>
+              {t('home:vault_sign_recipients')}
+            </Text>
+            <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+              {t('home:vault_sign_no_recipients')}
+            </Text>
+          </View>
+        )}
+
+        {/* Fee Card */}
+        <View style={[cardStyle, { marginBottom: 12 }]}>
+          <Text style={[styles.label, { color: Colors.textGray400 }]}>
+            {t('home:vault_sign_fee')}
+          </Text>
+          <Text style={[Fonts.textSmall, Fonts.textBold]}>
+            {formatAmount(fee, chainDecimals)} {chainSymbol}
           </Text>
         </View>
-      </View>
 
+        {/* Memo Card */}
+        {memo && (
+          <View style={[cardStyle, { marginBottom: 12 }]}>
+            <Text style={[styles.label, { color: Colors.textGray400 }]}>
+              {t('home:vault_sign_memo')}
+            </Text>
+            <Text style={[Fonts.textSmall]}>{memo}</Text>
+          </View>
+        )}
+
+        {/* Partial signature note */}
+        <Text
+          style={[
+            Fonts.textTiny,
+            Fonts.textCenter,
+            { color: Colors.textGray400, paddingHorizontal: 24, marginTop: 4 },
+          ]}
+        >
+          {t('home:vault_sign_partial_note')}
+        </Text>
+      </ScrollView>
+
+      {/* Action Buttons — fixed at bottom */}
       <View
         style={[
           Layout.justifyContentEnd,
@@ -367,5 +342,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
     </>
   );
 };
+
+const styles = StyleSheet.create({
+  label: {
+    fontSize: 11,
+    marginBottom: 2,
+  },
+});
 
 export default VaultSignRequest;

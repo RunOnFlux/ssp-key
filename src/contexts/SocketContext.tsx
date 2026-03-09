@@ -219,9 +219,24 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     newSocket.on(
       'enterprisevaultsign',
       (data: { chain: string; path: string; payload: string }) => {
-        console.log('[Socket] Enterprise vault signing request received');
+        console.log(
+          '[Socket] Enterprise vault signing request received, payload type:',
+          typeof data.payload,
+          'payload length:',
+          typeof data.payload === 'string' ? data.payload.length : 'N/A',
+        );
         try {
           const parsedPayload = JSON.parse(data.payload) as vaultSigningRequest;
+          console.log(
+            '[Socket] Parsed vault sign payload - recipients type:',
+            typeof parsedPayload.recipients,
+            'isArray:',
+            Array.isArray(parsedPayload.recipients),
+            'length:',
+            Array.isArray(parsedPayload.recipients)
+              ? parsedPayload.recipients.length
+              : 'N/A',
+          );
           setVaultSigningRequest(parsedPayload);
         } catch {
           console.error(

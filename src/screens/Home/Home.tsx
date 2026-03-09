@@ -1478,6 +1478,16 @@ function Home({ navigation }: Props) {
         } else if (result.data.action === 'enterprisevaultsign') {
           try {
             const vaultSignData = JSON.parse(result.data.payload);
+            console.log(
+              '[Vault Signing] handleRefresh recipients type:',
+              typeof vaultSignData.recipients,
+              'isArray:',
+              Array.isArray(vaultSignData.recipients),
+              'length:',
+              Array.isArray(vaultSignData.recipients)
+                ? vaultSignData.recipients.length
+                : 'N/A',
+            );
             // Defensively parse fields that may arrive as JSON strings instead of arrays
             // (e.g. from older wallet versions that double-stringified the payload)
             if (typeof vaultSignData.recipients === 'string') {
@@ -2793,6 +2803,7 @@ function Home({ navigation }: Props) {
               tokenContract={vaultSigningData.tokenContract}
               tokenSymbol={vaultSigningData.tokenSymbol}
               tokenDecimals={vaultSigningData.tokenDecimals}
+              sourceAddress={vaultSigningData.sourceAddress}
             />
           )}
           {txid && (

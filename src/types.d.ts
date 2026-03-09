@@ -643,4 +643,6 @@ interface vaultSigningRequest {
   tokenContract?: string;
   tokenSymbol?: string;
   tokenDecimals?: number;
+  // Source vault address for display
+  sourceAddress?: string;
 }
