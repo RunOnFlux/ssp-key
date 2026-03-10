@@ -2473,8 +2473,12 @@ function Home({ navigation }: Props) {
     // Handle both socket-received and scanned/manual EVM signing requests requests
     if (!evmSigningData) return;
 
+    // Hoist sensitive vars so they can be cleared in catch/finally
+    let pwForEncryption = '';
+    let xprivKeyDecrypted = '';
+
     try {
-      console.log('[EVM Signing] handleSignEVMAction:', evmSigningData);
+      console.log('[EVM Signing] handleSignEVMAction for chain:', evmSigningData.chain);
       // EVM signing with nonce management - same as approveTransaction
       const encryptionKey = await Keychain.getGenericPassword({
         service: 'enc_key',
@@ -2494,7 +2498,7 @@ function Home({ navigation }: Props) {
       const passwordDecryptedString = passwordDecrypted.toString(
         CryptoJS.enc.Utf8,
       );
-      const pwForEncryption = encryptionKey.password + passwordDecryptedString;
+      pwForEncryption = encryptionKey.password + passwordDecryptedString;
 
       // Use the same nonce management as normal transactions
       const pNs = CryptoJS.AES.decrypt(publicNonces, pwForEncryption);
@@ -2520,7 +2524,7 @@ function Home({ navigation }: Props) {
           nonce.kPublic === publicNonceKey?.kPublic &&
           nonce.kTwoPublic === publicNonceKey?.kTwoPublic,
       );
-      console.log(`noncesToUse:`, noncesToUse);
+      console.log('[EVM Signing] nonce matched:', !!noncesToUse);
 
       if (!noncesToUse) {
         throw new Error('Nonces not found');
@@ -2541,7 +2545,7 @@ function Home({ navigation }: Props) {
       dispatch(setSspKeyPublicNonces(encryptedNonces));
 
       const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
-      const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+      xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
 
       const splittedDerPath = evmSigningData.walletInUse.split('-');
       if (!splittedDerPath) {
@@ -2550,10 +2554,6 @@ function Home({ navigation }: Props) {
       const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
       const addressIndex = Number(splittedDerPath[1]);
 
-      console.log(`activeChain`, activeChain);
-      console.log(`typeIndex`, typeIndex);
-      console.log(`addressIndex`, addressIndex);
-
       const keyPair = generateAddressKeypair(
         xprivKeyDecrypted,
         typeIndex,
@@ -2561,9 +2561,14 @@ function Home({ navigation }: Props) {
         evmSigningData.chain as keyof cryptos,
       );
 
+      // Clear private key immediately after use
+      xprivKeyDecrypted = '';
+
       const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
       const xpubKeyWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
-      console.log(`xpubKeyWalletDecrypted`, xpubKeyWalletDecrypted);
+
+      // Clear encryption password — no longer needed
+      pwForEncryption = '';
 
       const publicKeyWallet = deriveEVMPublicKey(
         xpubKeyWalletDecrypted,
@@ -2584,6 +2589,10 @@ function Home({ navigation }: Props) {
         evmSigningData.sigOne || '',
         evmSigningData.challenge || '',
       );
+
+      // Clear private key from keypair
+      keyPair.privKey = '';
+
       setEvmSigningSignature(result);
 
       const dataToSend = {
@@ -2616,9 +2625,13 @@ function Home({ navigation }: Props) {
       // result is the signature.
       // todo if this is wallet connect there should be some id attached
     } catch (error) {
+      xprivKeyDecrypted = '';
+      pwForEncryption = '';
       console.error('[EVM Signing] Error handling request:', error);
       displayMessage('error', 'Error processing request');
     } finally {
+      xprivKeyDecrypted = '';
+      pwForEncryption = '';
       setActiveChain(identityChain);
       setEvmSigningData(null);
 
