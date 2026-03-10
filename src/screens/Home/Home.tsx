@@ -431,15 +431,22 @@ function Home({ navigation }: Props) {
               });
             }
           } else if (data.rawUnsignedTx) {
-            // UTXO: decode from raw TX hex
-            const inputAmounts = (
-              Array.isArray(data.inputDetails) ? data.inputDetails : []
-            ).map((inp: { amount?: string }) => inp.amount || '0');
+            // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
+            const inputs = Array.isArray(data.inputDetails)
+              ? data.inputDetails
+              : [];
+            const inputAmounts = inputs.map(
+              (inp: { amount?: string }) => inp.amount || '0',
+            );
+            const firstInput = inputs[0] as
+              | { witnessScript?: string; redeemScript?: string }
+              | undefined;
             setDecodedVaultTx(
               decodeVaultTransaction(
                 data.rawUnsignedTx,
                 data.chain as keyof cryptos,
                 inputAmounts,
+                firstInput,
               ),
             );
           }
@@ -1589,17 +1596,22 @@ function Home({ navigation }: Props) {
                   });
                 }
               } else if (vaultSignData.rawUnsignedTx) {
-                // UTXO: decode from raw TX hex
-                const inputAmounts = (
-                  Array.isArray(vaultSignData.inputDetails)
-                    ? vaultSignData.inputDetails
-                    : []
-                ).map((inp: { amount?: string }) => inp.amount || '0');
+                // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
+                const inputs = Array.isArray(vaultSignData.inputDetails)
+                  ? vaultSignData.inputDetails
+                  : [];
+                const inputAmounts = inputs.map(
+                  (inp: { amount?: string }) => inp.amount || '0',
+                );
+                const firstInput = inputs[0] as
+                  | { witnessScript?: string; redeemScript?: string }
+                  | undefined;
                 setDecodedVaultTx(
                   decodeVaultTransaction(
                     vaultSignData.rawUnsignedTx,
                     vaultSignData.chain as keyof cryptos,
                     inputAmounts,
+                    firstInput,
                   ),
                 );
               }
@@ -2478,7 +2490,10 @@ function Home({ navigation }: Props) {
     let xprivKeyDecrypted = '';
 
     try {
-      console.log('[EVM Signing] handleSignEVMAction for chain:', evmSigningData.chain);
+      console.log(
+        '[EVM Signing] handleSignEVMAction for chain:',
+        evmSigningData.chain,
+      );
       // EVM signing with nonce management - same as approveTransaction
       const encryptionKey = await Keychain.getGenericPassword({
         service: 'enc_key',
