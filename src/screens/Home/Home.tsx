@@ -2196,10 +2196,8 @@ function Home({ navigation }: Props) {
           console.log(
             `[Vault Signing] NONCE MISMATCH — looking for ${reservedNonce.kPublic.slice(0, 8)}, local pool (${enterpriseNonces.length}): [${localPrefixes}…]`,
           );
-          // Trigger background reconcile so next attempt will work
-          checkAndReplenishEnterpriseNonces().catch(() => {});
           throw new Error(
-            'Reserved nonce not found locally. Nonces may be out of sync. Please refresh SSP Key and recreate the proposal.',
+            'Reserved nonce not found locally. Nonces may be out of sync. Please sync nonces and recreate the proposal.',
           );
         }
         usedEnterpriseNonce = enterpriseNonces[matchIdx];
