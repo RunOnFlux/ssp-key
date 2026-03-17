@@ -2157,19 +2157,49 @@ function Home({ navigation }: Props) {
 
         // Find the reserved nonce by matching public parts
         const reservedNonce = vaultSigningData.reservedNonce;
-        const matchIdx = enterpriseNonces.findIndex(
+        let matchIdx = enterpriseNonces.findIndex(
           (n) =>
             n.kPublic === reservedNonce.kPublic &&
             n.kTwoPublic === reservedNonce.kTwoPublic,
         );
-        if (matchIdx === -1) {
+        if (matchIdx === -1 && enterpriseNonces.length > 0) {
+          // Retry after short delay — storage may need a moment
           console.log(
-            '[Vault Signing] Nonce mismatch: local pool has',
-            enterpriseNonces.length,
-            'nonces, none match reserved nonce',
+            '[Vault Signing] Nonce not found on first try, retrying in 2s…',
           );
+          await new Promise((r) => setTimeout(r, 2000));
+          // Reload from Redux store
+          try {
+            if (enterprisePublicNonces) {
+              const retryDecrypted = CryptoJS.AES.decrypt(
+                enterprisePublicNonces,
+                pwForEncryption,
+              );
+              enterpriseNonces = JSON.parse(
+                retryDecrypted.toString(CryptoJS.enc.Utf8),
+              ) as publicPrivateNonce[];
+            }
+          } catch {
+            // Keep existing nonces from first attempt
+          }
+          matchIdx = enterpriseNonces.findIndex(
+            (n) =>
+              n.kPublic === reservedNonce.kPublic &&
+              n.kTwoPublic === reservedNonce.kTwoPublic,
+          );
+        }
+        if (matchIdx === -1) {
+          const localPrefixes = enterpriseNonces
+            .slice(0, 5)
+            .map((n) => n.kPublic.slice(0, 8))
+            .join(', ');
+          console.log(
+            `[Vault Signing] NONCE MISMATCH — looking for ${reservedNonce.kPublic.slice(0, 8)}, local pool (${enterpriseNonces.length}): [${localPrefixes}…]`,
+          );
+          // Trigger background reconcile so next attempt will work
+          checkAndReplenishEnterpriseNonces().catch(() => {});
           throw new Error(
-            'Reserved nonce not found locally. Nonces may be out of sync. Re-sync SSP Key.',
+            'Reserved nonce not found locally. Nonces may be out of sync. Please refresh SSP Key and recreate the proposal.',
           );
         }
         usedEnterpriseNonce = enterpriseNonces[matchIdx];
@@ -2400,7 +2430,11 @@ function Home({ navigation }: Props) {
       mnemonicPhrase = '';
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error('[Vault Signing] Error:', errMsg);
-      displayMessage('error', t('home:err_vault_sign_failed'));
+      displayMessage(
+        'error',
+        `${t('home:err_vault_sign_failed')}: ${errMsg}`,
+        8000,
+      );
     } finally {
       setVaultSigningData(null);
       setDecodedVaultTx(null);
