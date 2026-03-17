@@ -1110,8 +1110,9 @@ function Home({ navigation }: Props) {
       );
       setTxid(ttxid);
     } catch (error) {
-      // @ts-expect-error 'error' is of type 'unknown'
-      displayMessage('error', error.message ?? 'home:err_tx_failed');
+      const txErrMsg =
+        error instanceof Error ? error.message : t('home:err_tx_failed');
+      displayMessage('error', txErrMsg);
       console.log(error);
     } finally {
       setSubmittingTransaction(false);
@@ -2675,7 +2676,7 @@ function Home({ navigation }: Props) {
       xprivKeyDecrypted = '';
       pwForEncryption = '';
       console.error('[EVM Signing] Error handling request:', error);
-      displayMessage('error', 'Error processing request');
+      displayMessage('error', t('home:err_invalid_request'));
     } finally {
       xprivKeyDecrypted = '';
       pwForEncryption = '';
