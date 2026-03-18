@@ -188,9 +188,12 @@ export function continueVaultSigningSchnorrMultisig(
       (hex) => hex === signerPubKeyHex,
     );
     if (signerKeyIdx === -1) {
-      throw new Error(
-        'Key public key not found in allSignerKeys array — key mismatch',
-      );
+      // Key pubkey not in signing array (e.g., wallet-only vault mode).
+      // Return wallet's contribution as-is (wallet already signed).
+      return {
+        signerContribution: sigOneHex,
+        challenge: '',
+      };
     }
     publicKeys[signerKeyIdx] = signerPubKey;
 
@@ -225,6 +228,15 @@ export function continueVaultSigningSchnorrMultisig(
     );
 
     console.log('🔐 Generated Key partial signature');
+
+    // Key-only mode: no wallet contribution to sum, return key's individual sig
+    if (!sigOneHex) {
+      console.log('🔐 Key-only mode: returning individual key signature');
+      return {
+        signerContribution: sigTwo.buffer.toString('hex'),
+        challenge: challenge.buffer.toString('hex'),
+      };
+    }
 
     // Sum wallet's partial sig + key's partial sig = signer contribution
     const sigOne = new accountAbstraction.types.SchnorrSignature(

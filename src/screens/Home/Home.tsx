@@ -2255,7 +2255,7 @@ function Home({ navigation }: Props) {
       if (
         isEvmChain &&
         usedEnterpriseNonce &&
-        vaultSigningData.sigOne &&
+        vaultSigningData.sigOne != null &&
         parsedAllSignerKeys &&
         parsedAllSignerNonces
       ) {
@@ -2315,7 +2315,7 @@ function Home({ navigation }: Props) {
         // EVM chain but missing Schnorr data — cannot sign
         const missing = [];
         if (!usedEnterpriseNonce) missing.push('nonce');
-        if (!vaultSigningData.sigOne) missing.push('sigOne');
+        if (vaultSigningData.sigOne == null) missing.push('sigOne');
         if (!parsedAllSignerKeys) missing.push('signerKeys');
         if (!parsedAllSignerNonces) missing.push('signerNonces');
         throw new Error(`Missing Schnorr signing data: ${missing.join(', ')}`);
