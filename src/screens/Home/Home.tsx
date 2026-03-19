@@ -2133,7 +2133,12 @@ function Home({ navigation }: Props) {
       const isEvmChain = blockchainConfig.chainType === 'evm';
       let usedEnterpriseNonce: publicPrivateNonce | null = null;
 
-      if (isEvmChain && vaultSigningData.reservedNonce) {
+      // Wallet-only mode: Key's nonce is empty placeholder — skip nonce lookup
+      const keyNonceIsPlaceholder =
+        vaultSigningData.reservedNonce &&
+        !vaultSigningData.reservedNonce.kPublic;
+
+      if (isEvmChain && vaultSigningData.reservedNonce && !keyNonceIsPlaceholder) {
         // Load enterprise nonces from Redux store
         let enterpriseNonces: publicPrivateNonce[] = [];
         try {
@@ -2254,7 +2259,7 @@ function Home({ navigation }: Props) {
 
       if (
         isEvmChain &&
-        usedEnterpriseNonce &&
+        (usedEnterpriseNonce || keyNonceIsPlaceholder) &&
         vaultSigningData.sigOne != null &&
         parsedAllSignerKeys &&
         parsedAllSignerNonces
@@ -2270,10 +2275,18 @@ function Home({ navigation }: Props) {
         );
         keyPubKey = signingKeypair.pubKey;
 
+        // Wallet-only mode: Key won't sign (pubkey not in array), pass dummy nonce
+        const nonceForSigning = usedEnterpriseNonce || {
+          k: '0'.repeat(64),
+          kTwo: '0'.repeat(64),
+          kPublic: '0'.repeat(66),
+          kTwoPublic: '0'.repeat(66),
+        };
+
         const vaultSchnorrResult = continueVaultSigningSchnorrMultisig(
           vaultSigningData.rawUnsignedTx,
           signingKeypair,
-          usedEnterpriseNonce,
+          nonceForSigning,
           parsedAllSignerKeys,
           parsedAllSignerNonces,
           vaultSigningData.sigOne,
@@ -2314,11 +2327,56 @@ function Home({ navigation }: Props) {
       } else if (isEvmChain) {
         // EVM chain but missing Schnorr data — cannot sign
         const missing = [];
-        if (!usedEnterpriseNonce) missing.push('nonce');
+        if (!usedEnterpriseNonce && !keyNonceIsPlaceholder) missing.push('nonce');
         if (vaultSigningData.sigOne == null) missing.push('sigOne');
         if (!parsedAllSignerKeys) missing.push('signerKeys');
         if (!parsedAllSignerNonces) missing.push('signerNonces');
         throw new Error(`Missing Schnorr signing data: ${missing.join(', ')}`);
+      } else if (vaultSigningData.signingMode === 'wallet_only') {
+        // UTXO wallet-only: Key doesn't sign, pass through walletSignedHex unchanged
+        const walletSignedHex = vaultSigningData.walletSignedHex;
+        if (!walletSignedHex) {
+          throw new Error(
+            'Missing wallet-signed TX hex for UTXO vault signing',
+          );
+        }
+
+        console.log(
+          '[Vault Signing] Wallet-only UTXO mode — skipping Key signing',
+        );
+
+        // Derive pubkey for response (no signing needed)
+        const firstAddrIdx = parsedInputDetails[0]?.addressIndex ?? 0;
+        const pubKeypair = generateAddressKeypair(
+          vaultXpriv,
+          vaultSigningData.vaultIndex,
+          firstAddrIdx,
+          vaultChain,
+        );
+        keyPubKey = pubKeypair.pubKey;
+        pubKeypair.privKey = '';
+
+        // Clear sensitive key material
+        vaultXpriv = '';
+        pwForEncryption = '';
+
+        // Pass through wallet-signed hex unchanged
+        const utxoResponsePayload: Record<string, unknown> = {
+          signedHex: walletSignedHex,
+          keyPubKey,
+          requestId: vaultSigningData.requestId,
+        };
+
+        await postAction(
+          'enterprisevaultsigned',
+          JSON.stringify(utxoResponsePayload),
+          vaultSigningData.chain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+
+        displayMessage('success', t('home:vault_sign_success'));
+        return;
       } else {
         // UTXO: SIGHASH-based signing via TransactionBuilder
         // Load the wallet-signed TX and add Key's signatures on top

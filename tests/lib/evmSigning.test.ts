@@ -532,24 +532,26 @@ describe('evmSigning', () => {
       expect(mockGetPubKey).toHaveBeenCalled();
     });
 
-    test('should throw when key public key not found (key mismatch)', () => {
-      // All keys in array are different from signer's pub key
+    test('should pass through wallet contribution when key public key not found (wallet-only mode)', () => {
+      // All keys in array are different from signer's pub key — wallet-only vault
       const mismatchedKeys = ['cc'.repeat(33), 'dd'.repeat(33)];
       const nonces = [
         { kPublic: 'aa'.repeat(33), kTwoPublic: 'bb'.repeat(33) },
         { kPublic: 'cc'.repeat(33), kTwoPublic: 'dd'.repeat(33) },
       ];
 
-      expect(() =>
-        continueVaultSigningSchnorrMultisig(
-          MOCK_MESSAGE,
-          makeKeyKeypair(),
-          makeKeyNonce(),
-          mismatchedKeys,
-          nonces,
-          MOCK_SIG_ONE_HEX,
-        ),
-      ).toThrow('Key public key not found in allSignerKeys array');
+      const result = continueVaultSigningSchnorrMultisig(
+        MOCK_MESSAGE,
+        makeKeyKeypair(),
+        makeKeyNonce(),
+        mismatchedKeys,
+        nonces,
+        MOCK_SIG_ONE_HEX,
+      );
+
+      // Key's pubkey not in array → wallet-only passthrough
+      expect(result.signerContribution).toBe(MOCK_SIG_ONE_HEX);
+      expect(result.challenge).toBe('');
     });
 
     test('should replace key entry in publicKeys with internal Key instance', () => {

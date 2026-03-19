@@ -647,4 +647,6 @@ interface vaultSigningRequest {
   sourceAddress?: string;
   // Full EVM UserOp struct (JSON string or object) for trustless decode
   evmUserOp?: string | Record<string, string>;
+  // Vault signing mode (dual, key_only, wallet_only)
+  signingMode?: string;
 }
