@@ -2298,9 +2298,7 @@ function Home({ navigation }: Props) {
           // Dual or key_only: Key participates in Schnorr signing.
           // usedEnterpriseNonce is always set here (nonce lookup runs for non-placeholder nonces).
           if (!usedEnterpriseNonce) {
-            throw new Error(
-              'Enterprise nonce required for EVM vault signing',
-            );
+            throw new Error('Enterprise nonce required for EVM vault signing');
           }
 
           vaultSchnorrResult = continueVaultSigningSchnorrMultisig(
