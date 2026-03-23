@@ -2279,22 +2279,39 @@ function Home({ navigation }: Props) {
         );
         keyPubKey = signingKeypair.pubKey;
 
-        // Wallet-only mode: Key won't sign (pubkey not in array), pass dummy nonce
-        const nonceForSigning = usedEnterpriseNonce || {
-          k: '0'.repeat(64),
-          kTwo: '0'.repeat(64),
-          kPublic: '0'.repeat(66),
-          kTwoPublic: '0'.repeat(66),
+        let vaultSchnorrResult: {
+          signerContribution: string;
+          challenge: string;
         };
 
-        const vaultSchnorrResult = continueVaultSigningSchnorrMultisig(
-          vaultSigningData.rawUnsignedTx,
-          signingKeypair,
-          nonceForSigning,
-          parsedAllSignerKeys,
-          parsedAllSignerNonces,
-          vaultSigningData.sigOne,
-        );
+        if (vaultSigningData.signingMode === 'wallet_only') {
+          // Wallet-only mode: Key doesn't participate in Schnorr signing.
+          // Pass through wallet's contribution unchanged.
+          console.log(
+            '[Vault Signing] Wallet-only EVM mode — skipping Key Schnorr signing',
+          );
+          vaultSchnorrResult = {
+            signerContribution: vaultSigningData.sigOne,
+            challenge: '',
+          };
+        } else {
+          // Dual or key_only: Key participates in Schnorr signing.
+          // usedEnterpriseNonce is always set here (nonce lookup runs for non-placeholder nonces).
+          if (!usedEnterpriseNonce) {
+            throw new Error(
+              'Enterprise nonce required for EVM vault signing',
+            );
+          }
+
+          vaultSchnorrResult = continueVaultSigningSchnorrMultisig(
+            vaultSigningData.rawUnsignedTx,
+            signingKeypair,
+            usedEnterpriseNonce,
+            parsedAllSignerKeys,
+            parsedAllSignerNonces,
+            vaultSigningData.sigOne,
+          );
+        }
 
         // Clear EVM signing keypair private key
         signingKeypair.privKey = '';
