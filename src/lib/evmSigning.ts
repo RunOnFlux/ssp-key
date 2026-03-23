@@ -197,6 +197,26 @@ export function continueVaultSigningSchnorrMultisig(
     }
     publicKeys[signerKeyIdx] = signerPubKey;
 
+    // Single-key Schnorr: smart account uses individual key (not combined).
+    // The SDK's signMultiSigHash requires 2+ keys. For single-key vaults
+    // (1-of-1 key_only or wallet_only), use Schnorrkel.signHash directly.
+    if (publicKeys.length === 1) {
+      const privHex = keyKeypair.privKey.startsWith('0x')
+        ? keyKeypair.privKey.slice(2)
+        : keyKeypair.privKey;
+      const privKeyObj = new accountAbstraction.types.Key(
+        Buffer.from(privHex, 'hex'),
+      );
+      const singleResult = accountAbstraction.signers.Schnorrkel.signHash(
+        privKeyObj,
+        messageToSign,
+      );
+      return {
+        signerContribution: singleResult.signature.buffer.toString('hex'),
+        challenge: singleResult.challenge.buffer.toString('hex'),
+      };
+    }
+
     // Build PublicNonces[] from hex inputs
     const signerPubNonces = schnorrSigner.getPubNonces();
     const signerNonceHex = signerPubNonces.kPublic.buffer.toString('hex');

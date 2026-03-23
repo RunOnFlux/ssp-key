@@ -168,16 +168,13 @@ function decodeVaultEvmTransaction(
     verificationGasLimit,
     preVerificationGas,
     maxFeePerGas,
-    maxPriorityFeePerGas,
   } = multisigUserOpJSON.userOpRequest;
 
+  // maxFeePerGas already includes the priority fee — do not add it again
   const totalGasLimit = new BigNumber(callGasLimit)
     .plus(new BigNumber(verificationGasLimit))
     .plus(new BigNumber(preVerificationGas));
-  const totalMaxWeiPerGas = new BigNumber(maxFeePerGas).plus(
-    new BigNumber(maxPriorityFeePerGas),
-  );
-  const fee = totalGasLimit.multipliedBy(totalMaxWeiPerGas).toFixed();
+  const fee = totalGasLimit.multipliedBy(new BigNumber(maxFeePerGas)).toFixed();
 
   const decodedData = decodeFunctionData({
     abi: abi.MultiSigSmartAccount_abi,
@@ -411,19 +408,15 @@ export async function decodeEVMTransactionForApproval(
       verificationGasLimit,
       preVerificationGas,
       maxFeePerGas,
-      maxPriorityFeePerGas,
     } = multisigUserOpJSON.userOpRequest;
 
     const totalGasLimit = new BigNumber(callGasLimit)
       .plus(new BigNumber(verificationGasLimit))
       .plus(new BigNumber(preVerificationGas));
 
-    const totalMaxWeiPerGas = new BigNumber(maxFeePerGas).plus(
-      new BigNumber(maxPriorityFeePerGas),
-    );
-
+    // maxFeePerGas already includes the priority fee — do not add it again
     const totalFeeWei = totalGasLimit
-      .multipliedBy(totalMaxWeiPerGas)
+      .multipliedBy(new BigNumber(maxFeePerGas))
       .dividedBy(10 ** 18);
 
     console.log(multisigUserOpJSON);

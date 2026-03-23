@@ -2138,7 +2138,11 @@ function Home({ navigation }: Props) {
         vaultSigningData.reservedNonce &&
         !vaultSigningData.reservedNonce.kPublic;
 
-      if (isEvmChain && vaultSigningData.reservedNonce && !keyNonceIsPlaceholder) {
+      if (
+        isEvmChain &&
+        vaultSigningData.reservedNonce &&
+        !keyNonceIsPlaceholder
+      ) {
         // Load enterprise nonces from Redux store
         let enterpriseNonces: publicPrivateNonce[] = [];
         try {
@@ -2327,7 +2331,8 @@ function Home({ navigation }: Props) {
       } else if (isEvmChain) {
         // EVM chain but missing Schnorr data — cannot sign
         const missing = [];
-        if (!usedEnterpriseNonce && !keyNonceIsPlaceholder) missing.push('nonce');
+        if (!usedEnterpriseNonce && !keyNonceIsPlaceholder)
+          missing.push('nonce');
         if (vaultSigningData.sigOne == null) missing.push('sigOne');
         if (!parsedAllSignerKeys) missing.push('signerKeys');
         if (!parsedAllSignerNonces) missing.push('signerNonces');
