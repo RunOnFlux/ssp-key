@@ -18,5 +18,7 @@
   "ask_me_later": "Fråga mig senare",
   "chain": "Kedja",
   "wallet": "Plånbok",
-  "receive": "Ta emot"
+  "receive": "Ta emot",
+  "reject": "Reject",
+  "approve": "Approve"
 }
