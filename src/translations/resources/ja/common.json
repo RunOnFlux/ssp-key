@@ -18,5 +18,7 @@
   "ask_me_later": "後で聞いてください",
   "chain": "チェーン",
   "wallet": "ウォレット",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }
