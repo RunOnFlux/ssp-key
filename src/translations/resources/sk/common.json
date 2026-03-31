@@ -18,5 +18,7 @@
   "ask_me_later": "Spýtať sa neskôr",
   "chain": "Reťazec",
   "wallet": "Peňaženka",
-  "receive": "Prijať"
+  "receive": "Prijať",
+  "reject": "Reject",
+  "approve": "Approve"
 }
