@@ -18,5 +18,7 @@
   "ask_me_later": "Запитайте мене пізніше",
   "chain": "Блокчейн",
   "wallet": "Гаманець",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }
