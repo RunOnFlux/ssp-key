@@ -18,5 +18,7 @@
   "ask_me_later": "Tanya saya kemudian",
   "chain": "Rantai",
   "wallet": "Dompet",
-  "receive": "Terima"
+  "receive": "Terima",
+  "reject": "Reject",
+  "approve": "Approve"
 }
