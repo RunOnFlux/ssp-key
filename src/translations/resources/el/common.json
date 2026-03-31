@@ -18,5 +18,7 @@
   "ask_me_later": "Ρωτήστε με αργότερα",
   "chain": "Αλυσίδα",
   "wallet": "Πορτοφόλι",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }
