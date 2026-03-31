@@ -18,5 +18,7 @@
   "ask_me_later": "Vra my later",
   "chain": "Ketting",
   "wallet": "Beursie",
-  "receive": "Ontvang"
+  "receive": "Ontvang",
+  "reject": "Reject",
+  "approve": "Approve"
 }
