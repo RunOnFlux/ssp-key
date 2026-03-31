@@ -18,5 +18,7 @@
   "ask_me_later": "मुझसे बाद में पूछें",
   "chain": "चेन",
   "wallet": "वॉलेट",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }
