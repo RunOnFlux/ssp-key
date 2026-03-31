@@ -18,5 +18,7 @@
   "ask_me_later": "Vprašaj me pozneje",
   "chain": "Veriga",
   "wallet": "Denarnica",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }
