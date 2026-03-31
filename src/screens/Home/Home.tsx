@@ -7,6 +7,7 @@ import {
   Linking,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { fluxnode } from '@runonflux/flux-sdk';
 import { useTheme } from '../../hooks';
 import Icon from 'react-native-vector-icons/Feather';
 import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -106,6 +107,7 @@ import WkSigningRequest from '../../components/WkSigningRequest/WkSigningRequest
 import VaultXpubRequest from '../../components/VaultXpubRequest/VaultXpubRequest';
 import VaultSignRequest from '../../components/VaultSignRequest/VaultSignRequest';
 import KeyNonceSyncRequest from '../../components/KeyNonceSyncRequest/KeyNonceSyncRequest';
+import FluxNodeStartRequest from '../../components/FluxNodeStartRequest/FluxNodeStartRequest';
 import { MainScreenProps } from '../../../@types/navigation';
 
 type Props = MainScreenProps<'Home'>;
@@ -164,6 +166,10 @@ function Home({ navigation }: Props) {
   const [decodedVaultTx, setDecodedVaultTx] = useState<VaultDecodedTx | null>(
     null,
   );
+  const [fluxNodeStartData, setFluxNodeStartData] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [keyNonceSyncDialogOpen, setKeyNonceSyncDialogOpen] = useState(false);
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
     (state) => state[activeChain],
@@ -191,6 +197,8 @@ function Home({ navigation }: Props) {
     clearVaultSigningRequest,
     keyNonceSyncRequest: socketKeyNonceSyncRequest,
     clearKeyNonceSyncRequest,
+    fluxNodeStartRequest: socketFluxNodeStartRequest,
+    clearFluxNodeStartRequest,
   } = useSocket();
   const { createWkIdentityAuth } = useRelayAuth();
 
@@ -463,6 +471,15 @@ function Home({ navigation }: Props) {
       setKeyNonceSyncDialogOpen(true);
     }
   }, [socketKeyNonceSyncRequest]);
+
+  // Handle Enterprise Flux Node Start request
+  useEffect(() => {
+    if (socketFluxNodeStartRequest) {
+      console.log('[Enterprise Flux Node] Start request received');
+      setFluxNodeStartData(socketFluxNodeStartRequest);
+      clearFluxNodeStartRequest?.();
+    }
+  }, [socketFluxNodeStartRequest]);
 
   useEffect(() => {
     if (!xpubKey || !xpubWallet) {
@@ -1924,6 +1941,187 @@ function Home({ navigation }: Props) {
     }
   };
 
+  const handleFluxNodeStartAction = async (status: boolean) => {
+    if (!fluxNodeStartData) return;
+    try {
+      if (!status) {
+        // User rejected via the UI
+        const requestId = (fluxNodeStartData.requestId as string) || '';
+        const nodeChain = (fluxNodeStartData.chain as string) || '';
+        await postAction(
+          'enterprisefluxnodestarted',
+          JSON.stringify({ requestId, error: 'User rejected' }),
+          nodeChain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+        return;
+      }
+      setActivityStatus(true);
+      await handleFluxNodeStart(fluxNodeStartData);
+    } catch (err) {
+      console.error('[Enterprise Flux Node] Action error:', err);
+    } finally {
+      setActivityStatus(false);
+      setFluxNodeStartData(null);
+    }
+  };
+
+  const handleFluxNodeStart = async (request: Record<string, unknown>) => {
+    let collateralPrivKey = '';
+    let pwForEncryption = '';
+    let mnemonicPhrase = '';
+    let vaultXpriv = '';
+
+    const requestId = (request.requestId as string) || '';
+    const nodeChain = (request.chain as string) || '';
+
+    try {
+      const nodeOrgIndex = request.orgIndex as number;
+      const nodeVaultIndex = request.vaultIndex as number;
+      const nodeAddressIndex = (request.addressIndex as number) || 0;
+      const identityPubKey = request.identityPubKey as string;
+      const collateralTxid = request.collateralTxid as string;
+      const nodeCollateralVout = request.collateralVout as number;
+      const nodeRedeemScript = request.redeemScript as string;
+      const nodeDelegates = (request.delegates as string[]) || [];
+
+      if (
+        !nodeChain ||
+        !collateralTxid ||
+        !identityPubKey ||
+        !nodeRedeemScript
+      ) {
+        console.error('[Enterprise Flux Node] Missing required parameters');
+        displayMessage('error', t('home:err_flux_node_missing_params'));
+        await postAction(
+          'enterprisefluxnodestarted',
+          JSON.stringify({
+            requestId,
+            error: 'Missing required parameters',
+          }),
+          nodeChain || identityChain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+        return;
+      }
+
+      // Derive Key's vault keypair — following same pattern as handleVaultSignAction
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+      });
+
+      if (!passwordData || !encryptionKey) {
+        throw new Error(t('home:err_flux_node_decrypt'));
+      }
+
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const passwordDecryptedString = passwordDecrypted.toString(
+        CryptoJS.enc.Utf8,
+      );
+      pwForEncryption = encryptionKey.password + passwordDecryptedString;
+
+      const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
+      mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
+
+      if (!mnemonicPhrase) {
+        throw new Error(t('home:err_flux_node_mnemonic'));
+      }
+
+      const vaultChain = nodeChain as keyof cryptos;
+      const blockchainConfig = blockchains[vaultChain];
+      if (!blockchainConfig) {
+        throw new Error(t('home:err_flux_node_unsupported_chain'));
+      }
+
+      // Derive xpriv at m/48'/coin'/orgIndex'/scriptType'
+      vaultXpriv = getMasterXpriv(
+        mnemonicPhrase,
+        48,
+        blockchainConfig.slip,
+        nodeOrgIndex,
+        blockchainConfig.scriptType,
+        vaultChain,
+      );
+
+      // Clear mnemonic immediately
+      mnemonicPhrase = '';
+      pwForEncryption = '';
+
+      // Derive keypair at vaultIndex/addressIndex
+      const keypair = generateAddressKeypair(
+        vaultXpriv,
+        nodeVaultIndex,
+        nodeAddressIndex,
+        vaultChain,
+      );
+      collateralPrivKey = keypair.privKey;
+      vaultXpriv = '';
+
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+
+      // Build delegate data
+      let delegateData;
+      if (nodeDelegates.length > 0) {
+        delegateData = {
+          version: 1,
+          type: 1,
+          delegatePublicKeys: nodeDelegates,
+        };
+      }
+
+      // Call startFluxNodev6WithPubKey — uses identity public key directly (no private key needed)
+      const signedTxHex = fluxnode.startFluxNodev6WithPubKey(
+        collateralTxid,
+        nodeCollateralVout,
+        collateralPrivKey,
+        identityPubKey,
+        timestamp,
+        true,
+        nodeRedeemScript,
+        delegateData,
+      );
+
+      // Clear sensitive data
+      collateralPrivKey = '';
+
+      // Send response back to Wallet
+      await postAction(
+        'enterprisefluxnodestarted',
+        JSON.stringify({ requestId, signedTxHex }),
+        nodeChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+
+      console.log('[Enterprise Flux Node] Start signed and sent back');
+    } catch (err) {
+      collateralPrivKey = '';
+      vaultXpriv = '';
+      mnemonicPhrase = '';
+      pwForEncryption = '';
+      console.error('[Enterprise Flux Node] Error:', err);
+      await postAction(
+        'enterprisefluxnodestarted',
+        JSON.stringify({
+          requestId,
+          error:
+            err instanceof Error ? err.message : t('home:err_flux_node_failed'),
+        }),
+        nodeChain || identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+    }
+  };
+
   const handleVaultXpubAction = async () => {
     if (!vaultXpubData) return;
 
@@ -2819,6 +3017,7 @@ function Home({ navigation }: Props) {
             !wkSigningData &&
             !vaultXpubData &&
             !vaultSigningData &&
+            !fluxNodeStartData &&
             !keyNonceSyncDialogOpen && (
               <>
                 <TouchableOpacity
@@ -3038,6 +3237,20 @@ function Home({ navigation }: Props) {
               tokenDecimals={vaultSigningData.tokenDecimals}
               sourceAddress={vaultSigningData.sourceAddress}
               decodedTx={decodedVaultTx}
+            />
+          )}
+          {fluxNodeStartData && (
+            <FluxNodeStartRequest
+              activityStatus={activityStatus}
+              chain={(fluxNodeStartData.chain as string) || ''}
+              nodeName={(fluxNodeStartData.nodeName as string) || ''}
+              collateralAmount={
+                (fluxNodeStartData.collateralAmount as string) || ''
+              }
+              delegates={(fluxNodeStartData.delegates as string[]) || []}
+              actionStatus={(status: boolean) => {
+                void handleFluxNodeStartAction(status);
+              }}
             />
           )}
           {txid && (

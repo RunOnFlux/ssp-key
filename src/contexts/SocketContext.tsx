@@ -41,6 +41,8 @@ interface SocketContextType {
   clearVaultSigningRequest?: () => void;
   keyNonceSyncRequest: boolean;
   clearKeyNonceSyncRequest?: () => void;
+  fluxNodeStartRequest: Record<string, unknown> | null;
+  clearFluxNodeStartRequest?: () => void;
 }
 
 const defaultValue: SocketContextType = {
@@ -57,6 +59,7 @@ const defaultValue: SocketContextType = {
   vaultXpubRequest: null,
   vaultSigningRequest: null,
   keyNonceSyncRequest: false,
+  fluxNodeStartRequest: null,
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
@@ -83,6 +86,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [vaultSigningRequest, setVaultSigningRequest] =
     useState<vaultSigningRequest | null>(null);
   const [keyNonceSyncRequest, setKeyNonceSyncRequest] = useState(false);
+  const [fluxNodeStartRequest, setFluxNodeStartRequest] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
   /**
    * Emit an authenticated join event.
@@ -246,6 +253,25 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       },
     );
 
+    // Handle Enterprise Flux Node Start request
+    newSocket.on(
+      'enterprisefluxnodestart',
+      (data: { chain: string; path: string; payload: string }) => {
+        console.log('[Socket] Enterprise flux node start request received');
+        try {
+          const parsedPayload = JSON.parse(data.payload) as Record<
+            string,
+            unknown
+          >;
+          setFluxNodeStartRequest(parsedPayload);
+        } catch {
+          console.error(
+            '[Socket] Failed to parse enterprise flux node start payload',
+          );
+        }
+      },
+    );
+
     // Handle Enterprise Key Nonce Sync request
     newSocket.on('enterprisekeynoncesync', () => {
       console.log('[Socket] Enterprise key nonce sync request received');
@@ -316,6 +342,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     setVaultSigningRequest(null);
   };
 
+  const clearFluxNodeStartRequest = () => {
+    setFluxNodeStartRequest(null);
+  };
+
   const clearKeyNonceSyncRequest = () => {
     setKeyNonceSyncRequest(false);
   };
@@ -338,6 +368,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         clearVaultSigningRequest,
         keyNonceSyncRequest,
         clearKeyNonceSyncRequest,
+        fluxNodeStartRequest,
+        clearFluxNodeStartRequest,
       }}
     >
       {children}
