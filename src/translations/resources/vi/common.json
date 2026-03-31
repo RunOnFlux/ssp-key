@@ -18,5 +18,7 @@
   "ask_me_later": "Hỏi lại tôi sau",
   "chain": "Chuỗi khối",
   "wallet": "Ví",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }
