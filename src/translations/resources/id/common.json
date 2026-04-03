@@ -19,6 +19,6 @@
   "chain": "Rantai",
   "wallet": "Dompet",
   "receive": "Terima",
-  "reject": "Reject",
-  "approve": "Approve"
+  "reject": "Tolak",
+  "approve": "Setujui"
 }
