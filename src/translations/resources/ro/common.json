@@ -18,5 +18,7 @@
   "ask_me_later": "Întreabă-mă mai târziu",
   "chain": "Lanț",
   "wallet": "Portofel",
-  "receive": "Primește"
+  "receive": "Primește",
+  "reject": "Reject",
+  "approve": "Approve"
 }

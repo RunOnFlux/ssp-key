@@ -18,5 +18,7 @@
   "ask_me_later": "Zapytaj mnie później",
   "chain": "Łańcuch",
   "wallet": "Portfel",
-  "receive": "Odbierz"
+  "receive": "Odbierz",
+  "reject": "Reject",
+  "approve": "Approve"
 }

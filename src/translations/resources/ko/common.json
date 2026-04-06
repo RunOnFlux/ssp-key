@@ -18,5 +18,7 @@
   "ask_me_later": "나중에 묻기",
   "chain": "체인",
   "wallet": "지갑",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }

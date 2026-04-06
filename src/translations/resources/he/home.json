@@ -159,5 +159,18 @@
   "enterprise_nonce_sync_request_info": "SSP Wallet is requesting to synchronise enterprise signing nonces. This will generate fresh nonces for vault transaction signing. No funds will be moved.",
   "enterprise_nonce_sync_started": "Syncing enterprise nonces...",
   "enterprise_nonce_sync_success": "Enterprise nonces synced successfully.",
-  "enterprise_nonce_sync_failed": "Failed to sync enterprise nonces."
+  "enterprise_nonce_sync_failed": "Failed to sync enterprise nonces.",
+  "flux_node_start_title": "Start Flux Node",
+  "flux_node_start_info": "SSP Wallet is requesting to sign a Flux node start transaction. Please review the details below.",
+  "flux_node_start_node": "Node",
+  "flux_node_start_chain": "Chain",
+  "flux_node_start_collateral": "Collateral",
+  "flux_node_start_delegates": "Delegates",
+  "flux_node_start_approve_prompt": "Approve?",
+  "flux_node_start_success": "Flux node start transaction signed successfully.",
+  "err_flux_node_missing_params": "Missing required parameters for flux node start.",
+  "err_flux_node_decrypt": "Unable to decrypt stored data.",
+  "err_flux_node_mnemonic": "Failed to decrypt mnemonic.",
+  "err_flux_node_unsupported_chain": "Unsupported chain.",
+  "err_flux_node_failed": "Failed to start flux node."
 }

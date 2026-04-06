@@ -18,5 +18,7 @@
   "ask_me_later": "Pregúntame más tarde",
   "chain": "Cadena",
   "wallet": "Cartera",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }

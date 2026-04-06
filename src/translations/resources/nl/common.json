@@ -18,5 +18,7 @@
   "ask_me_later": "Vraag het me later",
   "chain": "Keten",
   "wallet": "Portemonnee",
-  "receive": "Ontvangen"
+  "receive": "Ontvangen",
+  "reject": "Reject",
+  "approve": "Approve"
 }

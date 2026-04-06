@@ -18,5 +18,7 @@
   "ask_me_later": "Spør meg senere",
   "chain": "Kjede",
   "wallet": "Lommebok",
-  "receive": "Motta"
+  "receive": "Motta",
+  "reject": "Reject",
+  "approve": "Approve"
 }

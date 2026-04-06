@@ -18,5 +18,7 @@
   "ask_me_later": "Demande moi plus tard",
   "chain": "Chaîne",
   "wallet": "Portefeuille",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }

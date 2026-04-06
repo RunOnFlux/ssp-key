@@ -18,5 +18,7 @@
   "ask_me_later": "Pitaj me kasnije",
   "chain": "Chain",
   "wallet": "Novčanik",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }

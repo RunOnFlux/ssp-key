@@ -18,5 +18,7 @@
   "ask_me_later": "পরে জিজ্ঞাসা করুন",
   "chain": "চেইন",
   "wallet": "ওয়ালেট",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }

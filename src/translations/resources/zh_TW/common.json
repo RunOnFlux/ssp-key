@@ -18,5 +18,7 @@
   "ask_me_later": "稍後再問我",
   "chain": "鏈",
   "wallet": "錢包",
-  "receive": "Receive"
+  "receive": "Receive",
+  "reject": "Reject",
+  "approve": "Approve"
 }

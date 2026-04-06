@@ -18,5 +18,7 @@
   "ask_me_later": "ถามฉันภายหลัง",
   "chain": "เชน",
   "wallet": "กระเป๋าเงิน",
-  "receive": "รับ"
+  "receive": "รับ",
+  "reject": "Reject",
+  "approve": "Approve"
 }
