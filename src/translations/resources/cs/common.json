@@ -19,6 +19,6 @@
   "chain": "Chain",
   "wallet": "Peněženka",
   "receive": "Obdržet",
-  "reject": "Reject",
-  "approve": "Approve"
+  "reject": "Zamítnout",
+  "approve": "Schválit"
 }
