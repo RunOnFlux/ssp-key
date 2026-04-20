@@ -165,6 +165,8 @@
   "flux_node_start_node": "Node",
   "flux_node_start_chain": "Chain",
   "flux_node_start_collateral": "Collateral",
+  "flux_node_start_collateral_address": "Collateral Address",
+  "flux_node_start_collateral_utxo": "Collateral UTXO",
   "flux_node_start_delegates": "Delegates",
   "flux_node_start_approve_prompt": "Approve?",
   "flux_node_start_success": "Flux node start transaction signed successfully.",
