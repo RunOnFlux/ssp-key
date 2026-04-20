@@ -46,6 +46,27 @@ jobs:
           fileName: "release.keystore"
           fileDir: "/home/user/actions-runner/_work/ssp-key/ssp-key/android/app/"
           encodedString: ${{ secrets.ANDROID_SIGNING_KEY }}
+      - name: Debug node before build
+        working-directory: android
+        run: |
+          echo "===== which node ====="
+          which node
+          which -a node || true
+          echo "===== node -v ====="
+          node -v
+          echo "===== PATH ====="
+          echo "$PATH"
+          echo "===== nvm/node env ====="
+          env | grep -iE 'nvm|node' || true
+          echo "===== direct require.resolve ====="
+          node --print "require.resolve('react-native/package.json')" 2>&1
+          echo "Exit: $?"
+          echo "===== ulimit ====="
+          ulimit -a
+          echo "===== ldd on resolved node ====="
+          ldd "$(which node)" | grep -iE 'not found|=>' | head -10
+          echo "===== ls of nvm dir ====="
+          ls /home/user/.nvm/versions/node/ 2>/dev/null || echo "no nvm dir"
       - name: Build Android APK Release
         run: |
           cd android && ./gradlew clean && ./gradlew generateCodegenArtifactsFromSchema --rerun-tasks && ./gradlew assembleRelease
