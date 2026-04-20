@@ -19,6 +19,9 @@ interface FluxNodeStartRequestProps {
   chain: string;
   nodeName: string;
   collateralAmount: string;
+  collateralAddress?: string;
+  collateralTxid?: string;
+  collateralVout?: number;
   delegates: string[];
   actionStatus: (status: boolean) => void;
 }
@@ -28,6 +31,9 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
   chain,
   nodeName,
   collateralAmount,
+  collateralAddress,
+  collateralTxid,
+  collateralVout,
   delegates,
   actionStatus,
 }) => {
@@ -42,6 +48,10 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
   const amountFlux = collateralAmount
     ? (parseInt(collateralAmount, 10) / 1e8).toFixed(2)
     : '?';
+
+  const utxoDisplay = collateralTxid
+    ? `${collateralTxid.slice(0, 10)}…${collateralTxid.slice(-8)}:${collateralVout ?? 0}`
+    : '';
 
   const cardStyle = {
     backgroundColor: Colors.inputBackground,
@@ -137,6 +147,36 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
           </Text>
         </View>
 
+        {/* Collateral Address Card */}
+        {!!collateralAddress && (
+          <View style={[cardStyle, { marginBottom: 12 }]}>
+            <Text style={[styles.label, { color: Colors.textGray400 }]}>
+              {t('home:flux_node_start_collateral_address')}
+            </Text>
+            <Text
+              style={[Fonts.textSmall, Fonts.textBold, styles.mono]}
+              selectable={true}
+            >
+              {collateralAddress}
+            </Text>
+          </View>
+        )}
+
+        {/* Collateral UTXO Card */}
+        {!!utxoDisplay && (
+          <View style={[cardStyle, { marginBottom: 12 }]}>
+            <Text style={[styles.label, { color: Colors.textGray400 }]}>
+              {t('home:flux_node_start_collateral_utxo')}
+            </Text>
+            <Text
+              style={[Fonts.textSmall, Fonts.textBold, styles.mono]}
+              selectable={true}
+            >
+              {utxoDisplay}
+            </Text>
+          </View>
+        )}
+
         {/* Delegates Card */}
         {delegates.length > 0 && (
           <View style={[cardStyle, { marginBottom: 12 }]}>
@@ -210,6 +250,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     marginBottom: 2,
+  },
+  mono: {
+    fontFamily: 'monospace',
   },
 });
 

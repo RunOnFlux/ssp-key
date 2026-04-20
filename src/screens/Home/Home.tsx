@@ -2101,6 +2101,7 @@ function Home({ navigation }: Props) {
         sspWalletKeyInternalIdentity,
       );
 
+      displayMessage('success', t('home:flux_node_start_success'));
       console.log('[Enterprise Flux Node] Start signed and sent back');
     } catch (err) {
       collateralPrivKey = '';
@@ -3246,6 +3247,17 @@ function Home({ navigation }: Props) {
               nodeName={(fluxNodeStartData.nodeName as string) || ''}
               collateralAmount={
                 (fluxNodeStartData.collateralAmount as string) || ''
+              }
+              collateralAddress={
+                (fluxNodeStartData.collateralAddress as string) || undefined
+              }
+              collateralTxid={
+                (fluxNodeStartData.collateralTxid as string) || undefined
+              }
+              collateralVout={
+                typeof fluxNodeStartData.collateralVout === 'number'
+                  ? fluxNodeStartData.collateralVout
+                  : undefined
               }
               delegates={(fluxNodeStartData.delegates as string[]) || []}
               actionStatus={(status: boolean) => {
