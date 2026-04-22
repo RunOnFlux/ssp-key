@@ -11,6 +11,7 @@ import {
   vaultSigningRequest,
   utxo,
 } from '../types';
+import type { RecoveryRequestPayload } from '../lib/recoveryHandler';
 
 interface TxRequest {
   rawTx: string;
@@ -43,6 +44,8 @@ interface SocketContextType {
   clearKeyNonceSyncRequest?: () => void;
   fluxNodeStartRequest: Record<string, unknown> | null;
   clearFluxNodeStartRequest?: () => void;
+  recoveryRequest: RecoveryRequestPayload | null;
+  clearRecoveryRequest?: () => void;
 }
 
 const defaultValue: SocketContextType = {
@@ -60,6 +63,7 @@ const defaultValue: SocketContextType = {
   vaultSigningRequest: null,
   keyNonceSyncRequest: false,
   fluxNodeStartRequest: null,
+  recoveryRequest: null,
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
@@ -90,6 +94,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     string,
     unknown
   > | null>(null);
+  const [recoveryRequest, setRecoveryRequest] =
+    useState<RecoveryRequestPayload | null>(null);
 
   /**
    * Emit an authenticated join event.
@@ -278,6 +284,30 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       setKeyNonceSyncRequest(true);
     });
 
+    // Handle RandomParams recovery request from the wallet. The wallet
+    // issues this when its fingerprint drift causes L5 at Login and it
+    // falls back to the ssp-key envelope recovery path.
+    newSocket.on(
+      'recoveryrequest',
+      (data: { chain?: string; path?: string; payload: string }) => {
+        console.log('[Socket] Recovery request received');
+        try {
+          const parsed = JSON.parse(data.payload) as RecoveryRequestPayload;
+          if (
+            typeof parsed.pkEph !== 'string' ||
+            typeof parsed.nonce !== 'string' ||
+            typeof parsed.timestamp !== 'number'
+          ) {
+            console.error('[Socket] Malformed recovery request payload');
+            return;
+          }
+          setRecoveryRequest(parsed);
+        } catch {
+          console.error('[Socket] Failed to parse recovery request payload');
+        }
+      },
+    );
+
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: socket initialization must store the instance for context consumers
     setSocket(newSocket);
 
@@ -350,6 +380,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     setKeyNonceSyncRequest(false);
   };
 
+  const clearRecoveryRequest = () => {
+    setRecoveryRequest(null);
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -370,6 +404,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         clearKeyNonceSyncRequest,
         fluxNodeStartRequest,
         clearFluxNodeStartRequest,
+        recoveryRequest,
+        clearRecoveryRequest,
       }}
     >
       {children}

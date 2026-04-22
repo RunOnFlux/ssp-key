@@ -87,6 +87,8 @@ const Authentication = (props: {
       textForPrompt = t('home:auth_confirm_vault_signing');
     } else if (props.type === 'noncesync') {
       textForPrompt = t('home:auth_confirm_nonce_sync');
+    } else if (props.type === 'recovery') {
+      textForPrompt = t('home:auth_confirm_recovery');
     }
     console.log('Initiate Fingerprint');
     // if success continue, if fail, show error message and only allow password authentication

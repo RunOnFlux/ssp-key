@@ -48,6 +48,8 @@ import {
 import { blockchains } from '@storage/blockchains';
 
 import * as CryptoJS from 'crypto-js';
+import { buildRecoveryResponse } from '../../lib/recoveryHandler';
+import RecoveryRequest from '../../components/RecoveryRequest/RecoveryRequest';
 
 import {
   getMasterXpriv,
@@ -199,6 +201,8 @@ function Home({ navigation }: Props) {
     clearKeyNonceSyncRequest,
     fluxNodeStartRequest: socketFluxNodeStartRequest,
     clearFluxNodeStartRequest,
+    recoveryRequest,
+    clearRecoveryRequest,
   } = useSocket();
   const { createWkIdentityAuth } = useRelayAuth();
 
@@ -1016,6 +1020,102 @@ function Home({ navigation }: Props) {
       console.log(error);
     }
   };
+  /**
+   * Respond to a wallet-issued randomParams recovery request. Derives
+   * sk_r from the identity seed on demand, wraps it with ECDH+AES-GCM
+   * using the wallet's ephemeral pubkey from the request, and posts the
+   * response back through the relay.
+   */
+  const approveRecoveryRequest = async () => {
+    if (!recoveryRequest) return;
+    try {
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+      });
+      if (!passwordData || !encryptionKey) {
+        throw new Error('Unable to decrypt stored data');
+      }
+      const passwordDecrypted = CryptoJS.AES.decrypt(
+        passwordData.password,
+        encryptionKey.password,
+      );
+      const pwForEncryption =
+        encryptionKey.password + passwordDecrypted.toString(CryptoJS.enc.Utf8);
+      const xprivEncrypted = identityChainState?.xprivKey;
+      if (!xprivEncrypted || typeof xprivEncrypted !== 'string') {
+        throw new Error('Identity xpriv not available');
+      }
+      const xprivDecrypted = CryptoJS.AES.decrypt(
+        xprivEncrypted,
+        pwForEncryption,
+      ).toString(CryptoJS.enc.Utf8);
+      if (!xprivDecrypted) {
+        throw new Error('Failed to decrypt identity xpriv');
+      }
+      const response = buildRecoveryResponse({
+        xprivKeyIdentity: xprivDecrypted,
+        request: recoveryRequest,
+        identityChain,
+      });
+      await postAction(
+        'recoveryresponse',
+        JSON.stringify(response),
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+      clearRecoveryRequest?.();
+    } catch (error) {
+      console.log('[recovery] approve failed', error);
+      displayMessage('error', (error as Error)?.message ?? 'Recovery failed');
+      clearRecoveryRequest?.();
+    }
+  };
+
+  const denyRecoveryRequest = async () => {
+    if (!recoveryRequest) return;
+    try {
+      await postAction(
+        'recoverydenied',
+        JSON.stringify({
+          nonce: recoveryRequest.nonce,
+          timestamp: recoveryRequest.timestamp,
+        }),
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+    } catch (error) {
+      console.log('[recovery] deny post failed', error);
+    } finally {
+      clearRecoveryRequest?.();
+    }
+  };
+
+  /**
+   * Wired from RecoveryRequest component after the user tapped Approve and
+   * the biometric/password auth succeeded (status=true), or after they
+   * tapped Reject (status=false). Matches the handler pattern of the other
+   * request-action handlers in this file.
+   */
+  const handleRecoveryRequestAction = async (status: boolean) => {
+    try {
+      setActivityStatus(true);
+      if (status === true) {
+        await approveRecoveryRequest();
+      } else {
+        await denyRecoveryRequest();
+      }
+    } catch (error) {
+      console.log('[recovery] action handler error', error);
+    } finally {
+      setActivityStatus(false);
+    }
+  };
+
   const approveTransaction = async (
     rawTransaction: string,
     chain: keyof cryptos,
@@ -3019,7 +3119,8 @@ function Home({ navigation }: Props) {
             !vaultXpubData &&
             !vaultSigningData &&
             !fluxNodeStartData &&
-            !keyNonceSyncDialogOpen && (
+            !keyNonceSyncDialogOpen &&
+            !recoveryRequest && (
               <>
                 <TouchableOpacity
                   onPressIn={() => setReceiveModalOpen(true)}
@@ -3173,6 +3274,12 @@ function Home({ navigation }: Props) {
             <PublicNoncesRequest
               activityStatus={activityStatus}
               actionStatus={handlePublicNoncesRequestAction}
+            />
+          )}
+          {recoveryRequest && (
+            <RecoveryRequest
+              activityStatus={activityStatus}
+              actionStatus={handleRecoveryRequestAction}
             />
           )}
           {publicNoncesShared && (

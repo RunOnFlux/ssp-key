@@ -11,7 +11,7 @@ import {
   AuthorizationStatus,
 } from '@react-native-firebase/messaging';
 import * as Keychain from 'react-native-keychain';
-import notifee from '@notifee/react-native';
+import notifee, { EventType } from '@notifee/react-native';
 import { AppState, Platform } from 'react-native';
 
 export async function requestUserPermission() {
@@ -31,13 +31,45 @@ export async function requestUserPermission() {
   await notifee.requestPermission();
 }
 
+/**
+ * Register Notifee's background event handler.
+ *
+ * MUST be called from `index.js` (top level, before AppRegistry.registerComponent)
+ * per Notifee's docs. Without this, tapping a Notifee-displayed notification
+ * while the app is in the background does not resume the application —
+ * Notifee drops the press event because no handler is attached to the
+ * headless JS task that runs for background events.
+ *
+ * `pressAction: { id: 'default' }` on the displayed notification handles
+ * bringing the app to foreground; this listener just has to exist so the
+ * native side will actually dispatch the press.
+ */
+// eslint-disable-next-line @typescript-eslint/require-await
+notifee.onBackgroundEvent(async ({ type, detail }) => {
+  if (type === EventType.PRESS) {
+    // No-op: opening the app is the default action, handled by the native
+    // side. When we add deep-link-to-screen logic later it goes here.
+    console.log(
+      '[fcm] background notification pressed:',
+      detail.notification?.id,
+    );
+  }
+});
+
 export function notificationListener() {
   const messaging = getMessaging();
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  notifee.onBackgroundEvent(async ({ type, detail }) => {
-    console.log('type ', type);
-    console.log('detail ', detail);
+  // Foreground tap handler — notifications displayed by Notifee while the
+  // app is open don't route through `onNotificationOpenedApp` (that's FCM
+  // auto-delivered only). Without this handler, tapping the in-app
+  // notification does nothing.
+  notifee.onForegroundEvent(({ type, detail }) => {
+    if (type === EventType.PRESS) {
+      console.log(
+        '[fcm] foreground notification pressed:',
+        detail.notification?.id,
+      );
+    }
   });
 
   onNotificationOpenedApp(messaging, (remoteMessage) => {
