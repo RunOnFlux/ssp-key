@@ -9,9 +9,13 @@ jest.mock('@notifee/react-native', () => ({
   __esModule: true,
   default: {
     onBackgroundEvent: jest.fn(),
+    onForegroundEvent: jest.fn(),
     requestPermission: jest.fn(),
     createChannel: jest.fn(),
     displayNotification: jest.fn(),
+  },
+  EventType: {
+    PRESS: 1,
   },
 }));
 
@@ -95,6 +99,8 @@ describe('FCM Helper Lib', () => {
       });
       (messaging.onMessage as jest.Mock).mockImplementation(() => {});
       mockedNotifee.onBackgroundEvent.mockImplementation(() => {});
+      // onForegroundEvent expects the observer to return a cleanup fn.
+      mockedNotifee.onForegroundEvent.mockImplementation(() => () => {});
 
       notificationListener();
 
@@ -110,7 +116,10 @@ describe('FCM Helper Lib', () => {
         mockMessagingInstance,
         expect.any(Function),
       );
-      expect(mockedNotifee.onBackgroundEvent).toHaveBeenCalled();
+      // onBackgroundEvent is registered at module load (top-level of
+      // fcmHelper.ts) per Notifee's requirement, not inside
+      // notificationListener — so we assert the foreground listener.
+      expect(mockedNotifee.onForegroundEvent).toHaveBeenCalled();
     });
 
     test('should return success data when onBackgroundMessageHandler', () => {
