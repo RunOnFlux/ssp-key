@@ -1,4 +1,10 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import io, { Socket } from 'socket.io-client';
 import { useAppSelector } from '../hooks';
 import { useRelayAuth } from '../hooks';
@@ -322,15 +328,28 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [wkIdentity]);
 
+  // Tracks whether we emitted 'leave' on the way to background. iOS
+  // briefly transitions to 'inactive' (not 'background') for system
+  // overlays like Face ID, the control center pull-down, or an incoming
+  // call banner. The socket stays connected through those, so we must
+  // not re-join on the way back — re-joining causes the relay to
+  // re-deliver the pending tx request, which surfaces in the UI as a
+  // duplicate approval prompt right after a successful broadcast.
+  const wasInBackground = useRef(false);
+
   useEffect(() => {
     let subscription: NativeEventSubscription | null = null;
 
     if (socket && wkIdentity) {
       subscription = AppState.addEventListener('change', (state) => {
         if (state === 'active') {
-          emitAuthenticatedJoin(socket, wkIdentity);
+          if (wasInBackground.current) {
+            emitAuthenticatedJoin(socket, wkIdentity);
+            wasInBackground.current = false;
+          }
         } else if (state === 'background') {
           socket.emit('leave', { wkIdentity });
+          wasInBackground.current = true;
         }
       });
     }

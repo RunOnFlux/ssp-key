@@ -33,6 +33,25 @@ const Authentication = (props: {
   const [passwordVisibility, setPasswordVisibility] = useState(false);
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
   const [setupBiometrics, setSetupBiometrics] = useState(false);
+  const [modalVisible, setModalVisible] = useState(true);
+  // Guards against the success setTimeout (queued before the user tapped
+  // cancel) firing after a cancel propagation already started, which
+  // would otherwise call actionStatus(true) seconds after actionStatus(false).
+  const propagated = useRef(false);
+
+  // Fade out the modal before the parent unmounts us. Without this, an
+  // abrupt unmount during the same render commit (e.g. Home setting
+  // submittingTransaction=true on approve) leaves iOS Fabric to take an
+  // empty snapshot of the dismissed view, blanketing the screen with a
+  // black overlay that can also block touches until the app is restarted.
+  const propagate = (status: boolean) => {
+    if (propagated.current) return;
+    propagated.current = true;
+    setModalVisible(false);
+    setTimeout(() => {
+      props.actionStatus(status);
+    }, 300);
+  };
 
   useEffect(() => {
     if (!props.biomatricsAllowed) {
@@ -110,7 +129,7 @@ const Authentication = (props: {
           if (data && data.password) {
             setPassword('');
             setPasswordVisibility(false);
-            props.actionStatus(true);
+            propagate(true);
           } else {
             // biometrics failed, were tempered with, disable biometrics option and only allow for password authentication
             setPassword('');
@@ -139,7 +158,7 @@ const Authentication = (props: {
     console.log('Close');
     setPassword('');
     setPasswordVisibility(false);
-    props.actionStatus(false);
+    propagate(false);
   };
 
   const grantAccess = async () => {
@@ -222,7 +241,7 @@ const Authentication = (props: {
       setPassword('');
       setPasswordVisibility(false);
       setSetupBiometrics(false);
-      props.actionStatus(true);
+      propagate(true);
     } catch (error) {
       console.log(error);
       displayMessage('error', t('home:err_auth_pw_check'));
@@ -237,7 +256,7 @@ const Authentication = (props: {
     <Modal
       animationType="fade"
       transparent={true}
-      visible={true}
+      visible={modalVisible}
       onRequestClose={() => close()}
     >
       <BlurOverlay />
