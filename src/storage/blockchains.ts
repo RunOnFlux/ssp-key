@@ -499,6 +499,27 @@ const avax = {
   onramperNetwork: 'avaxc',
 };
 
+const solDevnet = {
+  id: 'solDevnet',
+  libid: 'solana-devnet',
+  name: 'Solana Devnet',
+  symbol: 'TEST-SOL',
+  logo: require('../assets/solDevnet.svg'),
+  slip: 1, // SLIP-44 universal testnet coin type
+  decimals: 9,
+  node: backends().solDevnet.node,
+  bip32: {
+    // not specified, use default — leaf converted to Ed25519 seed at signing time
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  scriptType: 'p2sh', // not used for Solana, defaulted
+  chainType: 'sol',
+  backend: 'solana-devnet',
+  programId: 'CisPSFTQoTnEqn5cUi1pgpfPp2xiTVRkK7eD5jBevxdX', // SSP Solana Multisig program
+  tokens: tokens.solDevnet(),
+};
+
 export const blockchains = {
   btc,
   flux,
@@ -517,4 +538,5 @@ export const blockchains = {
   fluxTestnet,
   sepolia,
   amoy,
+  solDevnet,
 };

@@ -915,6 +915,19 @@ function bsc() {
   return tokens;
 }
 
+function solDevnet() {
+  const tokens = [
+    {
+      contract: '', // native SOL
+      name: 'Solana Devnet',
+      symbol: 'TEST-SOL',
+      decimals: 9,
+      logo: require('../assets/solDevnet.svg'),
+    },
+  ];
+  return tokens;
+}
+
 export const tokens = {
   eth,
   sepolia,
@@ -923,4 +936,5 @@ export const tokens = {
   base,
   avax,
   bsc,
+  solDevnet,
 };

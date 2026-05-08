@@ -36,6 +36,7 @@ const chains = {
   base: chainSliceBase('base'),
   avax: chainSliceBase('avax'),
   bsc: chainSliceBase('bsc'),
+  solDevnet: chainSliceBase('solDevnet'),
 };
 // ********** Import chains **********
 

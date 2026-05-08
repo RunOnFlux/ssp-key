@@ -58,6 +58,8 @@ import {
   generateInternalIdentityAddress,
   generateAddressKeypair,
   generatePublicNonce,
+  generateSolanaPubkeyArray,
+  signSolanaInitMessage,
   deriveEVMPublicKey,
   getLibId,
 } from '../../lib/wallet';
@@ -70,6 +72,7 @@ import {
   fetchUtxos,
   signAndBroadcastEVM,
   selectPublicNonce,
+  cosignAndBroadcastSOLTransaction,
 } from '../../lib/constructTx';
 
 import {
@@ -604,7 +607,31 @@ function Home({ navigation }: Props) {
         const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
         const pwForEncryption = idData.password + passwordDecrypted;
         const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
-        const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+        let xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+        // For Solana chains, "xpub" is actually a JSON-stringified array of
+        // 42 base58 Ed25519 leaf pubkeys (Ed25519 has no non-hardened
+        // public-key derivation). If the stored xpubKey for this chain is
+        // still in regular xpub form (e.g., chain was set up before Solana
+        // support), derive the 42-pubkey array on the fly from xprivKey.
+        if (
+          blockchains[chain].chainType === 'sol' &&
+          !xpubKeyDecrypted.startsWith('[')
+        ) {
+          const xprk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
+          const xprivKeyDecrypted = xprk.toString(CryptoJS.enc.Utf8);
+          const keyPubkeys = generateSolanaPubkeyArray(
+            xprivKeyDecrypted,
+            chain,
+          );
+          xpubKeyDecrypted = JSON.stringify(keyPubkeys);
+          // Persist the JSON-encoded form back to encrypted storage so
+          // subsequent calls don't need to re-derive.
+          const reEncryptedXpubKey = CryptoJS.AES.encrypt(
+            xpubKeyDecrypted,
+            pwForEncryption,
+          ).toString();
+          setXpubKey(chain, reEncryptedXpubKey);
+        }
         const addrInfo = generateMultisigAddress(
           suppliedXpubWallet,
           xpubKeyDecrypted,
@@ -937,6 +964,62 @@ function Home({ navigation }: Props) {
     setActiveChain(chain);
     setPublicNoncesReq(chain);
   };
+  const handleSolInitSigRequest = async (
+    chain: keyof cryptos,
+    derivationPath: string,
+  ) => {
+    // Decrypt our xpriv + xpubs, derive our leaf signing keypair for this
+    // address index, sign the SSP Solana Multisig init message, and post
+    // the signature back to the wallet via 'solinitsig' action.
+    const encryptionKey = await Keychain.getGenericPassword({
+      service: 'enc_key',
+    });
+    const passwordData = await Keychain.getGenericPassword({
+      service: 'sspkey_pw',
+    });
+    if (!passwordData || !encryptionKey) {
+      throw new Error('Unable to decrypt stored data');
+    }
+    const passwordDecrypted = CryptoJS.AES.decrypt(
+      passwordData.password,
+      encryptionKey.password,
+    );
+    const passwordDecryptedString = passwordDecrypted.toString(
+      CryptoJS.enc.Utf8,
+    );
+    const pwForEncryption = encryptionKey.password + passwordDecryptedString;
+
+    const xprivk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
+    const xprivKeyDecrypted = xprivk.toString(CryptoJS.enc.Utf8);
+    const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
+    const xpubWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
+    if (!xpubWalletDecrypted.startsWith('[')) {
+      throw new Error('Wallet xpub for sol chain is not a JSON pubkey array');
+    }
+    const walletPubkeys = JSON.parse(xpubWalletDecrypted) as string[];
+    const splittedDerPath = derivationPath.split('-');
+    const addressIndex = Number(splittedDerPath[1]);
+
+    const keyPair = generateAddressKeypair(
+      xprivKeyDecrypted,
+      0,
+      addressIndex,
+      chain,
+    );
+    const sigBase64 = signSolanaInitMessage(
+      keyPair.privKey,
+      walletPubkeys[addressIndex],
+      keyPair.pubKey,
+    );
+
+    await postAction(
+      'solinitsig',
+      sigBase64,
+      chain,
+      derivationPath,
+      sspWalletKeyInternalIdentity,
+    );
+  };
   const handleEvmSigningRequest = (data: evmSigningRequest) => {
     console.log('[EVM Signing] handleEvmSigningRequest:', data);
     setActiveChain(data.chain as keyof cryptos);
@@ -1200,6 +1283,18 @@ function Home({ navigation }: Props) {
           keyPair.privKey as `0x${string}`,
           publicNonceKey,
         );
+      } else if (blockchains[chain].chainType === 'sol') {
+        // Solana: rawTransaction is a base64-encoded partially-signed tx
+        // (wallet has already partial-signed). Key adds its own member ix
+        // signature and submits to the relay's paymaster endpoint, which
+        // signs the feePayer slot and broadcasts.
+        ttxid = await cosignAndBroadcastSOLTransaction({
+          chain,
+          serializedTxBase64: rawTransaction,
+          keyPubkeyBase58: keyPair.pubKey,
+          keyPrivKeyHex: keyPair.privKey,
+          relayHost: sspConfig().relay,
+        });
       } else {
         const signedTx = signTransaction(
           rawTransaction,
@@ -1634,6 +1729,16 @@ function Home({ navigation }: Props) {
           );
         } else if (result.data.action === 'publicnoncesrequest') {
           handlePublicNoncesRequest(result.data.chain);
+        } else if (result.data.action === 'solinitsigrequest') {
+          // Wallet is asking us to sign the SSP Solana Multisig init message
+          // for the multisig at this address index, so wallet can bundle
+          // init + send atomically into one Solana tx.
+          handleSolInitSigRequest(
+            result.data.chain,
+            result.data.path,
+          ).catch((e) => {
+            console.log('[SOL init-sig] handler failed', e);
+          });
         } else if (result.data.action === 'evmsigningrequest') {
           try {
             const evmData = JSON.parse(result.data.payload);
