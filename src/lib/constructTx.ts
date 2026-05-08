@@ -411,9 +411,7 @@ export async function cosignAndBroadcastSOLTransaction(opts: {
 }): Promise<string> {
   const { Transaction, Keypair } = await import('@solana/web3.js');
 
-  const keySecretKey = new Uint8Array(
-    Buffer.from(opts.keyPrivKeyHex, 'hex'),
-  );
+  const keySecretKey = new Uint8Array(Buffer.from(opts.keyPrivKeyHex, 'hex'));
   const keyKeypair = Keypair.fromSecretKey(keySecretKey);
   if (keyKeypair.publicKey.toBase58() !== opts.keyPubkeyBase58) {
     throw new Error('Key privkey/pubkey mismatch');
@@ -441,7 +439,9 @@ export async function cosignAndBroadcastSOLTransaction(opts: {
     data?: { signature?: string; message?: string };
   };
   if (json.status !== 'success' || !json.data?.signature) {
-    throw new Error(`Relay broadcast error: ${json.data?.message ?? 'unknown'}`);
+    throw new Error(
+      `Relay broadcast error: ${json.data?.message ?? 'unknown'}`,
+    );
   }
   return json.data.signature;
 }

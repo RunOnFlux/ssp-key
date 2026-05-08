@@ -23,6 +23,9 @@ module.exports = {
     production: {
       plugins: ['transform-remove-console'],
     },
+    test: {
+      plugins: ['dynamic-import-node'],
+    },
   },
   // Ignore SES files from transformation for LavaMoat compatibility
   ignore: [/\/ses\.cjs$/, /\/ses-hermes\.cjs$/],

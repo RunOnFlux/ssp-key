@@ -1733,12 +1733,11 @@ function Home({ navigation }: Props) {
           // Wallet is asking us to sign the SSP Solana Multisig init message
           // for the multisig at this address index, so wallet can bundle
           // init + send atomically into one Solana tx.
-          handleSolInitSigRequest(
-            result.data.chain,
-            result.data.path,
-          ).catch((e) => {
-            console.log('[SOL init-sig] handler failed', e);
-          });
+          handleSolInitSigRequest(result.data.chain, result.data.path).catch(
+            (e) => {
+              console.log('[SOL init-sig] handler failed', e);
+            },
+          );
         } else if (result.data.action === 'evmsigningrequest') {
           try {
             const evmData = JSON.parse(result.data.payload);
