@@ -119,6 +119,24 @@ type Props = MainScreenProps<'Home'>;
 
 const xpubRegex = /^([a-zA-Z]{2}ub[1-9A-HJ-NP-Za-km-z]{79,140})$/; // xpub start is the most usual, but can also be Ltub
 
+// Solana repurposes the "xpub" field as a JSON-stringified array of 20
+// base58-encoded Ed25519 leaf pubkeys. Accept that format too in sync
+// QR / manual input.
+function isSolanaPubkeyArrayString(input: string): boolean {
+  try {
+    const arr = JSON.parse(input.trim());
+    if (!Array.isArray(arr) || arr.length !== 20) return false;
+    const base58Pk = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    return arr.every((pk) => typeof pk === 'string' && base58Pk.test(pk));
+  } catch {
+    return false;
+  }
+}
+
+function looksLikeXpub(input: string): boolean {
+  return xpubRegex.test(input) || isSolanaPubkeyArrayString(input);
+}
+
 function Home({ navigation }: Props) {
   // focusability of inputs
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
@@ -609,10 +627,10 @@ function Home({ navigation }: Props) {
         const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
         let xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
         // For Solana chains, "xpub" is actually a JSON-stringified array of
-        // 42 base58 Ed25519 leaf pubkeys (Ed25519 has no non-hardened
+        // 20 base58 Ed25519 leaf pubkeys (Ed25519 has no non-hardened
         // public-key derivation). If the stored xpubKey for this chain is
         // still in regular xpub form (e.g., chain was set up before Solana
-        // support), derive the 42-pubkey array on the fly from xprivKey.
+        // support), derive the 20-pubkey array on the fly from xprivKey.
         if (
           blockchains[chain].chainType === 'sol' &&
           !xpubKeyDecrypted.startsWith('[')
@@ -1396,7 +1414,7 @@ function Home({ navigation }: Props) {
         if (!dataToProcess || !blockchains[chain]) {
           displayMessage('error', t('home:err_invalid_manual_input'));
         } else {
-          if (xpubRegex.test(dataToProcess)) {
+          if (looksLikeXpub(dataToProcess)) {
             // xpub
             const xpubw = dataToProcess;
             handleSyncRequest(xpubw, chain);
@@ -1511,7 +1529,7 @@ function Home({ navigation }: Props) {
         }, 200);
       } else {
         // check if input is xpub or transaction
-        if (xpubRegex.test(dataToProcess)) {
+        if (looksLikeXpub(dataToProcess)) {
           // xpub
           const xpubw = dataToProcess;
           handleSyncRequest(xpubw, chain);

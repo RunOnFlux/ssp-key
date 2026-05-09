@@ -134,7 +134,7 @@ export function generateMultisigAddress(
     );
   }
   if (blockchains[chain].chainType === 'sol') {
-    // For Solana, xpub1/xpub2 are JSON-stringified arrays of 42 base58
+    // For Solana, xpub1/xpub2 are JSON-stringified arrays of 20 base58
     // Ed25519 leaf pubkeys. Look up the pubkey for the requested index
     // and derive the vault PDA via the multisig SDK.
     let walletPubkeys: string[];
@@ -150,13 +150,13 @@ export function generateMultisigAddress(
     if (
       !Array.isArray(walletPubkeys) ||
       !Array.isArray(keyPubkeys) ||
-      walletPubkeys.length !== 42 ||
-      keyPubkeys.length !== 42
+      walletPubkeys.length !== 20 ||
+      keyPubkeys.length !== 20
     ) {
       throw new Error('generateMultisigAddress: sol pubkey arrays malformed');
     }
     const idx = typeIndex === 10 ? 0 : addressIndex;
-    if (idx < 0 || idx >= 42) {
+    if (idx < 0 || idx >= 20) {
       throw new Error(
         `generateMultisigAddress: sol address index ${idx} out of range`,
       );
@@ -399,15 +399,20 @@ export function generateAddressKeypairSOL(
 }
 
 /**
- * Pre-derive an array of 42 leaf Ed25519 public keys (base58-encoded) for
+ * Pre-derive an array of 20 leaf Ed25519 public keys (base58-encoded) for
  * a Solana chain. Exchanged via pairing.
+ *
+ * ⚠️  See ssp-wallet/src/lib/wallet.ts for the full coupling notes if you
+ *    change this. TL;DR: the 20 mirrors several other call sites here and
+ *    in ssp-relay; the sync QR fits at errorLevel H up to ~25 pubkeys.
+ *    Past that, Key.tsx in ssp-wallet must drop to errorLevel L.
  */
 export function generateSolanaPubkeyArray(
   xpriv: string,
   chain: keyof cryptos,
 ): string[] {
   const pubkeys: string[] = [];
-  for (let i = 0; i < 42; i++) {
+  for (let i = 0; i < 20; i++) {
     const { pubKey } = generateAddressKeypairSOL(xpriv, 0, i, chain);
     pubkeys.push(pubKey);
   }

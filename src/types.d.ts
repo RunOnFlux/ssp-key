@@ -547,7 +547,7 @@ export interface fusionMessage {
 
 export interface chainState {
   // For chainType === 'sol', xpub fields are JSON-stringified arrays of
-  // 42 base58 Ed25519 leaf pubkeys (one per address index 0-41).
+  // 20 base58 Ed25519 leaf pubkeys (one per address index 0-19).
   xpubWallet: string;
   xpubKey: string;
   wallets: wallets;
