@@ -314,7 +314,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       },
     );
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: socket initialization must store the instance for context consumers
     setSocket(newSocket);
 
     return () => {

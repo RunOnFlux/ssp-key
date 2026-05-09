@@ -83,7 +83,8 @@ const TransactionRequest = (props: {
         setTxData(txInfo.data || '');
         if (
           (props.utxos && props.utxos.length) ||
-          blockchains[props.chain].chainType === 'evm'
+          blockchains[props.chain].chainType === 'evm' ||
+          blockchains[props.chain].chainType === 'sol'
         ) {
           setFee(txInfo.fee);
         }
