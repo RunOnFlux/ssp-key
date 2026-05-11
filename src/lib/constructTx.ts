@@ -392,22 +392,26 @@ export async function signAndBroadcastEVM(
 // ============================================================================
 
 /**
- * Co-sign a partially-signed Solana tx and submit to the relay's paymaster
- * broadcast endpoint (which adds the feePayer signature and broadcasts).
+ * UTXO/EVM-style Solana co-sign + broadcast on the Key device.
  *
- * Used by ssp-key when it receives an action `tx` for `chainType === 'sol'`.
- * Wallet has already partial-signed; key adds its own partial-sig (member
- * ix authorization). The relay paymaster pays tx fees + auto-tops-up
- * member signers for proposal rent.
+ * Wallet partial-signs the outer tx with its leaf and posts the serialized
+ * tx as a bare base64 string in the standard `tx` action. Key adds its own
+ * leaf signature and broadcasts via the relay's paymaster endpoint,
+ * mirroring how UTXO/EVM `tx` actions are handled.
  *
- * Returns the broadcast signature.
+ * Same flow for first / subsequent sends — when the multisig PDA isn't
+ * initialized yet, wallet's tx contains a leading permissionless
+ * `initialize_multisig` ix (no member sigs required), and Key never has
+ * to know the difference.
+ *
+ * Returns the broadcast signature (used as txid for the existing TxSent UI).
  */
 export async function cosignAndBroadcastSOLTransaction(opts: {
   chain: keyof cryptos;
   serializedTxBase64: string;
   keyPubkeyBase58: string;
-  keyPrivKeyHex: string; // 64-byte Ed25519 secret key (hex)
-  relayHost: string; // e.g., 'relay.sspwallet.com'
+  keyPrivKeyHex: string;
+  relayHost: string;
 }): Promise<string> {
   const { Transaction, Keypair } = await import('@solana/web3.js');
 
@@ -420,8 +424,6 @@ export async function cosignAndBroadcastSOLTransaction(opts: {
   const tx = Transaction.from(Buffer.from(opts.serializedTxBase64, 'base64'));
   tx.partialSign(keyKeypair);
 
-  // Submit to relay's paymaster broadcast endpoint instead of direct RPC.
-  // The relay adds the feePayer (paymaster) signature and broadcasts.
   const serializedTxBase64 = tx
     .serialize({ requireAllSignatures: false, verifySignatures: false })
     .toString('base64');

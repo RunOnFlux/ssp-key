@@ -2800,14 +2800,13 @@
   resolved "https://registry.yarnpkg.com/@runonflux/react-native-step-indicator/-/react-native-step-indicator-1.0.0.tgz#5acb0ead7ca09d093d7a8105278d2bc95dd21cb0"
   integrity sha512-Q8Y2IbXoar8jaD4v82B5nFm2FcgVNLrhbtbyNcKyehxMDLUe4v8xZtl/Idv8ZsyA7gvf8N7DZccxxnsCPIjCnQ==
 
-"@runonflux/solana-multisig@0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@runonflux/solana-multisig/-/solana-multisig-0.3.0.tgz#b1e3c09a6407351705778a675bca705ef1a915b3"
-  integrity sha512-iemLV5O7zMmCc1PB3O34/DAJ4Z7/f0dqS19xP85D5pQ5ytjLqiDWn1BRog5SAaeUbVAt2o6B29G4hLwOJkP7pg==
+"@runonflux/solana-multisig@0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@runonflux/solana-multisig/-/solana-multisig-0.8.1.tgz#7606016913d998ea7ee57fd963aeb739c2cf92b0"
+  integrity sha512-Igby3YA/UYaB/7onsAutZLPzHe59Bx4pUuBKKy9t5Hk/HXBwEq+1DW/OovBKJNswW/i1nb2dGFAwjT5NMdGp0g==
   dependencies:
     "@coral-xyz/anchor" "^0.31.1"
     "@solana/web3.js" "^1.98.4"
-    tweetnacl "^1.0.3"
 
 "@runonflux/utxo-lib@1.0.2":
   version "1.0.2"
@@ -10314,7 +10313,7 @@ tslib@^2.0.3, tslib@^2.1.0, tslib@^2.4.0, tslib@^2.8.0:
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.8.1.tgz#612efe4ed235d567e8aba5f2a5fab70280ade83f"
   integrity sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==
 
-tweetnacl@1.0.3, tweetnacl@^1.0.3:
+tweetnacl@1.0.3:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/tweetnacl/-/tweetnacl-1.0.3.tgz#ac0af71680458d8a6378d0d0d050ab1407d35596"
   integrity sha512-6rt+RN7aOi1nGMyC4Xa5DdYiukl2UWCbcJft7YhxReBGQD7OAM8Pbxw6YMo4r2diNEA8FEmu32YOn9rhaiE5yw==

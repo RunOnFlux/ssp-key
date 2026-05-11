@@ -59,7 +59,6 @@ import {
   generateAddressKeypair,
   generatePublicNonce,
   generateSolanaPubkeyArray,
-  signSolanaInitMessage,
   deriveEVMPublicKey,
   getLibId,
 } from '../../lib/wallet';
@@ -932,6 +931,7 @@ function Home({ navigation }: Props) {
       data,
     );
     console.log('[postAction] response:', result.data);
+    return result;
   };
   const postSyncToken = async (token: string, wkIdentity: string) => {
     // post fcm token tied to wkIdentity
@@ -981,62 +981,6 @@ function Home({ navigation }: Props) {
     console.log(chain);
     setActiveChain(chain);
     setPublicNoncesReq(chain);
-  };
-  const handleSolInitSigRequest = async (
-    chain: keyof cryptos,
-    derivationPath: string,
-  ) => {
-    // Decrypt our xpriv + xpubs, derive our leaf signing keypair for this
-    // address index, sign the SSP Solana Multisig init message, and post
-    // the signature back to the wallet via 'solinitsig' action.
-    const encryptionKey = await Keychain.getGenericPassword({
-      service: 'enc_key',
-    });
-    const passwordData = await Keychain.getGenericPassword({
-      service: 'sspkey_pw',
-    });
-    if (!passwordData || !encryptionKey) {
-      throw new Error('Unable to decrypt stored data');
-    }
-    const passwordDecrypted = CryptoJS.AES.decrypt(
-      passwordData.password,
-      encryptionKey.password,
-    );
-    const passwordDecryptedString = passwordDecrypted.toString(
-      CryptoJS.enc.Utf8,
-    );
-    const pwForEncryption = encryptionKey.password + passwordDecryptedString;
-
-    const xprivk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
-    const xprivKeyDecrypted = xprivk.toString(CryptoJS.enc.Utf8);
-    const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
-    const xpubWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
-    if (!xpubWalletDecrypted.startsWith('[')) {
-      throw new Error('Wallet xpub for sol chain is not a JSON pubkey array');
-    }
-    const walletPubkeys = JSON.parse(xpubWalletDecrypted) as string[];
-    const splittedDerPath = derivationPath.split('-');
-    const addressIndex = Number(splittedDerPath[1]);
-
-    const keyPair = generateAddressKeypair(
-      xprivKeyDecrypted,
-      0,
-      addressIndex,
-      chain,
-    );
-    const sigBase64 = signSolanaInitMessage(
-      keyPair.privKey,
-      walletPubkeys[addressIndex],
-      keyPair.pubKey,
-    );
-
-    await postAction(
-      'solinitsig',
-      sigBase64,
-      chain,
-      derivationPath,
-      sspWalletKeyInternalIdentity,
-    );
   };
   const handleEvmSigningRequest = (data: evmSigningRequest) => {
     console.log('[EVM Signing] handleEvmSigningRequest:', data);
@@ -1302,10 +1246,10 @@ function Home({ navigation }: Props) {
           publicNonceKey,
         );
       } else if (blockchains[chain].chainType === 'sol') {
-        // Solana: rawTransaction is a base64-encoded partially-signed tx
-        // (wallet has already partial-signed). Key adds its own member ix
-        // signature and submits to the relay's paymaster endpoint, which
-        // signs the feePayer slot and broadcasts.
+        // Wallet pre-signed the outer tx with its leaf. Key adds its own
+        // leaf sig + broadcasts directly. The tx may include a permissionless
+        // initialize_multisig ix at the head for first-send-per-vault — Key
+        // doesn't need to know; it just signs and broadcasts.
         ttxid = await cosignAndBroadcastSOLTransaction({
           chain,
           serializedTxBase64: rawTransaction,
@@ -1330,7 +1274,6 @@ function Home({ navigation }: Props) {
       setRawTx('');
       setTxPath('');
       setTxUtxos([]);
-      // here tell ssp-relay that we are finished, rewrite the request
       await postAction(
         'txid',
         ttxid,
@@ -1747,15 +1690,6 @@ function Home({ navigation }: Props) {
           );
         } else if (result.data.action === 'publicnoncesrequest') {
           handlePublicNoncesRequest(result.data.chain);
-        } else if (result.data.action === 'solinitsigrequest') {
-          // Wallet is asking us to sign the SSP Solana Multisig init message
-          // for the multisig at this address index, so wallet can bundle
-          // init + send atomically into one Solana tx.
-          handleSolInitSigRequest(result.data.chain, result.data.path).catch(
-            (e) => {
-              console.log('[SOL init-sig] handler failed', e);
-            },
-          );
         } else if (result.data.action === 'evmsigningrequest') {
           try {
             const evmData = JSON.parse(result.data.payload);

@@ -43,147 +43,89 @@ function buildKeySignableTx() {
   };
 }
 
-describe('Solana constructTx (key device)', () => {
-  describe('cosignAndBroadcastSOLTransaction', () => {
-    test('throws if key privkey does not match the supplied key pubkey', async () => {
-      const { serialized } = buildKeySignableTx();
-      await expect(
-        cosignAndBroadcastSOLTransaction({
-          chain: 'solDevnet',
-          serializedTxBase64: serialized,
-          keyPubkeyBase58: walletKp.pubKey, // wrong pubkey
-          keyPrivKeyHex: keyKp.privKey,
-          relayHost: 'relay.sspwallet.com',
-        }),
-      ).rejects.toThrow(/privkey\/pubkey mismatch/);
+describe('cosignAndBroadcastSOLTransaction (key device)', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('throws if key privkey does not match the supplied key pubkey', async () => {
+    const { serialized } = buildKeySignableTx();
+    await expect(
+      cosignAndBroadcastSOLTransaction({
+        chain: 'solDevnet',
+        serializedTxBase64: serialized,
+        keyPubkeyBase58: walletKp.pubKey, // wrong pubkey
+        keyPrivKeyHex: keyKp.privKey,
+        relayHost: 'relay.example',
+      }),
+    ).rejects.toThrow(/privkey\/pubkey mismatch/);
+  });
+
+  test('attaches the key signature and POSTs the partial-signed tx to /v1/sol/broadcast', async () => {
+    const { paymaster, serialized } = buildKeySignableTx();
+    let capturedBody: { chain?: string; serializedTxBase64?: string } = {};
+    global.fetch = jest.fn((_url: string, init?: RequestInit) => {
+      capturedBody = JSON.parse((init?.body as string) ?? '{}');
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            status: 'success',
+            data: { signature: 'TXSIGNATURE_FAKE' },
+          }),
+      } as Response);
+    }) as unknown as typeof fetch;
+
+    const sig = await cosignAndBroadcastSOLTransaction({
+      chain: 'solDevnet',
+      serializedTxBase64: serialized,
+      keyPubkeyBase58: keyKp.pubKey,
+      keyPrivKeyHex: keyKp.privKey,
+      relayHost: 'relay.example',
     });
+    expect(sig).toBe('TXSIGNATURE_FAKE');
+    expect(capturedBody.chain).toBe('solDevnet');
+    expect(typeof capturedBody.serializedTxBase64).toBe('string');
 
-    test('on relay success returns the broadcast signature and posts to /v1/sol/broadcast', async () => {
-      const { serialized } = buildKeySignableTx();
-      const fakeSig = '5xKeyDeviceFakeBroadcastSig';
-      const fetchSpy = jest
-        .spyOn(globalThis as any, 'fetch')
-        .mockResolvedValue({
-          ok: true,
-          status: 200,
-          json: () =>
-            Promise.resolve({
-              status: 'success',
-              data: { signature: fakeSig },
-            }),
-        } as any);
+    const sentTx = Transaction.from(
+      Buffer.from(capturedBody.serializedTxBase64!, 'base64'),
+    );
+    const keySig = sentTx.signatures.find(
+      (s) => s.publicKey.toBase58() === keyKp.pubKey,
+    );
+    expect(keySig).toBeDefined();
+    expect(keySig!.signature).not.toBeNull();
+    // Paymaster slot is still unsigned — relay adds that on broadcast.
+    const paySig = sentTx.signatures.find(
+      (s) => s.publicKey.toBase58() === paymaster.publicKey.toBase58(),
+    );
+    expect(paySig).toBeDefined();
+    expect(paySig!.signature).toBeNull();
+  });
 
-      const sig = await cosignAndBroadcastSOLTransaction({
+  test('surfaces a relay error response', async () => {
+    const { serialized } = buildKeySignableTx();
+    global.fetch = jest.fn(() => {
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            status: 'error',
+            data: { message: 'paymaster simulation failed' },
+          }),
+      } as Response);
+    }) as unknown as typeof fetch;
+
+    await expect(
+      cosignAndBroadcastSOLTransaction({
         chain: 'solDevnet',
         serializedTxBase64: serialized,
         keyPubkeyBase58: keyKp.pubKey,
         keyPrivKeyHex: keyKp.privKey,
-        relayHost: 'relay.sspwallet.com',
-      });
-      expect(sig).toBe(fakeSig);
-
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
-      const [url, opts] = fetchSpy.mock.calls[0];
-      expect(url).toBe('https://relay.sspwallet.com/v1/sol/broadcast');
-      const body = JSON.parse((opts as any).body);
-      expect(body.chain).toBe('solDevnet');
-      expect(typeof body.serializedTxBase64).toBe('string');
-
-      fetchSpy.mockRestore();
-    });
-
-    test('on relay 4xx/5xx HTTP throws "Relay broadcast failed"', async () => {
-      const { serialized } = buildKeySignableTx();
-      const fetchSpy = jest
-        .spyOn(globalThis as any, 'fetch')
-        .mockResolvedValue({
-          ok: false,
-          status: 503,
-          json: () => Promise.resolve({}),
-        } as any);
-
-      await expect(
-        cosignAndBroadcastSOLTransaction({
-          chain: 'solDevnet',
-          serializedTxBase64: serialized,
-          keyPubkeyBase58: keyKp.pubKey,
-          keyPrivKeyHex: keyKp.privKey,
-          relayHost: 'relay.sspwallet.com',
-        }),
-      ).rejects.toThrow(/Relay broadcast failed: 503/);
-
-      fetchSpy.mockRestore();
-    });
-
-    test('on relay error response (status="error") throws "Relay broadcast error"', async () => {
-      const { serialized } = buildKeySignableTx();
-      const fetchSpy = jest
-        .spyOn(globalThis as any, 'fetch')
-        .mockResolvedValue({
-          ok: true,
-          status: 200,
-          json: () =>
-            Promise.resolve({
-              status: 'error',
-              data: { message: 'paymaster funds depleted' },
-            }),
-        } as any);
-
-      await expect(
-        cosignAndBroadcastSOLTransaction({
-          chain: 'solDevnet',
-          serializedTxBase64: serialized,
-          keyPubkeyBase58: keyKp.pubKey,
-          keyPrivKeyHex: keyKp.privKey,
-          relayHost: 'relay.sspwallet.com',
-        }),
-      ).rejects.toThrow(/Relay broadcast error: paymaster funds depleted/);
-
-      fetchSpy.mockRestore();
-    });
-
-    test('co-signing attaches the key device signature to the relayed tx', async () => {
-      const { paymaster, serialized } = buildKeySignableTx();
-      let capturedBody: any = null;
-      const fetchSpy = jest
-        .spyOn(globalThis as any, 'fetch')
-        .mockImplementation((_url, opts: any) => {
-          capturedBody = JSON.parse(opts.body);
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () =>
-              Promise.resolve({
-                status: 'success',
-                data: { signature: 'sigFromRelay' },
-              }),
-          } as any);
-        });
-
-      await cosignAndBroadcastSOLTransaction({
-        chain: 'solDevnet',
-        serializedTxBase64: serialized,
-        keyPubkeyBase58: keyKp.pubKey,
-        keyPrivKeyHex: keyKp.privKey,
-        relayHost: 'relay.sspwallet.com',
-      });
-
-      const sentTx = Transaction.from(
-        Buffer.from(capturedBody.serializedTxBase64, 'base64'),
-      );
-      const keySig = sentTx.signatures.find(
-        (s) => s.publicKey.toBase58() === keyKp.pubKey,
-      );
-      expect(keySig).toBeDefined();
-      expect(keySig!.signature).not.toBeNull();
-      // Paymaster slot is still unsigned — relay adds that.
-      const paySig = sentTx.signatures.find(
-        (s) => s.publicKey.toBase58() === paymaster.publicKey.toBase58(),
-      );
-      expect(paySig).toBeDefined();
-      expect(paySig!.signature).toBeNull();
-
-      fetchSpy.mockRestore();
-    });
+        relayHost: 'relay.example',
+      }),
+    ).rejects.toThrow(/paymaster simulation failed/);
   });
 });

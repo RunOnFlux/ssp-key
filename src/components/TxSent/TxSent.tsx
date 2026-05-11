@@ -10,7 +10,7 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-import { backends } from '@storage/backends';
+import { explorerTxUrl } from '../../lib/explorerUrl';
 import BlurOverlay from '../../BlurOverlay';
 
 import { cryptos } from '../../types';
@@ -31,10 +31,7 @@ const TxSent = (props: {
 
   const openExplorer = () => {
     console.log('Open Explorer');
-    const backendConfig = backends()[props.chain];
-    Linking.openURL(
-      `https://${backendConfig.explorer ?? backendConfig.node}/tx/${props.txid}`,
-    );
+    Linking.openURL(explorerTxUrl(props.chain, props.txid));
   };
 
   return (

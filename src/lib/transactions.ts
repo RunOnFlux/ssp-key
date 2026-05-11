@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+import QuickCrypto from 'react-native-quick-crypto';
 import utxolib from '@runonflux/utxo-lib';
 import { decodeFunctionData, erc20Abi } from 'viem';
 import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
@@ -267,7 +268,21 @@ export async function decodeTransactionForApproval(
       return decodedTx;
     }
     if (blockchains[chain].chainType === 'sol') {
-      const decodedTx = await decodeSOLTransactionForApproval(rawTx, chain);
+      // Single-roundtrip flow: payload is JSON wrapping the unsigned tx
+      // plus init metadata. Older callers pass a bare base64 tx string.
+      let serializedForDecode = rawTx;
+      try {
+        const parsed = JSON.parse(rawTx) as { unsignedTxBase64?: string };
+        if (parsed && typeof parsed.unsignedTxBase64 === 'string') {
+          serializedForDecode = parsed.unsignedTxBase64;
+        }
+      } catch {
+        // Not JSON — fall through to decode rawTx directly.
+      }
+      const decodedTx = await decodeSOLTransactionForApproval(
+        serializedForDecode,
+        chain,
+      );
       return decodedTx;
     }
     const libID = getLibId(chain);
@@ -525,26 +540,10 @@ export async function decodeEVMTransactionForApproval(
   }
 }
 
-/**
- * Decode an SSP Solana Multisig transaction for the key device's approval
- * screen. The wallet hands the key a base64-encoded outer Solana Transaction
- * containing a `create_transaction` ix; that ix's data carries the proposal
- * `TransactionMessage` inline (borsh-encoded) describing the user's intended
- * transfer.
- *
- * Two transfers are typically present in the proposal:
- *   1. user transfer: vault → recipient (this is what the user is sending)
- *   2. paymaster reimbursement: vault → feePayer (this is the fee — the
- *      paymaster signs the outer tx's feePayer slot and gets reimbursed
- *      in-tx so its balance stays flat)
- *
- * We identify the fee transfer by matching destination = outer tx feePayer.
- * Anything else SystemProgram.transfer'd from the vault is the user's send.
- *
- * For SPL token transfers (TOKEN_PROGRAM ix), the recipient shown is the
- * destination ATA — Solana explorers resolve ATAs to their owner so the
- * user can verify on-chain that the ATA belongs to who they intended.
- */
+// Decode an SSP Solana proposal for the approval screen. Splits the
+// proposal's transfers into the user's send (vault → recipient) and the
+// fee (vault → outer feePayer = paymaster). SPL transfers show the
+// destination ATA as the receiver; explorers resolve ATAs to owners.
 async function decodeSOLTransactionForApproval(
   rawTxBase64: string,
   chain: keyof cryptos,
@@ -552,7 +551,6 @@ async function decodeSOLTransactionForApproval(
   try {
     const { Transaction, PublicKey, SystemProgram } =
       await import('@solana/web3.js');
-    const { createHash } = require('crypto') as typeof import('crypto');
     const decimals = blockchains[chain].decimals;
     const tokenSymbol = blockchains[chain].symbol;
 
@@ -562,25 +560,35 @@ async function decodeSOLTransactionForApproval(
     }
     const paymasterPubkey = tx.feePayer;
 
-    // Find the create_transaction ix (matches Anchor discriminator
-    // sha256("global:create_transaction")[:8]).
-    const createIxDiscriminator: Buffer = createHash('sha256')
-      .update('global:create_transaction')
-      .digest()
-      .subarray(0, 8);
-    const createIx = tx.instructions.find(
-      (ix) =>
-        ix.data.length >= 8 &&
-        ix.data.subarray(0, 8).equals(createIxDiscriminator),
-    );
+    // Compute the create_transaction discriminator (first 8 bytes of
+    // sha256("global:create_transaction")) using react-native-quick-crypto
+    // — Node's `crypto.createHash` isn't available in RN, and utxolib's
+    // sha256 wasn't reachable from this RN bundle either.
+    const createIxDiscriminator: Buffer = Buffer.from(
+      QuickCrypto.createHash('sha256')
+        .update('global:create_transaction')
+        .digest(),
+    ).subarray(0, 8);
+    console.log(createIxDiscriminator);
+    console.log(tx.instructions);
+    // `ix.data` from `Transaction.from(...)` is typed as Buffer but the
+    // RN runtime can deliver a plain JS array of numbers (no `.subarray`,
+    // no `.readUInt32LE`, no `.equals`). Compare byte-by-byte using only
+    // index access, then `Buffer.from(...)` the matched ix's data so all
+    // the parser helpers below have a real Buffer to work with.
+    const createIx = tx.instructions.find((ix) => {
+      if (!ix.data || ix.data.length < 8) return false;
+      for (let i = 0; i < 8; i++) {
+        if ((ix.data as ArrayLike<number>)[i] !== createIxDiscriminator[i])
+          return false;
+      }
+      return true;
+    });
     if (!createIx) {
       throw new Error('Solana tx does not contain a create_transaction ix');
     }
-
-    // Borsh-decode the proposal message inline from ix data:
-    //   8 bytes discriminator + 1 byte vault_index + TransactionMessage
-    const data = createIx.data;
-    let off = 8 + 1 + 3; // skip disc + vault_index + 3-byte header
+    const data = Buffer.from(createIx.data as ArrayLike<number>);
+    let off = 8 + 1 + 3; // skip discriminator + vault_index + 3-byte header
     const accountKeysLen = data.readUInt32LE(off);
     off += 4;
     const accountKeys: InstanceType<typeof PublicKey>[] = [];
@@ -605,30 +613,26 @@ async function decodeSOLTransactionForApproval(
       off += 1;
       const aiLen = data.readUInt32LE(off);
       off += 4;
-      const accountIdxs = data.subarray(off, off + aiLen);
+      const accountIdxs = Buffer.from(data.subarray(off, off + aiLen));
       off += aiLen;
       const ixDataLen = data.readUInt32LE(off);
       off += 4;
-      const ixData = data.subarray(off, off + ixDataLen);
+      const ixData = Buffer.from(data.subarray(off, off + ixDataLen));
       off += ixDataLen;
 
       const ixProgram = accountKeys[programIdIdx];
       if (!ixProgram) continue;
 
-      // SystemProgram.transfer (native SOL).
       if (ixProgram.equals(SystemProgram.programId)) {
         if (ixData.length < 12 || ixData.readUInt32LE(0) !== 2) continue;
         if (accountIdxs.length < 2) continue;
         const fromIdx = accountIdxs[0];
-        const toIdx = accountIdxs[1];
-        const toPubkey = accountKeys[toIdx];
+        const toPubkey = accountKeys[accountIdxs[1]];
         if (!toPubkey) continue;
         const amountLamports = ixData.readBigUInt64LE(4).toString();
         if (toPubkey.equals(paymasterPubkey)) {
-          // Reimbursement to paymaster — this is the fee.
           feeBase = new BigNumber(feeBase).plus(amountLamports).toFixed();
         } else {
-          // User's actual transfer.
           vaultPubkey = accountKeys[fromIdx];
           userReceiver = toPubkey.toBase58();
           userAmountBase = amountLamports;
@@ -636,40 +640,24 @@ async function decodeSOLTransactionForApproval(
         continue;
       }
 
-      // SPL token transfer (TOKEN_PROGRAM):
-      //   accountIndexes: [source_ata, dest_ata, authority]
-      //   data tag 3 = Transfer (legacy), tag 12 = TransferChecked
+      // SPL Transfer (tag 3) or TransferChecked (tag 12); accountIndexes
+      // are [source_ata, dest_ata, authority]. Mint isn't in the proposal,
+      // so symbol stays generic — explorer resolves ATA → mint → symbol.
       if (ixProgram.toBase58() === TOKEN_PROGRAM) {
         const tag = ixData.readUInt8(0);
-        let tokenAmount: string | null = null;
-        if (tag === 3 && ixData.length >= 9) {
-          tokenAmount = ixData.readBigUInt64LE(1).toString();
-        } else if (tag === 12 && ixData.length >= 9) {
-          tokenAmount = ixData.readBigUInt64LE(1).toString();
-        } else {
-          continue;
-        }
+        if ((tag !== 3 && tag !== 12) || ixData.length < 9) continue;
         if (accountIdxs.length < 2) continue;
-        const destAtaIdx = accountIdxs[1];
-        const destAta = accountKeys[destAtaIdx];
+        const destAta = accountKeys[accountIdxs[1]];
         if (!destAta) continue;
         userReceiver = destAta.toBase58();
-        userAmountBase = tokenAmount;
-
-        // Look up token metadata from chain spec for symbol/decimals/contract.
-        // The proposal doesn't carry the mint address directly in the ix
-        // accountIndexes for legacy Transfer (only source ATA, dest ATA,
-        // authority). Inferring the mint requires either an RPC call or
-        // off-chain knowledge from chain spec. For now: leave userTokenSymbol
-        // generic; explorer link resolves ATA → mint → symbol.
+        userAmountBase = ixData.readBigUInt64LE(1).toString();
         userTokenSymbol = '(token)';
         continue;
       }
     }
 
-    // Convert base units to display units. For native SOL the chain decimals
-    // apply; for SPL we'd need the mint's decimals (not retrievable from the
-    // proposal alone — show raw base units in that case).
+    // SPL amounts stay in base units since the proposal doesn't carry the
+    // mint's decimals; native SOL converts via the chain's decimals.
     const isNative = userTokenSymbol === tokenSymbol;
     const displayAmount = isNative
       ? new BigNumber(userAmountBase).dividedBy(10 ** decimals).toFixed()
