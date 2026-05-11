@@ -1364,16 +1364,13 @@ function Home({ navigation }: Props) {
             setTimeout(() => {
               setIsManualInputModalOpen(false);
             });
-          } else if (dataToProcess.startsWith('0')) {
-            // transaction
-            // sign transaction
+          } else {
+            // transaction (UTXO hex, EVM userOp JSON, or Solana base64)
             const rawTransaction = dataToProcess;
             handleTxRequest(rawTransaction, chain, wallet);
             setTimeout(() => {
               setIsManualInputModalOpen(false);
             });
-          } else {
-            displayMessage('error', t('home:err_invalid_manual_input'));
           }
         }
       }
@@ -1476,14 +1473,10 @@ function Home({ navigation }: Props) {
           // xpub
           const xpubw = dataToProcess;
           handleSyncRequest(xpubw, chain);
-        } else if (dataToProcess.startsWith('0')) {
-          // transaction
+        } else {
+          // transaction (UTXO hex, EVM userOp JSON, or Solana base64)
           const rawTransaction = dataToProcess;
           handleTxRequest(rawTransaction, chain, wallet);
-        } else {
-          setTimeout(() => {
-            displayMessage('error', t('home:err_invalid_scanned_data'));
-          }, 200);
         }
       }
       setTimeout(() => {
