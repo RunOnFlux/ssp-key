@@ -2477,6 +2477,91 @@ function Home({ navigation }: Props) {
       // Key's public key for this vault — set during signing
       let keyPubKey = '';
 
+      // Solana enterprise: ed25519 partial-sign of the bundled tx.
+      // No nonces, no Schnorr, no UTXO progressive — just one 64-byte sig
+      // for Key's slot.
+      if (blockchainConfig.chainType === 'sol') {
+        // Read addressIndex from the synthesized inputDetails[0] entry the
+        // wallet/enterprise-app forwards. Must match the index used to
+        // derive the on-chain multisig PDA; otherwise the derived pubkey
+        // wouldn't be a member and approve_transaction would reject.
+        // Defensive: vaultSigningData.inputDetails may arrive as either a
+        // JSON string (relay payload) or already-parsed Array — match the
+        // existing UTXO path's accommodation.
+        let solInputDetailsParsed: Array<{ addressIndex?: number }> = [];
+        const rawInputDetails = vaultSigningData.inputDetails;
+        if (typeof rawInputDetails === 'string') {
+          try {
+            solInputDetailsParsed = JSON.parse(rawInputDetails) as Array<{
+              addressIndex?: number;
+            }>;
+          } catch {
+            solInputDetailsParsed = [];
+          }
+        } else if (Array.isArray(rawInputDetails)) {
+          solInputDetailsParsed = rawInputDetails;
+        }
+        const solAddressIndex =
+          typeof solInputDetailsParsed[0]?.addressIndex === 'number'
+            ? solInputDetailsParsed[0].addressIndex
+            : 0;
+        const signingKeypair = generateAddressKeypair(
+          vaultXpriv,
+          vaultSigningData.vaultIndex,
+          solAddressIndex,
+          vaultChain,
+        );
+        keyPubKey = signingKeypair.pubKey;
+
+        const { Transaction: SolTransaction, Keypair: SolKeypair } =
+          await import('@solana/web3.js');
+        const secretKey = new Uint8Array(
+          Buffer.from(signingKeypair.privKey, 'hex'),
+        );
+        const keyKeypair = SolKeypair.fromSecretKey(secretKey);
+        // rawUnsignedTx carries the base64 bundled tx from the backend
+        // (nonceAdvance + create + approve×threshold + execute + close).
+        const tx = SolTransaction.from(
+          Buffer.from(vaultSigningData.rawUnsignedTx, 'base64'),
+        );
+        tx.partialSign(keyKeypair);
+        const sigEntry = tx.signatures.find((s) =>
+          s.publicKey.equals(keyKeypair.publicKey),
+        );
+        if (!sigEntry?.signature) {
+          signingKeypair.privKey = '';
+          throw new Error(
+            'Solana partial-sign produced no signature at key slot',
+          );
+        }
+        const keySigBase64 = Buffer.from(sigEntry.signature).toString('base64');
+
+        // Clear sensitive material
+        signingKeypair.privKey = '';
+        vaultXpriv = '';
+        pwForEncryption = '';
+
+        const responsePayload: Record<string, unknown> = {
+          // Reuse signedHex convention for shipping the base64 sig back —
+          // wallet-side EnterpriseVaultSignTx receiver doesn't care about
+          // the field name; it forwards to the enterprise sign endpoint.
+          keySignatureBase64: keySigBase64,
+          keyPubKey,
+          requestId: vaultSigningData.requestId,
+        };
+
+        await postAction(
+          'enterprisevaultsigned',
+          JSON.stringify(responsePayload),
+          vaultSigningData.chain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+
+        displayMessage('success', t('home:vault_sign_success'));
+        return;
+      }
+
       // EVM vault signing: use enterprise nonce for Schnorr partial signature
       const isEvmChain = blockchainConfig.chainType === 'evm';
       let usedEnterpriseNonce: publicPrivateNonce | null = null;
