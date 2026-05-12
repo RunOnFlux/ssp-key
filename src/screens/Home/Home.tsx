@@ -636,9 +636,13 @@ function Home({ navigation }: Props) {
         ) {
           const xprk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
           const xprivKeyDecrypted = xprk.toString(CryptoJS.enc.Utf8);
+          // Consumer wallet on-the-fly migration: derive at typeIndex=0
+          // (receiving slot). Enterprise vaults take a different code path
+          // (handleVaultXpubAction) which passes vault.vaultIndex.
           const keyPubkeys = generateSolanaPubkeyArray(
             xprivKeyDecrypted,
             chain,
+            0,
           );
           xpubKeyDecrypted = JSON.stringify(keyPubkeys);
           // Persist the JSON-encoded form back to encrypted storage so
@@ -2318,15 +2322,48 @@ function Home({ navigation }: Props) {
         throw new Error('Unsupported chain: ' + vaultXpubData.chain);
       }
 
-      // Derive xpub at m/48'/coin'/orgIndex'/scriptType'
-      const vaultXpub = getMasterXpub(
-        mnemonicPhrase,
-        48,
-        blockchainConfig.slip,
-        vaultXpubData.orgIndex,
-        blockchainConfig.scriptType,
-        vaultChain,
-      );
+      // For UTXO/EVM: BIP32 xpub at m/48'/coin'/orgIndex'/scriptType'. Backend
+      // derives child pubkeys per addressIndex on demand.
+      // For Solana: pre-derive 20 ed25519 pubkeys at /[vaultIndex]/0..19 from
+      // the master xpriv and send as JSON array. vaultIndex (from the wallet's
+      // relay payload) provides per-vault key separation — mirrors EVM/UTXO
+      // behavior where vault.vaultIndex shifts the HD derivation.
+      let vaultXpub: string;
+      if (
+        typeof vaultXpubData.vaultIndex !== 'number' ||
+        !Number.isInteger(vaultXpubData.vaultIndex) ||
+        vaultXpubData.vaultIndex < 0
+      ) {
+        throw new Error(
+          'vaultXpub request missing valid vaultIndex (wallet must send a non-negative integer)',
+        );
+      }
+      const solVaultTypeIndex = vaultXpubData.vaultIndex;
+      if (blockchainConfig.chainType === 'sol') {
+        const solVaultXpriv = getMasterXpriv(
+          mnemonicPhrase,
+          48,
+          blockchainConfig.slip,
+          vaultXpubData.orgIndex,
+          blockchainConfig.scriptType,
+          vaultChain,
+        );
+        const pubkeys = generateSolanaPubkeyArray(
+          solVaultXpriv,
+          vaultChain,
+          solVaultTypeIndex,
+        );
+        vaultXpub = JSON.stringify(pubkeys);
+      } else {
+        vaultXpub = getMasterXpub(
+          mnemonicPhrase,
+          48,
+          blockchainConfig.slip,
+          vaultXpubData.orgIndex,
+          blockchainConfig.scriptType,
+          vaultChain,
+        );
+      }
 
       // Sign the keyXpub with identity key for verification
       const { xprivKey: idXprivKey } = identityChainState || {};
@@ -2505,6 +2542,11 @@ function Home({ navigation }: Props) {
           typeof solInputDetailsParsed[0]?.addressIndex === 'number'
             ? solInputDetailsParsed[0].addressIndex
             : 0;
+        // Sign at HD path [vaultIndex][addressIndex]. Mirrors the per-vault
+        // xpub flow (generateSolanaPubkeyArray now also derives at
+        // typeIndex=vault.vaultIndex), so the wallet's signing pubkey
+        // matches the multisig slot pubkey computed from the stored xpub
+        // array. Identical to EVM/UTXO per-vault key separation.
         const signingKeypair = generateAddressKeypair(
           vaultXpriv,
           vaultSigningData.vaultIndex,

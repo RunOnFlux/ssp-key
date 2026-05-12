@@ -599,6 +599,10 @@ interface wkSigningRequest {
 interface vaultXpubRequest {
   chain: string;
   orgIndex: number;
+  // Per-vault HD typeIndex slot. Solana xpub generation uses this to derive
+  // a vault-specific 20-pubkey array (mirrors EVM/UTXO per-vault keys).
+  // Always present — the wallet's relay payload includes it.
+  vaultIndex: number;
   vaultName: string;
   orgName: string;
   xpubWallet: string;

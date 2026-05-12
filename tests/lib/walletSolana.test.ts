@@ -48,7 +48,7 @@ describe('Solana wallet lib (key device)', () => {
 
   describe('generateSolanaPubkeyArray', () => {
     test('produces 20 distinct base58 pubkeys', () => {
-      const arr = generateSolanaPubkeyArray(xprivWallet, 'solDevnet');
+      const arr = generateSolanaPubkeyArray(xprivWallet, 'solDevnet', 0);
       expect(arr).toHaveLength(20);
       expect(new Set(arr).size).toBe(20);
       for (const pk of arr) {
@@ -57,7 +57,7 @@ describe('Solana wallet lib (key device)', () => {
     });
 
     test('matches generateAddressKeypairSOL element-by-element', () => {
-      const arr = generateSolanaPubkeyArray(xprivWallet, 'solDevnet');
+      const arr = generateSolanaPubkeyArray(xprivWallet, 'solDevnet', 0);
       for (let i = 0; i < arr.length; i += 7) {
         const { pubKey } = generateAddressKeypairSOL(
           xprivWallet,
