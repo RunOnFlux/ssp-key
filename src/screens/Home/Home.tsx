@@ -120,13 +120,20 @@ const xpubRegex = /^([a-zA-Z]{2}ub[1-9A-HJ-NP-Za-km-z]{79,140})$/; // xpub start
 
 // Solana repurposes the "xpub" field as a JSON-stringified array of 20
 // base58-encoded Ed25519 leaf pubkeys. Accept that format too in sync
-// QR / manual input.
+// QR / manual input. Each HD slot derives a distinct leaf so the array
+// must have 20 unique entries — duplicates indicate a malformed input.
 function isSolanaPubkeyArrayString(input: string): boolean {
   try {
     const arr = JSON.parse(input.trim());
     if (!Array.isArray(arr) || arr.length !== 20) return false;
     const base58Pk = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-    return arr.every((pk) => typeof pk === 'string' && base58Pk.test(pk));
+    const seen = new Set<string>();
+    for (const pk of arr) {
+      if (typeof pk !== 'string' || !base58Pk.test(pk)) return false;
+      if (seen.has(pk)) return false;
+      seen.add(pk);
+    }
+    return true;
   } catch {
     return false;
   }
@@ -2609,22 +2616,30 @@ function Home({ navigation }: Props) {
           Buffer.from(signingKeypair.privKey, 'hex'),
         );
         const keyKeypair = SolKeypair.fromSecretKey(secretKey);
-        // rawUnsignedTx carries the base64 bundled tx from the backend
-        // (nonceAdvance + create + approve×threshold + execute + close).
-        const tx = SolTransaction.from(
-          Buffer.from(vaultSigningData.rawUnsignedTx, 'base64'),
-        );
-        tx.partialSign(keyKeypair);
-        const sigEntry = tx.signatures.find((s) =>
-          s.publicKey.equals(keyKeypair.publicKey),
-        );
-        if (!sigEntry?.signature) {
-          signingKeypair.privKey = '';
-          throw new Error(
-            'Solana partial-sign produced no signature at key slot',
+        let keySigBase64: string;
+        try {
+          // rawUnsignedTx carries the base64 bundled tx from the backend
+          // (nonceAdvance + create + approve×threshold + execute + close).
+          const tx = SolTransaction.from(
+            Buffer.from(vaultSigningData.rawUnsignedTx, 'base64'),
           );
+          tx.partialSign(keyKeypair);
+          const sigEntry = tx.signatures.find((s) =>
+            s.publicKey.equals(keyKeypair.publicKey),
+          );
+          if (!sigEntry?.signature) {
+            throw new Error(
+              'Solana partial-sign produced no signature at key slot',
+            );
+          }
+          keySigBase64 = Buffer.from(sigEntry.signature).toString('base64');
+        } finally {
+          // Zero the raw 64-byte ed25519 secret-key buffer whether signing
+          // succeeded or failed. Mirrors the wallet-side cleanup; without
+          // this the Uint8Array can linger in V8/Hermes memory long after
+          // the hex-string clear at signingKeypair.privKey below.
+          secretKey.fill(0);
         }
-        const keySigBase64 = Buffer.from(sigEntry.signature).toString('base64');
 
         // Clear sensitive material
         signingKeypair.privKey = '';
