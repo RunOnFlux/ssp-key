@@ -462,6 +462,30 @@ function Home({ navigation }: Props) {
                 error: 'Failed to parse EVM UserOp data',
               });
             }
+          } else if (chainConf?.chainType === 'sol') {
+            // Solana: rawUnsignedTx is a base64-encoded bundled tx (not UTXO
+            // hex), so the UTXO decoder would throw. The recipients + fee +
+            // source were captured by the relay at proposal-create time and
+            // shipped in the signing payload itself, so we surface them
+            // here for the UI. NOTE: this is NOT trustless verification
+            // against the bundle bytes — a full Solana decoder would have
+            // to borsh-decode create_transaction's inner message + walk the
+            // SystemProgram.transfer / spl-token ixs. The wallet's
+            // EnterpriseVaultSignTx uses the same synthetic-decode pattern.
+            const rawRecipients = Array.isArray(data.recipients)
+              ? (data.recipients as Array<{ address: string; amount: string }>)
+              : [];
+            setDecodedVaultTx({
+              sender:
+                typeof data.sourceAddress === 'string'
+                  ? data.sourceAddress
+                  : '',
+              recipients: rawRecipients.map((r) => ({
+                address: r.address,
+                amount: r.amount,
+              })),
+              fee: typeof data.fee === 'string' ? data.fee : '0',
+            });
           } else if (data.rawUnsignedTx) {
             // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
             const inputs = Array.isArray(data.inputDetails)
@@ -1766,6 +1790,30 @@ function Home({ navigation }: Props) {
                     error: 'Failed to parse EVM UserOp data',
                   });
                 }
+              } else if (chainConf?.chainType === 'sol') {
+                // Solana: rawUnsignedTx is base64 bundled tx — surface the
+                // recipients/fee/source from the relay payload directly
+                // (same pattern as the wallet's EnterpriseVaultSignTx).
+                const rawRecipients = Array.isArray(vaultSignData.recipients)
+                  ? (vaultSignData.recipients as Array<{
+                      address: string;
+                      amount: string;
+                    }>)
+                  : [];
+                setDecodedVaultTx({
+                  sender:
+                    typeof vaultSignData.sourceAddress === 'string'
+                      ? vaultSignData.sourceAddress
+                      : '',
+                  recipients: rawRecipients.map((r) => ({
+                    address: r.address,
+                    amount: r.amount,
+                  })),
+                  fee:
+                    typeof vaultSignData.fee === 'string'
+                      ? vaultSignData.fee
+                      : '0',
+                });
               } else if (vaultSignData.rawUnsignedTx) {
                 // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
                 const inputs = Array.isArray(vaultSignData.inputDetails)
