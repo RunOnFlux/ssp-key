@@ -1285,9 +1285,23 @@ function Home({ navigation }: Props) {
         // leaf sig + broadcasts directly. The tx may include a permissionless
         // initialize_multisig ix at the head for first-send-per-vault — Key
         // doesn't need to know; it just signs and broadcasts.
+        // SPL sends arrive JSON-wrapped (`{ unsignedTxBase64, tokenMint, ...}`)
+        // so the approval screen can show the real token symbol; unwrap
+        // here so we sign the raw proposal bytes, not the JSON string.
+        let serializedTxBase64 = rawTransaction;
+        try {
+          const parsed = JSON.parse(rawTransaction) as {
+            unsignedTxBase64?: string;
+          };
+          if (parsed && typeof parsed.unsignedTxBase64 === 'string') {
+            serializedTxBase64 = parsed.unsignedTxBase64;
+          }
+        } catch {
+          // Not JSON — bare base64 from older wallet, use as-is.
+        }
         ttxid = await cosignAndBroadcastSOLTransaction({
           chain,
-          serializedTxBase64: rawTransaction,
+          serializedTxBase64,
           keyPubkeyBase58: keyPair.pubKey,
           keyPrivKeyHex: keyPair.privKey,
           relayHost: sspConfig().relay,

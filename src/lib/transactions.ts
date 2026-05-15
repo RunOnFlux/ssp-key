@@ -269,12 +269,36 @@ export async function decodeTransactionForApproval(
     }
     if (blockchains[chain].chainType === 'sol') {
       // Single-roundtrip flow: payload is JSON wrapping the unsigned tx
-      // plus init metadata. Older callers pass a bare base64 tx string.
+      // plus token metadata (mint/symbol/decimals so the approval screen
+      // can show the real SPL token, since the proposal bytes only carry
+      // ATAs). Older callers pass a bare base64 tx string.
       let serializedForDecode = rawTx;
+      let tokenMeta:
+        | { mint?: string; symbol?: string; decimals?: number }
+        | undefined;
       try {
-        const parsed = JSON.parse(rawTx) as { unsignedTxBase64?: string };
+        const parsed = JSON.parse(rawTx) as {
+          unsignedTxBase64?: string;
+          tokenMint?: string;
+          tokenSymbol?: string;
+          tokenDecimals?: number;
+        };
         if (parsed && typeof parsed.unsignedTxBase64 === 'string') {
           serializedForDecode = parsed.unsignedTxBase64;
+          tokenMeta = {
+            mint:
+              typeof parsed.tokenMint === 'string'
+                ? parsed.tokenMint
+                : undefined,
+            symbol:
+              typeof parsed.tokenSymbol === 'string'
+                ? parsed.tokenSymbol
+                : undefined,
+            decimals:
+              typeof parsed.tokenDecimals === 'number'
+                ? parsed.tokenDecimals
+                : undefined,
+          };
         }
       } catch {
         // Not JSON — fall through to decode rawTx directly.
@@ -282,6 +306,7 @@ export async function decodeTransactionForApproval(
       const decodedTx = await decodeSOLTransactionForApproval(
         serializedForDecode,
         chain,
+        tokenMeta,
       );
       return decodedTx;
     }
@@ -547,6 +572,7 @@ export async function decodeEVMTransactionForApproval(
 async function decodeSOLTransactionForApproval(
   rawTxBase64: string,
   chain: keyof cryptos,
+  tokenMeta?: { mint?: string; symbol?: string; decimals?: number },
 ): Promise<tokenInfo> {
   try {
     const { Transaction, PublicKey, SystemProgram } =
@@ -607,6 +633,11 @@ async function decodeSOLTransactionForApproval(
     let feeBase = '0';
     let userTokenSymbol = tokenSymbol; // default to native
     let userTokenContract: string | undefined;
+    let isSpl = false; // explicit — don't rely on userTokenSymbol === tokenSymbol
+    // because the SPL mint's symbol could coincidentally match the chain
+    // symbol (e.g., a token branded "SOL" on Solana mainnet) which would
+    // mis-classify the tx as native and divide by wrong decimals.
+    let verifiedDecimals: number | undefined;
 
     for (let i = 0; i < ixCount; i++) {
       const programIdIdx = data.readUInt8(off);
@@ -640,28 +671,66 @@ async function decodeSOLTransactionForApproval(
         continue;
       }
 
-      // SPL Transfer (tag 3) or TransferChecked (tag 12); accountIndexes
-      // are [source_ata, dest_ata, authority]. Mint isn't in the proposal,
-      // so symbol stays generic — explorer resolves ATA → mint → symbol.
+      // SPL Transfer (tag 3) vs TransferChecked (tag 12). TransferChecked
+      // embeds the mint + decimals in the signed bytes, so we can verify
+      // wallet-supplied tokenMeta against the bytes the user is about to
+      // sign — mismatches throw. Plain Transfer carries neither, so the
+      // wallet-supplied metadata is the only source (used as-is).
       if (ixProgram.toBase58() === TOKEN_PROGRAM) {
         const tag = ixData.readUInt8(0);
-        if ((tag !== 3 && tag !== 12) || ixData.length < 9) continue;
-        if (accountIdxs.length < 2) continue;
-        const destAta = accountKeys[accountIdxs[1]];
-        if (!destAta) continue;
-        userReceiver = destAta.toBase58();
-        userAmountBase = ixData.readBigUInt64LE(1).toString();
-        userTokenSymbol = '(token)';
+        if (tag === 12 && ixData.length >= 10 && accountIdxs.length >= 4) {
+          // TransferChecked: accountIndexes = [source, mint, dest, authority]
+          const ixMint = accountKeys[accountIdxs[1]];
+          const destAta = accountKeys[accountIdxs[2]];
+          if (!ixMint || !destAta) continue;
+          const ixDecimals = ixData.readUInt8(9);
+          if (tokenMeta?.mint && tokenMeta.mint !== ixMint.toBase58()) {
+            throw new Error(
+              'SPL mint mismatch: wallet-supplied mint differs from signed transaction',
+            );
+          }
+          if (
+            tokenMeta?.decimals != null &&
+            tokenMeta.decimals !== ixDecimals
+          ) {
+            throw new Error(
+              'SPL decimals mismatch: wallet-supplied decimals differ from signed transaction',
+            );
+          }
+          userReceiver = destAta.toBase58();
+          userAmountBase = ixData.readBigUInt64LE(1).toString();
+          userTokenSymbol = tokenMeta?.symbol || '(token)';
+          userTokenContract = ixMint.toBase58(); // trustless from signed bytes
+          verifiedDecimals = ixDecimals; // authoritative — on-chain re-verifies
+          isSpl = true;
+          continue;
+        }
+        if (tag === 3 && ixData.length >= 9 && accountIdxs.length >= 3) {
+          // Legacy Transfer: accountIndexes = [source, dest, authority]; mint
+          // + decimals are NOT in the bytes — wallet metadata is unverified.
+          const destAta = accountKeys[accountIdxs[1]];
+          if (!destAta) continue;
+          userReceiver = destAta.toBase58();
+          userAmountBase = ixData.readBigUInt64LE(1).toString();
+          userTokenSymbol = tokenMeta?.symbol || '(token)';
+          userTokenContract = tokenMeta?.mint;
+          verifiedDecimals = tokenMeta?.decimals;
+          isSpl = true;
+          continue;
+        }
         continue;
       }
     }
 
-    // SPL amounts stay in base units since the proposal doesn't carry the
-    // mint's decimals; native SOL converts via the chain's decimals.
-    const isNative = userTokenSymbol === tokenSymbol;
-    const displayAmount = isNative
+    // SPL amounts use decimals from the signed TransferChecked bytes when
+    // available (authoritative), else wallet-supplied (legacy Transfer).
+    // Native SOL uses chain decimals.
+    const splDecimals = verifiedDecimals;
+    const displayAmount = !isSpl
       ? new BigNumber(userAmountBase).dividedBy(10 ** decimals).toFixed()
-      : userAmountBase;
+      : splDecimals != null
+        ? new BigNumber(userAmountBase).dividedBy(10 ** splDecimals).toFixed()
+        : userAmountBase;
     const displayFee = new BigNumber(feeBase)
       .dividedBy(10 ** decimals)
       .toFixed();
