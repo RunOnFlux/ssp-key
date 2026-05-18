@@ -6,7 +6,7 @@ module.exports = {
     '<rootDir>/jest.setup.js',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(jest-)?react-native|@react-native|@react-native-community|@react-navigation|@scure|@noble|immer)',
+    'node_modules/(?!(jest-)?react-native|@react-native|@react-native-community|@react-navigation|@scure|@noble|immer|uuid)',
   ],
   collectCoverageFrom: [
     // '<rootDir>/src/Components/**/*.jsx',
