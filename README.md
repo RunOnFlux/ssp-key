@@ -34,7 +34,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
   - **React 19** and **React Native 0.82**
   - **TypeScript** for modern, type-safe development.
 - Compatible with:
-  - **iOS 15.1+** and **Android 7+**
+  - **iOS 15.5+** and **Android 7+**
 - Requires **Node.js 4+** for development.
 
 ---
@@ -70,7 +70,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
 - **Node.js**: Version 24 or higher  
 - **React Native**: Version 0.82
 - **Mobile OS**:
-  - iOS: Minimum version 15.1
+  - iOS: Minimum version 15.5
   - Android: Minimum version 7  
 
 ---
