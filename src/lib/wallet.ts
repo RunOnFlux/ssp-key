@@ -360,7 +360,7 @@ export function generateAddressKeypairEVM(
   const privateKey =
     '0x' + Buffer.from(externalAddress.privateKey).toString('hex');
 
-  return { privKey: privateKey as `0x${string}`, pubKey: publicKey };
+  return { privKey: privateKey, pubKey: publicKey };
 }
 
 /**

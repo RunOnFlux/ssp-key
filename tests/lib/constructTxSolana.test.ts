@@ -116,7 +116,7 @@ describe('cosignAndBroadcastSOLTransaction (key device)', () => {
             data: { message: 'paymaster simulation failed' },
           }),
       } as Response);
-    }) as unknown as typeof fetch;
+    });
 
     await expect(
       cosignAndBroadcastSOLTransaction({

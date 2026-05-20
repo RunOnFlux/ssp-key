@@ -20,6 +20,7 @@
       "types/*": [
         "./@types/*"
       ]
-    }
+    },
+    "ignoreDeprecations": "6.0"
   }
 }

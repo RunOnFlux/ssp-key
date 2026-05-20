@@ -542,11 +542,11 @@ export async function decodeEVMTransactionForApproval(
         }
       } else {
         // this is not a standard token transfer, treat it as a contract execution and only display data information
-        txInfo.data = decodedData.args[2] as `0x${string}`;
+        txInfo.data = decodedData.args[2];
       }
     } else {
       txInfo.tokenSymbol = blockchains[chain].symbol;
-      txInfo.data = decodedData.args[2] as `0x${string}`;
+      txInfo.data = decodedData.args[2];
     }
 
     return txInfo;

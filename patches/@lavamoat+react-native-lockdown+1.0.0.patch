@@ -1,15 +1,15 @@
 diff --git a/node_modules/@lavamoat/react-native-lockdown/src/repair.js b/node_modules/@lavamoat/react-native-lockdown/src/repair.js
-index e16173b..9a195ec 100644
+index 5f7191f..9a195ec 100644
 --- a/node_modules/@lavamoat/react-native-lockdown/src/repair.js
 +++ b/node_modules/@lavamoat/react-native-lockdown/src/repair.js
-@@ -39,8 +39,10 @@ const dumbPolyfillExposedInternals = Object.entries(Promise).filter(
+@@ -39,7 +39,10 @@ const dumbPolyfillExposedInternals = Object.entries(Promise).filter(
    }
  )
  
+-repairIntrinsics({
 +// Call globalThis.repairIntrinsics to set up hardenIntrinsics
 +// This is exposed by the SES shim and will set globalThis.hardenIntrinsics
- // eslint-disable-next-line no-undef
--repairIntrinsics({
++// eslint-disable-next-line no-undef
 +globalThis.repairIntrinsics({
    errorTaming: 'unsafe',
    consoleTaming: 'unsafe',

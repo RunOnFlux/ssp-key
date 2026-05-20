@@ -2781,17 +2781,16 @@ function Home({ navigation }: Props) {
       if (vaultSigningData.allSignerKeys) {
         parsedAllSignerKeys =
           typeof vaultSigningData.allSignerKeys === 'string'
-            ? (JSON.parse(
-                vaultSigningData.allSignerKeys as unknown as string,
-              ) as string[])
+            ? (JSON.parse(vaultSigningData.allSignerKeys) as string[])
             : vaultSigningData.allSignerKeys;
       }
       if (vaultSigningData.allSignerNonces) {
         parsedAllSignerNonces =
           typeof vaultSigningData.allSignerNonces === 'string'
-            ? (JSON.parse(
-                vaultSigningData.allSignerNonces as unknown as string,
-              ) as Array<{ kPublic: string; kTwoPublic: string }>)
+            ? (JSON.parse(vaultSigningData.allSignerNonces) as Array<{
+                kPublic: string;
+                kTwoPublic: string;
+              }>)
             : vaultSigningData.allSignerNonces;
       }
 

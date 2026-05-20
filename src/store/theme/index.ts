@@ -3,6 +3,7 @@ import themes from '../../theme/themes';
 
 const slice = createSlice({
   name: 'theme',
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- widens darkMode literal to boolean|null
   initialState: { theme: 'default', darkMode: null } as ThemeState,
   reducers: {
     changeTheme: (state, { payload: { theme, darkMode } }: ThemePayload) => {
