@@ -915,6 +915,35 @@ function bsc() {
   return tokens;
 }
 
+function solDevnet() {
+  const tokens = [
+    {
+      contract: '', // native SOL
+      name: 'Solana Devnet',
+      symbol: 'TEST-SOL',
+      decimals: 9,
+      logo: require('../assets/solDevnet.svg'),
+    },
+    {
+      // Circle's official USDC devnet mint
+      contract: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+      name: 'USD Coin (Devnet)',
+      symbol: 'TEST-USDC',
+      decimals: 6,
+      logo: require('../assets/customToken.svg'),
+    },
+    {
+      // Flux on Solana devnet — bridged/wrapped FLUX SPL mint
+      contract: 'FLUX2cragmo9LyWcbmDskU9V9akfoKEZUDLAmgGGEiRP',
+      name: 'Flux (Devnet)',
+      symbol: 'TEST-FLUX',
+      decimals: 8,
+      logo: require('../assets/flux.svg'),
+    },
+  ];
+  return tokens;
+}
+
 export const tokens = {
   eth,
   sepolia,
@@ -923,4 +952,5 @@ export const tokens = {
   base,
   avax,
   bsc,
+  solDevnet,
 };

@@ -34,7 +34,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
   - **React 19** and **React Native 0.82**
   - **TypeScript** for modern, type-safe development.
 - Compatible with:
-  - **iOS 15.1+** and **Android 7+**
+  - **iOS 15.5+** and **Android 7+**
 - Requires **Node.js 4+** for development.
 
 ---
@@ -70,7 +70,7 @@ Both keys are required to authorize transactions, ensuring that your funds remai
 - **Node.js**: Version 24 or higher  
 - **React Native**: Version 0.82
 - **Mobile OS**:
-  - iOS: Minimum version 15.1
+  - iOS: Minimum version 15.5
   - Android: Minimum version 7  
 
 ---
@@ -97,7 +97,8 @@ Help make SSP Key accessible globally:
 
 ## SSP Enterprise
 
-SSP Enterprise extends SSP Wallet into a multi-party business cryptocurrency management platform with true self-custody across 15+ blockchains.
+SSP Enterprise extends SSP Wallet into a multi-party business cryptocurrency management platform with true self-custody across 15+ blockchains — including **Solana** vaults (sol_dual / sol_single modes). On Solana, SSP Key serves as the second ed25519 signer per SSP signer in dual mode: receives the bundled signing tx via the relay, derives the vault keypair from xpriv at the proposal's addressIndex, partial-signs, and returns its sig back to the wallet which forwards to enterprise's signProposal endpoint.
+
 [Learn more about SSP Enterprise](https://sspwallet.io/ssp-enterprise.html)
 
 ---

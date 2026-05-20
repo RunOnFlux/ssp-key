@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+import QuickCrypto from 'react-native-quick-crypto';
 import utxolib from '@runonflux/utxo-lib';
 import { decodeFunctionData, erc20Abi } from 'viem';
 import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
@@ -266,6 +267,49 @@ export async function decodeTransactionForApproval(
       const decodedTx = await decodeEVMTransactionForApproval(rawTx, chain);
       return decodedTx;
     }
+    if (blockchains[chain].chainType === 'sol') {
+      // Single-roundtrip flow: payload is JSON wrapping the unsigned tx
+      // plus token metadata (mint/symbol/decimals so the approval screen
+      // can show the real SPL token, since the proposal bytes only carry
+      // ATAs). Older callers pass a bare base64 tx string.
+      let serializedForDecode = rawTx;
+      let tokenMeta:
+        | { mint?: string; symbol?: string; decimals?: number }
+        | undefined;
+      try {
+        const parsed = JSON.parse(rawTx) as {
+          unsignedTxBase64?: string;
+          tokenMint?: string;
+          tokenSymbol?: string;
+          tokenDecimals?: number;
+        };
+        if (parsed && typeof parsed.unsignedTxBase64 === 'string') {
+          serializedForDecode = parsed.unsignedTxBase64;
+          tokenMeta = {
+            mint:
+              typeof parsed.tokenMint === 'string'
+                ? parsed.tokenMint
+                : undefined,
+            symbol:
+              typeof parsed.tokenSymbol === 'string'
+                ? parsed.tokenSymbol
+                : undefined,
+            decimals:
+              typeof parsed.tokenDecimals === 'number'
+                ? parsed.tokenDecimals
+                : undefined,
+          };
+        }
+      } catch {
+        // Not JSON — fall through to decode rawTx directly.
+      }
+      const decodedTx = await decodeSOLTransactionForApproval(
+        serializedForDecode,
+        chain,
+        tokenMeta,
+      );
+      return decodedTx;
+    }
     const libID = getLibId(chain);
     const decimals = blockchains[chain].decimals;
     const cashAddrPrefix = blockchains[chain].cashaddr;
@@ -498,11 +542,11 @@ export async function decodeEVMTransactionForApproval(
         }
       } else {
         // this is not a standard token transfer, treat it as a contract execution and only display data information
-        txInfo.data = decodedData.args[2] as `0x${string}`;
+        txInfo.data = decodedData.args[2];
       }
     } else {
       txInfo.tokenSymbol = blockchains[chain].symbol;
-      txInfo.data = decodedData.args[2] as `0x${string}`;
+      txInfo.data = decodedData.args[2];
     }
 
     return txInfo;
@@ -518,5 +562,195 @@ export async function decodeEVMTransactionForApproval(
       data: 'decodingError',
     };
     return txInfo;
+  }
+}
+
+// Decode an SSP Solana proposal for the approval screen. Splits the
+// proposal's transfers into the user's send (vault → recipient) and the
+// fee (vault → outer feePayer = paymaster). SPL transfers show the
+// destination ATA as the receiver; explorers resolve ATAs to owners.
+async function decodeSOLTransactionForApproval(
+  rawTxBase64: string,
+  chain: keyof cryptos,
+  tokenMeta?: { mint?: string; symbol?: string; decimals?: number },
+): Promise<tokenInfo> {
+  try {
+    const { Transaction, PublicKey, SystemProgram } =
+      await import('@solana/web3.js');
+    const decimals = blockchains[chain].decimals;
+    const tokenSymbol = blockchains[chain].symbol;
+
+    const tx = Transaction.from(Buffer.from(rawTxBase64, 'base64'));
+    if (!tx.feePayer) {
+      throw new Error('Solana tx missing feePayer');
+    }
+    const paymasterPubkey = tx.feePayer;
+
+    // Compute the create_transaction discriminator (first 8 bytes of
+    // sha256("global:create_transaction")) using react-native-quick-crypto
+    // — Node's `crypto.createHash` isn't available in RN, and utxolib's
+    // sha256 wasn't reachable from this RN bundle either.
+    const createIxDiscriminator: Buffer = Buffer.from(
+      QuickCrypto.createHash('sha256')
+        .update('global:create_transaction')
+        .digest(),
+    ).subarray(0, 8);
+    console.log(createIxDiscriminator);
+    console.log(tx.instructions);
+    // `ix.data` from `Transaction.from(...)` is typed as Buffer but the
+    // RN runtime can deliver a plain JS array of numbers (no `.subarray`,
+    // no `.readUInt32LE`, no `.equals`). Compare byte-by-byte using only
+    // index access, then `Buffer.from(...)` the matched ix's data so all
+    // the parser helpers below have a real Buffer to work with.
+    const createIx = tx.instructions.find((ix) => {
+      if (!ix.data || ix.data.length < 8) return false;
+      for (let i = 0; i < 8; i++) {
+        if ((ix.data as ArrayLike<number>)[i] !== createIxDiscriminator[i])
+          return false;
+      }
+      return true;
+    });
+    if (!createIx) {
+      throw new Error('Solana tx does not contain a create_transaction ix');
+    }
+    const data = Buffer.from(createIx.data as ArrayLike<number>);
+    let off = 8 + 1 + 3; // skip discriminator + vault_index + 3-byte header
+    const accountKeysLen = data.readUInt32LE(off);
+    off += 4;
+    const accountKeys: InstanceType<typeof PublicKey>[] = [];
+    for (let i = 0; i < accountKeysLen; i++) {
+      accountKeys.push(new PublicKey(data.subarray(off, off + 32)));
+      off += 32;
+    }
+    const ixCount = data.readUInt32LE(off);
+    off += 4;
+
+    const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+
+    let vaultPubkey = accountKeys[0]; // convention: vault is at index 0
+    let userReceiver = '';
+    let userAmountBase = '0';
+    let feeBase = '0';
+    let userTokenSymbol = tokenSymbol; // default to native
+    let userTokenContract: string | undefined;
+    let isSpl = false; // explicit — don't rely on userTokenSymbol === tokenSymbol
+    // because the SPL mint's symbol could coincidentally match the chain
+    // symbol (e.g., a token branded "SOL" on Solana mainnet) which would
+    // mis-classify the tx as native and divide by wrong decimals.
+    let verifiedDecimals: number | undefined;
+
+    for (let i = 0; i < ixCount; i++) {
+      const programIdIdx = data.readUInt8(off);
+      off += 1;
+      const aiLen = data.readUInt32LE(off);
+      off += 4;
+      const accountIdxs = Buffer.from(data.subarray(off, off + aiLen));
+      off += aiLen;
+      const ixDataLen = data.readUInt32LE(off);
+      off += 4;
+      const ixData = Buffer.from(data.subarray(off, off + ixDataLen));
+      off += ixDataLen;
+
+      const ixProgram = accountKeys[programIdIdx];
+      if (!ixProgram) continue;
+
+      if (ixProgram.equals(SystemProgram.programId)) {
+        if (ixData.length < 12 || ixData.readUInt32LE(0) !== 2) continue;
+        if (accountIdxs.length < 2) continue;
+        const fromIdx = accountIdxs[0];
+        const toPubkey = accountKeys[accountIdxs[1]];
+        if (!toPubkey) continue;
+        const amountLamports = ixData.readBigUInt64LE(4).toString();
+        if (toPubkey.equals(paymasterPubkey)) {
+          feeBase = new BigNumber(feeBase).plus(amountLamports).toFixed();
+        } else {
+          vaultPubkey = accountKeys[fromIdx];
+          userReceiver = toPubkey.toBase58();
+          userAmountBase = amountLamports;
+        }
+        continue;
+      }
+
+      // SPL Transfer (tag 3) vs TransferChecked (tag 12). TransferChecked
+      // embeds the mint + decimals in the signed bytes, so we can verify
+      // wallet-supplied tokenMeta against the bytes the user is about to
+      // sign — mismatches throw. Plain Transfer carries neither, so the
+      // wallet-supplied metadata is the only source (used as-is).
+      if (ixProgram.toBase58() === TOKEN_PROGRAM) {
+        const tag = ixData.readUInt8(0);
+        if (tag === 12 && ixData.length >= 10 && accountIdxs.length >= 4) {
+          // TransferChecked: accountIndexes = [source, mint, dest, authority]
+          const ixMint = accountKeys[accountIdxs[1]];
+          const destAta = accountKeys[accountIdxs[2]];
+          if (!ixMint || !destAta) continue;
+          const ixDecimals = ixData.readUInt8(9);
+          if (tokenMeta?.mint && tokenMeta.mint !== ixMint.toBase58()) {
+            throw new Error(
+              'SPL mint mismatch: wallet-supplied mint differs from signed transaction',
+            );
+          }
+          if (
+            tokenMeta?.decimals != null &&
+            tokenMeta.decimals !== ixDecimals
+          ) {
+            throw new Error(
+              'SPL decimals mismatch: wallet-supplied decimals differ from signed transaction',
+            );
+          }
+          userReceiver = destAta.toBase58();
+          userAmountBase = ixData.readBigUInt64LE(1).toString();
+          userTokenSymbol = tokenMeta?.symbol || '(token)';
+          userTokenContract = ixMint.toBase58(); // trustless from signed bytes
+          verifiedDecimals = ixDecimals; // authoritative — on-chain re-verifies
+          isSpl = true;
+          continue;
+        }
+        if (tag === 3 && ixData.length >= 9 && accountIdxs.length >= 3) {
+          // Legacy Transfer: accountIndexes = [source, dest, authority]; mint
+          // + decimals are NOT in the bytes — wallet metadata is unverified.
+          const destAta = accountKeys[accountIdxs[1]];
+          if (!destAta) continue;
+          userReceiver = destAta.toBase58();
+          userAmountBase = ixData.readBigUInt64LE(1).toString();
+          userTokenSymbol = tokenMeta?.symbol || '(token)';
+          userTokenContract = tokenMeta?.mint;
+          verifiedDecimals = tokenMeta?.decimals;
+          isSpl = true;
+          continue;
+        }
+        continue;
+      }
+    }
+
+    // SPL amounts use decimals from the signed TransferChecked bytes when
+    // available (authoritative), else wallet-supplied (legacy Transfer).
+    // Native SOL uses chain decimals.
+    const splDecimals = verifiedDecimals;
+    const displayAmount = !isSpl
+      ? new BigNumber(userAmountBase).dividedBy(10 ** decimals).toFixed()
+      : splDecimals != null
+        ? new BigNumber(userAmountBase).dividedBy(10 ** splDecimals).toFixed()
+        : userAmountBase;
+    const displayFee = new BigNumber(feeBase)
+      .dividedBy(10 ** decimals)
+      .toFixed();
+
+    return {
+      sender: vaultPubkey.toBase58(),
+      receiver: userReceiver || 'decodingError',
+      amount: displayAmount,
+      fee: displayFee,
+      tokenSymbol: userTokenSymbol,
+      token: userTokenContract,
+    };
+  } catch (e) {
+    console.log('[decodeSOLTransactionForApproval] error', e);
+    return {
+      sender: 'decodingError',
+      receiver: 'decodingError',
+      amount: 'decodingError',
+      fee: '0',
+      tokenSymbol: blockchains[chain].symbol,
+    };
   }
 }

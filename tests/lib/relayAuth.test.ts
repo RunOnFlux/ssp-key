@@ -75,14 +75,14 @@ describe('Relay Auth Lib', () => {
     test('should handle nested objects', () => {
       const hash = computeBodyHash({
         outer: { inner: { deep: 'value' } },
-      } as Record<string, unknown>);
+      });
       expect(hash).toHaveLength(64);
     });
 
     test('should handle arrays in body', () => {
       const hash = computeBodyHash({
         items: [1, 2, 3],
-      } as Record<string, unknown>);
+      });
       expect(hash).toHaveLength(64);
     });
 
@@ -97,7 +97,7 @@ describe('Relay Auth Lib', () => {
     });
 
     test('should handle body with null values', () => {
-      const hash = computeBodyHash({ key: null } as Record<string, unknown>);
+      const hash = computeBodyHash({ key: null });
       expect(hash).toHaveLength(64);
       expect(hash).toMatch(/^[a-f0-9]{64}$/);
     });

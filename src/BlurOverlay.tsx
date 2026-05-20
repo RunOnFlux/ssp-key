@@ -36,7 +36,7 @@ const BlurOverlay = () => {
 
 const styles = StyleSheet.create({
   fullScreenBlur: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1000, // Ensure it's above everything, including modals
   },
 });

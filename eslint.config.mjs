@@ -57,6 +57,14 @@ export default [
     rules: {
       ...pluginReactHooks.configs.recommended.rules,
       'react-hooks/exhaustive-deps': 'off',
+      // The new react-hooks v6+ rules flag patterns this codebase uses
+      // intentionally (deferred-execution callbacks closing over later-
+      // declared functions, setState calls inside effects). Runtime
+      // behavior is correct; revisit if/when we refactor the affected
+      // components (Authentication, SettingsSection, TransactionRequest,
+      // Home).
+      'react-hooks/immutability': 'off',
+      'react-hooks/set-state-in-effect': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',

@@ -1,12 +1,12 @@
 module.exports = {
-  preset: 'react-native',
+  preset: '@react-native/jest-preset',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   setupFilesAfterEnv: [
     './node_modules/react-native-gesture-handler/jestSetup.js',
     '<rootDir>/jest.setup.js',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(jest-)?react-native|@react-native|@react-native-community|@react-navigation|@scure|@noble|immer)',
+    'node_modules/(?!(jest-)?react-native|@react-native|@react-native-community|@react-navigation|@scure|@noble|immer|uuid)',
   ],
   collectCoverageFrom: [
     // '<rootDir>/src/Components/**/*.jsx',

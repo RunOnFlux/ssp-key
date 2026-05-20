@@ -17,11 +17,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import {
-  Camera,
-  useCameraDevice,
-  useCodeScanner,
-} from 'react-native-vision-camera';
+import { Camera, useCameraDevice } from 'react-native-vision-camera';
+import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
 import {
   request,
   check,
@@ -181,21 +178,23 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
     })();
   }, []);
 
-  const codeScanner = useCodeScanner({
-    codeTypes: ['qr'],
-    onCodeScanned: useCallback(
-      (codes) => {
+  const scannerOutput = useBarcodeScannerOutput({
+    barcodeFormats: ['qr-code'],
+    onBarcodeScanned: useCallback(
+      (barcodes) => {
         if (isScanned.current) return;
-        const value = codes[0]?.value;
+        const value = barcodes[0]?.rawValue;
         if (value) {
           isScanned.current = true;
-          console.log(value);
           onRead?.(value);
           onClose?.();
         }
       },
       [onRead, onClose],
     ),
+    onError: useCallback((error: Error) => {
+      console.warn('[Scanner] barcode scan error', error);
+    }, []),
   });
 
   const scanLineTranslateY = scanLineAnim.interpolate({
@@ -271,8 +270,8 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
             style={styles.camera}
             device={device}
             isActive={true}
-            codeScanner={codeScanner}
-            enableZoomGesture={true}
+            outputs={[scannerOutput]}
+            enableNativeZoomGesture={true}
           />
           {renderScanOverlay()}
         </>

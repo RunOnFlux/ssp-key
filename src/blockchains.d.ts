@@ -48,6 +48,8 @@ declare module '@storage/blockchains' {
     priorityFee: number;
     gasLimit: number;
     tokens: Token[];
+    // sol
+    programId?: string; // on-chain Solana program for chainType='sol'
   }
   type blockchains = Record<string, Blockchain>;
   let blockchains: blockchains;

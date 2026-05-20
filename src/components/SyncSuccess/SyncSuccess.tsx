@@ -10,7 +10,7 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-import { backends } from '@storage/backends';
+import { explorerAddressUrl } from '../../lib/explorerUrl';
 import { cryptos } from '../../types';
 import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
@@ -95,10 +95,7 @@ const SyncSuccess = (props: {
 
   const openExplorer = () => {
     console.log('Open Explorer');
-    const backendConfig = backends()[props.chain];
-    Linking.openURL(
-      `https://${backendConfig.explorer ?? backendConfig.node}/address/${chainAddress}`,
-    );
+    Linking.openURL(explorerAddressUrl(props.chain, chainAddress));
   };
 
   return (

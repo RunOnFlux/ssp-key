@@ -386,3 +386,64 @@ export async function signAndBroadcastEVM(
     throw error;
   }
 }
+
+// ============================================================================
+// Solana
+// ============================================================================
+
+/**
+ * UTXO/EVM-style Solana co-sign + broadcast on the Key device.
+ *
+ * Wallet partial-signs the outer tx with its leaf and posts the serialized
+ * tx as a bare base64 string in the standard `tx` action. Key adds its own
+ * leaf signature and broadcasts via the relay's paymaster endpoint,
+ * mirroring how UTXO/EVM `tx` actions are handled.
+ *
+ * Same flow for first / subsequent sends — when the multisig PDA isn't
+ * initialized yet, wallet's tx contains a leading permissionless
+ * `initialize_multisig` ix (no member sigs required), and Key never has
+ * to know the difference.
+ *
+ * Returns the broadcast signature (used as txid for the existing TxSent UI).
+ */
+export async function cosignAndBroadcastSOLTransaction(opts: {
+  chain: keyof cryptos;
+  serializedTxBase64: string;
+  keyPubkeyBase58: string;
+  keyPrivKeyHex: string;
+  relayHost: string;
+}): Promise<string> {
+  const { Transaction, Keypair } = await import('@solana/web3.js');
+
+  const keySecretKey = new Uint8Array(Buffer.from(opts.keyPrivKeyHex, 'hex'));
+  const keyKeypair = Keypair.fromSecretKey(keySecretKey);
+  if (keyKeypair.publicKey.toBase58() !== opts.keyPubkeyBase58) {
+    throw new Error('Key privkey/pubkey mismatch');
+  }
+
+  const tx = Transaction.from(Buffer.from(opts.serializedTxBase64, 'base64'));
+  tx.partialSign(keyKeypair);
+
+  const serializedTxBase64 = tx
+    .serialize({ requireAllSignatures: false, verifySignatures: false })
+    .toString('base64');
+  const url = `https://${opts.relayHost}/v1/sol/broadcast`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chain: opts.chain, serializedTxBase64 }),
+  });
+  if (!resp.ok) {
+    throw new Error(`Relay broadcast failed: ${resp.status}`);
+  }
+  const json = (await resp.json()) as {
+    status?: string;
+    data?: { signature?: string; message?: string };
+  };
+  if (json.status !== 'success' || !json.data?.signature) {
+    throw new Error(
+      `Relay broadcast error: ${json.data?.message ?? 'unknown'}`,
+    );
+  }
+  return json.data.signature;
+}

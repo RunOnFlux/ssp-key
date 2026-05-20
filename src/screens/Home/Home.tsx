@@ -58,6 +58,7 @@ import {
   generateInternalIdentityAddress,
   generateAddressKeypair,
   generatePublicNonce,
+  generateSolanaPubkeyArray,
   deriveEVMPublicKey,
   getLibId,
 } from '../../lib/wallet';
@@ -70,6 +71,7 @@ import {
   fetchUtxos,
   signAndBroadcastEVM,
   selectPublicNonce,
+  cosignAndBroadcastSOLTransaction,
 } from '../../lib/constructTx';
 
 import {
@@ -115,6 +117,31 @@ import { MainScreenProps } from '../../../@types/navigation';
 type Props = MainScreenProps<'Home'>;
 
 const xpubRegex = /^([a-zA-Z]{2}ub[1-9A-HJ-NP-Za-km-z]{79,140})$/; // xpub start is the most usual, but can also be Ltub
+
+// Solana repurposes the "xpub" field as a JSON-stringified array of 20
+// base58-encoded Ed25519 leaf pubkeys. Accept that format too in sync
+// QR / manual input. Each HD slot derives a distinct leaf so the array
+// must have 20 unique entries — duplicates indicate a malformed input.
+function isSolanaPubkeyArrayString(input: string): boolean {
+  try {
+    const arr = JSON.parse(input.trim());
+    if (!Array.isArray(arr) || arr.length !== 20) return false;
+    const base58Pk = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const seen = new Set<string>();
+    for (const pk of arr) {
+      if (typeof pk !== 'string' || !base58Pk.test(pk)) return false;
+      if (seen.has(pk)) return false;
+      seen.add(pk);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function looksLikeXpub(input: string): boolean {
+  return xpubRegex.test(input) || isSolanaPubkeyArrayString(input);
+}
 
 function Home({ navigation }: Props) {
   // focusability of inputs
@@ -442,6 +469,30 @@ function Home({ navigation }: Props) {
                 error: 'Failed to parse EVM UserOp data',
               });
             }
+          } else if (chainConf?.chainType === 'sol') {
+            // Solana: rawUnsignedTx is a base64-encoded bundled tx (not UTXO
+            // hex), so the UTXO decoder would throw. The recipients + fee +
+            // source were captured by the relay at proposal-create time and
+            // shipped in the signing payload itself, so we surface them
+            // here for the UI. NOTE: this is NOT trustless verification
+            // against the bundle bytes — a full Solana decoder would have
+            // to borsh-decode create_transaction's inner message + walk the
+            // SystemProgram.transfer / spl-token ixs. The wallet's
+            // EnterpriseVaultSignTx uses the same synthetic-decode pattern.
+            const rawRecipients = Array.isArray(data.recipients)
+              ? (data.recipients as Array<{ address: string; amount: string }>)
+              : [];
+            setDecodedVaultTx({
+              sender:
+                typeof data.sourceAddress === 'string'
+                  ? data.sourceAddress
+                  : '',
+              recipients: rawRecipients.map((r) => ({
+                address: r.address,
+                amount: r.amount,
+              })),
+              fee: typeof data.fee === 'string' ? data.fee : '0',
+            });
           } else if (data.rawUnsignedTx) {
             // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
             const inputs = Array.isArray(data.inputDetails)
@@ -604,7 +655,35 @@ function Home({ navigation }: Props) {
         const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
         const pwForEncryption = idData.password + passwordDecrypted;
         const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
-        const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+        let xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+        // For Solana chains, "xpub" is actually a JSON-stringified array of
+        // 20 base58 Ed25519 leaf pubkeys (Ed25519 has no non-hardened
+        // public-key derivation). If the stored xpubKey for this chain is
+        // still in regular xpub form (e.g., chain was set up before Solana
+        // support), derive the 20-pubkey array on the fly from xprivKey.
+        if (
+          blockchains[chain].chainType === 'sol' &&
+          !xpubKeyDecrypted.startsWith('[')
+        ) {
+          const xprk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
+          const xprivKeyDecrypted = xprk.toString(CryptoJS.enc.Utf8);
+          // Consumer wallet on-the-fly migration: derive at typeIndex=0
+          // (receiving slot). Enterprise vaults take a different code path
+          // (handleVaultXpubAction) which passes vault.vaultIndex.
+          const keyPubkeys = generateSolanaPubkeyArray(
+            xprivKeyDecrypted,
+            chain,
+            0,
+          );
+          xpubKeyDecrypted = JSON.stringify(keyPubkeys);
+          // Persist the JSON-encoded form back to encrypted storage so
+          // subsequent calls don't need to re-derive.
+          const reEncryptedXpubKey = CryptoJS.AES.encrypt(
+            xpubKeyDecrypted,
+            pwForEncryption,
+          ).toString();
+          setXpubKey(chain, reEncryptedXpubKey);
+        }
         const addrInfo = generateMultisigAddress(
           suppliedXpubWallet,
           xpubKeyDecrypted,
@@ -887,6 +966,7 @@ function Home({ navigation }: Props) {
       data,
     );
     console.log('[postAction] response:', result.data);
+    return result;
   };
   const postSyncToken = async (token: string, wkIdentity: string) => {
     // post fcm token tied to wkIdentity
@@ -1200,6 +1280,32 @@ function Home({ navigation }: Props) {
           keyPair.privKey as `0x${string}`,
           publicNonceKey,
         );
+      } else if (blockchains[chain].chainType === 'sol') {
+        // Wallet pre-signed the outer tx with its leaf. Key adds its own
+        // leaf sig + broadcasts directly. The tx may include a permissionless
+        // initialize_multisig ix at the head for first-send-per-vault — Key
+        // doesn't need to know; it just signs and broadcasts.
+        // SPL sends arrive JSON-wrapped (`{ unsignedTxBase64, tokenMint, ...}`)
+        // so the approval screen can show the real token symbol; unwrap
+        // here so we sign the raw proposal bytes, not the JSON string.
+        let serializedTxBase64 = rawTransaction;
+        try {
+          const parsed = JSON.parse(rawTransaction) as {
+            unsignedTxBase64?: string;
+          };
+          if (parsed && typeof parsed.unsignedTxBase64 === 'string') {
+            serializedTxBase64 = parsed.unsignedTxBase64;
+          }
+        } catch {
+          // Not JSON — bare base64 from older wallet, use as-is.
+        }
+        ttxid = await cosignAndBroadcastSOLTransaction({
+          chain,
+          serializedTxBase64,
+          keyPubkeyBase58: keyPair.pubKey,
+          keyPrivKeyHex: keyPair.privKey,
+          relayHost: sspConfig().relay,
+        });
       } else {
         const signedTx = signTransaction(
           rawTransaction,
@@ -1217,7 +1323,6 @@ function Home({ navigation }: Props) {
       setRawTx('');
       setTxPath('');
       setTxUtxos([]);
-      // here tell ssp-relay that we are finished, rewrite the request
       await postAction(
         'txid',
         ttxid,
@@ -1301,23 +1406,20 @@ function Home({ navigation }: Props) {
         if (!dataToProcess || !blockchains[chain]) {
           displayMessage('error', t('home:err_invalid_manual_input'));
         } else {
-          if (xpubRegex.test(dataToProcess)) {
+          if (looksLikeXpub(dataToProcess)) {
             // xpub
             const xpubw = dataToProcess;
             handleSyncRequest(xpubw, chain);
             setTimeout(() => {
               setIsManualInputModalOpen(false);
             });
-          } else if (dataToProcess.startsWith('0')) {
-            // transaction
-            // sign transaction
+          } else {
+            // transaction (UTXO hex, EVM userOp JSON, or Solana base64)
             const rawTransaction = dataToProcess;
             handleTxRequest(rawTransaction, chain, wallet);
             setTimeout(() => {
               setIsManualInputModalOpen(false);
             });
-          } else {
-            displayMessage('error', t('home:err_invalid_manual_input'));
           }
         }
       }
@@ -1416,18 +1518,14 @@ function Home({ navigation }: Props) {
         }, 200);
       } else {
         // check if input is xpub or transaction
-        if (xpubRegex.test(dataToProcess)) {
+        if (looksLikeXpub(dataToProcess)) {
           // xpub
           const xpubw = dataToProcess;
           handleSyncRequest(xpubw, chain);
-        } else if (dataToProcess.startsWith('0')) {
-          // transaction
+        } else {
+          // transaction (UTXO hex, EVM userOp JSON, or Solana base64)
           const rawTransaction = dataToProcess;
           handleTxRequest(rawTransaction, chain, wallet);
-        } else {
-          setTimeout(() => {
-            displayMessage('error', t('home:err_invalid_scanned_data'));
-          }, 200);
         }
       }
       setTimeout(() => {
@@ -1713,6 +1811,30 @@ function Home({ navigation }: Props) {
                     error: 'Failed to parse EVM UserOp data',
                   });
                 }
+              } else if (chainConf?.chainType === 'sol') {
+                // Solana: rawUnsignedTx is base64 bundled tx — surface the
+                // recipients/fee/source from the relay payload directly
+                // (same pattern as the wallet's EnterpriseVaultSignTx).
+                const rawRecipients = Array.isArray(vaultSignData.recipients)
+                  ? (vaultSignData.recipients as Array<{
+                      address: string;
+                      amount: string;
+                    }>)
+                  : [];
+                setDecodedVaultTx({
+                  sender:
+                    typeof vaultSignData.sourceAddress === 'string'
+                      ? vaultSignData.sourceAddress
+                      : '',
+                  recipients: rawRecipients.map((r) => ({
+                    address: r.address,
+                    amount: r.amount,
+                  })),
+                  fee:
+                    typeof vaultSignData.fee === 'string'
+                      ? vaultSignData.fee
+                      : '0',
+                });
               } else if (vaultSignData.rawUnsignedTx) {
                 // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
                 const inputs = Array.isArray(vaultSignData.inputDetails)
@@ -2269,15 +2391,48 @@ function Home({ navigation }: Props) {
         throw new Error('Unsupported chain: ' + vaultXpubData.chain);
       }
 
-      // Derive xpub at m/48'/coin'/orgIndex'/scriptType'
-      const vaultXpub = getMasterXpub(
-        mnemonicPhrase,
-        48,
-        blockchainConfig.slip,
-        vaultXpubData.orgIndex,
-        blockchainConfig.scriptType,
-        vaultChain,
-      );
+      // For UTXO/EVM: BIP32 xpub at m/48'/coin'/orgIndex'/scriptType'. Backend
+      // derives child pubkeys per addressIndex on demand.
+      // For Solana: pre-derive 20 ed25519 pubkeys at /[vaultIndex]/0..19 from
+      // the master xpriv and send as JSON array. vaultIndex (from the wallet's
+      // relay payload) provides per-vault key separation — mirrors EVM/UTXO
+      // behavior where vault.vaultIndex shifts the HD derivation.
+      let vaultXpub: string;
+      if (
+        typeof vaultXpubData.vaultIndex !== 'number' ||
+        !Number.isInteger(vaultXpubData.vaultIndex) ||
+        vaultXpubData.vaultIndex < 0
+      ) {
+        throw new Error(
+          'vaultXpub request missing valid vaultIndex (wallet must send a non-negative integer)',
+        );
+      }
+      const solVaultTypeIndex = vaultXpubData.vaultIndex;
+      if (blockchainConfig.chainType === 'sol') {
+        const solVaultXpriv = getMasterXpriv(
+          mnemonicPhrase,
+          48,
+          blockchainConfig.slip,
+          vaultXpubData.orgIndex,
+          blockchainConfig.scriptType,
+          vaultChain,
+        );
+        const pubkeys = generateSolanaPubkeyArray(
+          solVaultXpriv,
+          vaultChain,
+          solVaultTypeIndex,
+        );
+        vaultXpub = JSON.stringify(pubkeys);
+      } else {
+        vaultXpub = getMasterXpub(
+          mnemonicPhrase,
+          48,
+          blockchainConfig.slip,
+          vaultXpubData.orgIndex,
+          blockchainConfig.scriptType,
+          vaultChain,
+        );
+      }
 
       // Sign the keyXpub with identity key for verification
       const { xprivKey: idXprivKey } = identityChainState || {};
@@ -2428,6 +2583,104 @@ function Home({ navigation }: Props) {
       // Key's public key for this vault — set during signing
       let keyPubKey = '';
 
+      // Solana enterprise: ed25519 partial-sign of the bundled tx.
+      // No nonces, no Schnorr, no UTXO progressive — just one 64-byte sig
+      // for Key's slot.
+      if (blockchainConfig.chainType === 'sol') {
+        // Read addressIndex from the synthesized inputDetails[0] entry the
+        // wallet/enterprise-app forwards. Must match the index used to
+        // derive the on-chain multisig PDA; otherwise the derived pubkey
+        // wouldn't be a member and approve_transaction would reject.
+        // Defensive: vaultSigningData.inputDetails may arrive as either a
+        // JSON string (relay payload) or already-parsed Array — match the
+        // existing UTXO path's accommodation.
+        let solInputDetailsParsed: Array<{ addressIndex?: number }> = [];
+        const rawInputDetails = vaultSigningData.inputDetails;
+        if (typeof rawInputDetails === 'string') {
+          try {
+            solInputDetailsParsed = JSON.parse(rawInputDetails) as Array<{
+              addressIndex?: number;
+            }>;
+          } catch {
+            solInputDetailsParsed = [];
+          }
+        } else if (Array.isArray(rawInputDetails)) {
+          solInputDetailsParsed = rawInputDetails;
+        }
+        const solAddressIndex =
+          typeof solInputDetailsParsed[0]?.addressIndex === 'number'
+            ? solInputDetailsParsed[0].addressIndex
+            : 0;
+        // Sign at HD path [vaultIndex][addressIndex]. Mirrors the per-vault
+        // xpub flow (generateSolanaPubkeyArray now also derives at
+        // typeIndex=vault.vaultIndex), so the wallet's signing pubkey
+        // matches the multisig slot pubkey computed from the stored xpub
+        // array. Identical to EVM/UTXO per-vault key separation.
+        const signingKeypair = generateAddressKeypair(
+          vaultXpriv,
+          vaultSigningData.vaultIndex,
+          solAddressIndex,
+          vaultChain,
+        );
+        keyPubKey = signingKeypair.pubKey;
+
+        const { Transaction: SolTransaction, Keypair: SolKeypair } =
+          await import('@solana/web3.js');
+        const secretKey = new Uint8Array(
+          Buffer.from(signingKeypair.privKey, 'hex'),
+        );
+        const keyKeypair = SolKeypair.fromSecretKey(secretKey);
+        let keySigBase64: string;
+        try {
+          // rawUnsignedTx carries the base64 bundled tx from the backend
+          // (nonceAdvance + create + approve×threshold + execute + close).
+          const tx = SolTransaction.from(
+            Buffer.from(vaultSigningData.rawUnsignedTx, 'base64'),
+          );
+          tx.partialSign(keyKeypair);
+          const sigEntry = tx.signatures.find((s) =>
+            s.publicKey.equals(keyKeypair.publicKey),
+          );
+          if (!sigEntry?.signature) {
+            throw new Error(
+              'Solana partial-sign produced no signature at key slot',
+            );
+          }
+          keySigBase64 = Buffer.from(sigEntry.signature).toString('base64');
+        } finally {
+          // Zero the raw 64-byte ed25519 secret-key buffer whether signing
+          // succeeded or failed. Mirrors the wallet-side cleanup; without
+          // this the Uint8Array can linger in V8/Hermes memory long after
+          // the hex-string clear at signingKeypair.privKey below.
+          secretKey.fill(0);
+        }
+
+        // Clear sensitive material
+        signingKeypair.privKey = '';
+        vaultXpriv = '';
+        pwForEncryption = '';
+
+        const responsePayload: Record<string, unknown> = {
+          // Reuse signedHex convention for shipping the base64 sig back —
+          // wallet-side EnterpriseVaultSignTx receiver doesn't care about
+          // the field name; it forwards to the enterprise sign endpoint.
+          keySignatureBase64: keySigBase64,
+          keyPubKey,
+          requestId: vaultSigningData.requestId,
+        };
+
+        await postAction(
+          'enterprisevaultsigned',
+          JSON.stringify(responsePayload),
+          vaultSigningData.chain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+
+        displayMessage('success', t('home:vault_sign_success'));
+        return;
+      }
+
       // EVM vault signing: use enterprise nonce for Schnorr partial signature
       const isEvmChain = blockchainConfig.chainType === 'evm';
       let usedEnterpriseNonce: publicPrivateNonce | null = null;
@@ -2528,17 +2781,16 @@ function Home({ navigation }: Props) {
       if (vaultSigningData.allSignerKeys) {
         parsedAllSignerKeys =
           typeof vaultSigningData.allSignerKeys === 'string'
-            ? (JSON.parse(
-                vaultSigningData.allSignerKeys as unknown as string,
-              ) as string[])
+            ? (JSON.parse(vaultSigningData.allSignerKeys) as string[])
             : vaultSigningData.allSignerKeys;
       }
       if (vaultSigningData.allSignerNonces) {
         parsedAllSignerNonces =
           typeof vaultSigningData.allSignerNonces === 'string'
-            ? (JSON.parse(
-                vaultSigningData.allSignerNonces as unknown as string,
-              ) as Array<{ kPublic: string; kTwoPublic: string }>)
+            ? (JSON.parse(vaultSigningData.allSignerNonces) as Array<{
+                kPublic: string;
+                kTwoPublic: string;
+              }>)
             : vaultSigningData.allSignerNonces;
       }
 

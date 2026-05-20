@@ -433,6 +433,7 @@ export interface cryptos {
   base: number;
   avax: number;
   bsc: number;
+  solDevnet: number;
 }
 
 export interface externalIdentity {
@@ -545,6 +546,8 @@ export interface fusionMessage {
 }
 
 export interface chainState {
+  // For chainType === 'sol', xpub fields are JSON-stringified arrays of
+  // 20 base58 Ed25519 leaf pubkeys (one per address index 0-19).
   xpubWallet: string;
   xpubKey: string;
   wallets: wallets;
@@ -553,6 +556,7 @@ export interface chainState {
 }
 
 export interface chainStateKey {
+  // For chainType === 'sol', see chainState comment.
   xpubWallet: string;
   xpubKey: string;
   xprivKey: string;
@@ -595,6 +599,10 @@ interface wkSigningRequest {
 interface vaultXpubRequest {
   chain: string;
   orgIndex: number;
+  // Per-vault HD typeIndex slot. Solana xpub generation uses this to derive
+  // a vault-specific 20-pubkey array (mirrors EVM/UTXO per-vault keys).
+  // Always present — the wallet's relay payload includes it.
+  vaultIndex: number;
   vaultName: string;
   orgName: string;
   xpubWallet: string;
