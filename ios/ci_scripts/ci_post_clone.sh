@@ -1,31 +1,32 @@
 #!/bin/sh
+set -e
 export HOMEBREW_NO_INSTALL_CLEANUP=TRUE
+export HOMEBREW_NO_AUTO_UPDATE=1
 export NODE_OPTIONS=--max_old_space_size=8192
 
-# Install CocoaPods and yarn using Homebrew.
-brew install cocoapods
-brew install rbenv ruby-build
-brew install node@24
-brew link node@24
-brew install yarn
+# Pinned Ruby for the iOS toolchain. CocoaPods + modern bundler require Ruby >= 3.2;
+# Ruby 2.7.x is EOL and breaks against the current Xcode Cloud image (its Homebrew
+# Ruby leaks into `bundle exec`, and rubygems.org rejects the old client). 3.3.x is the
+# stable, CocoaPods-safe line and satisfies the Gemfile's `ruby ">= 2.6.10"` requirement.
+RUBY_VERSION=3.3.6
 
-echo ">>> SETUP ENVIRONMENT"
-echo 'export GEM_HOME=$HOME/gems' >>~/.bash_profile
-echo 'export PATH=$HOME/gems/bin:$PATH' >>~/.bash_profile
-export GEM_HOME=$HOME/gems
-export PATH="$GEM_HOME/bin:$PATH"
+# Install the toolchain via Homebrew.
+brew install cocoapods rbenv ruby-build node@24 yarn
+brew link --overwrite node@24
+
+echo ">>> INSTALL RUBY ${RUBY_VERSION} (rbenv)"
+eval "$(rbenv init - sh)"
+rbenv install --skip-existing "${RUBY_VERSION}"
+rbenv global "${RUBY_VERSION}"
+rbenv rehash
+ruby -v
 
 echo ">>> INSTALL BUNDLER"
-ruby -v
-rbenv init
-rbenv install 2.7.8
-rbenv global 2.7.8
-eval "$(rbenv init -)"
-ruby -v
-gem install bundler --install-dir $GEM_HOME
+gem install bundler
+rbenv rehash
+bundle -v
 
-# Install dependencies
+echo ">>> INSTALL DEPENDENCIES"
 yarn
-bundle update --bundler
-yarn bundleinstall
+bundle install
 yarn podinstall
