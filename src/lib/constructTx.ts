@@ -416,17 +416,26 @@ export async function cosignAndBroadcastSOLTransaction(opts: {
   const { Transaction, Keypair } = await import('@solana/web3.js');
 
   const keySecretKey = new Uint8Array(Buffer.from(opts.keyPrivKeyHex, 'hex'));
-  const keyKeypair = Keypair.fromSecretKey(keySecretKey);
-  if (keyKeypair.publicKey.toBase58() !== opts.keyPubkeyBase58) {
-    throw new Error('Key privkey/pubkey mismatch');
+  let serializedTxBase64: string;
+  try {
+    const keyKeypair = Keypair.fromSecretKey(keySecretKey);
+    if (keyKeypair.publicKey.toBase58() !== opts.keyPubkeyBase58) {
+      throw new Error('Key privkey/pubkey mismatch');
+    }
+
+    const tx = Transaction.from(Buffer.from(opts.serializedTxBase64, 'base64'));
+    tx.partialSign(keyKeypair);
+
+    serializedTxBase64 = tx
+      .serialize({ requireAllSignatures: false, verifySignatures: false })
+      .toString('base64');
+  } finally {
+    // Zero the raw 64-byte ed25519 secret-key buffer once we're done signing
+    // (including error paths). Mirrors the wallet-side wipe in
+    // ssp-wallet/src/lib/constructTx.ts — JS GC doesn't promise prompt
+    // zeroing, so an explicit wipe defends against heap inspection.
+    keySecretKey.fill(0);
   }
-
-  const tx = Transaction.from(Buffer.from(opts.serializedTxBase64, 'base64'));
-  tx.partialSign(keyKeypair);
-
-  const serializedTxBase64 = tx
-    .serialize({ requireAllSignatures: false, verifySignatures: false })
-    .toString('base64');
   const url = `https://${opts.relayHost}/v1/sol/broadcast`;
   const resp = await fetch(url, {
     method: 'POST',
