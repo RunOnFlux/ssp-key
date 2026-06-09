@@ -28,5 +28,8 @@ bundle -v
 
 echo ">>> INSTALL DEPENDENCIES"
 yarn
-bundle install
+# rubygems.org's compact-index host (index.rubygems.org) is intermittently unreachable from
+# Xcode Cloud runners. Retry, then fall back to the full index served from rubygems.org
+# itself (which is reachable — the `gem install bundler` above succeeds against it).
+bundle install --retry 3 || bundle install --retry 3 --full-index
 yarn podinstall
