@@ -103,7 +103,11 @@ import {
 
 import { useAppSelector, useAppDispatch, useRelayAuth } from '../../hooks';
 import { useSocket } from '../../hooks/useSocket';
-import { getFCMToken, refreshFCMToken } from '../../lib/fcmHelper';
+import {
+  getFCMToken,
+  refreshFCMToken,
+  setNotificationOpenHandler,
+} from '../../lib/fcmHelper';
 import { changeTheme } from '../../store/theme';
 import EvmSigningRequest from '../../components/EvmSigningRequest/EvmSigningRequest';
 import EvmSigningSuccess from '../../components/EvmSigningSuccess/EvmSigningSuccess';
@@ -146,6 +150,9 @@ function looksLikeXpub(input: string): boolean {
 function Home({ navigation }: Props) {
   // focusability of inputs
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
+  // Holds the latest handleRefresh so the notification deep-link handler always
+  // invokes the current closure without re-registering on every render.
+  const handleRefreshRef = useRef<() => void>(() => {});
   const {
     seedPhrase,
     sspWalletKeyInternalIdentity,
@@ -249,6 +256,17 @@ function Home({ navigation }: Props) {
 
     checkXpubXpriv();
     checkFCMToken();
+  }, []);
+
+  // Deep-link: when a signing-request notification is opened (foreground,
+  // background, or quit-state launch), fetch and surface the pending request.
+  useEffect(() => {
+    setNotificationOpenHandler(() => {
+      handleRefreshRef.current();
+    });
+    return () => {
+      setNotificationOpenHandler(null);
+    };
   }, []);
 
   // Ensure auth fields (witnessScript and pubKey) are generated if missing
@@ -1886,6 +1904,14 @@ function Home({ navigation }: Props) {
       }
     }
   };
+
+  // Keep the deep-link ref pointing at the latest handleRefresh closure so a
+  // tapped notification always fetches the freshest pending request.
+  useEffect(() => {
+    handleRefreshRef.current = () => {
+      void handleRefresh();
+    };
+  });
 
   const handleRestore = () => {
     setIsMenuModalOpen(false);

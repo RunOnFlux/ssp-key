@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { useTheme } from '../../hooks';
 import { useAppSelector } from '../../hooks';
 import { blockchains } from '../../storage/blockchains';
 import { generateMultisigAddress } from '../../lib/wallet';
+import { decodeEvmSigningData } from '../../lib/transactions';
+import type { DecodedEvmSigningData } from '../../lib/transactions';
 import * as Keychain from 'react-native-keychain';
 import CryptoJS from 'crypto-js';
 import { cryptos } from '../../types';
@@ -37,6 +39,13 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const [signingAddress, setSigningAddress] = useState<string>('');
   const [loadingAddress, setLoadingAddress] = useState(true);
+  const [showRawData, setShowRawData] = useState(false);
+
+  // Display-only decode of the requested data — never affects what is signed.
+  const decoded: DecodedEvmSigningData = useMemo(
+    () => decodeEvmSigningData(dataToSign, chain),
+    [dataToSign, chain],
+  );
 
   // Get encrypted keys from Redux
   const { xpubWallet, xpubKey } = useAppSelector((state) => state[chain]);
@@ -231,7 +240,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           )}
         </View>
 
-        {/* Data to Sign */}
+        {/* Decoded summary of the data to sign */}
         <View style={[Gutters.regularTMargin, Layout.alignItemsCenter]}>
           <Text
             style={[
@@ -243,41 +252,156 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
             {t('home:data_to_sign')}:
           </Text>
         </View>
-        <View
-          style={[
-            {
-              height: 100,
-              maxHeight: 100,
+
+        {decoded.summary ? (
+          <View
+            style={[
+              {
+                backgroundColor: Colors.inputBackground,
+                borderRadius: 8,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: Colors.textGray200,
+                width: '90%',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                Fonts.textSmall,
+                Fonts.textBold,
+                { color: Colors.textGray800 },
+              ]}
+              selectable={true}
+            >
+              {decoded.summary}
+            </Text>
+
+            {decoded.recipient ? (
+              <View style={{ marginTop: 8 }}>
+                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+                  {t('home:evm_sign_recipient')}
+                </Text>
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    { fontFamily: 'monospace', color: Colors.textGray800 },
+                  ]}
+                  selectable={true}
+                >
+                  {decoded.recipient}
+                </Text>
+              </View>
+            ) : null}
+
+            {decoded.amount ? (
+              <View style={{ marginTop: 8 }}>
+                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+                  {t('home:evm_sign_amount')}
+                </Text>
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    Fonts.textBold,
+                    { color: Colors.textGray800 },
+                  ]}
+                  selectable={true}
+                >
+                  {decoded.amount}
+                  {decoded.tokenSymbol ? ` ${decoded.tokenSymbol}` : ''}
+                </Text>
+              </View>
+            ) : null}
+
+            {decoded.message ? (
+              <View style={{ marginTop: 8 }}>
+                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+                  {t('home:evm_sign_message')}
+                </Text>
+                <Text
+                  style={[Fonts.textTiny, { color: Colors.textGray800 }]}
+                  selectable={true}
+                >
+                  {decoded.message}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Warning when the payload could not be confidently recognized */}
+        {!decoded.recognized && (
+          <View
+            style={{
+              width: '90%',
+              marginTop: 10,
               backgroundColor: Colors.inputBackground,
               borderRadius: 8,
               padding: 10,
               borderWidth: 1,
-              borderColor: Colors.textGray200,
-            },
-            Gutters.regularLMargin,
-            Gutters.regularRMargin,
-          ]}
-        >
-          <ScrollView
-            style={{ flex: 1 }}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}
+              borderColor: Colors.error,
+            }}
           >
             <Text
               style={[
                 Fonts.textTiny,
-                {
-                  fontFamily: 'monospace',
-                  lineHeight: 16,
-                  color: Colors.textGray800,
-                },
+                { color: Colors.error, textAlign: 'center' },
               ]}
-              selectable={true}
             >
-              {dataToSign}
+              {t('home:evm_sign_unrecognized')}
             </Text>
-          </ScrollView>
-        </View>
+          </View>
+        )}
+
+        {/* Raw hex — collapsed behind a toggle */}
+        <TouchableOpacity
+          onPress={() => setShowRawData((prev) => !prev)}
+          style={{ marginTop: 10 }}
+        >
+          <Text style={[Fonts.textTiny, Fonts.textBluePrimary]}>
+            {showRawData
+              ? t('home:evm_sign_hide_raw')
+              : t('home:evm_sign_show_raw')}
+          </Text>
+        </TouchableOpacity>
+
+        {showRawData && (
+          <View
+            style={[
+              {
+                height: 100,
+                maxHeight: 100,
+                marginTop: 8,
+                backgroundColor: Colors.inputBackground,
+                borderRadius: 8,
+                padding: 10,
+                borderWidth: 1,
+                borderColor: Colors.textGray200,
+                width: '90%',
+              },
+            ]}
+          >
+            <ScrollView
+              style={{ flex: 1 }}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+            >
+              <Text
+                style={[
+                  Fonts.textTiny,
+                  {
+                    fontFamily: 'monospace',
+                    lineHeight: 16,
+                    color: Colors.textGray800,
+                  },
+                ]}
+                selectable={true}
+              >
+                {dataToSign}
+              </Text>
+            </ScrollView>
+          </View>
+        )}
       </View>
       <View
         style={[

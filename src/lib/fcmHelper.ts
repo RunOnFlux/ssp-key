@@ -14,6 +14,43 @@ import * as Keychain from 'react-native-keychain';
 import notifee, { EventType } from '@notifee/react-native';
 import { AppState, Platform } from 'react-native';
 
+/**
+ * Deep-link handler registry.
+ *
+ * The screen that renders pending signing requests (Home) registers a handler
+ * here. When a signing-request notification is opened — whether the app was in
+ * the foreground, background, or freshly launched from a quit state — we invoke
+ * the handler so the app routes to / refreshes the pending request instead of
+ * just silently coming to the foreground.
+ *
+ * A pending open (e.g. the app was launched from a quit-state notification
+ * before any screen registered a handler) is buffered and flushed as soon as a
+ * handler registers.
+ */
+type NotificationOpenHandler = () => void;
+let notificationOpenHandler: NotificationOpenHandler | null = null;
+let pendingNotificationOpen = false;
+
+export function setNotificationOpenHandler(
+  handler: NotificationOpenHandler | null,
+): void {
+  notificationOpenHandler = handler;
+  if (handler && pendingNotificationOpen) {
+    pendingNotificationOpen = false;
+    handler();
+  }
+}
+
+function handleNotificationOpen(): void {
+  if (notificationOpenHandler) {
+    notificationOpenHandler();
+  } else {
+    // No handler yet (e.g. launched from quit state). Buffer it so the handler
+    // can pick it up once the screen mounts and registers.
+    pendingNotificationOpen = true;
+  }
+}
+
 export async function requestUserPermission() {
   const messaging = getMessaging();
   const authStatus = await requestPermission(messaging);
@@ -47,12 +84,14 @@ export async function requestUserPermission() {
 // eslint-disable-next-line @typescript-eslint/require-await
 notifee.onBackgroundEvent(async ({ type, detail }) => {
   if (type === EventType.PRESS) {
-    // No-op: opening the app is the default action, handled by the native
-    // side. When we add deep-link-to-screen logic later it goes here.
+    // Opening the app is the default action, handled by the native side
+    // (pressAction id 'default'). We additionally buffer a deep-link so the
+    // Home screen routes to the pending request once it mounts.
     console.log(
       '[fcm] background notification pressed:',
       detail.notification?.id,
     );
+    handleNotificationOpen();
   }
 });
 
@@ -69,24 +108,30 @@ export function notificationListener() {
         '[fcm] foreground notification pressed:',
         detail.notification?.id,
       );
+      handleNotificationOpen();
     }
   });
 
+  // FCM-delivered notification tapped while the app was backgrounded.
+  // (Notifee-displayed notifications route through onForegroundEvent /
+  // onBackgroundEvent instead; this covers OS-rendered notification payloads.)
   onNotificationOpenedApp(messaging, (remoteMessage) => {
-    //we can use this event to move particular screen when user click the notification and app is killed state
     console.log(
       'Notification caused app to open from background state:',
       remoteMessage.notification,
     );
+    handleNotificationOpen();
   });
 
-  // Check whether an initial notification is available
+  // App launched from a quit state by tapping a notification — deep-link to the
+  // pending request. Buffered until the Home screen registers its handler.
   getInitialNotification(messaging).then((remoteMessage) => {
     if (remoteMessage) {
       console.log(
         'Notification caused app to open from quit state:',
         remoteMessage.notification,
       );
+      handleNotificationOpen();
     }
   });
 
@@ -101,7 +146,16 @@ export function onBackgroundMessageHandler() {
 async function onMessageReceived(
   message: FirebaseMessagingTypes.RemoteMessage,
 ) {
-  if (AppState.currentState !== 'background') {
+  // While the app is in the foreground the OS does NOT render the message's
+  // notification payload, so we must present it ourselves via Notifee.
+  //
+  // While the app is backgrounded or in a quit state, React Native Firebase
+  // lets the OS render the notification payload automatically — we must NOT
+  // suppress it here (the previous `!== 'background'` early-return swallowed
+  // exactly the signing-request push that tells the co-signer to approve).
+  // Re-displaying via Notifee in the background would risk a duplicate, so we
+  // only display while the app is actively in the foreground.
+  if (AppState.currentState === 'active') {
     await displayNotification((message?.notification as any) ?? {});
   }
 }

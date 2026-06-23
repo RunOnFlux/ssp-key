@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js';
 import QuickCrypto from 'react-native-quick-crypto';
 import utxolib from '@runonflux/utxo-lib';
-import { decodeFunctionData, erc20Abi } from 'viem';
+import { decodeFunctionData, erc20Abi, hexToString, isHex } from 'viem';
 import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
 import { getTokenMetadata } from './tokens';
@@ -240,6 +240,150 @@ function decodeVaultEvmTransaction(
   }
 
   return result;
+}
+
+/**
+ * Display-only decode of an arbitrary EVM signing request (`personal_sign`,
+ * EIP-712 typed data, or raw transaction calldata) so the co-signer sees a
+ * human-readable summary instead of raw hex on the approval screen.
+ *
+ * This NEVER affects what is signed — it only interprets `data` for display.
+ * The caller keeps the original raw `data` for the actual signature. When the
+ * payload cannot be confidently recognised, `recognized` is false so the UI can
+ * warn the user and fall back to showing the raw hex.
+ */
+export type EvmSigningKind =
+  | 'erc20-transfer'
+  | 'contract-call'
+  | 'message'
+  | 'typed-data'
+  | 'unknown';
+
+export interface DecodedEvmSigningData {
+  kind: EvmSigningKind;
+  recognized: boolean;
+  summary: string; // plain-language one-liner
+  method?: string; // function name / selector for calldata
+  recipient?: string;
+  tokenContract?: string;
+  tokenSymbol?: string;
+  amount?: string; // human-readable, decimals applied where known
+  message?: string; // decoded UTF-8 message (personal_sign)
+}
+
+export function decodeEvmSigningData(
+  data: string,
+  chain: keyof cryptos,
+): DecodedEvmSigningData {
+  const raw = (data || '').trim();
+  if (!raw) {
+    return { kind: 'unknown', recognized: false, summary: '' };
+  }
+
+  // EIP-712 typed data is delivered as JSON.
+  if (raw.startsWith('{') || raw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw) as {
+        primaryType?: string;
+        domain?: { name?: string };
+      };
+      const primaryType =
+        typeof parsed.primaryType === 'string' ? parsed.primaryType : undefined;
+      const domainName =
+        parsed.domain && typeof parsed.domain.name === 'string'
+          ? parsed.domain.name
+          : undefined;
+      return {
+        kind: 'typed-data',
+        recognized: true,
+        summary: domainName
+          ? `Typed data signature for ${domainName}${
+              primaryType ? ` (${primaryType})` : ''
+            }`
+          : 'Typed data (EIP-712) signature request',
+        method: primaryType,
+      };
+    } catch {
+      // Not valid JSON — fall through to other interpretations.
+    }
+  }
+
+  // Hex payloads: either calldata (function selector) or a hex-encoded message.
+  if (isHex(raw)) {
+    const hex = raw;
+    const byteLen = (hex.length - 2) / 2;
+
+    // A 4-byte selector + ABI-encoded args looks like calldata. Try ERC-20
+    // transfer first, then fall back to a generic contract-call summary.
+    if (byteLen >= 4 && (byteLen - 4) % 32 === 0) {
+      try {
+        const decoded = decodeFunctionData({ abi: erc20Abi, data: hex });
+        if (
+          decoded.functionName === 'transfer' &&
+          Array.isArray(decoded.args) &&
+          decoded.args.length >= 2
+        ) {
+          const to = String(decoded.args[0]);
+          const rawAmount = decoded.args[1].toString();
+          const token = blockchains[chain].tokens.find(
+            (tk) => tk.contract.toLowerCase() === to.toLowerCase(),
+          );
+          // `to` here is the transfer recipient; token decimals are unknown
+          // from calldata alone, so only format when this is a known token on
+          // the contract address — otherwise show base units.
+          return {
+            kind: 'erc20-transfer',
+            recognized: true,
+            method: 'transfer',
+            recipient: to,
+            amount: rawAmount,
+            summary: `ERC-20 transfer of ${rawAmount} (base units) to ${to}`,
+            tokenSymbol: token?.symbol,
+          };
+        }
+      } catch {
+        // Not an ERC-20 transfer — fall through to generic calldata.
+      }
+
+      const selector = hex.slice(0, 10);
+      return {
+        kind: 'contract-call',
+        recognized: false,
+        method: selector,
+        summary: `Contract call (method ${selector}, ${byteLen} bytes). Unable to fully decode — verify the requesting site.`,
+      };
+    }
+
+    // Not calldata-shaped: attempt to read it as a UTF-8 message.
+    try {
+      const text = hexToString(hex);
+      // eslint-disable-next-line no-control-regex
+      if (text && /^[\x09\x0a\x0d\x20-\x7e]*$/.test(text)) {
+        return {
+          kind: 'message',
+          recognized: true,
+          message: text,
+          summary: 'Plain-text message signature request',
+        };
+      }
+    } catch {
+      // Not decodable as text — fall through.
+    }
+
+    return {
+      kind: 'unknown',
+      recognized: false,
+      summary: `Unrecognized hex payload (${byteLen} bytes). Verify the requesting site before approving.`,
+    };
+  }
+
+  // Non-hex, non-JSON input is treated as a plain-text personal_sign message.
+  return {
+    kind: 'message',
+    recognized: true,
+    message: raw,
+    summary: 'Plain-text message signature request',
+  };
 }
 
 interface output {
