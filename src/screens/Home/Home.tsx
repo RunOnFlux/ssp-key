@@ -82,6 +82,7 @@ import {
   decodeVaultTransaction,
   type VaultDecodedTx,
 } from '../../lib/transactions';
+import { parseProposalSimulation } from '../../lib/vaultSimulation';
 import { signMessage } from '../../lib/relayAuth';
 
 import {
@@ -3623,6 +3624,7 @@ function Home({ navigation }: Props) {
               tokenDecimals={vaultSigningData.tokenDecimals}
               sourceAddress={vaultSigningData.sourceAddress}
               decodedTx={decodedVaultTx}
+              simulation={parseProposalSimulation(vaultSigningData.simulation)}
             />
           )}
           {fluxNodeStartData && (

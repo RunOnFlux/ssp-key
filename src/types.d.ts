@@ -657,4 +657,9 @@ interface vaultSigningRequest {
   evmUserOp?: string | Record<string, string>;
   // Vault signing mode (dual, key_only, wallet_only)
   signingMode?: string;
+  // Server-computed simulation / risk preview (ADVISORY, never gates signing).
+  // Carried through the relay action/sync payload. May be a parsed object or a
+  // JSON string depending on transport; absent on legacy proposals — render
+  // defensively (absent → no risk strip). See lib/vaultSimulation.ts.
+  simulation?: import('./lib/vaultSimulation').ProposalSimulation | string;
 }

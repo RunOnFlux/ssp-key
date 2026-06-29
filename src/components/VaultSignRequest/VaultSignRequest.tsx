@@ -14,6 +14,8 @@ import Icon from 'react-native-vector-icons/Feather';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 import type { VaultDecodedTx } from '../../lib/transactions';
+import type { ProposalSimulation } from '../../lib/vaultSimulation';
+import VaultRiskStrip from './VaultRiskStrip';
 
 /**
  * Format a base-unit amount (satoshis/wei) to human-readable using chain decimals.
@@ -53,6 +55,8 @@ interface VaultSignRequestProps {
   sourceAddress?: string;
   // Decoded transaction data — trustless verification from raw TX
   decodedTx?: VaultDecodedTx | null;
+  // Server-computed simulation / risk preview — ADVISORY only, never gates signing
+  simulation?: ProposalSimulation | null;
 }
 
 const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
@@ -66,6 +70,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   tokenSymbol,
   tokenDecimals,
   decodedTx,
+  simulation,
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -325,6 +330,11 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             <Text style={[Fonts.textSmall]}>{memo}</Text>
           </View>
         )}
+
+        {/* Risk strip — ADVISORY. Critical/high warnings render as prominent
+            banners the user must scroll past before the approve control. NEVER
+            disables the approve button; the device decode above stays primary. */}
+        <VaultRiskStrip simulation={simulation} decodedTx={decodedTx} />
 
         {/* Partial signature note */}
         <Text
