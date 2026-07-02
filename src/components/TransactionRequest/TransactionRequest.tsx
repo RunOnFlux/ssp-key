@@ -9,9 +9,11 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
+import BigNumber from 'bignumber.js';
 import Authentication from '../Authentication/Authentication';
 import { useTheme } from '../../hooks';
 import { decodeTransactionForApproval } from '../../lib/transactions';
+import { getCryptoUsdRate, formatUsdAmount } from '../../lib/rates';
 import { cryptos, utxo } from '../../types';
 
 import { blockchains } from '@storage/blockchains';
@@ -33,6 +35,7 @@ const TransactionRequest = (props: {
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [txData, setTxData] = useState('');
   const [fee, setFee] = useState('');
+  const [usdValue, setUsdValue] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
 
@@ -64,9 +67,14 @@ const TransactionRequest = (props: {
       return;
     }
     alreadyRunning.current = true;
+    // Cancellation flag for the fire-and-forget USD rate fetch — an in-flight
+    // fetch from a previous tx must never set a fiat value computed from the
+    // previous amount while a new transaction is displayed.
+    let cancelled = false;
     console.log('Transaction Request');
     console.log(props.rawTx);
     console.log(props.chain);
+    setUsdValue(''); // never show a stale value on a re-used component
     void (async function () {
       try {
         const txInfo = await decodeTransactionForApproval(
@@ -89,6 +97,24 @@ const TransactionRequest = (props: {
           setFee(txInfo.fee);
         }
         console.log(fee);
+        // USD estimate — native asset only (never risk a wrong fiat value for
+        // tokens on an authorization screen). Fire-and-forget: must never
+        // block or fail the decode/approval path.
+        if (
+          !txInfo.token &&
+          txInfo.amount &&
+          txInfo.amount !== 'decodingError'
+        ) {
+          void getCryptoUsdRate(props.chain).then((rate) => {
+            if (cancelled) {
+              return; // effect re-ran for a new tx — this rate is stale
+            }
+            const usd = new BigNumber(txInfo.amount).multipliedBy(rate);
+            if (rate > 0 && usd.isFinite() && usd.isGreaterThan(0)) {
+              setUsdValue(formatUsdAmount(usd.toNumber()));
+            }
+          });
+        }
         if (
           txInfo.amount === 'decodingError' ||
           txInfo.receiver === 'decodingError' ||
@@ -109,6 +135,9 @@ const TransactionRequest = (props: {
         alreadyRunning.current = false;
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [props.rawTx, props.chain]);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -157,6 +186,11 @@ const TransactionRequest = (props: {
         <Text style={[Fonts.textTiny, Fonts.textBold, Fonts.textCenter]}>
           {receiverAddress}
         </Text>
+        {usdValue !== '' && (
+          <Text style={[Fonts.textTiny, Fonts.textCenter]}>
+            {t('home:approx_usd', { usd: usdValue })}
+          </Text>
+        )}
         {txData && txData !== '0x' && (
           <>
             <Text

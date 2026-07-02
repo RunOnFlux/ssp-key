@@ -57,6 +57,14 @@ interface VaultSignRequestProps {
   decodedTx?: VaultDecodedTx | null;
   // Server-computed simulation / risk preview — ADVISORY only, never gates signing
   simulation?: ProposalSimulation | null;
+  // Solana byte-decode vs relay-payload verdict (see lib/vaultSolanaDecode).
+  // kind 'create' + mismatch = active-attack indicator → approval hard-blocked.
+  solDecodeMismatch?: boolean;
+  solDecodeKind?: string;
+  solMismatchReasons?: string[];
+  // True while the async sol byte-decode has not produced a verdict yet —
+  // approval stays disabled (fail closed) until the decode resolves.
+  solDecodePending?: boolean;
 }
 
 const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
@@ -71,6 +79,10 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   tokenDecimals,
   decodedTx,
   simulation,
+  solDecodeMismatch,
+  solDecodeKind,
+  solMismatchReasons,
+  solDecodePending,
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
@@ -90,6 +102,16 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   const displayRecipients = decodedTx?.recipients ?? [];
   const displayFee = decodedTx?.fee ?? fee;
   const displaySender = decodedTx?.sender ?? '';
+
+  // Solana byte-decode verdict: a successful decode that contradicts the
+  // relay payload is an active-attack indicator → HARD-BLOCK approval.
+  // Undecodable bytes only warn (never-strand-funds); approve-only txs carry
+  // proposal-record amounts (verified at creation).
+  const solBlocked = solDecodeMismatch === true;
+  // Fail closed: while the async byte-decode is still pending there is no
+  // verdict yet — keep Approve disabled (no attack banner, just disabled)
+  // until the decode resolves.
+  const solPending = solDecodePending === true;
 
   const cardStyle = {
     backgroundColor: Colors.inputBackground,
@@ -189,20 +211,102 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </Text>
         </View>
 
-        {/* Decoded data notice */}
-        <Text
-          style={[
-            Fonts.textTiny,
-            {
-              color: Colors.textGray400,
-              textAlign: 'center',
-              paddingHorizontal: 24,
+        {/* Decoded data notice — provenance depends on the sol decode kind:
+            'approve' amounts come from the proposal record, 'undecodable'
+            amounts come from the relay unverified. */}
+        {solDecodeKind === 'approve' ? (
+          <View
+            style={{
+              width: '90%',
               marginBottom: 12,
-            },
-          ]}
-        >
-          {t('home:vault_sign_decoded_notice')}
-        </Text>
+              backgroundColor: Colors.inputBackground,
+              borderRadius: 8,
+              padding: 10,
+              borderWidth: 1,
+              borderColor: Colors.textGray200,
+            }}
+          >
+            <Text
+              style={[
+                Fonts.textTiny,
+                { color: Colors.textGray400, textAlign: 'center' },
+              ]}
+            >
+              {t('home:vault_sign_sol_approve_only')}
+            </Text>
+          </View>
+        ) : solDecodeKind === 'undecodable' ? (
+          <View
+            style={{
+              width: '90%',
+              marginBottom: 12,
+              backgroundColor: Colors.inputBackground,
+              borderRadius: 8,
+              padding: 10,
+              borderWidth: 1,
+              borderColor: Colors.warning,
+            }}
+          >
+            <Text
+              style={[
+                Fonts.textTiny,
+                { color: Colors.warning, textAlign: 'center' },
+              ]}
+            >
+              {t('home:vault_sign_sol_undecodable')}
+            </Text>
+          </View>
+        ) : (
+          <Text
+            style={[
+              Fonts.textTiny,
+              {
+                color: Colors.textGray400,
+                textAlign: 'center',
+                paddingHorizontal: 24,
+                marginBottom: 12,
+              },
+            ]}
+          >
+            {t('home:vault_sign_decoded_notice')}
+          </Text>
+        )}
+
+        {/* Sol byte-decode vs payload mismatch — approval is hard-blocked */}
+        {solBlocked && (
+          <View
+            style={{
+              width: '90%',
+              marginBottom: 12,
+              backgroundColor: Colors.inputBackground,
+              borderRadius: 8,
+              padding: 10,
+              borderWidth: 1,
+              borderColor: Colors.error,
+            }}
+          >
+            <Text
+              style={[
+                Fonts.textTiny,
+                Fonts.textBold,
+                { color: Colors.error, textAlign: 'center' },
+              ]}
+            >
+              {t('home:vault_sign_sol_decode_mismatch')}
+            </Text>
+            {(solMismatchReasons ?? []).map((reason, index) => (
+              <Text
+                key={index}
+                style={[
+                  Fonts.textTiny,
+                  { color: Colors.error, textAlign: 'center', marginTop: 4 },
+                ]}
+              >
+                {reason}
+              </Text>
+            ))}
+          </View>
+        )}
 
         {/* Decode error warning */}
         {decodedTx?.error && (
@@ -362,8 +466,11 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             Common.button.bluePrimary,
             Gutters.regularBMargin,
             Gutters.smallTMargin,
+            solBlocked || solPending ? { opacity: 0.4 } : {},
           ]}
-          disabled={authenticationOpen || activityStatus}
+          disabled={
+            authenticationOpen || activityStatus || solBlocked || solPending
+          }
           onPressIn={() => openAuthentication()}
         >
           {(authenticationOpen || activityStatus) && (

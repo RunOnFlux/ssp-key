@@ -83,6 +83,10 @@ import {
   type VaultDecodedTx,
 } from '../../lib/transactions';
 import { parseProposalSimulation } from '../../lib/vaultSimulation';
+import {
+  applyVaultSolDecode,
+  VaultSolDecodeState,
+} from '../../lib/vaultSolanaDecode';
 import { signMessage } from '../../lib/relayAuth';
 
 import {
@@ -203,6 +207,12 @@ function Home({ navigation }: Props) {
   const [decodedVaultTx, setDecodedVaultTx] = useState<VaultDecodedTx | null>(
     null,
   );
+  const [solDecodeState, setSolDecodeState] =
+    useState<VaultSolDecodeState | null>(null);
+  // Monotonic token guarding the async sol decode — a decode started for an
+  // older vault payload must never overwrite the verdict of a newer one
+  // (bumped on every new request and on reject/completion cleanup).
+  const solDecodeSeqRef = useRef(0);
   const [fluxNodeStartData, setFluxNodeStartData] = useState<Record<
     string,
     unknown
@@ -461,6 +471,14 @@ function Home({ navigation }: Props) {
           data.allSignerNonces = JSON.parse(data.allSignerNonces);
         }
         setVaultSigningData(data);
+        // Every incoming request must start from a clean decode state — never
+        // render a stale sol verdict or stale decoded values from a previous
+        // request. The seq token discards any still-in-flight async sol
+        // decode started for an older payload.
+        solDecodeSeqRef.current += 1;
+        const decodeSeq = solDecodeSeqRef.current;
+        setDecodedVaultTx(null);
+        setSolDecodeState(null);
         // Decode raw transaction independently for trustless verification
         if (data.chain) {
           const chainConf = blockchains[data.chain as keyof cryptos];
@@ -489,29 +507,25 @@ function Home({ navigation }: Props) {
               });
             }
           } else if (chainConf?.chainType === 'sol') {
-            // Solana: rawUnsignedTx is a base64-encoded bundled tx (not UTXO
-            // hex), so the UTXO decoder would throw. The recipients + fee +
-            // source were captured by the relay at proposal-create time and
-            // shipped in the signing payload itself, so we surface them
-            // here for the UI. NOTE: this is NOT trustless verification
-            // against the bundle bytes — a full Solana decoder would have
-            // to borsh-decode create_transaction's inner message + walk the
-            // SystemProgram.transfer / spl-token ixs. The wallet's
-            // EnterpriseVaultSignTx uses the same synthetic-decode pattern.
-            const rawRecipients = Array.isArray(data.recipients)
-              ? (data.recipients as Array<{ address: string; amount: string }>)
-              : [];
-            setDecodedVaultTx({
-              sender:
-                typeof data.sourceAddress === 'string'
-                  ? data.sourceAddress
-                  : '',
-              recipients: rawRecipients.map((r) => ({
-                address: r.address,
-                amount: r.amount,
-              })),
-              fee: typeof data.fee === 'string' ? data.fee : '0',
-            });
+            // Solana: trustlessly decode the raw base64 bundle bytes and
+            // compare against the relay-supplied payload (shared helper —
+            // also used by the pull-to-refresh path). A create-kind decode
+            // that contradicts the payload hard-blocks approval in
+            // VaultSignRequest. Setters are seq-guarded so a decode that
+            // resolves after a newer request arrived is discarded.
+            void applyVaultSolDecode(
+              data,
+              (tx) => {
+                if (solDecodeSeqRef.current === decodeSeq) {
+                  setDecodedVaultTx(tx);
+                }
+              },
+              (state) => {
+                if (solDecodeSeqRef.current === decodeSeq) {
+                  setSolDecodeState(state);
+                }
+              },
+            );
           } else if (data.rawUnsignedTx) {
             // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
             const inputs = Array.isArray(data.inputDetails)
@@ -1802,6 +1816,14 @@ function Home({ navigation }: Props) {
               );
             }
             setVaultSigningData(vaultSignData);
+            // Every incoming request must start from a clean decode state —
+            // never render a stale sol verdict or stale decoded values from
+            // a previous request. The seq token discards any still-in-flight
+            // async sol decode started for an older payload.
+            solDecodeSeqRef.current += 1;
+            const decodeSeq = solDecodeSeqRef.current;
+            setDecodedVaultTx(null);
+            setSolDecodeState(null);
             // Decode raw transaction independently for trustless verification
             if (vaultSignData.chain) {
               const chainConf =
@@ -1831,29 +1853,24 @@ function Home({ navigation }: Props) {
                   });
                 }
               } else if (chainConf?.chainType === 'sol') {
-                // Solana: rawUnsignedTx is base64 bundled tx — surface the
-                // recipients/fee/source from the relay payload directly
-                // (same pattern as the wallet's EnterpriseVaultSignTx).
-                const rawRecipients = Array.isArray(vaultSignData.recipients)
-                  ? (vaultSignData.recipients as Array<{
-                      address: string;
-                      amount: string;
-                    }>)
-                  : [];
-                setDecodedVaultTx({
-                  sender:
-                    typeof vaultSignData.sourceAddress === 'string'
-                      ? vaultSignData.sourceAddress
-                      : '',
-                  recipients: rawRecipients.map((r) => ({
-                    address: r.address,
-                    amount: r.amount,
-                  })),
-                  fee:
-                    typeof vaultSignData.fee === 'string'
-                      ? vaultSignData.fee
-                      : '0',
-                });
+                // Solana: trustlessly decode the raw base64 bundle bytes and
+                // compare against the relay-supplied payload (shared helper —
+                // same path as the socket effect above). Setters are
+                // seq-guarded so a decode that resolves after a newer
+                // request arrived is discarded.
+                void applyVaultSolDecode(
+                  vaultSignData,
+                  (tx) => {
+                    if (solDecodeSeqRef.current === decodeSeq) {
+                      setDecodedVaultTx(tx);
+                    }
+                  },
+                  (state) => {
+                    if (solDecodeSeqRef.current === decodeSeq) {
+                      setSolDecodeState(state);
+                    }
+                  },
+                );
               } else if (vaultSignData.rawUnsignedTx) {
                 // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
                 const inputs = Array.isArray(vaultSignData.inputDetails)
@@ -2529,8 +2546,10 @@ function Home({ navigation }: Props) {
         await handleVaultSignAction();
       } else {
         // reject
+        solDecodeSeqRef.current += 1; // discard any in-flight sol decode
         setVaultSigningData(null);
         setDecodedVaultTx(null);
+        setSolDecodeState(null);
         clearVaultSigningRequest?.();
         await postAction(
           'enterprisevaultsignrejected',
@@ -2549,6 +2568,26 @@ function Home({ navigation }: Props) {
 
   const handleVaultSignAction = async () => {
     if (!vaultSigningData) return;
+
+    // Sign-time fail-closed recheck for Solana: the Approve button's
+    // disabled prop is evaluated at press time, but the byte-decode verdict
+    // can land while biometric auth is open (or the press can race the
+    // async decode). NEVER partial-sign while the trustless decode is still
+    // pending or after it flagged a mismatch. Keeps the request open — the
+    // user sees the banner/disabled state instead of a silent dismissal.
+    if (
+      blockchains[vaultSigningData.chain as keyof cryptos]?.chainType === 'sol'
+    ) {
+      if (!solDecodeState) {
+        // Decode still pending — Approve is disabled while pending, so this
+        // is defensive-only; refuse to sign without a verdict.
+        return;
+      }
+      if (solDecodeState.mismatch) {
+        displayMessage('error', t('home:vault_sign_sol_decode_mismatch'), 8000);
+        return;
+      }
+    }
 
     // Hoist sensitive vars outside try so they can be cleared in catch/finally
     let vaultXpriv = '';
@@ -3091,8 +3130,10 @@ function Home({ navigation }: Props) {
         8000,
       );
     } finally {
+      solDecodeSeqRef.current += 1; // discard any in-flight sol decode
       setVaultSigningData(null);
       setDecodedVaultTx(null);
+      setSolDecodeState(null);
       clearVaultSigningRequest?.();
     }
   };
@@ -3625,6 +3666,13 @@ function Home({ navigation }: Props) {
               sourceAddress={vaultSigningData.sourceAddress}
               decodedTx={decodedVaultTx}
               simulation={parseProposalSimulation(vaultSigningData.simulation)}
+              solDecodeMismatch={solDecodeState?.mismatch ?? false}
+              solDecodeKind={solDecodeState?.kind}
+              solMismatchReasons={solDecodeState?.mismatchReasons}
+              solDecodePending={
+                blockchains[vaultSigningData.chain as keyof cryptos]
+                  ?.chainType === 'sol' && solDecodeState === null
+              }
             />
           )}
           {fluxNodeStartData && (
