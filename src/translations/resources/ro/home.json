@@ -9,6 +9,8 @@
   "transaction_request": "Cerere tranzacție",
   "approve_transaction": "Aprobare tranzacție",
   "reject": "Respinge",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Cerere de sincronizare",
   "approve_sync": "Aprobare sincronizare",
   "show_in_explorer": "Afișează în Explorer",
