@@ -9,6 +9,8 @@
   "transaction_request": "Transaktionsförfrågan",
   "approve_transaction": "Godkänn transaktion",
   "reject": "Avvisa",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Synkroniseringsförfrågan",
   "approve_sync": "Godkänn synkronisering",
   "show_in_explorer": "Visa i Explorer",
