@@ -9,6 +9,8 @@
   "transaction_request": "トランザクション要求",
   "approve_transaction": "トランザクションを承認",
   "reject": "拒否",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "同期要求",
   "approve_sync": "同期を承認",
   "show_in_explorer": "エクスプローラーで表示",
