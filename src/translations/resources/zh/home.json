@@ -9,6 +9,8 @@
   "transaction_request": "交易请求",
   "approve_transaction": "批准交易",
   "reject": "拒绝",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "同步请求",
   "approve_sync": "批准同步",
   "show_in_explorer": "在浏览器中显示",
