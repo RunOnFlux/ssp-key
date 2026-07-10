@@ -9,6 +9,8 @@
   "transaction_request": "Запрос транзакции",
   "approve_transaction": "Подтвердить транзакцию",
   "reject": "Отклонить",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Синхронизировать",
   "approve_sync": "Подтвердить синхронизацию",
   "show_in_explorer": "Показать в проводнике",
