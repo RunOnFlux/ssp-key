@@ -9,6 +9,8 @@
   "transaction_request": "ट्रांजैक्शन रिक्वेस्ट",
   "approve_transaction": "ट्रांजैक्शन अप्रूव करें",
   "reject": "रिजेक्ट",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "सिंक्रोनाइजेशन रिक्वेस्ट",
   "approve_sync": "अप्रूव सिंक्रोनाइजेशन",
   "show_in_explorer": "एक्सप्लोरर में दिखाएँ",
