@@ -9,6 +9,8 @@
   "transaction_request": "Tranzakciókérés",
   "approve_transaction": "Tranzakció jóváhagyása",
   "reject": "Elutasítás",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Szinkronizálási felkérés",
   "approve_sync": "Szinkronizálás engedélyezése",
   "show_in_explorer": "Megjelenítés a böngészőben",
