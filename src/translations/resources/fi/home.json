@@ -9,6 +9,8 @@
   "transaction_request": "Tapahtumapyyntö",
   "approve_transaction": "Hyväksy tapahtuma",
   "reject": "Hylkää",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Synkronointipyyntö",
   "approve_sync": "Hyväksy synkronointi",
   "show_in_explorer": "Näytä Explorerissa",
