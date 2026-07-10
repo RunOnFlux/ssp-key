@@ -9,6 +9,8 @@
   "transaction_request": "Humiling sa Transaction",
   "approve_transaction": "Aprubahan ang Transaction",
   "reject": "Tanggihan",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Kahilingan sa Pag-synchronize",
   "approve_sync": "Aprubahan ang Pag-synchronise",
   "show_in_explorer": "Ipakita sa Explorer",
