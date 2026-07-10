@@ -9,6 +9,8 @@
   "transaction_request": "Richiesta transazione",
   "approve_transaction": "Approva Transazione",
   "reject": "Rifiuta",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Richiesta Di Sincronizzazione",
   "approve_sync": "Approva Sincronizzazione",
   "show_in_explorer": "Mostra nell'Explorer",
