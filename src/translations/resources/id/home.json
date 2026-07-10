@@ -9,6 +9,8 @@
   "transaction_request": "Permintaan Transaksi",
   "approve_transaction": "Setujui Transaksi",
   "reject": "Tolak",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Permintaan Sinkronisasi",
   "approve_sync": "Setujui Sinkronisasi",
   "show_in_explorer": "Tampilkan di Penjelajah",
