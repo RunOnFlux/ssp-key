@@ -9,6 +9,8 @@
   "transaction_request": "Transaksie Versoek",
   "approve_transaction": "Keur Transaksie Goed",
   "reject": "Verwerp",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Sinkronisasie Versoek",
   "approve_sync": "Keur Sinkronisasie Goed",
   "show_in_explorer": "Wys in Verkenner",
