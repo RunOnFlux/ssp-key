@@ -9,6 +9,8 @@
   "transaction_request": "거래 요청",
   "approve_transaction": "거래 승인",
   "reject": "거부",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "동기화 요청",
   "approve_sync": "동기화 승인",
   "show_in_explorer": "탐색기에 표시",
