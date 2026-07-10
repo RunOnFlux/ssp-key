@@ -9,6 +9,8 @@
   "transaction_request": "பரிவர்த்தனை கோரிக்கை",
   "approve_transaction": "பரிவர்த்தனையை ஒப்புதல் அளிக்கவும்",
   "reject": "நிராகரிக்கவும்",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "ஒத்திசைவு கோரிக்கை",
   "approve_sync": "ஒத்திசைவுக்கு ஒப்புதல் அளிக்கவும்",
   "show_in_explorer": "காண்க விசாரணையில்",
