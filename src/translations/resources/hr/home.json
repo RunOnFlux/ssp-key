@@ -9,6 +9,8 @@
   "transaction_request": "Zahtjev za transakciju",
   "approve_transaction": "Odobrite transakciju",
   "reject": "Odbij",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Zahtjev za sinkronizaciju",
   "approve_sync": "Odobrite sinkronizaciju",
   "show_in_explorer": "Pokaži u Exploreru",
