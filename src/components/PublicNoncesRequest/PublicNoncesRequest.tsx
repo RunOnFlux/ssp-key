@@ -71,6 +71,7 @@ const PublicNoncesRequest = (props: {
       </View>
       <View style={[Layout.justifyContentEnd]}>
         <TouchableOpacity
+          accessibilityRole="button"
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
@@ -91,6 +92,7 @@ const PublicNoncesRequest = (props: {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityRole="button"
           disabled={authenticationOpen || props.activityStatus}
           onPressIn={() => reject()}
         >

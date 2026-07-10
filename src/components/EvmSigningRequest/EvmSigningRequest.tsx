@@ -411,6 +411,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
         ]}
       >
         <TouchableOpacity
+          accessibilityRole="button"
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
@@ -431,6 +432,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
           onPressIn={() => reject()}
         >

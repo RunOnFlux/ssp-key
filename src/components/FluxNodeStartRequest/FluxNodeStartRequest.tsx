@@ -199,6 +199,7 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
         ]}
       >
         <TouchableOpacity
+          accessibilityRole="button"
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
@@ -219,6 +220,7 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
           onPressIn={() => reject()}
         >

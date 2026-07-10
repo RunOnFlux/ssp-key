@@ -138,6 +138,7 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
         ]}
       >
         <TouchableOpacity
+          accessibilityRole="button"
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
@@ -158,6 +159,7 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
           onPressIn={() => reject()}
         >

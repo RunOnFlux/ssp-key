@@ -250,6 +250,12 @@ const TransactionRequest = (props: {
       </View>
       <View style={[Layout.justifyContentEnd]}>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('home:a11y_approve_send', {
+            amount: sendingAmount,
+            symbol: token ? tokenSymbol : blockchainConfig.symbol,
+            recipient: receiverAddress,
+          })}
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
@@ -270,6 +276,8 @@ const TransactionRequest = (props: {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('home:a11y_reject')}
           disabled={authenticationOpen || props.activityStatus}
           onPressIn={() => reject()}
         >

@@ -258,6 +258,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
 
       <View style={[Layout.justifyContentEnd]}>
         <TouchableOpacity
+          accessibilityRole="button"
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
@@ -278,6 +279,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
           onPressIn={() => reject()}
         >

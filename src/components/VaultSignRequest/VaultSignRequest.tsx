@@ -461,6 +461,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
         ]}
       >
         <TouchableOpacity
+          accessibilityRole="button"
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
@@ -484,6 +485,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
           onPressIn={() => reject()}
         >

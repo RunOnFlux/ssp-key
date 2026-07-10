@@ -80,6 +80,7 @@ const KeyNonceSyncRequest: React.FC<KeyNonceSyncRequestProps> = ({
         ]}
       >
         <TouchableOpacity
+          accessibilityRole="button"
           style={[
             Common.button.rounded,
             Common.button.bluePrimary,
@@ -100,6 +101,7 @@ const KeyNonceSyncRequest: React.FC<KeyNonceSyncRequestProps> = ({
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
           onPressIn={() => reject()}
         >
