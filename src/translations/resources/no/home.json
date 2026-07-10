@@ -9,6 +9,8 @@
   "transaction_request": "Transaksjonsforespørsel",
   "approve_transaction": "Godkjenn transaksjon",
   "reject": "Avslå",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "Synkroniseringsforespørsel",
   "approve_sync": "Godkjenn synkronisering",
   "show_in_explorer": "Vis i Explorer",
