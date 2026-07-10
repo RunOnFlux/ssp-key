@@ -9,6 +9,8 @@
   "transaction_request": "คำขอธุรกรรม",
   "approve_transaction": "อนุมัติธุรกรรม",
   "reject": "ปฏิเสธ",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "คำขอซิงค์",
   "approve_sync": "อนุมัติการซิงค์",
   "show_in_explorer": "แสดงใน Explorer",
