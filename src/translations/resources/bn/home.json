@@ -9,6 +9,8 @@
   "transaction_request": "লেনদেন অনুরোধ",
   "approve_transaction": "লেনদেন অনুমোদন করুন",
   "reject": "প্রত্যাখ্যান করুন",
+  "a11y_approve_send": "Approve transaction, sending {{amount}} {{symbol}} to {{recipient}}",
+  "a11y_reject": "Reject transaction",
   "sync_request": "সিঙ্ক্রোনাইজেশন অনুরোধ",
   "approve_sync": "সিঙ্ক্রোনাইজেশন অনুমোদন করুন",
   "show_in_explorer": "এক্সপ্লোরারে দেখান",
