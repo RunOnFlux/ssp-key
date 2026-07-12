@@ -155,6 +155,8 @@
   "vault": "Brankas",
   "organization": "Organisasi",
   "vault_sign_recipients": "Penerima",
+  "vault_sign_message": "Message to sign",
+  "vault_sign_dapp": "Requested by",
   "vault_sign_no_recipients": "Tidak ada data penerima yang tersedia",
   "vault_sign_source_address": "Alamat Sumber",
   "vault_sign_address": "Alamat",
