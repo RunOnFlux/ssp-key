@@ -65,6 +65,11 @@ interface VaultSignRequestProps {
   // True while the async sol byte-decode has not produced a verdict yet —
   // approval stays disabled (fail closed) until the decode resolves.
   solDecodePending?: boolean;
+  // WalletConnect Phase 2 — vault MESSAGE signing (personal_sign). When set, this
+  // is a message signature (not a transaction): show the message text + dApp
+  // instead of recipients/amounts. Signing math is identical (signs the digest).
+  signMessage?: string;
+  dappOrigin?: string;
 }
 
 const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
@@ -83,8 +88,11 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   solDecodeKind,
   solMismatchReasons,
   solDecodePending,
+  signMessage,
+  dappOrigin,
 }) => {
   const { t } = useTranslation(['home', 'common']);
+  const isMessageSign = !!signMessage;
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const chainConfig = blockchains[chain as keyof cryptos];
@@ -357,73 +365,108 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </View>
         ) : null}
 
-        {/* Recipients — decoded from raw transaction */}
-        {displayRecipients.length > 0 ? (
-          displayRecipients.map((recipient, index) => (
-            <View key={index} style={[cardStyle, { marginBottom: 12 }]}>
-              <Text
-                style={[
-                  styles.label,
-                  { color: Colors.textGray400, marginBottom: 6 },
-                ]}
-              >
-                {t('home:vault_sign_recipients')}
-              </Text>
-              <View style={{ paddingLeft: 10 }}>
+        {/* WalletConnect Phase 2 — message signing: show the message + dApp
+            instead of recipients/amounts (there is no transaction). */}
+        {isMessageSign ? (
+          <View style={[cardStyle, { marginBottom: 12 }]}>
+            {dappOrigin ? (
+              <>
                 <Text style={[styles.label, { color: Colors.textGray400 }]}>
-                  {t('home:vault_sign_address')}
+                  {t('home:vault_sign_dapp')}
                 </Text>
                 <Text
-                  style={[
-                    Fonts.textTiny,
-                    Fonts.textBold,
-                    {
-                      fontFamily: 'monospace',
-                      lineHeight: 18,
-                      marginTop: 2,
-                    },
-                  ]}
+                  style={[Fonts.textSmall, Fonts.textBold, { marginBottom: 8 }]}
                   selectable={true}
                 >
-                  {recipient.address}
+                  {dappOrigin}
                 </Text>
+              </>
+            ) : null}
+            <Text style={[styles.label, { color: Colors.textGray400 }]}>
+              {t('home:vault_sign_message')}
+            </Text>
+            <Text
+              style={[
+                Fonts.textTiny,
+                { fontFamily: 'monospace', lineHeight: 18, marginTop: 4 },
+              ]}
+              selectable={true}
+            >
+              {signMessage}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Recipients — decoded from raw transaction */}
+        {!isMessageSign &&
+          (displayRecipients.length > 0 ? (
+            displayRecipients.map((recipient, index) => (
+              <View key={index} style={[cardStyle, { marginBottom: 12 }]}>
                 <Text
                   style={[
                     styles.label,
-                    { color: Colors.textGray400, marginTop: 8 },
+                    { color: Colors.textGray400, marginBottom: 6 },
                   ]}
                 >
-                  {t('home:vault_sign_amount')}
+                  {t('home:vault_sign_recipients')}
                 </Text>
-                <Text
-                  style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
-                >
-                  {formatAmount(recipient.amount, amountDecimals)}{' '}
-                  {amountSymbol}
-                </Text>
+                <View style={{ paddingLeft: 10 }}>
+                  <Text style={[styles.label, { color: Colors.textGray400 }]}>
+                    {t('home:vault_sign_address')}
+                  </Text>
+                  <Text
+                    style={[
+                      Fonts.textTiny,
+                      Fonts.textBold,
+                      {
+                        fontFamily: 'monospace',
+                        lineHeight: 18,
+                        marginTop: 2,
+                      },
+                    ]}
+                    selectable={true}
+                  >
+                    {recipient.address}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.label,
+                      { color: Colors.textGray400, marginTop: 8 },
+                    ]}
+                  >
+                    {t('home:vault_sign_amount')}
+                  </Text>
+                  <Text
+                    style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
+                  >
+                    {formatAmount(recipient.amount, amountDecimals)}{' '}
+                    {amountSymbol}
+                  </Text>
+                </View>
               </View>
+            ))
+          ) : (
+            <View style={[cardStyle, { marginBottom: 12 }]}>
+              <Text style={[styles.label, { color: Colors.textGray400 }]}>
+                {t('home:vault_sign_recipients')}
+              </Text>
+              <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+                {t('home:vault_sign_no_recipients')}
+              </Text>
             </View>
-          ))
-        ) : (
+          ))}
+
+        {/* Fee Card — decoded from raw transaction (omitted for message signing) */}
+        {!isMessageSign && (
           <View style={[cardStyle, { marginBottom: 12 }]}>
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
-              {t('home:vault_sign_recipients')}
+              {t('home:vault_sign_fee')}
             </Text>
-            <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
-              {t('home:vault_sign_no_recipients')}
+            <Text style={[Fonts.textSmall, Fonts.textBold]}>
+              {formatAmount(displayFee, chainDecimals)} {chainSymbol}
             </Text>
           </View>
         )}
-
-        {/* Fee Card — decoded from raw transaction */}
-        <View style={[cardStyle, { marginBottom: 12 }]}>
-          <Text style={[styles.label, { color: Colors.textGray400 }]}>
-            {t('home:vault_sign_fee')}
-          </Text>
-          <Text style={[Fonts.textSmall, Fonts.textBold]}>
-            {formatAmount(displayFee, chainDecimals)} {chainSymbol}
-          </Text>
-        </View>
 
         {/* Memo Card — from metadata (not in raw transaction) */}
         {memo && (

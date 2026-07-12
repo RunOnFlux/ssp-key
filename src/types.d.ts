@@ -662,4 +662,9 @@ interface vaultSigningRequest {
   // JSON string depending on transport; absent on legacy proposals — render
   // defensively (absent → no risk strip). See lib/vaultSimulation.ts.
   simulation?: import('./lib/vaultSimulation').ProposalSimulation | string;
+  // WalletConnect Phase 2 — vault MESSAGE signing (personal_sign). Present when
+  // co-signing a dApp message: rawUnsignedTx carries the EIP-191 digest and there
+  // are no recipients. signMessage is the human-readable text; dappOrigin the dApp.
+  signMessage?: string;
+  dappOrigin?: string;
 }

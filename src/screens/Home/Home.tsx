@@ -3673,6 +3673,8 @@ function Home({ navigation }: Props) {
                 blockchains[vaultSigningData.chain as keyof cryptos]
                   ?.chainType === 'sol' && solDecodeState === null
               }
+              signMessage={vaultSigningData.signMessage}
+              dappOrigin={vaultSigningData.dappOrigin}
             />
           )}
           {fluxNodeStartData && (
