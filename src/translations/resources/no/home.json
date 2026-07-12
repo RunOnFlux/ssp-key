@@ -155,6 +155,8 @@
   "vault": "Vault",
   "organization": "Organization",
   "vault_sign_recipients": "Recipients",
+  "vault_sign_message": "Message to sign",
+  "vault_sign_dapp": "Requested by",
   "vault_sign_no_recipients": "No recipient data available",
   "vault_sign_source_address": "Source Address",
   "vault_sign_address": "Address",
