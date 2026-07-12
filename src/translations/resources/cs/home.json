@@ -155,6 +155,8 @@
   "vault": "Vault",
   "organization": "Ogranizace",
   "vault_sign_recipients": "Příjemci",
+  "vault_sign_message": "Message to sign",
+  "vault_sign_dapp": "Requested by",
   "vault_sign_no_recipients": "Nejsou dostupná žádná data příjemce",
   "vault_sign_source_address": "Adresa odesílatele",
   "vault_sign_address": "Adresa",
