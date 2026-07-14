@@ -91,6 +91,7 @@
   "selected_chain_wallet": "已選擇的鏈和錢包",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "提交交易中...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "生成地址時出錯.",
   "public_nonces_request": "公開 Nonces 請求",
   "ssp_public_nonces_request": "SSP 錢包希望請求公開 Nonces。公開 Nonces 用於構建使用 Schnorr 簽名的區塊鏈交易.",
