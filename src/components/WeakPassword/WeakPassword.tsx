@@ -80,23 +80,19 @@ const WeakPassword = (props: {
             <TouchableOpacity
               style={[
                 Common.button.rounded,
-                Common.button.bluePrimary,
+                Common.button.primary,
                 Gutters.regularBMargin,
                 Gutters.smallTMargin,
               ]}
               onPress={() => reject()}
             >
-              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+              <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
                 {t('cr:weak_password_confirm_cancel')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => approve()}>
               <Text
-                style={[
-                  Fonts.textTiny,
-                  Fonts.textBluePrimary,
-                  Fonts.textCenter,
-                ]}
+                style={[Fonts.textTiny, Fonts.textPrimary, Fonts.textCenter]}
               >
                 {t('cr:weak_password_confirm_ok')}
               </Text>

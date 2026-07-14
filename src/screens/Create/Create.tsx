@@ -334,13 +334,9 @@ function Create({ navigation }: Props) {
           onPress={() => navigation.navigate('Welcome')}
           style={[Layout.row]}
         >
-          <Icon name="chevron-left" size={20} color={Colors.bluePrimary} />
+          <Icon name="chevron-left" size={20} color={Colors.primary} />
           <Text
-            style={[
-              Fonts.textSmall,
-              Fonts.textBluePrimary,
-              Gutters.tinyLPadding,
-            ]}
+            style={[Fonts.textSmall, Fonts.textPrimary, Gutters.tinyLPadding]}
           >
             {t('common:back')}
           </Text>
@@ -422,7 +418,7 @@ function Create({ navigation }: Props) {
               onPress={handlePasswordVisibility}
               style={Common.inputIcon}
             >
-              <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
+              <Icon name={rightIcon} size={20} color={Colors.primary} />
             </TouchableOpacity>
           </View>
           <View
@@ -450,11 +446,7 @@ function Create({ navigation }: Props) {
               onPress={handlePasswordVisibilityConfirm}
               style={Common.inputIcon}
             >
-              <Icon
-                name={rightIconConfirm}
-                size={20}
-                color={Colors.bluePrimary}
-              />
+              <Icon name={rightIconConfirm} size={20} color={Colors.primary} />
             </TouchableOpacity>
           </View>
           <Text
@@ -472,18 +464,18 @@ function Create({ navigation }: Props) {
           <TouchableOpacity
             style={[
               Common.button.rounded,
-              Common.button.bluePrimary,
+              Common.button.primary,
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
             onPress={() => checkPasswordStrength()}
           >
-            <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+            <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
               {t('cr:setup_key')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
-            <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
+            <Text style={[Fonts.textSmall, Fonts.textPrimary]}>
               {t('cr:restore_key')}
             </Text>
           </TouchableOpacity>
@@ -631,7 +623,7 @@ function Create({ navigation }: Props) {
                   <Text
                     style={[
                       Fonts.textSmall,
-                      Fonts.textBluePrimary,
+                      Fonts.textPrimary,
                       Gutters.smallHPadding,
                     ]}
                   >
@@ -670,7 +662,7 @@ function Create({ navigation }: Props) {
               <TouchableOpacity
                 style={[
                   Common.button.rounded,
-                  Common.button.bluePrimary,
+                  Common.button.primary,
                   Gutters.regularBMargin,
                   Gutters.smallTMargin,
                 ]}
@@ -684,7 +676,7 @@ function Create({ navigation }: Props) {
                   />
                 )}
                 {!isLoading && (
-                  <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                  <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
                     {t('cr:setup_key')}
                   </Text>
                 )}
@@ -694,11 +686,7 @@ function Create({ navigation }: Props) {
                 onPress={() => handleCancel()}
               >
                 <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBluePrimary,
-                    Fonts.textCenter,
-                  ]}
+                  style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
                 >
                   {t('common:cancel')}
                 </Text>

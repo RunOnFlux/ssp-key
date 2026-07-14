@@ -25,22 +25,22 @@ const CreationSteps = ({ step, isImport }: Props) => {
     stepStrokeCurrentColor: '#9a9a9a',
     stepStrokeWidth: 2,
     separatorStrokeFinishedWidth: 3,
-    stepStrokeFinishedColor: '#1677ff',
+    stepStrokeFinishedColor: '#FBBF24',
     stepStrokeUnFinishedColor: '#9a9a9a',
-    separatorFinishedColor: '#1677ff',
+    separatorFinishedColor: '#FBBF24',
     separatorUnFinishedColor: '#9a9a9a',
-    stepIndicatorFinishedColor: '#1677ff',
+    stepIndicatorFinishedColor: '#FBBF24',
     stepIndicatorUnFinishedColor: '#9a9a9a',
     stepIndicatorCurrentColor: '#9a9a9a',
     stepIndicatorLabelFontSize: 15,
     currentStepIndicatorLabelFontSize: 15,
     stepIndicatorLabelCurrentColor: '#fff',
-    stepIndicatorLabelFinishedColor: '#fff',
+    stepIndicatorLabelFinishedColor: '#000',
     stepIndicatorLabelUnFinishedColor: '#fff',
     labelColor: '#9a9a9a',
     labelSize: 11,
     currentStepLabelColor: '#9a9a9a',
-    finishedStepLabelColor: '#1677ff',
+    finishedStepLabelColor: '#F59E0B',
     borderRadiusSize: 15,
   };
 
@@ -58,7 +58,7 @@ const CreationSteps = ({ step, isImport }: Props) => {
     stepStatus: string;
   }) => {
     if (stepStatus === 'finished') {
-      return <Icon name="check" color="#fff" size={17} />;
+      return <Icon name="check" color="#000" size={17} />;
     }
     return <Text style={indicatorLabelStyle}>{`${position + 1}`}</Text>;
   };

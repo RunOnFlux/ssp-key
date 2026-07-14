@@ -56,7 +56,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Fonts.textCenter,
                     Gutters.tinyPadding,
                   ]}
@@ -68,7 +68,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Fonts.textCenter,
                     Gutters.tinyPadding,
                   ]}
@@ -80,7 +80,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Fonts.textCenter,
                     Gutters.tinyPadding,
                   ]}
@@ -92,7 +92,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Fonts.textCenter,
                     Gutters.tinyPadding,
                   ]}
@@ -104,7 +104,7 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Fonts.textCenter,
                     Gutters.tinyPadding,
                   ]}

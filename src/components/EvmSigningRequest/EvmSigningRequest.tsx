@@ -19,6 +19,7 @@ import CryptoJS from 'crypto-js';
 import { cryptos } from '../../types';
 import Authentication from '../Authentication/Authentication';
 
+import { PrimaryButton } from '../ui';
 interface EvmSigningRequestProps {
   activityStatus: boolean;
   dataToSign: string;
@@ -35,7 +36,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
   actionStatus,
 }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const [signingAddress, setSigningAddress] = useState<string>('');
   const [loadingAddress, setLoadingAddress] = useState(true);
@@ -358,7 +359,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           onPress={() => setShowRawData((prev) => !prev)}
           style={{ marginTop: 10 }}
         >
-          <Text style={[Fonts.textTiny, Fonts.textBluePrimary]}>
+          <Text style={[Fonts.textTiny, Fonts.textPrimary]}>
             {showRawData
               ? t('home:evm_sign_hide_raw')
               : t('home:evm_sign_show_raw')}
@@ -410,27 +411,13 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           Gutters.regularRMargin,
         ]}
       >
-        <TouchableOpacity
-          accessibilityRole="button"
-          style={[
-            Common.button.rounded,
-            Common.button.bluePrimary,
-            Gutters.regularBMargin,
-            Gutters.smallTMargin,
-          ]}
+        <PrimaryButton
+          label={t('home:approve_request')}
+          style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || activityStatus}
+          loading={authenticationOpen || activityStatus}
           onPress={() => openAuthentication()}
-        >
-          {(authenticationOpen || activityStatus) && (
-            <ActivityIndicator
-              size={'large'}
-              style={[{ position: 'absolute' }]}
-            />
-          )}
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('home:approve_request')}
-          </Text>
-        </TouchableOpacity>
+        />
         <TouchableOpacity
           accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
@@ -440,7 +427,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           <Text
             style={[
               Fonts.textSmall,
-              Fonts.textBluePrimary,
+              Fonts.textPrimary,
               Gutters.regularBMargin,
               Fonts.textCenter,
             ]}

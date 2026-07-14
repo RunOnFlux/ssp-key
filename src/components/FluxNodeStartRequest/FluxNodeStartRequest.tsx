@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
 } from 'react-native';
@@ -14,6 +13,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 
+import { PrimaryButton } from '../ui';
 interface FluxNodeStartRequestProps {
   activityStatus: boolean;
   chain: string;
@@ -38,7 +38,7 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
   actionStatus,
 }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const chainConfig = blockchains[chain as keyof cryptos];
   const chainDisplay = chainConfig
@@ -198,27 +198,13 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
           Gutters.regularRMargin,
         ]}
       >
-        <TouchableOpacity
-          accessibilityRole="button"
-          style={[
-            Common.button.rounded,
-            Common.button.bluePrimary,
-            Gutters.regularBMargin,
-            Gutters.smallTMargin,
-          ]}
+        <PrimaryButton
+          label={t('home:approve_request')}
+          style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || activityStatus}
+          loading={authenticationOpen || activityStatus}
           onPress={() => openAuthentication()}
-        >
-          {(authenticationOpen || activityStatus) && (
-            <ActivityIndicator
-              size={'large'}
-              style={[{ position: 'absolute' }]}
-            />
-          )}
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('home:approve_request')}
-          </Text>
-        </TouchableOpacity>
+        />
         <TouchableOpacity
           accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
@@ -228,7 +214,7 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
           <Text
             style={[
               Fonts.textSmall,
-              Fonts.textBluePrimary,
+              Fonts.textPrimary,
               Gutters.regularBMargin,
               Fonts.textCenter,
             ]}

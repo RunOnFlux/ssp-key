@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
 } from 'react-native';
@@ -17,6 +16,7 @@ import type { VaultDecodedTx } from '../../lib/transactions';
 import type { ProposalSimulation } from '../../lib/vaultSimulation';
 import VaultRiskStrip from './VaultRiskStrip';
 
+import { Card, PrimaryButton } from '../ui';
 /**
  * Format a base-unit amount (satoshis/wei) to human-readable using chain decimals.
  */
@@ -93,7 +93,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const isMessageSign = !!signMessage;
-  const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const chainConfig = blockchains[chain as keyof cryptos];
   const chainDisplay = chainConfig
@@ -120,15 +120,6 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   // verdict yet — keep Approve disabled (no attack banner, just disabled)
   // until the decode resolves.
   const solPending = solDecodePending === true;
-
-  const cardStyle = {
-    backgroundColor: Colors.inputBackground,
-    borderRadius: 8,
-    padding: 12,
-    width: '90%' as const,
-    borderWidth: 1,
-    borderColor: Colors.textGray200,
-  };
 
   const approve = () => {
     actionStatus(true);
@@ -187,7 +178,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
 
         {/* Vault & Org Card */}
         {(vaultName || orgName) && (
-          <View style={[cardStyle, { marginBottom: 12 }]}>
+          <Card style={styles.card}>
             {vaultName && (
               <View style={{ marginBottom: orgName ? 8 : 0 }}>
                 <Text style={[styles.label, { color: Colors.textGray400 }]}>
@@ -206,34 +197,24 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                 <Text style={[Fonts.textSmall, Fonts.textBold]}>{orgName}</Text>
               </View>
             )}
-          </View>
+          </Card>
         )}
 
         {/* Chain Card */}
-        <View style={[cardStyle, { marginBottom: 12 }]}>
+        <Card style={styles.card}>
           <Text style={[styles.label, { color: Colors.textGray400 }]}>
             {t('home:chain')}
           </Text>
           <Text style={[Fonts.textSmall, Fonts.textBold]} selectable={true}>
             {chainDisplay}
           </Text>
-        </View>
+        </Card>
 
         {/* Decoded data notice — provenance depends on the sol decode kind:
             'approve' amounts come from the proposal record, 'undecodable'
             amounts come from the relay unverified. */}
         {solDecodeKind === 'approve' ? (
-          <View
-            style={{
-              width: '90%',
-              marginBottom: 12,
-              backgroundColor: Colors.inputBackground,
-              borderRadius: 8,
-              padding: 10,
-              borderWidth: 1,
-              borderColor: Colors.textGray200,
-            }}
-          >
+          <Card style={styles.card}>
             <Text
               style={[
                 Fonts.textTiny,
@@ -242,19 +223,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             >
               {t('home:vault_sign_sol_approve_only')}
             </Text>
-          </View>
+          </Card>
         ) : solDecodeKind === 'undecodable' ? (
-          <View
-            style={{
-              width: '90%',
-              marginBottom: 12,
-              backgroundColor: Colors.inputBackground,
-              borderRadius: 8,
-              padding: 10,
-              borderWidth: 1,
-              borderColor: Colors.warning,
-            }}
-          >
+          <Card style={[styles.card, { borderColor: Colors.warning }]}>
             <Text
               style={[
                 Fonts.textTiny,
@@ -263,7 +234,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             >
               {t('home:vault_sign_sol_undecodable')}
             </Text>
-          </View>
+          </Card>
         ) : (
           <Text
             style={[
@@ -282,17 +253,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
 
         {/* Sol byte-decode vs payload mismatch — approval is hard-blocked */}
         {solBlocked && (
-          <View
-            style={{
-              width: '90%',
-              marginBottom: 12,
-              backgroundColor: Colors.inputBackground,
-              borderRadius: 8,
-              padding: 10,
-              borderWidth: 1,
-              borderColor: Colors.error,
-            }}
-          >
+          <Card style={[styles.card, { borderColor: Colors.error }]}>
             <Text
               style={[
                 Fonts.textTiny,
@@ -313,22 +274,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                 {reason}
               </Text>
             ))}
-          </View>
+          </Card>
         )}
 
         {/* Decode error warning */}
         {decodedTx?.error && (
-          <View
-            style={{
-              width: '90%',
-              marginBottom: 12,
-              backgroundColor: Colors.inputBackground,
-              borderRadius: 8,
-              padding: 10,
-              borderWidth: 1,
-              borderColor: Colors.error,
-            }}
-          >
+          <Card style={[styles.card, { borderColor: Colors.error }]}>
             <Text
               style={[
                 Fonts.textTiny,
@@ -340,12 +291,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             >
               {t('home:vault_sign_decode_error')}
             </Text>
-          </View>
+          </Card>
         )}
 
         {/* Source Address — decoded from raw transaction */}
         {displaySender ? (
-          <View style={[cardStyle, { marginBottom: 12 }]}>
+          <Card style={styles.card}>
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_source_address')}
             </Text>
@@ -362,13 +313,13 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             >
               {displaySender}
             </Text>
-          </View>
+          </Card>
         ) : null}
 
         {/* WalletConnect Phase 2 — message signing: show the message + dApp
             instead of recipients/amounts (there is no transaction). */}
         {isMessageSign ? (
-          <View style={[cardStyle, { marginBottom: 12 }]}>
+          <Card style={styles.card}>
             {dappOrigin ? (
               <>
                 <Text style={[styles.label, { color: Colors.textGray400 }]}>
@@ -394,14 +345,14 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             >
               {signMessage}
             </Text>
-          </View>
+          </Card>
         ) : null}
 
         {/* Recipients — decoded from raw transaction */}
         {!isMessageSign &&
           (displayRecipients.length > 0 ? (
             displayRecipients.map((recipient, index) => (
-              <View key={index} style={[cardStyle, { marginBottom: 12 }]}>
+              <Card key={index} style={styles.card}>
                 <Text
                   style={[
                     styles.label,
@@ -443,39 +394,39 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                     {amountSymbol}
                   </Text>
                 </View>
-              </View>
+              </Card>
             ))
           ) : (
-            <View style={[cardStyle, { marginBottom: 12 }]}>
+            <Card style={styles.card}>
               <Text style={[styles.label, { color: Colors.textGray400 }]}>
                 {t('home:vault_sign_recipients')}
               </Text>
               <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
                 {t('home:vault_sign_no_recipients')}
               </Text>
-            </View>
+            </Card>
           ))}
 
         {/* Fee Card — decoded from raw transaction (omitted for message signing) */}
         {!isMessageSign && (
-          <View style={[cardStyle, { marginBottom: 12 }]}>
+          <Card style={styles.card}>
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_fee')}
             </Text>
             <Text style={[Fonts.textSmall, Fonts.textBold]}>
               {formatAmount(displayFee, chainDecimals)} {chainSymbol}
             </Text>
-          </View>
+          </Card>
         )}
 
         {/* Memo Card — from metadata (not in raw transaction) */}
         {memo && (
-          <View style={[cardStyle, { marginBottom: 12 }]}>
+          <Card style={styles.card}>
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_memo')}
             </Text>
             <Text style={[Fonts.textSmall]}>{memo}</Text>
-          </View>
+          </Card>
         )}
 
         {/* Risk strip — ADVISORY. Critical/high warnings render as prominent
@@ -503,11 +454,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           Gutters.regularRMargin,
         ]}
       >
-        <TouchableOpacity
-          accessibilityRole="button"
+        <PrimaryButton
+          label={t('home:approve_request')}
           style={[
-            Common.button.rounded,
-            Common.button.bluePrimary,
             Gutters.regularBMargin,
             Gutters.smallTMargin,
             solBlocked || solPending ? { opacity: 0.4 } : {},
@@ -515,18 +464,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           disabled={
             authenticationOpen || activityStatus || solBlocked || solPending
           }
+          loading={authenticationOpen || activityStatus}
           onPress={() => openAuthentication()}
-        >
-          {(authenticationOpen || activityStatus) && (
-            <ActivityIndicator
-              size={'large'}
-              style={[{ position: 'absolute' }]}
-            />
-          )}
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('home:approve_request')}
-          </Text>
-        </TouchableOpacity>
+        />
         <TouchableOpacity
           accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
@@ -536,7 +476,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           <Text
             style={[
               Fonts.textSmall,
-              Fonts.textBluePrimary,
+              Fonts.textPrimary,
               Gutters.regularBMargin,
               Fonts.textCenter,
             ]}
@@ -561,6 +501,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     marginBottom: 2,
+  },
+  card: {
+    width: '90%',
+    marginBottom: 12,
   },
 });
 

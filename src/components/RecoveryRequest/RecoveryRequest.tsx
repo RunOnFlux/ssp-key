@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
 
+import { PrimaryButton } from '../ui';
 /**
  * RecoveryRequest — approval UI for a wallet-issued randomParams recovery
  * request. Matches the existing request-component pattern:
@@ -23,7 +24,7 @@ const RecoveryRequest = (props: {
   actionStatus: (status: boolean) => void;
 }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
 
   const approve = () => {
@@ -92,27 +93,13 @@ const RecoveryRequest = (props: {
         </Text>
       </View>
       <View style={[Layout.justifyContentEnd]}>
-        <TouchableOpacity
-          accessibilityRole="button"
-          style={[
-            Common.button.rounded,
-            Common.button.bluePrimary,
-            Gutters.regularBMargin,
-            Gutters.smallTMargin,
-          ]}
+        <PrimaryButton
+          label={t('home:approve_request')}
+          style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || props.activityStatus}
+          loading={authenticationOpen || props.activityStatus}
           onPress={() => openAuthentication()}
-        >
-          {(authenticationOpen || props.activityStatus) && (
-            <ActivityIndicator
-              size={'large'}
-              style={[{ position: 'absolute' }]}
-            />
-          )}
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('home:approve_request')}
-          </Text>
-        </TouchableOpacity>
+        />
         <TouchableOpacity
           accessibilityRole="button"
           disabled={authenticationOpen || props.activityStatus}
@@ -122,7 +109,7 @@ const RecoveryRequest = (props: {
           <Text
             style={[
               Fonts.textSmall,
-              Fonts.textBluePrimary,
+              Fonts.textPrimary,
               Gutters.regularBMargin,
               Fonts.textCenter,
             ]}

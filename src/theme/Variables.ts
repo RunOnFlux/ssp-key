@@ -3,6 +3,9 @@
  *
  * Define color, sizes, etc. here instead of duplicating them throughout the components.
  * That allows to change them more easily later on.
+ *
+ * Color values implement the SSP ecosystem design tokens (DESIGN_TOKENS.md):
+ * amber brand ramp anchored at #FBBF24, semantic set, warm-stone neutrals.
  */
 
 import { ThemeNavigationColors } from '../../@types/theme';
@@ -14,32 +17,40 @@ export const Colors = {
   transparent: 'rgba(0,0,0,0)',
   inputBackground: '#FFFFFF',
   white: '#ffffff',
-  modalBackground: 'white',
+  modalBackground: '#FFFFFF',
   shadowColor: '#000',
   backdropColor: 'rgba(0,0,0,0.5)',
-  secondaryButtonBackground: '#ffffff',
-  //Typography
-  textGray800: '#000000',
-  textGray400: '#4D4D4D',
-  textGray200: '#A1A1A1',
-  textInput: '#4d4d4d',
-  primary: '#E14032',
-  success: '#28a745',
-  warning: '#f0ad4e',
-  error: '#dc3545',
-  bluePrimary: '#1677ff',
+  secondaryButtonBackground: '#FFFFFF',
+  //Typography — warm stone neutrals
+  textGray800: '#1C1917',
+  textGray400: '#57534E',
+  textGray200: '#A8A29E',
+  textInput: '#57534E',
+  // Brand — amber anchor. primaryDeep is the pressed/hover-deep variant.
+  primary: '#FBBF24',
+  primaryDeep: '#F59E0B',
+  // Text/icon color on primary (amber) fills — always near-black, never white
+  textOnPrimary: '#000000',
+  // Semantic
+  success: '#22C55E',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+  // Borders — warm stone
+  border: '#E7E5E4',
+  borderSecondary: '#D6D3D1',
   //ComponentColors
-  circleButtonBackground: '#E1E1EF',
-  circleButtonColor: '#44427D',
+  circleButtonBackground: '#FEF3C7',
+  circleButtonColor: '#92400E',
   // inputArea in Modal
-  bgInputAreaModalColor: '#f6f6f6',
-  inputAreaModalColor: '#424242',
+  bgInputAreaModalColor: '#F5F5F4',
+  inputAreaModalColor: '#44403C',
 };
 
 export const NavigationColors: Partial<ThemeNavigationColors> = {
   primary: Colors.primary,
-  background: '#EFEFEF',
-  card: '#EFEFEF',
+  background: '#FAFAF9',
+  card: '#FAFAF9',
 };
 
 /**
@@ -50,6 +61,7 @@ export const FontSize = {
   tiny: 14,
   small: 16,
   regular: 20,
+  medium: 24,
   large: 40,
 };
 

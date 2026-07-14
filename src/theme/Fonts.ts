@@ -22,6 +22,10 @@ export default function ({ FontSize, Colors }: ThemeVariables) {
       fontSize: FontSize.regular,
       color: Colors.textGray400,
     },
+    textMedium: {
+      fontSize: FontSize.medium,
+      color: Colors.textGray400,
+    },
     textLarge: {
       fontSize: FontSize.large,
       color: Colors.textGray400,
@@ -79,11 +83,8 @@ export default function ({ FontSize, Colors }: ThemeVariables) {
     textLight: {
       color: Colors.textGray200,
     },
-    textWhite: {
-      color: Colors.white,
-    },
-    textBluePrimary: {
-      color: Colors.bluePrimary,
+    textOnPrimary: {
+      color: Colors.textOnPrimary,
     },
     textLobster: {
       fontFamily: 'lobster',

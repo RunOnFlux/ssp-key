@@ -177,7 +177,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >
@@ -203,7 +203,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     <Icon
                       name={xpubVisible ? 'eye' : 'eye-off'}
                       size={20}
-                      color={Colors.bluePrimary}
+                      color={Colors.primary}
                     />
                   </TouchableOpacity>
                   <Text
@@ -246,7 +246,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     <Icon
                       name={xprivVisible ? 'eye' : 'eye-off'}
                       size={20}
-                      color={Colors.bluePrimary}
+                      color={Colors.primary}
                     />
                   </TouchableOpacity>
                   <Text
@@ -327,7 +327,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     <Icon
                       name={mnemonicVisible ? 'eye' : 'eye-off'}
                       size={20}
-                      color={Colors.bluePrimary}
+                      color={Colors.primary}
                     />
                   </TouchableOpacity>
                   <Text
@@ -440,7 +440,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >
@@ -502,7 +502,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >

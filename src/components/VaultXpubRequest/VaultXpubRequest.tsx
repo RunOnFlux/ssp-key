@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
@@ -7,6 +7,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 
+import { PrimaryButton } from '../ui';
 interface VaultXpubRequestProps {
   activityStatus: boolean;
   vaultName: string;
@@ -23,7 +24,7 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
   actionStatus,
 }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const chainConfig = blockchains[chain as keyof cryptos];
   const chainDisplay = chainConfig
@@ -137,27 +138,13 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
           Gutters.regularRMargin,
         ]}
       >
-        <TouchableOpacity
-          accessibilityRole="button"
-          style={[
-            Common.button.rounded,
-            Common.button.bluePrimary,
-            Gutters.regularBMargin,
-            Gutters.smallTMargin,
-          ]}
+        <PrimaryButton
+          label={t('home:approve_request')}
+          style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || activityStatus}
+          loading={authenticationOpen || activityStatus}
           onPress={() => openAuthentication()}
-        >
-          {(authenticationOpen || activityStatus) && (
-            <ActivityIndicator
-              size={'large'}
-              style={[{ position: 'absolute' }]}
-            />
-          )}
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('home:approve_request')}
-          </Text>
-        </TouchableOpacity>
+        />
         <TouchableOpacity
           accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
@@ -167,7 +154,7 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
           <Text
             style={[
               Fonts.textSmall,
-              Fonts.textBluePrimary,
+              Fonts.textPrimary,
               Gutters.regularBMargin,
               Fonts.textCenter,
             ]}

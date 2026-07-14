@@ -386,7 +386,7 @@ const SettingsSection = (props: {
                     <Text
                       style={[
                         Fonts.textTiny,
-                        Fonts.textBluePrimary,
+                        Fonts.textPrimary,
                         Gutters.tinyVPadding,
                         Gutters.tinyHPadding,
                       ]}
@@ -421,7 +421,7 @@ const SettingsSection = (props: {
                   <Text
                     style={[
                       Fonts.textTiny,
-                      Fonts.textBluePrimary,
+                      Fonts.textPrimary,
                       Gutters.tinyVPadding,
                       Gutters.tinyHPadding,
                     ]}
@@ -446,7 +446,7 @@ const SettingsSection = (props: {
                     <Text
                       style={[
                         Fonts.textTiny,
-                        Fonts.textBluePrimary,
+                        Fonts.textPrimary,
                         Gutters.tinyVPadding,
                         Gutters.tinyHPadding,
                       ]}
@@ -485,7 +485,7 @@ const SettingsSection = (props: {
                       onPress={resetSSPRelay}
                       style={Common.inputIcon}
                     >
-                      <Icon name="x" size={20} color={Colors.bluePrimary} />
+                      <Icon name="x" size={20} color={Colors.primary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -527,7 +527,7 @@ const SettingsSection = (props: {
                           onPress={resetChainNodeService}
                           style={Common.inputIcon}
                         >
-                          <Icon name="x" size={20} color={Colors.bluePrimary} />
+                          <Icon name="x" size={20} color={Colors.primary} />
                         </TouchableOpacity>
                       </View>
                     </>
@@ -570,7 +570,7 @@ const SettingsSection = (props: {
                           onPress={resetChainApiService}
                           style={Common.inputIcon}
                         >
-                          <Icon name="x" size={20} color={Colors.bluePrimary} />
+                          <Icon name="x" size={20} color={Colors.primary} />
                         </TouchableOpacity>
                       </View>
                     </>
@@ -613,7 +613,7 @@ const SettingsSection = (props: {
                           onPress={resetChainExplorerService}
                           style={Common.inputIcon}
                         >
-                          <Icon name="x" size={20} color={Colors.bluePrimary} />
+                          <Icon name="x" size={20} color={Colors.primary} />
                         </TouchableOpacity>
                       </View>
                     </>
@@ -629,7 +629,7 @@ const SettingsSection = (props: {
                       <Text
                         style={[
                           Fonts.textSmall,
-                          Fonts.textBluePrimary,
+                          Fonts.textPrimary,
                           Gutters.regularHPadding,
                         ]}
                       >
@@ -643,13 +643,13 @@ const SettingsSection = (props: {
                 <TouchableOpacity
                   style={[
                     Common.button.rounded,
-                    Common.button.bluePrimary,
+                    Common.button.primary,
                     Gutters.regularBMargin,
                     Gutters.largeTMargin,
                   ]}
                   onPress={() => handleSave()}
                 >
-                  <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                  <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
                     {t('common:save')}
                   </Text>
                 </TouchableOpacity>
@@ -657,7 +657,7 @@ const SettingsSection = (props: {
                   <Text
                     style={[
                       Fonts.textSmall,
-                      Fonts.textBluePrimary,
+                      Fonts.textPrimary,
                       Fonts.textCenter,
                     ]}
                   >
@@ -718,7 +718,7 @@ const SettingsSection = (props: {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >
@@ -778,7 +778,7 @@ const SettingsSection = (props: {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >

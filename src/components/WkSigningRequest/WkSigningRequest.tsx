@@ -1,17 +1,11 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-  Image,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
 import Icon from 'react-native-vector-icons/Feather';
 
+import { PrimaryButton } from '../ui';
 interface WkSignRequesterInfo {
   origin: string;
   siteName?: string;
@@ -34,7 +28,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
   actionStatus,
 }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const [iconError, setIconError] = useState(false);
 
@@ -257,27 +251,13 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
       </View>
 
       <View style={[Layout.justifyContentEnd]}>
-        <TouchableOpacity
-          accessibilityRole="button"
-          style={[
-            Common.button.rounded,
-            Common.button.bluePrimary,
-            Gutters.regularBMargin,
-            Gutters.smallTMargin,
-          ]}
+        <PrimaryButton
+          label={t('home:approve_request')}
+          style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || activityStatus}
+          loading={authenticationOpen || activityStatus}
           onPress={() => openAuthentication()}
-        >
-          {(authenticationOpen || activityStatus) && (
-            <ActivityIndicator
-              size={'large'}
-              style={[{ position: 'absolute' }]}
-            />
-          )}
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('home:approve_request')}
-          </Text>
-        </TouchableOpacity>
+        />
         <TouchableOpacity
           accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
@@ -287,7 +267,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
           <Text
             style={[
               Fonts.textSmall,
-              Fonts.textBluePrimary,
+              Fonts.textPrimary,
               Gutters.regularBMargin,
               Fonts.textCenter,
             ]}

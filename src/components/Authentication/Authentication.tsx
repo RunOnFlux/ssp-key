@@ -345,7 +345,7 @@ const Authentication = (props: {
                 <IconB
                   name="fingerprint"
                   size={50}
-                  color={Colors.bluePrimary}
+                  color={Colors.primary}
                   style={[Fonts.textCenter, Gutters.regularTMargin]}
                   onPress={() => initiateFingerprint()}
                 />
@@ -379,7 +379,7 @@ const Authentication = (props: {
                   <Icon
                     name={passwordVisibility ? 'eye' : 'eye-off'}
                     size={20}
-                    color={Colors.bluePrimary}
+                    color={Colors.primary}
                   />
                 </TouchableOpacity>
               </View>
@@ -388,13 +388,13 @@ const Authentication = (props: {
               <TouchableOpacity
                 style={[
                   Common.button.rounded,
-                  Common.button.bluePrimary,
+                  Common.button.primary,
                   Gutters.regularBMargin,
                   Gutters.smallTMargin,
                 ]}
                 onPress={() => grantAccess()}
               >
-                <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
                   {props.type === 'sensitive'
                     ? t('home:grant_access')
                     : t('common:confirm')}
@@ -402,11 +402,7 @@ const Authentication = (props: {
               </TouchableOpacity>
               <TouchableOpacity onPress={() => close()}>
                 <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBluePrimary,
-                    Fonts.textCenter,
-                  ]}
+                  style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
                 >
                   {t('common:cancel')}
                 </Text>

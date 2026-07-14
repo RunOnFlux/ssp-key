@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 30,
     height: 30,
-    borderColor: '#00ff00',
+    borderColor: '#FBBF24',
   },
   cornerTopLeft: {
     top: 0,
@@ -395,8 +395,8 @@ const styles = StyleSheet.create({
   scanLine: {
     width: '100%',
     height: 2,
-    backgroundColor: '#00ff00',
-    shadowColor: '#00ff00',
+    backgroundColor: '#FBBF24',
+    shadowColor: '#FBBF24',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,

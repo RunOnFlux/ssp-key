@@ -194,7 +194,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >
@@ -254,7 +254,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                       <Icon
                         name={redeemScriptVisible ? 'eye' : 'eye-off'}
                         size={20}
-                        color={Colors.bluePrimary}
+                        color={Colors.primary}
                       />
                     </TouchableOpacity>
                     <Text
@@ -304,7 +304,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                       <Icon
                         name={witnessScriptVisible ? 'eye' : 'eye-off'}
                         size={20}
-                        color={Colors.bluePrimary}
+                        color={Colors.primary}
                       />
                     </TouchableOpacity>
                     <Text
@@ -351,7 +351,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     <Icon
                       name={privateKeyVisible ? 'eye' : 'eye-off'}
                       size={20}
-                      color={Colors.bluePrimary}
+                      color={Colors.primary}
                     />
                   </TouchableOpacity>
                   <Text
@@ -451,7 +451,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >
@@ -524,7 +524,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >

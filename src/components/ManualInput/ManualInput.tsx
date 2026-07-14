@@ -98,23 +98,19 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
               <TouchableOpacity
                 style={[
                   Common.button.rounded,
-                  Common.button.bluePrimary,
+                  Common.button.primary,
                   Gutters.regularBMargin,
                   Gutters.smallTMargin,
                 ]}
                 onPress={() => handleMnualInput()}
               >
-                <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+                <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
                   {t('home:process_input')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleCancel()}>
                 <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textBluePrimary,
-                    Fonts.textCenter,
-                  ]}
+                  style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
                 >
                   {t('common:cancel')}
                 </Text>

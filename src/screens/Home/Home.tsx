@@ -3568,13 +3568,13 @@ function Home({ navigation }: Props) {
                       <IconB
                         name="gesture-tap"
                         size={30}
-                        color={Colors.bluePrimary}
+                        color={Colors.primary}
                       />
                       <Text
                         style={[
                           Fonts.textSmall,
                           Fonts.textBold,
-                          Fonts.textBluePrimary,
+                          Fonts.textPrimary,
                           Gutters.tinyTMargin,
                           Gutters.tinyLMargin,
                         ]}
@@ -3596,7 +3596,7 @@ function Home({ navigation }: Props) {
                     <Text
                       style={[
                         Fonts.textSmall,
-                        Fonts.textBluePrimary,
+                        Fonts.textPrimary,
                         Gutters.regularHPadding,
                       ]}
                     >

@@ -160,7 +160,7 @@ const Receive = (props: { actionStatus: (status: boolean) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >
@@ -244,7 +244,7 @@ const Receive = (props: { actionStatus: (status: boolean) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >
@@ -317,7 +317,7 @@ const Receive = (props: { actionStatus: (status: boolean) => void }) => {
                 <Text
                   style={[
                     Fonts.textSmall,
-                    Fonts.textBluePrimary,
+                    Fonts.textPrimary,
                     Gutters.regularHPadding,
                   ]}
                 >

@@ -74,23 +74,19 @@ const EvmSigningSuccess = (props: {
             <TouchableOpacity
               style={[
                 Common.button.rounded,
-                Common.button.bluePrimary,
+                Common.button.primary,
                 Gutters.regularBMargin,
                 Gutters.smallTMargin,
               ]}
               onPress={() => close()}
             >
-              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
+              <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
                 {t('home:close')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => copyToClipboard()}>
               <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Fonts.textCenter,
-                ]}
+                style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
               >
                 {t('home:copy_to_clipboard')}
               </Text>

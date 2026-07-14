@@ -1,11 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
@@ -18,6 +12,7 @@ import { cryptos, utxo } from '../../types';
 
 import { blockchains } from '@storage/blockchains';
 
+import { PrimaryButton } from '../ui';
 const TransactionRequest = (props: {
   rawTx: string;
   chain: keyof cryptos;
@@ -27,7 +22,7 @@ const TransactionRequest = (props: {
 }) => {
   const alreadyRunning = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [sendingAmount, setSendingAmount] = useState('');
   const [receiverAddress, setReceiverAddress] = useState('');
   const [senderAddress, setSenderAddress] = useState('');
@@ -249,32 +244,18 @@ const TransactionRequest = (props: {
         )}
       </View>
       <View style={[Layout.justifyContentEnd]}>
-        <TouchableOpacity
-          accessibilityRole="button"
+        <PrimaryButton
+          label={t('home:approve_transaction')}
           accessibilityLabel={t('home:a11y_approve_send', {
             amount: sendingAmount,
             symbol: token ? tokenSymbol : blockchainConfig.symbol,
             recipient: receiverAddress,
           })}
-          style={[
-            Common.button.rounded,
-            Common.button.bluePrimary,
-            Gutters.regularBMargin,
-            Gutters.smallTMargin,
-          ]}
+          style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || props.activityStatus}
+          loading={authenticationOpen || props.activityStatus}
           onPress={() => openAuthentication()}
-        >
-          {(authenticationOpen || props.activityStatus) && (
-            <ActivityIndicator
-              size={'large'}
-              style={[{ position: 'absolute' }]}
-            />
-          )}
-          <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-            {t('home:approve_transaction')}
-          </Text>
-        </TouchableOpacity>
+        />
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel={t('home:a11y_reject')}
@@ -285,7 +266,7 @@ const TransactionRequest = (props: {
           <Text
             style={[
               Fonts.textSmall,
-              Fonts.textBluePrimary,
+              Fonts.textPrimary,
               Gutters.regularBMargin,
               Fonts.textCenter,
             ]}

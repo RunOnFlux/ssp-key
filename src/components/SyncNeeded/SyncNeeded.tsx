@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import CreationSteps from '../CreationSteps/CreationSteps';
 import BlurOverlay from '../../BlurOverlay';
+import { PrimaryButton, SecondaryButton } from '../ui';
 
 const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
   // so we need our xpubkey, then generate address and show user the address. If not the same, tell user to restore or create wallet from scratch.
@@ -102,39 +103,19 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
             </TouchableOpacity>
           </View>
           <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.rounded,
-                Common.button.bluePrimary,
-                Gutters.regularBMargin,
-                Gutters.smallTMargin,
-              ]}
+            <PrimaryButton
+              label={t('home:scan_code')}
+              style={[Gutters.regularBMargin, Gutters.smallTMargin]}
               onPress={() => scanCode()}
-            >
-              <Text style={[Fonts.textRegular, Fonts.textWhite]}>
-                {t('home:scan_code')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                Common.button.outlineRounded,
-                Common.button.secondaryButton,
-                Layout.fullWidth,
-                Gutters.regularBMargin,
-              ]}
+            />
+            <SecondaryButton
+              label={t('home:manual_input')}
+              style={[Layout.fullWidth, Gutters.regularBMargin]}
               onPress={() => manualInput()}
-            >
-              <Text style={[Fonts.textRegular, Fonts.textBluePrimary]}>
-                {t('home:manual_input')}
-              </Text>
-            </TouchableOpacity>
+            />
             <TouchableOpacity onPress={() => reject()}>
               <Text
-                style={[
-                  Fonts.textSmall,
-                  Fonts.textBluePrimary,
-                  Fonts.textCenter,
-                ]}
+                style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
               >
                 {t('common:cancel')}
               </Text>

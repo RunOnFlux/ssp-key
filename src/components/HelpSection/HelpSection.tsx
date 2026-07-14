@@ -112,21 +112,21 @@ const HelpSection = (props: {
               onPress={openWebsite}
               style={[Layout.center, Gutters.smallVPadding]}
             >
-              <Icon name={'web'} size={30} color={Colors.bluePrimary} />
+              <Icon name={'web'} size={30} color={Colors.primary} />
               <Text style={[Fonts.textSmall, Fonts.textCenter]}>Website</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={openSupport}
               style={[Layout.center, Gutters.tinyVPadding]}
             >
-              <Icon name={'help'} size={30} color={Colors.bluePrimary} />
+              <Icon name={'help'} size={30} color={Colors.primary} />
               <Text style={[Fonts.textSmall, Fonts.textCenter]}>Support</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={openDiscord}
               style={[Layout.center, Gutters.smallVPadding]}
             >
-              <Icon name={'discord'} size={30} color={Colors.bluePrimary} />
+              <Icon name={'discord'} size={30} color={Colors.primary} />
               <Text style={[Fonts.textSmall, Fonts.textCenter]}>Discord</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -162,7 +162,7 @@ const HelpSection = (props: {
               <Text
                 style={[
                   Fonts.textSmall,
-                  Fonts.textBluePrimary,
+                  Fonts.textPrimary,
                   Gutters.regularHPadding,
                 ]}
               >
