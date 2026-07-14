@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Vybraná sieť a peňaženka",
   "chain_not_synced_scan": "Sieť nie je synchronizovaná s SSP peňaženkou. Naskenujte QR kód SSP peňaženky na synchronizáciu.",
   "submitting_transaction": "Odosielanie transakcie...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Chyba pri generovaní adresy.",
   "public_nonces_request": "Žiadosť o verejné nonce",
   "ssp_public_nonces_request": "SSP peňaženka chce požiadať o verejné nonce. Verejné nonce sa používajú na vytváranie blockchainových transakcií, ktoré využívajú Schnorr podpisy.",
