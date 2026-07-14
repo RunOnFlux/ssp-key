@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Rantai dan Dompet yang Dipilih",
   "chain_not_synced_scan": "Rantai tidak Disinkronkan dengan Dompet SSP. Pindai Kode QR Dompet SSP untuk Menyinkronkannya.",
   "submitting_transaction": "Mengirimkan Transaksi...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Terjadi kesalahan saat membuat alamat.",
   "public_nonces_request": "Permintaan Nonce Publik",
   "ssp_public_nonces_request": "SSP Wallet ingin meminta Nonce Publik.",
