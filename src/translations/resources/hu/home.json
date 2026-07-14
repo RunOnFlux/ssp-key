@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Választott lánc és tárca",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Tranzakció benyújtása...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Hiba történt a cím generálása során.",
   "public_nonces_request": "Nyilvános Nonces felkérés",
   "ssp_public_nonces_request": "Az SSP tárca nyilvános nonce-okat szeretne kérni. A nyilvános nonce-okat a Schnorr aláírásokat használó blokklánc tranzakciók felépítésére használják.",
