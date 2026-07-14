@@ -91,6 +91,7 @@
   "selected_chain_wallet": "தேர்ந்தெடுக்கப்பட்ட சங்கிலி மற்றும் பணப்பை",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "விவரத்தைச் சமர்ப்பித்து கொண்டிருக்கிறது...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "முகவரி உருவாக்கும்போது பிழை ஏற்பட்டது.",
   "public_nonces_request": "பொது நோன்ஸ்கள் கோரிக்கை",
   "ssp_public_nonces_request": "SSP பணப்பை பொது நோன்ஸ்கள் -ஐ கோர விரும்புகிறது. பொது Nonces, Schnorr கையொப்பங்களை பயன்படுத்தும் ப்ளோக்செயின் பரிவர்த்தனைகளை உருவாக்கப் பயன்படுத்தப்படுகிறது.",
