@@ -91,6 +91,7 @@
   "selected_chain_wallet": "已选择的链和钱包",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "正在提交交易...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "生成地址时出错.",
   "public_nonces_request": "公共随机数请求",
   "ssp_public_nonces_request": "SSP钱包希望请求公共随机数.公共随机数用于构建使用Schnorr签名的区块链交易.",
