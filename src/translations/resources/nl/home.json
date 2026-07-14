@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Geselecteerde blockchain en portemonnee",
   "chain_not_synced_scan": "Blockchain niet gesynchroniseerd met SSP-portemonnee. Scan de SSP-portemonnee QR-code om te synchroniseren.",
   "submitting_transaction": "Transactie indienen...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Fout bij het genereren van het adres.",
   "public_nonces_request": "Verzoek om openbare nonces",
   "ssp_public_nonces_request": "SSP-portemonnee wil openbare nonces opvragen. Openbare nonces worden gebruikt om blockchaintransacties met Schnorr-handtekeningen te construeren.",
