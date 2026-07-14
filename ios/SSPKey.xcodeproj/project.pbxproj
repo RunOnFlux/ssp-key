@@ -301,7 +301,7 @@
 				CODE_SIGN_ENTITLEMENTS = SSPKey/SSPKey.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = URVD95GYQ7;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = SSPKey/Info.plist;
@@ -312,7 +312,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.27.1;
+				MARKETING_VERSION = 1.28.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -340,7 +340,7 @@
 				CODE_SIGN_ENTITLEMENTS = SSPKey/SSPKey.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = URVD95GYQ7;
 				INFOPLIST_FILE = SSPKey/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "SSP Key";
@@ -350,7 +350,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.27.1;
+				MARKETING_VERSION = 1.28.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
