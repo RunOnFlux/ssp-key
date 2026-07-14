@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Rantai dan Dompet Yang Dipilih",
   "chain_not_synced_scan": "Rantaian tidak disegerakkan dengan Dompet SSP. Imbas Kod QR Dompet SSP untuk menyegerakkannya.",
   "submitting_transaction": "Menghantar Transaksi...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Ralat semasa menjana alamat.",
   "public_nonces_request": "Permintaan Nonces Awam",
   "ssp_public_nonces_request": "Dompet SSP ingin meminta Nonces Awam. Nonces Awam digunakan untuk membina transaksi blockchain yang menggunakan tandatangan Schnorr.",
