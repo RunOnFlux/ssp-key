@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Cadena i moneder seleccionats",
   "chain_not_synced_scan": "La cadena no està sincronitzada amb SSP Wallet. Escaneja el codi QR de SSP Wallet per sincronitzar-la.",
   "submitting_transaction": "Enviant transacció...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Error en generar l'adreça.",
   "public_nonces_request": "Sol·licitud de Nonces Públiques",
   "ssp_public_nonces_request": "SSP Wallet vol sol·licitar Nonces Públiques. Les Nonces Públiques s'utilitzen per construir transaccions blockchain que fan servir signatures Schnorr.",
