@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Ví và chuỗi khối được lựa chọn",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Đang xem xét giao dịch...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Gặp lỗi khi khởi tạo địa chỉ.",
   "public_nonces_request": "Yêu cầu các số Nonce công cộng",
   "ssp_public_nonces_request": "Ví SSP muốn yêu cầu các số Nonce công cộng. Số Nonce công cộng được dùng để kiến tạo các giao dịch chuỗi khối mà dùng các đặc trưng Schnorr.",
