@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Gekose Ketting en Beursie",
   "chain_not_synced_scan": "Ketting nie gesinkroniseer met SSP Beursie nie. Skandeer SSP Beursie QR Kode om dit te sinkroniseer.",
   "submitting_transaction": "Dien transaksie in...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Fout tydens adresgenerering.",
   "public_nonces_request": "Publieke Nonces Versoek",
   "ssp_public_nonces_request": "SSP Beursie wil graag Publieke Nonces versoek. Publieke Nonces word gebruik om blockchain-transaksies te konstrueer wat Schnorr-handtekeninge gebruik.",
