@@ -91,6 +91,7 @@
   "selected_chain_wallet": "선택된 체인 및 지갑",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "거래 제출 중...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "주소 생성 중 오류가 발생했습니다.",
   "public_nonces_request": "공개 Nonces 요청",
   "ssp_public_nonces_request": "SSP 지갑에서 공개 Nonces를 요청하려고 합니다. 공개 Nonces는 슈노르 서명을 사용하는 블록체인 거래를 구성하는 데 사용됩니다.",
