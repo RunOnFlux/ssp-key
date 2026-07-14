@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Valgt kjede og lommebok",
   "chain_not_synced_scan": "Kjede ikke synkronisert med SSP-lommebok. Skann SSP-lommebokens QR-kode for å synkronisere.",
   "submitting_transaction": "Sender transaksjon...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Feil ved generering av adresse.",
   "public_nonces_request": "Forespørsel om offentlige nonces",
   "ssp_public_nonces_request": "SSP-lommebok ønsker å be om offentlige nonces. Offentlige nonces brukes til å konstruere blockchain-transaksjoner som bruker Schnorr-signaturer.",
