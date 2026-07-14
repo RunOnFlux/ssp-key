@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Vald kedja och plånbok",
   "chain_not_synced_scan": "Kedjan är inte synkroniserad med SSP-plånboken. Skanna SSP-plånbokens QR-kod för att synkronisera.",
   "submitting_transaction": "Skickar transaktion...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Fel vid generering av adress.",
   "public_nonces_request": "Begäran om offentliga nonces",
   "ssp_public_nonces_request": "SSP-plånboken vill begära offentliga nonces. Offentliga nonces används för att skapa blockchain-transaktioner som använder Schnorr-signaturer.",
