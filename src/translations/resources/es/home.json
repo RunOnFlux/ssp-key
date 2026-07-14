@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Cadena y Cartera seleccionadas",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Enviando la Transacción...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Error al generar la dirección.",
   "public_nonces_request": "Solicitud de Nonces Públicas",
   "ssp_public_nonces_request": "La Cartera SSP desea solicitar Nonces Públicas. Las Nonces Públicas se utilizan para construir transacciones de bloques de cadema que utilizan firmas de Schnorr.",
