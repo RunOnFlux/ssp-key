@@ -263,7 +263,7 @@ const TransactionRequest = (props: {
             Gutters.smallTMargin,
           ]}
           disabled={authenticationOpen || props.activityStatus}
-          onPressIn={() => openAuthentication()}
+          onPress={() => openAuthentication()}
         >
           {(authenticationOpen || props.activityStatus) && (
             <ActivityIndicator
@@ -279,7 +279,8 @@ const TransactionRequest = (props: {
           accessibilityRole="button"
           accessibilityLabel={t('home:a11y_reject')}
           disabled={authenticationOpen || props.activityStatus}
-          onPressIn={() => reject()}
+          onPress={() => reject()}
+          hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
         >
           <Text
             style={[

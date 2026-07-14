@@ -331,7 +331,7 @@ function Create({ navigation }: Props) {
         style={[Layout.fullWidth, Gutters.smallTMargin, Gutters.smallHPadding]}
       >
         <TouchableOpacity
-          onPressIn={() => navigation.navigate('Welcome')}
+          onPress={() => navigation.navigate('Welcome')}
           style={[Layout.row]}
         >
           <Icon name="chevron-left" size={20} color={Colors.bluePrimary} />
@@ -383,7 +383,7 @@ function Create({ navigation }: Props) {
             {t('cr:ssp_key_2fa')}
           </Text>
           <TouchableOpacity
-            onPressIn={() => Linking.openURL('https://sspwallet.io/guide')}
+            onPress={() => Linking.openURL('https://sspwallet.io/guide')}
           >
             <Text
               style={[
@@ -419,7 +419,7 @@ function Create({ navigation }: Props) {
               onPressIn={() => passwordInputA.current?.focus()}
             />
             <TouchableOpacity
-              onPressIn={handlePasswordVisibility}
+              onPress={handlePasswordVisibility}
               style={Common.inputIcon}
             >
               <Icon name={rightIcon} size={20} color={Colors.bluePrimary} />
@@ -447,7 +447,7 @@ function Create({ navigation }: Props) {
               onPressIn={() => passwordInputB.current?.focus()}
             />
             <TouchableOpacity
-              onPressIn={handlePasswordVisibilityConfirm}
+              onPress={handlePasswordVisibilityConfirm}
               style={Common.inputIcon}
             >
               <Icon
@@ -476,13 +476,13 @@ function Create({ navigation }: Props) {
               Gutters.regularBMargin,
               Gutters.smallTMargin,
             ]}
-            onPressIn={() => checkPasswordStrength()}
+            onPress={() => checkPasswordStrength()}
           >
             <Text style={[Fonts.textRegular, Fonts.textWhite]}>
               {t('cr:setup_key')}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPressIn={() => navigation.navigate('Restore')}>
+          <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
             <Text style={[Fonts.textSmall, Fonts.textBluePrimary]}>
               {t('cr:restore_key')}
             </Text>

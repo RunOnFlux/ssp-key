@@ -101,7 +101,7 @@ const RecoveryRequest = (props: {
             Gutters.smallTMargin,
           ]}
           disabled={authenticationOpen || props.activityStatus}
-          onPressIn={() => openAuthentication()}
+          onPress={() => openAuthentication()}
         >
           {(authenticationOpen || props.activityStatus) && (
             <ActivityIndicator
@@ -116,7 +116,8 @@ const RecoveryRequest = (props: {
         <TouchableOpacity
           accessibilityRole="button"
           disabled={authenticationOpen || props.activityStatus}
-          onPressIn={() => reject()}
+          onPress={() => reject()}
+          hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
         >
           <Text
             style={[

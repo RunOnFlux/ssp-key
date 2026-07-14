@@ -86,7 +86,7 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
               {t('home:sync_qr_needed')}
             </Text>
             <TouchableOpacity
-              onPressIn={() => Linking.openURL('https://sspwallet.io/guide')}
+              onPress={() => Linking.openURL('https://sspwallet.io/guide')}
             >
               <Text
                 style={[

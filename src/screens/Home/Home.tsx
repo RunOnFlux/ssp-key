@@ -228,6 +228,7 @@ function Home({ navigation }: Props) {
   );
   const [activityStatus, setActivityStatus] = useState(false);
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
+  const [preparingChainKeys, setPreparingChainKeys] = useState(false);
 
   const {
     newTx,
@@ -594,11 +595,11 @@ function Home({ navigation }: Props) {
   };
 
   const checkXpubXpriv = () => {
-    // todo loading animation on chain sync approval
     const chainToUse = activeChain;
     const blockchainConfigToUse = blockchains[chainToUse];
     if (!xpubKey || !xprivKey) {
       // just a precaution to make sure xpub and xpriv are set. Should acutally never end up here
+      setPreparingChainKeys(true);
       Keychain.getGenericPassword({
         service: 'enc_key',
       })
@@ -649,6 +650,9 @@ function Home({ navigation }: Props) {
         })
         .catch((error) => {
           console.log(error.message);
+        })
+        .finally(() => {
+          setPreparingChainKeys(false);
         });
     }
   };
@@ -3430,7 +3434,35 @@ function Home({ navigation }: Props) {
               />
             </View>
           )}
+          {!submittingTransaction && preparingChainKeys && (
+            <View
+              style={[
+                Layout.fill,
+                Layout.relative,
+                Layout.fullWidth,
+                Layout.justifyContentCenter,
+                Layout.alignItemsCenter,
+              ]}
+            >
+              <Icon name="key" size={60} color={Colors.textGray400} />
+              <Text
+                style={[
+                  Fonts.textBold,
+                  Fonts.textCenter,
+                  Fonts.textRegular,
+                  Gutters.smallMargin,
+                ]}
+              >
+                {t('home:preparing_chain_keys')}
+              </Text>
+              <ActivityIndicator
+                size={'large'}
+                style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
+              />
+            </View>
+          )}
           {!submittingTransaction &&
+            !preparingChainKeys &&
             !rawTx &&
             !syncReq &&
             !publicNoncesReq &&
@@ -3443,7 +3475,7 @@ function Home({ navigation }: Props) {
             !recoveryRequest && (
               <>
                 <TouchableOpacity
-                  onPressIn={() => setReceiveModalOpen(true)}
+                  onPress={() => setReceiveModalOpen(true)}
                   style={[Layout.row, { height: 30, marginTop: -30 }]}
                 >
                   <IconB name="qrcode" size={30} color={Colors.textGray400} />
@@ -3496,7 +3528,7 @@ function Home({ navigation }: Props) {
                         {t('home:sync_qr_needed')}
                       </Text>
                       <TouchableOpacity
-                        onPressIn={() =>
+                        onPress={() =>
                           Linking.openURL('https://sspwallet.io/guide')
                         }
                       >
@@ -3526,7 +3558,7 @@ function Home({ navigation }: Props) {
                   )}
                   {!isRefreshing && (
                     <TouchableOpacity
-                      onPressIn={() => handleRefresh()}
+                      onPress={() => handleRefresh()}
                       style={[
                         Layout.row,
                         Gutters.regularVMargin,
@@ -3559,7 +3591,7 @@ function Home({ navigation }: Props) {
                       Common.button.secondaryButton,
                       Gutters.smallBMargin,
                     ]}
-                    onPressIn={() => scanCode()}
+                    onPress={() => scanCode()}
                   >
                     <Text
                       style={[

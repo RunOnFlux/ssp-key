@@ -146,7 +146,7 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
             Gutters.smallTMargin,
           ]}
           disabled={authenticationOpen || activityStatus}
-          onPressIn={() => openAuthentication()}
+          onPress={() => openAuthentication()}
         >
           {(authenticationOpen || activityStatus) && (
             <ActivityIndicator
@@ -161,7 +161,8 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
         <TouchableOpacity
           accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}
-          onPressIn={() => reject()}
+          onPress={() => reject()}
+          hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
         >
           <Text
             style={[

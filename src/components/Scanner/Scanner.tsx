@@ -246,7 +246,11 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
     return (
       <View style={styles.container}>
         <StatusBar hidden />
-        <TouchableOpacity style={styles.backButton} onPressIn={onClose}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={onClose}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Icon name="chevron-left" size={32} color={Colors.white} />
         </TouchableOpacity>
         <View style={styles.camera}>
@@ -261,7 +265,11 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   return (
     <View style={styles.container}>
       <StatusBar hidden />
-      <TouchableOpacity style={styles.backButton} onPressIn={onClose}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={onClose}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
         <Icon name="chevron-left" size={32} color={Colors.white} />
       </TouchableOpacity>
       {hasCameraPermission ? (

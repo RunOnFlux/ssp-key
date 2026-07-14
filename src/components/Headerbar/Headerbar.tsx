@@ -20,7 +20,10 @@ const Headerbar = ({ headerText, backNavigation, navigation }: Props) => {
           Gutters.tinyTMargin,
         ]}
       >
-        <TouchableOpacity onPressIn={() => navigation.navigate(backNavigation)}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate(backNavigation)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Image
             style={{ width: 35, height: 35 }}
             source={darkMode ? Images.ssp.logoWhite : Images.ssp.logoBlack}
