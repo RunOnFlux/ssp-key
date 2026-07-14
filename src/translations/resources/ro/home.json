@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Lanț și portofel selectat",
   "chain_not_synced_scan": "Lanțul nu este sincronizat cu portofelul SSP. Scanează codul QR al portofelului SSP pentru a-l sincroniza.",
   "submitting_transaction": "Se trimite tranzacția...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Eroare la generarea adresei.",
   "public_nonces_request": "Cerere pentru Nonce-uri publice",
   "ssp_public_nonces_request": "Portofelul SSP dorește să solicite Nonce-uri publice. Nonce-urile publice sunt utilizate pentru a construi tranzacții blockchain care folosesc semnături Schnorr.",
