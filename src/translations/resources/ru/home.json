@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Выбранная цепочка и кошелек",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Отправка транзакции...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Ошибка при генерации адреса.",
   "public_nonces_request": "Запрос публичных Nonces",
   "ssp_public_nonces_request": "Кошелек SSP хочет запросить публичные Nonces. Публичные Nonces используются для создания транзакций на блокчейне, которые используют подписи Schnorr.",
