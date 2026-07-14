@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Napiling Chain at Wallet",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Nagsusubmit ng Transaction...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Error habang bumubuo ng address.",
   "public_nonces_request": "Paghiling ng Pampublikong Nonces",
   "ssp_public_nonces_request": "Gustong humiling ng SSP Wallet ng mga Public Nonces. Ginagamit ang Public Nonces upang bumuo ng mga transaction sa blockchain na gumagamit ng mga Schnorr signatures.",
