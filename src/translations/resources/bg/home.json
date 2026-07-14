@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Избрани мрежа и портфейл",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Изпращане на транзакцията...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Грешка при генериране на адреса.",
   "public_nonces_request": "Заявка за публични nonce (единични произволни стойности).",
   "ssp_public_nonces_request": "SSP портфейлът иска да заяви публични nonce стойности. Публичните nonce (единични произволни стойности) се използват за изграждане на блокчейн транзакции, които използват Schnorr подписи.",
