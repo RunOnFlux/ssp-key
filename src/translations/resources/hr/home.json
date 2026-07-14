@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Odabrani Chain i Novčanik",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Podnošenje transakcije...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Error pri generiranju adrese.",
   "public_nonces_request": "Zahtjev za javne nonce",
   "ssp_public_nonces_request": "SSP Wallet želi zatražiti javne nonce-e. Javni nonce-i se koriste za izradu blockchain transakcija koje koriste Schnorr potpise.",
