@@ -91,6 +91,7 @@
   "selected_chain_wallet": "เครือข่ายและกระเป๋าเงินที่เลือก",
   "chain_not_synced_scan": "เครือข่ายไม่ได้ซิงโครไนซ์กับกระเป๋า SSP โปรดสแกนรหัส QR ของกระเป๋า SSP เพื่อทำการซิงโครไนซ์",
   "submitting_transaction": "กำลังส่งธุรกรรม...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "เกิดข้อผิดพลาดในการสร้างที่อยู่",
   "public_nonces_request": "คำขอ Public Nonces",
   "ssp_public_nonces_request": "SSP Wallet ต้องการขอ Public Nonces ซึ่งใช้สำหรับสร้างธุรกรรมบล็อกเชนที่ใช้ลายเซ็น Schnorr",
