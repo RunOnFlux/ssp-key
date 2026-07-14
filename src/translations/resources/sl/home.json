@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Izbrana veriga in denarnica",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Pošiljanje transakcije...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Napaka pri ustvarjanju naslova.",
   "public_nonces_request": "Zahteva za javne nonce",
   "ssp_public_nonces_request": "SSP denarnica želi zahtevati javne nonce. Javni nonci se uporabljajo za ustvarjanje blockchain transakcij, ki uporabljajo Schnorr podpise.",
