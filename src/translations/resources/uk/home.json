@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Виберіть мережу і гаманець",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Надсилання транзакції...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Помилка під час генерації адреси.",
   "public_nonces_request": "Публічний запит Nonces",
   "ssp_public_nonces_request": "SSP Wallet запитує Публічні Nonces. Публічні Nonces використовуються для створення блокчейн транзакцій, які використовують підписи Schnorr.",
