@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Επιλεγμένη αλυσίδα και πορτοφόλι",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "Υποβολή Συναλλαγής...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Σφάλμα κατά τη δημιουργία διεύθυνσης.",
   "public_nonces_request": "Αίτηση Δημοσίων Nonces",
   "ssp_public_nonces_request": "Το πορτοφόλι SSP θα ήθελε να ζητήσει δημόσια Nonces. Τα Δημόσια Nonces χρησιμοποιούνται για την κατασκευή συναλλαγών blockchain που χρησιμοποιούν τις υπογραφές Schnorr.",
