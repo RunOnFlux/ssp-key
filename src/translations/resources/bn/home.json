@@ -91,6 +91,7 @@
   "selected_chain_wallet": "নির্বাচিত চেইন এবং ওয়ালেট",
   "chain_not_synced_scan": "Chain not Synced with SSP Wallet. Scan SSP Wallet QR Code to Sync it.",
   "submitting_transaction": "লেনদেন জমা দেওয়া হচ্ছে...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "ঠিকানা তৈরি করার সময় ত্রুটি হয়েছে.",
   "public_nonces_request": "পাবলিক ননস রিকোয়েস্ট",
   "ssp_public_nonces_request": "SSP Wallet পাবলিক ননস রিকোয়েস্ট করতে চায়. পাবলিক ননসগুলি ব্লকচেইন লেনদেন তৈরি করতে ব্যবহৃত হয় যা Schnorr সিগনেচার ব্যবহার করে.",
