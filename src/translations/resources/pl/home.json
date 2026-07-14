@@ -91,6 +91,7 @@
   "selected_chain_wallet": "Wybrany łańcuch i portfel",
   "chain_not_synced_scan": "Łańcuch nie jest zsynchronizowany z portfelem SSP. Zeskanuj kod QR portfela SSP, aby go zsynchronizować.",
   "submitting_transaction": "Przesyłanie transakcji...",
+  "preparing_chain_keys": "Preparing Chain Keys...",
   "err_generate_address": "Błąd podczas generowania adresu.",
   "public_nonces_request": "Żądanie Publicznych Nonces",
   "ssp_public_nonces_request": "Portfel SSP chce zażądać Publicznych Nonces. Publiczne Nonces są używane do konstruowania transakcji blockchain, które wykorzystują podpisy Schnorra.",
