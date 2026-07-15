@@ -9,7 +9,7 @@ import { blockchains } from '@storage/blockchains';
 
 import { cryptos } from '../../types';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 const SyncRequest = (props: {
   chain: keyof cryptos;
   activityStatus: boolean;
@@ -81,12 +81,13 @@ const SyncRequest = (props: {
         </Text>
       </View>
       <View style={[Layout.justifyContentEnd]}>
-        <PrimaryButton
-          label={t('home:approve_sync')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_sync')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || props.activityStatus}
           loading={authenticationOpen || props.activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"

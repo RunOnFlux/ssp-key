@@ -5,7 +5,7 @@ import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
 import Icon from 'react-native-vector-icons/Feather';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 interface WkSignRequesterInfo {
   origin: string;
   siteName?: string;
@@ -251,12 +251,13 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
       </View>
 
       <View style={[Layout.justifyContentEnd]}>
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || activityStatus}
           loading={authenticationOpen || activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"

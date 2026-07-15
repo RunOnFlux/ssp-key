@@ -16,7 +16,8 @@ import type { VaultDecodedTx } from '../../lib/transactions';
 import type { ProposalSimulation } from '../../lib/vaultSimulation';
 import VaultRiskStrip from './VaultRiskStrip';
 
-import { Card, PrimaryButton } from '../ui';
+import { Card } from '../ui';
+import { SlideToApprove } from '../request';
 /**
  * Format a base-unit amount (satoshis/wei) to human-readable using chain decimals.
  */
@@ -454,8 +455,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           Gutters.regularRMargin,
         ]}
       >
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[
             Gutters.regularBMargin,
             Gutters.smallTMargin,
@@ -465,7 +467,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             authenticationOpen || activityStatus || solBlocked || solPending
           }
           loading={authenticationOpen || activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"

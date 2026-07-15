@@ -19,7 +19,7 @@ import CryptoJS from 'crypto-js';
 import { cryptos } from '../../types';
 import Authentication from '../Authentication/Authentication';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 interface EvmSigningRequestProps {
   activityStatus: boolean;
   dataToSign: string;
@@ -411,12 +411,13 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           Gutters.regularRMargin,
         ]}
       >
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || activityStatus}
           loading={authenticationOpen || activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"

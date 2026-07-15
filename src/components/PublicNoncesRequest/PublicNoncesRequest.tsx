@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 const PublicNoncesRequest = (props: {
   activityStatus: boolean;
   actionStatus: (status: boolean) => void;
@@ -71,12 +71,13 @@ const PublicNoncesRequest = (props: {
         </Text>
       </View>
       <View style={[Layout.justifyContentEnd]}>
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || props.activityStatus}
           loading={authenticationOpen || props.activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"
