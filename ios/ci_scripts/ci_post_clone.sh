@@ -23,4 +23,17 @@ yarn
 echo ">>> POD INSTALL"
 cd ..
 pod --version
-RCT_NEW_ARCH_ENABLED=1 pod install
+# dl.google.com intermittently resets connections on Xcode Cloud runners
+# while downloading GoogleMLKit/Firebase tarballs (known flaky issue).
+# CocoaPods caches pods that already downloaded, so each retry only
+# re-fetches the ones still missing.
+n=0
+until RCT_NEW_ARCH_ENABLED=1 pod install; do
+  n=$((n+1))
+  if [ "$n" -ge 4 ]; then
+    echo ">>> pod install failed after $n attempts"
+    exit 1
+  fi
+  echo ">>> pod install failed (attempt $n), retrying in 15s"
+  sleep 15
+done
