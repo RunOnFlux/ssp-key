@@ -21,6 +21,12 @@ RUBY_PREFIX="$(brew --prefix ruby@3.3)"
 export PATH="${RUBY_PREFIX}/bin:${PATH}"
 ruby -v
 
+# The Tahoe image runs this x86_64 Homebrew ruby under Rosetta, but clang
+# invoked from gem native-extension builds targets the host's native arm64,
+# producing .bundle files the x86_64 ruby cannot dlopen (and making mkmf's
+# link-time have_func checks fail). mkmf honors ARCHFLAGS — force x86_64.
+export ARCHFLAGS="-arch x86_64"
+
 echo ">>> INSTALL BUNDLER"
 gem install bundler
 export PATH="$(gem environment gemdir)/bin:${PATH}"
