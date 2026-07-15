@@ -8,22 +8,22 @@ export NODE_OPTIONS=--max_old_space_size=8192
 # Ruby 2.7.x is EOL and breaks against the current Xcode Cloud image (its Homebrew
 # Ruby leaks into `bundle exec`, and rubygems.org rejects the old client). 3.3.x is the
 # stable, CocoaPods-safe line and satisfies the Gemfile's `ruby ">= 2.6.10"` requirement.
-RUBY_VERSION=3.3.6
+# Use Homebrew's pre-built ruby@3.3 bottle instead of compiling via rbenv/ruby-build —
+# the Tahoe Xcode Cloud image no longer ships openssl@3/libyaml, which made the
+# source build fail while configuring the openssl and psych extensions.
 
 # Install the toolchain via Homebrew.
-brew install cocoapods rbenv ruby-build node@24 yarn
+brew install cocoapods ruby@3.3 node@24 yarn
 brew link --overwrite node@24
 
-echo ">>> INSTALL RUBY ${RUBY_VERSION} (rbenv)"
-eval "$(rbenv init - sh)"
-rbenv install --skip-existing "${RUBY_VERSION}"
-rbenv global "${RUBY_VERSION}"
-rbenv rehash
+echo ">>> ACTIVATE RUBY 3.3 (Homebrew bottle)"
+RUBY_PREFIX="$(brew --prefix ruby@3.3)"
+export PATH="${RUBY_PREFIX}/bin:${PATH}"
 ruby -v
 
 echo ">>> INSTALL BUNDLER"
 gem install bundler
-rbenv rehash
+export PATH="$(gem environment gemdir)/bin:${PATH}"
 bundle -v
 
 echo ">>> INSTALL DEPENDENCIES"
