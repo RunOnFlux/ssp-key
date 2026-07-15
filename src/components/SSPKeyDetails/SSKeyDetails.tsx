@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
+import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import * as Keychain from 'react-native-keychain';
@@ -234,6 +235,16 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     >
                       {xpubVisible ? decryptedXpub : '*** *** *** *** *** ***'}
                     </Text>
+                  )}
+                  {/* Offline manual sync: a scannable QR of this chain's xpub
+                      so the wallet can scan it instead of the user typing it.
+                      Shown only when the xpub is revealed. Display-only. */}
+                  {!activityLoading && xpubVisible && !!decryptedXpub && (
+                    <View
+                      style={[Layout.alignItemsCenter, Gutters.smallBMargin]}
+                    >
+                      <QRCode value={decryptedXpub} size={180} />
+                    </View>
                   )}
                 </View>
               </View>

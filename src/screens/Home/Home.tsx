@@ -94,6 +94,7 @@ import {
   setXprivKey,
   setXpubWallet,
   setXpubWalletIdentity,
+  store,
 } from '../../store';
 
 import {
@@ -121,6 +122,18 @@ import VaultXpubRequest from '../../components/VaultXpubRequest/VaultXpubRequest
 import VaultSignRequest from '../../components/VaultSignRequest/VaultSignRequest';
 import KeyNonceSyncRequest from '../../components/KeyNonceSyncRequest/KeyNonceSyncRequest';
 import FluxNodeStartRequest from '../../components/FluxNodeStartRequest/FluxNodeStartRequest';
+import ChainSyncRequest from '../../components/ChainSyncRequest/ChainSyncRequest';
+import VerificationCode from '../../components/VerificationCode/VerificationCode';
+import {
+  sessionVerificationWords,
+  type VerifyEntry,
+} from '../../lib/pairingVerification';
+import {
+  parseChainSyncRequest,
+  buildChainSyncRejectionPayload,
+  CHAIN_SYNC_POST_SPACING_MS,
+  type ParsedChainSyncRequest,
+} from '../../lib/chainSyncRequest';
 import { MainScreenProps } from '../../../@types/navigation';
 
 type Props = MainScreenProps<'Home'>;
@@ -229,6 +242,27 @@ function Home({ navigation }: Props) {
   const [activityStatus, setActivityStatus] = useState(false);
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
   const [preparingChainKeys, setPreparingChainKeys] = useState(false);
+  const [chainSyncData, setChainSyncData] =
+    useState<ParsedChainSyncRequest | null>(null);
+  const [chainSyncProgress, setChainSyncProgress] = useState<{
+    current: number;
+    total: number;
+    chain: keyof cryptos;
+  } | null>(null);
+  // Out-of-band pairing verification words for the current session. ONE code
+  // covers every chain synced this session (identity chain + any batch chains),
+  // shown once at the end so the user can compare it against SSP Wallet (or
+  // scan the wallet's QR). Display-only — never logged.
+  const [batchVerifyWords, setBatchVerifyWords] = useState<string[]>([]);
+  // The identity chain's own verification entry, captured when the identity
+  // pairing completes. It is folded into the unified session code as just
+  // another entry (empty for an already-paired wallet activating extra chains).
+  const identityVerifyEntryRef = useRef<VerifyEntry | null>(null);
+  // Whether a batch chain-sync started this session. When it did, the batch
+  // completion drives the unified verification screen; otherwise the identity
+  // sync alone does. Prevents showing an identity-only code that a following
+  // batch would supersede.
+  const batchStartedRef = useRef(false);
 
   const {
     newTx,
@@ -249,6 +283,8 @@ function Home({ navigation }: Props) {
     clearFluxNodeStartRequest,
     recoveryRequest,
     clearRecoveryRequest,
+    chainSyncRequest: socketChainSyncRequest,
+    clearChainSyncRequest,
   } = useSocket();
   const { createWkIdentityAuth } = useRelayAuth();
 
@@ -437,6 +473,14 @@ function Home({ navigation }: Props) {
       setVaultXpubData(socketVaultXpubRequest);
     }
   }, [socketVaultXpubRequest]);
+
+  useEffect(() => {
+    if (socketChainSyncRequest) {
+      console.log('[Chain Sync] Received batch chain sync request');
+      handleChainSyncRequestPayload(socketChainSyncRequest);
+      clearChainSyncRequest?.();
+    }
+  }, [socketChainSyncRequest]);
 
   useEffect(() => {
     if (socketVaultSigningRequest) {
@@ -669,6 +713,116 @@ function Home({ navigation }: Props) {
     });
   };
 
+  // Shared per-chain sync core: decrypts the key xpub for the chain, runs the
+  // Solana on-the-fly migration when needed, generates + verifies the first
+  // multisig address, stores the wallet xpub, and posts the standard
+  // syncSSPRelay payload to POST /v1/sync. Used by the single-chain sync flow
+  // (generateAddressesForActiveChain) and looped over by the batch chain sync
+  // (processChainSyncBatch) — same crypto calls, same sync POST, unchanged
+  // endpoint so old wallets keep working.
+  const syncChainToRelay = async (
+    chain: keyof cryptos,
+    suppliedXpubWallet: string,
+    pwForEncryption: string,
+    xpubKeyEncrypted: string,
+    xprivKeyEncrypted: string,
+  ) => {
+    const xpk = CryptoJS.AES.decrypt(xpubKeyEncrypted, pwForEncryption);
+    let xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
+    // For Solana chains, "xpub" is actually a JSON-stringified array of
+    // 20 base58 Ed25519 leaf pubkeys (Ed25519 has no non-hardened
+    // public-key derivation). If the stored xpubKey for this chain is
+    // still in regular xpub form (e.g., chain was set up before Solana
+    // support), derive the 20-pubkey array on the fly from xprivKey.
+    if (
+      blockchains[chain].chainType === 'sol' &&
+      !xpubKeyDecrypted.startsWith('[')
+    ) {
+      const xprk = CryptoJS.AES.decrypt(xprivKeyEncrypted, pwForEncryption);
+      const xprivKeyDecrypted = xprk.toString(CryptoJS.enc.Utf8);
+      // Consumer wallet on-the-fly migration: derive at typeIndex=0
+      // (receiving slot). Enterprise vaults take a different code path
+      // (handleVaultXpubAction) which passes vault.vaultIndex.
+      const keyPubkeys = generateSolanaPubkeyArray(xprivKeyDecrypted, chain, 0);
+      xpubKeyDecrypted = JSON.stringify(keyPubkeys);
+      // Persist the JSON-encoded form back to encrypted storage so
+      // subsequent calls don't need to re-derive.
+      const reEncryptedXpubKey = CryptoJS.AES.encrypt(
+        xpubKeyDecrypted,
+        pwForEncryption,
+      ).toString();
+      setXpubKey(chain, reEncryptedXpubKey);
+    }
+    const addrInfo = generateMultisigAddress(
+      suppliedXpubWallet,
+      xpubKeyDecrypted,
+      0,
+      0,
+      chain,
+    );
+    if (!addrInfo || !addrInfo.address) {
+      throw new Error('Could not generate multisig address');
+    }
+    CryptoJS.AES.encrypt(
+      addrInfo.redeemScript || addrInfo.witnessScript || '',
+      pwForEncryption,
+    ).toString(); // just to test all is fine
+    const encryptedXpubWallet = CryptoJS.AES.encrypt(
+      suppliedXpubWallet,
+      pwForEncryption,
+    ).toString();
+    setXpubWallet(chain, encryptedXpubWallet);
+    // tell ssp relay that we are synced, post data to ssp sync
+    // sspKeyInternalIdentity is already set from identity chain sync
+    // Note: may be undefined for SSPs synced before this field was stored
+    const syncData: syncSSPRelay = {
+      chain,
+      walletIdentity: sspWalletInternalIdentity,
+      keyXpub: xpubKeyDecrypted,
+      wkIdentity: sspWalletKeyInternalIdentity,
+      generatedAddress: addrInfo.address,
+      keyToken: await getFCMToken(),
+      // Include additional fields for verification
+      walletXpub: suppliedXpubWallet,
+      keyIdentity: sspKeyInternalIdentity,
+      // Scripts from first address (index 0) - not strictly needed but extra assurance
+      redeemScript: addrInfo.redeemScript,
+      witnessScript: addrInfo.witnessScript,
+    };
+    // == EVM ==
+    if (blockchains[chain].chainType === 'evm') {
+      const ppNonces = [];
+      // generate and replace nonces
+      for (let i = 0; i < 50; i += 1) {
+        // max 50 txs
+        const nonce = generatePublicNonce();
+        ppNonces.push(nonce);
+      }
+      const stringifiedNonces = JSON.stringify(ppNonces);
+      const encryptedNonces = CryptoJS.AES.encrypt(
+        stringifiedNonces,
+        pwForEncryption,
+      ).toString();
+      dispatch(setSspKeyPublicNonces(encryptedNonces));
+      // on publicNonces delete k and kTwo, leave only public parts
+      const pNs: publicNonce[] = ppNonces.map((nonce) => ({
+        kPublic: nonce.kPublic,
+        kTwoPublic: nonce.kTwoPublic,
+      }));
+      syncData.publicNonces = pNs;
+    }
+    // == EVM end
+    console.log('syncData', syncData);
+    await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
+    // Return this device's decrypted view of the pair so the batch flow can
+    // derive the out-of-band verification code. Display-only — never logged.
+    return {
+      chain,
+      walletXpub: suppliedXpubWallet,
+      keyXpub: xpubKeyDecrypted,
+    };
+  };
+
   const generateAddressesForActiveChain = (
     suppliedXpubWallet: string,
     chain: keyof cryptos,
@@ -691,97 +845,13 @@ function Home({ navigation }: Props) {
         );
         const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
         const pwForEncryption = idData.password + passwordDecrypted;
-        const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
-        let xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-        // For Solana chains, "xpub" is actually a JSON-stringified array of
-        // 20 base58 Ed25519 leaf pubkeys (Ed25519 has no non-hardened
-        // public-key derivation). If the stored xpubKey for this chain is
-        // still in regular xpub form (e.g., chain was set up before Solana
-        // support), derive the 20-pubkey array on the fly from xprivKey.
-        if (
-          blockchains[chain].chainType === 'sol' &&
-          !xpubKeyDecrypted.startsWith('[')
-        ) {
-          const xprk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
-          const xprivKeyDecrypted = xprk.toString(CryptoJS.enc.Utf8);
-          // Consumer wallet on-the-fly migration: derive at typeIndex=0
-          // (receiving slot). Enterprise vaults take a different code path
-          // (handleVaultXpubAction) which passes vault.vaultIndex.
-          const keyPubkeys = generateSolanaPubkeyArray(
-            xprivKeyDecrypted,
-            chain,
-            0,
-          );
-          xpubKeyDecrypted = JSON.stringify(keyPubkeys);
-          // Persist the JSON-encoded form back to encrypted storage so
-          // subsequent calls don't need to re-derive.
-          const reEncryptedXpubKey = CryptoJS.AES.encrypt(
-            xpubKeyDecrypted,
-            pwForEncryption,
-          ).toString();
-          setXpubKey(chain, reEncryptedXpubKey);
-        }
-        const addrInfo = generateMultisigAddress(
-          suppliedXpubWallet,
-          xpubKeyDecrypted,
-          0,
-          0,
+        await syncChainToRelay(
           chain,
+          suppliedXpubWallet,
+          pwForEncryption,
+          xpubKey,
+          xprivKey,
         );
-        if (!addrInfo || !addrInfo.address) {
-          throw new Error('Could not generate multisig address');
-        }
-        CryptoJS.AES.encrypt(
-          addrInfo.redeemScript || addrInfo.witnessScript || '',
-          pwForEncryption,
-        ).toString(); // just to test all is fine
-        const encryptedXpubWallet = CryptoJS.AES.encrypt(
-          suppliedXpubWallet,
-          pwForEncryption,
-        ).toString();
-        setXpubWallet(chain, encryptedXpubWallet);
-        // tell ssp relay that we are synced, post data to ssp sync
-        // sspKeyInternalIdentity is already set from identity chain sync
-        // Note: may be undefined for SSPs synced before this field was stored
-        const syncData: syncSSPRelay = {
-          chain,
-          walletIdentity: sspWalletInternalIdentity,
-          keyXpub: xpubKeyDecrypted,
-          wkIdentity: sspWalletKeyInternalIdentity,
-          generatedAddress: addrInfo.address,
-          keyToken: await getFCMToken(),
-          // Include additional fields for verification
-          walletXpub: suppliedXpubWallet,
-          keyIdentity: sspKeyInternalIdentity,
-          // Scripts from first address (index 0) - not strictly needed but extra assurance
-          redeemScript: addrInfo.redeemScript,
-          witnessScript: addrInfo.witnessScript,
-        };
-        // == EVM ==
-        if (blockchains[chain].chainType === 'evm') {
-          const ppNonces = [];
-          // generate and replace nonces
-          for (let i = 0; i < 50; i += 1) {
-            // max 50 txs
-            const nonce = generatePublicNonce();
-            ppNonces.push(nonce);
-          }
-          const stringifiedNonces = JSON.stringify(ppNonces);
-          const encryptedNonces = CryptoJS.AES.encrypt(
-            stringifiedNonces,
-            pwForEncryption,
-          ).toString();
-          dispatch(setSspKeyPublicNonces(encryptedNonces));
-          // on publicNonces delete k and kTwo, leave only public parts
-          const pNs: publicNonce[] = ppNonces.map((nonce) => ({
-            kPublic: nonce.kPublic,
-            kTwoPublic: nonce.kTwoPublic,
-          }));
-          syncData.publicNonces = pNs;
-        }
-        // == EVM end
-        console.log('syncData', syncData);
-        await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         setSyncReq('');
         setSyncSuccessOpen(true);
       })
@@ -793,6 +863,183 @@ function Home({ navigation }: Props) {
           displayMessage('error', t('home:err_sync_failed'));
         }, 200);
       });
+  };
+
+  // ==== Batch chain sync (chainsyncrequest) ====
+  // One approval activates many chains: the wallet posts a versioned list of
+  // chains over the existing action transport; after slide + Authentication
+  // the key derives each chain's keys (~3s per not-yet-prepared chain) with
+  // visible progress and answers per chain through the EXISTING sync POST.
+  const handleChainSyncRequestPayload = (payload: string) => {
+    if (!sspWalletKeyInternalIdentity) {
+      console.log('[Chain Sync] Ignoring request — no wallet synced yet');
+      return;
+    }
+    const parsed = parseChainSyncRequest(payload, identityChain);
+    if (parsed.status === 'ok') {
+      // A batch is now in flight this session — the unified verification code
+      // will be shown when the batch completes (folding in the identity entry),
+      // not by the identity sync alone.
+      batchStartedRef.current = true;
+      setChainSyncData(parsed.request);
+      return;
+    }
+    if (parsed.status === 'unsupported_version') {
+      // A future wallet spoke a newer protocol — tell it so it can fall
+      // back to per-chain QR sync instead of waiting for a timeout.
+      console.log('[Chain Sync] Unsupported request version:', parsed.version);
+      postAction(
+        'chainsyncrejected',
+        buildChainSyncRejectionPayload('unsupported_version'),
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      ).catch((error) => console.log(error));
+      return;
+    }
+    console.log('[Chain Sync] Invalid request:', parsed.reason);
+    displayMessage('error', t('home:err_invalid_request'));
+  };
+
+  const handleChainSyncRequestAction = (status: boolean) => {
+    if (status === true) {
+      void processChainSyncBatch();
+    } else {
+      // reject — notify wallet so it can offer per-chain QR sync right away
+      setChainSyncData(null);
+      postAction(
+        'chainsyncrejected',
+        buildChainSyncRejectionPayload('declined'),
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      ).catch((error) => console.log(error));
+    }
+  };
+
+  const processChainSyncBatch = async () => {
+    const request = chainSyncData;
+    if (!request) {
+      return;
+    }
+    setActivityStatus(true);
+    let mnemonicPhrase = '';
+    try {
+      const idData = await Keychain.getGenericPassword({
+        service: 'enc_key',
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+      });
+      if (!passwordData || !idData) {
+        throw new Error('Unable to decrypt stored data');
+      }
+      const password = CryptoJS.AES.decrypt(
+        passwordData.password,
+        idData.password,
+      );
+      const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
+      const pwForEncryption = idData.password + passwordDecrypted;
+      const total = request.chains.length;
+      let failedChains = 0;
+      const verifyEntries: {
+        chain: string;
+        walletXpub: string;
+        keyXpub: string;
+      }[] = [];
+      for (let i = 0; i < total; i += 1) {
+        const entry = request.chains[i];
+        setChainSyncProgress({
+          current: i + 1,
+          total,
+          chain: entry.chain,
+        });
+        // let the progress UI paint before the synchronous ~3s derivation
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        try {
+          let { xpubKey: chainXpubKey, xprivKey: chainXprivKey } =
+            store.getState()[entry.chain];
+          if (!chainXpubKey || !chainXprivKey) {
+            // chain keys were never prepared on this device — derive them
+            // now, exactly as checkXpubXpriv does for the active chain
+            if (!mnemonicPhrase) {
+              const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
+              mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
+            }
+            const chainConfig = blockchains[entry.chain];
+            const xpriv = getMasterXpriv(
+              mnemonicPhrase,
+              48,
+              chainConfig.slip,
+              0,
+              chainConfig.scriptType,
+              entry.chain,
+            ); // takes ~3 secs
+            const xpub = getMasterXpub(
+              mnemonicPhrase,
+              48,
+              chainConfig.slip,
+              0,
+              chainConfig.scriptType,
+              entry.chain,
+            ); // takes ~3 secs
+            chainXprivKey = CryptoJS.AES.encrypt(
+              xpriv,
+              pwForEncryption,
+            ).toString();
+            chainXpubKey = CryptoJS.AES.encrypt(
+              xpub,
+              pwForEncryption,
+            ).toString();
+            setXprivKey(entry.chain, chainXprivKey);
+            setXpubKey(entry.chain, chainXpubKey);
+          }
+          const synced = await syncChainToRelay(
+            entry.chain,
+            entry.xpubWallet,
+            pwForEncryption,
+            chainXpubKey,
+            chainXprivKey,
+          );
+          verifyEntries.push(synced);
+        } catch (error) {
+          failedChains += 1;
+          console.log('[Chain Sync] Failed for chain', entry.chain, error);
+        }
+        if (i < total - 1) {
+          // spacing so the wallet's 1s sync poll catches every chain
+          // (relay sync doc is last-write-wins per walletIdentity)
+          await new Promise((resolve) =>
+            setTimeout(resolve, CHAIN_SYNC_POST_SPACING_MS),
+          );
+        }
+      }
+      if (failedChains > 0) {
+        displayMessage('error', t('home:err_sync_failed'));
+      } else {
+        displayMessage('success', t('home:chainsync_success'));
+      }
+      // Show the ONE unified verification code covering every chain synced this
+      // session so the user can confirm it matches SSP Wallet. The identity
+      // chain (if paired this session) is folded in as just another entry — a
+      // relay swap on ANY chain changes the code.
+      const sessionEntries: VerifyEntry[] = [];
+      if (identityVerifyEntryRef.current) {
+        sessionEntries.push(identityVerifyEntryRef.current);
+      }
+      sessionEntries.push(...verifyEntries);
+      if (sessionEntries.length > 0) {
+        setBatchVerifyWords(sessionVerificationWords(sessionEntries));
+      }
+    } catch (error) {
+      console.log(error);
+      displayMessage('error', t('home:err_sync_failed'));
+    } finally {
+      mnemonicPhrase = '';
+      setChainSyncData(null);
+      setChainSyncProgress(null);
+      setActivityStatus(false);
+    }
   };
 
   const generateAddressesForSyncIdentity = (suppliedXpubWallet: string) => {
@@ -905,6 +1152,14 @@ function Home({ navigation }: Props) {
         };
         console.log('syncData', syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
+        // Capture the identity chain's verification entry so it can be folded
+        // into the ONE unified session code (with any batch chains). The words
+        // themselves are derived on demand from this device's own key view.
+        identityVerifyEntryRef.current = {
+          chain: identityChain,
+          walletXpub: suppliedXpubWallet,
+          keyXpub: xpubKeyDecrypted,
+        };
         setSyncReq('');
         setSyncSuccessOpen(true);
       })
@@ -1908,6 +2163,12 @@ function Home({ navigation }: Props) {
           }
         } else if (result.data.action === 'enterprisekeynoncesync') {
           setKeyNonceSyncDialogOpen(true);
+        } else if (result.data.action === 'chainsyncrequest') {
+          if (typeof result.data.payload === 'string') {
+            handleChainSyncRequestPayload(result.data.payload);
+          } else {
+            displayMessage('error', t('home:err_invalid_request'));
+          }
         }
       } else {
         // here open sync needed modal
@@ -3161,6 +3422,22 @@ function Home({ navigation }: Props) {
   const handleSyncSuccessModalAction = () => {
     console.log('sync success modal close.');
     setSyncSuccessOpen(false);
+    // Identity-only pairing (no batch this session): show the ONE unified
+    // verification code now. If a batch is/was in flight, its completion drives
+    // the code instead (folding in the identity entry), so don't show it here.
+    if (!batchStartedRef.current && identityVerifyEntryRef.current) {
+      setBatchVerifyWords(
+        sessionVerificationWords([identityVerifyEntryRef.current]),
+      );
+    }
+  };
+
+  // The unified verification screen was acknowledged — clear the session's
+  // verification state so a later pairing starts clean.
+  const handleVerificationClose = () => {
+    setBatchVerifyWords([]);
+    identityVerifyEntryRef.current = null;
+    batchStartedRef.current = false;
   };
 
   const handleAddrDetailsModalAction = () => {
@@ -3434,6 +3711,41 @@ function Home({ navigation }: Props) {
               />
             </View>
           )}
+          {!submittingTransaction &&
+            !preparingChainKeys &&
+            chainSyncProgress && (
+              <View
+                style={[
+                  Layout.fill,
+                  Layout.relative,
+                  Layout.fullWidth,
+                  Layout.justifyContentCenter,
+                  Layout.alignItemsCenter,
+                ]}
+              >
+                <Icon name="key" size={60} color={Colors.textGray400} />
+                <Text
+                  style={[
+                    Fonts.textBold,
+                    Fonts.textCenter,
+                    Fonts.textRegular,
+                    Gutters.smallMargin,
+                  ]}
+                >
+                  {t('home:preparing_chain_keys_progress', {
+                    symbol:
+                      blockchains[chainSyncProgress.chain]?.symbol ??
+                      String(chainSyncProgress.chain),
+                    current: chainSyncProgress.current,
+                    total: chainSyncProgress.total,
+                  })}
+                </Text>
+                <ActivityIndicator
+                  size={'large'}
+                  style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
+                />
+              </View>
+            )}
           {!submittingTransaction && preparingChainKeys && (
             <View
               style={[
@@ -3472,6 +3784,8 @@ function Home({ navigation }: Props) {
             !vaultSigningData &&
             !fluxNodeStartData &&
             !keyNonceSyncDialogOpen &&
+            !chainSyncData &&
+            !chainSyncProgress &&
             !recoveryRequest && (
               <>
                 <TouchableOpacity
@@ -3622,6 +3936,14 @@ function Home({ navigation }: Props) {
               actionStatus={handleSynchronisationRequestAction}
             />
           )}
+          {chainSyncData && !chainSyncProgress && (
+            <ChainSyncRequest
+              chains={chainSyncData.chains.map((entry) => entry.chain)}
+              identity={sspWalletKeyInternalIdentity}
+              activityStatus={activityStatus}
+              actionStatus={handleChainSyncRequestAction}
+            />
+          )}
           {publicNoncesReq && (
             <PublicNoncesRequest
               activityStatus={activityStatus}
@@ -3745,6 +4067,12 @@ function Home({ navigation }: Props) {
             <SyncSuccess
               chain={activeChain}
               actionStatus={handleSyncSuccessModalAction}
+            />
+          )}
+          {batchVerifyWords.length > 0 && (
+            <VerificationCode
+              words={batchVerifyWords}
+              actionStatus={handleVerificationClose}
             />
           )}
           {addrDetailsOpen && (
