@@ -6,6 +6,7 @@ export type MainParamsList = {
   Welcome: undefined;
   Create: undefined;
   Restore: undefined;
+  History: undefined;
   LavaMoatTest: undefined;
 };
 

@@ -88,6 +88,7 @@ import {
   VaultSolDecodeState,
 } from '../../lib/vaultSolanaDecode';
 import { signMessage } from '../../lib/relayAuth';
+import { recordSignAction } from '../../lib/signHistory';
 
 import {
   setXpubKey,
@@ -1258,6 +1259,17 @@ function Home({ navigation }: Props) {
       data,
     );
     console.log('[postAction] response:', result.data);
+    // Local, encrypted, biometric-gated signed-action History (Phase 3,
+    // invariant 4). Additive and fire-and-forget: recordSignAction internally
+    // filters to successful co-sign actions, stores ONLY public metadata (never
+    // the signature payload — for 'txid' the public txid is kept as a reference),
+    // and swallows all errors so it can never disturb the signing flow.
+    void recordSignAction(
+      action,
+      chain,
+      wkIdentity,
+      action === 'txid' ? payload : undefined,
+    );
     return result;
   };
   const postSyncToken = async (token: string, wkIdentity: string) => {
