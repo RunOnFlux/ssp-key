@@ -21,13 +21,33 @@ import type { cryptos } from '../types';
 const SELECTOR_TRANSFER = 'a9059cbb'; // transfer(address,uint256)
 const SELECTOR_APPROVE = '095ea7b3'; // approve(address,uint256)
 const SELECTOR_TRANSFER_FROM = '23b872dd'; // transferFrom(address,address,uint256)
+const SELECTOR_INCREASE_ALLOWANCE = '39509351'; // increaseAllowance(address,uint256)
+const SELECTOR_SET_APPROVAL_FOR_ALL = 'a22cb442'; // setApprovalForAll(address,bool)
 
 const WORD_HEX_LEN = 64; // 32 bytes
 const SELECTOR_HEX_LEN = 8; // 4 bytes
 
 const MAX_UINT256 = (1n << 256n) - 1n;
 
-export type DecodedCalldataKind = 'transfer' | 'approve' | 'transferFrom';
+/**
+ * Allowance amounts at or above 2^255 are flagged unlimited. The canonical
+ * "infinite approval" sentinel is exactly 2^256-1, but dapps routinely use
+ * other astronomically large values (max/2, 0xff…f0, 10^18 * 10^38, …) that
+ * are unlimited in every practical sense. 2^255 (~5.8e76) exceeds any
+ * possible ERC-20 supply by dozens of orders of magnitude, so nothing
+ * legitimate is ever misflagged, while sentinel-adjacent grinding below the
+ * exact max can't dodge the warning. Applied ONLY to allowance-granting
+ * calls (approve / increaseAllowance) — transfers keep the exact-max
+ * sentinel, where "unlimited" is not a meaningful spend-rights concept.
+ */
+const UNLIMITED_ALLOWANCE_THRESHOLD = 1n << 255n;
+
+export type DecodedCalldataKind =
+  | 'transfer'
+  | 'approve'
+  | 'transferFrom'
+  | 'increaseAllowance'
+  | 'setApprovalForAll';
 
 export interface DecodedCalldata {
   kind: DecodedCalldataKind;
@@ -35,12 +55,17 @@ export interface DecodedCalldata {
   contract: string;
   /**
    * The counterparty to show as the recipient card:
-   * transfer / transferFrom → tokens recipient, approve → the spender.
+   * transfer / transferFrom → tokens recipient, approve / increaseAllowance
+   * → the spender, setApprovalForAll → the operator.
    */
   counterparty: string;
   /** transferFrom only — the address tokens are pulled from. */
   from?: string;
-  /** Raw amount in base units, decimal string. Always present. */
+  /**
+   * Raw amount in base units, decimal string. Always present. For
+   * setApprovalForAll (bool arg, no amount) this is '1' (grant) or '0'
+   * (revoke) so the field contract holds; the UI keys off `approved`.
+   */
   amountRaw: string;
   /** Human amount — only when decimals are confidently known on-device. */
   amount?: string;
@@ -48,8 +73,14 @@ export interface DecodedCalldata {
   tokenSymbol?: string;
   /** Known token decimals used to compute `amount`. */
   tokenDecimals?: number;
-  /** True when amount is the max-uint256 sentinel (unlimited approval). */
+  /**
+   * True when the call grants unbounded rights: an allowance at or above
+   * UNLIMITED_ALLOWANCE_THRESHOLD (approve / increaseAllowance), a
+   * setApprovalForAll(true), or the exact max-uint256 sentinel on transfers.
+   */
   unlimited: boolean;
+  /** setApprovalForAll only — the bool argument (true = grant, false = revoke). */
+  approved?: boolean;
   /** Plain-English fallback summary (UI prefers i18n from structured fields). */
   summary: string;
 }
@@ -93,6 +124,25 @@ function parseUintWord(word: string): bigint | null {
   return BigInt(`0x${word}`);
 }
 
+/**
+ * Parse an ABI-encoded bool word. Only the canonical encodings (all-zero
+ * word = false, 31 zero bytes + 0x01 = true) are accepted — any other bit
+ * pattern on a spend-rights-granting call is suspicious, so fail closed
+ * (mirrors the address-padding policy above).
+ */
+function parseBoolWord(word: string): boolean | null {
+  if (word.length !== WORD_HEX_LEN) {
+    return null;
+  }
+  if (/^0{64}$/.test(word)) {
+    return false;
+  }
+  if (/^0{63}1$/.test(word)) {
+    return true;
+  }
+  return null;
+}
+
 /** Look up a token in the on-device registry by contract address. */
 function findRegistryToken(
   contract: string,
@@ -117,8 +167,9 @@ function findRegistryToken(
 }
 
 /**
- * Decode ERC-20 transfer / approve / transferFrom calldata into
- * plain-language display data. Returns null for anything unrecognized.
+ * Decode ERC-20 transfer / approve / transferFrom / increaseAllowance and
+ * ERC-721/1155 setApprovalForAll calldata into plain-language display data.
+ * Returns null for anything unrecognized.
  */
 export function decodeErc20Calldata(
   data: string,
@@ -150,6 +201,12 @@ export function decodeErc20Calldata(
   } else if (selector === SELECTOR_TRANSFER_FROM) {
     kind = 'transferFrom';
     wordCount = 3;
+  } else if (selector === SELECTOR_INCREASE_ALLOWANCE) {
+    kind = 'increaseAllowance';
+    wordCount = 2;
+  } else if (selector === SELECTOR_SET_APPROVAL_FOR_ALL) {
+    kind = 'setApprovalForAll';
+    wordCount = 2;
   } else {
     return null;
   }
@@ -162,6 +219,30 @@ export function decodeErc20Calldata(
   const words: string[] = [];
   for (let i = 0; i < wordCount; i += 1) {
     words.push(argsHex.slice(i * WORD_HEX_LEN, (i + 1) * WORD_HEX_LEN));
+  }
+
+  // setApprovalForAll(address operator, bool approved) — no amount at all.
+  // approved=true grants the operator control over EVERY token the sender
+  // owns in this contract (ERC-721/1155), so it is flagged unlimited.
+  // Token symbol/decimals are deliberately NOT attached: the target is an
+  // NFT-style contract, where the ERC-20 registry metadata is meaningless.
+  if (kind === 'setApprovalForAll') {
+    const operator = parseAddressWord(words[0]);
+    const approved = parseBoolWord(words[1]);
+    if (!operator || approved === null) {
+      return null;
+    }
+    return {
+      kind,
+      contract,
+      counterparty: operator,
+      amountRaw: approved ? '1' : '0',
+      unlimited: approved,
+      approved,
+      summary: approved
+        ? `Grant operator ${operator} approval for ALL tokens in ${contract}`
+        : `Revoke operator ${operator} approval for tokens in ${contract}`,
+    };
   }
 
   let counterparty: string | null;
@@ -183,7 +264,13 @@ export function decodeErc20Calldata(
     return null;
   }
 
-  const unlimited = amountBig === MAX_UINT256;
+  // Allowance-granting calls use the >= 2^255 heuristic (see the threshold
+  // comment above); transfers keep the exact sentinel — pre-existing display
+  // behavior, and "unlimited" only describes spend RIGHTS, not a movement.
+  const grantsAllowance = kind === 'approve' || kind === 'increaseAllowance';
+  const unlimited = grantsAllowance
+    ? amountBig >= UNLIMITED_ALLOWANCE_THRESHOLD
+    : amountBig === MAX_UINT256;
   const registry = findRegistryToken(contract, chain);
   const amount =
     registry && !unlimited
@@ -201,6 +288,8 @@ export function decodeErc20Calldata(
     summary = `Transfer ${amountText} to ${counterparty}`;
   } else if (kind === 'approve') {
     summary = `Approve spender ${counterparty} for ${amountText}`;
+  } else if (kind === 'increaseAllowance') {
+    summary = `Increase spender ${counterparty} allowance by ${amountText}`;
   } else {
     summary = `Transfer ${amountText} from ${from ?? ''} to ${counterparty}`;
   }

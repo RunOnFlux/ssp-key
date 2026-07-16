@@ -14,6 +14,7 @@ import Authentication from '../Authentication/Authentication';
 import { useTheme } from '../../hooks';
 import { decodeTransactionForApproval } from '../../lib/transactions';
 import { decodeErc20Calldata } from '../../lib/calldataDecode';
+import { truncateAddress } from '../../lib/addressDisplay';
 import { getCryptoUsdRate, formatUsdAmount } from '../../lib/rates';
 import { cryptos, utxo } from '../../types';
 
@@ -194,6 +195,21 @@ const TransactionRequest = (props: {
     return '';
   })();
 
+  // Allowance-granting calls (spend-rights, not a movement of funds). The
+  // decode is display-only; the exact original payload is what gets signed.
+  const isAllowanceGrant =
+    humanCalldata?.kind === 'approve' ||
+    humanCalldata?.kind === 'increaseAllowance';
+  // Human amount for allowance lines: token symbol/decimals ONLY when the
+  // on-device registry confidently knows them (decodeErc20Calldata never
+  // guesses decimals — a wrong human amount on a spend-rights grant would be
+  // worse than a raw one), otherwise the honest raw base-unit figure.
+  const allowanceAmountText = humanCalldata
+    ? humanCalldata.amount && humanCalldata.tokenSymbol
+      ? `${humanCalldata.amount} ${humanCalldata.tokenSymbol}`
+      : t('home:token_base_units', { amount: humanCalldata.amountRaw })
+    : '';
+
   // Plain-language action + recipient presentation
   let actionText = t('home:action_send_amount', {
     amount: sendingAmount,
@@ -222,6 +238,23 @@ const TransactionRequest = (props: {
               amount: humanCalldata.amountRaw,
             });
       recipientLabel = t('home:spender');
+    } else if (humanCalldata.kind === 'increaseAllowance') {
+      actionText = humanCalldata.unlimited
+        ? t('home:action_approve_unlimited')
+        : known
+          ? t('home:action_increase_allowance', {
+              amount: humanCalldata.amount,
+              symbol: humanCalldata.tokenSymbol,
+            })
+          : t('home:action_increase_allowance_raw', {
+              amount: humanCalldata.amountRaw,
+            });
+      recipientLabel = t('home:spender');
+    } else if (humanCalldata.kind === 'setApprovalForAll') {
+      actionText = humanCalldata.approved
+        ? t('home:action_approval_for_all')
+        : t('home:action_revoke_approval_for_all');
+      recipientLabel = t('home:operator');
     } else {
       actionText = known
         ? t('home:action_transfer_from', {
@@ -264,10 +297,36 @@ const TransactionRequest = (props: {
           />
         ) : (
           <>
-            {humanCalldata?.kind === 'approve' && humanCalldata.unlimited ? (
+            {isAllowanceGrant && humanCalldata?.unlimited ? (
               <RiskBanner
                 severity="high"
                 title={t('home:vault_sim_warn_UNLIMITED_APPROVAL')}
+                messages={[
+                  t('home:risk_unlimited_spender', {
+                    spender: truncateAddress(humanCalldata.counterparty),
+                  }),
+                ]}
+              />
+            ) : null}
+            {isAllowanceGrant && humanCalldata && !humanCalldata.unlimited ? (
+              <RiskBanner
+                severity="info"
+                title={t('home:risk_bounded_approval', {
+                  spender: truncateAddress(humanCalldata.counterparty),
+                  amount: allowanceAmountText,
+                })}
+              />
+            ) : null}
+            {humanCalldata?.kind === 'setApprovalForAll' &&
+            humanCalldata.approved ? (
+              <RiskBanner
+                severity="high"
+                title={t('home:risk_approval_for_all')}
+                messages={[
+                  t('home:risk_approval_for_all_operator', {
+                    operator: truncateAddress(humanCalldata.counterparty),
+                  }),
+                ]}
               />
             ) : null}
             {!humanCalldata && token && txData && txData !== '0x' ? (
