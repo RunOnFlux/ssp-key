@@ -11,6 +11,7 @@ import {
   Platform,
   Settings,
   I18nManager,
+  Switch,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/Feather';
@@ -37,6 +38,7 @@ import { blockchains } from '@storage/blockchains';
 
 import * as resources from '../../translations/resources';
 import BlurOverlay from '../../BlurOverlay';
+import { usePrivacyMode } from '../../contexts/PrivacyContext';
 
 const backendsOriginalConfig = backendsOriginal();
 const originalConfig = sspConfigOriginal();
@@ -76,6 +78,9 @@ const SettingsSection = (props: {
       ? Settings.get('AppleLocale') || Settings.get('AppleLanguages')[0]
       : I18nManager.getConstants().localeIdentifier;
   const dispatch = useAppDispatch();
+  // Privacy mode preference — persisted independently (own MMKV key), purely
+  // presentational, never affects signing/approval displays.
+  const { hidden: privacyHidden, togglePrivacy } = usePrivacyMode();
 
   const deviceLanguageShort = deviceLanguage.split('_')[0].split('-')[0];
 
@@ -456,6 +461,35 @@ const SettingsSection = (props: {
                       )?.desc ?? t('home:use_system_language')}
                     </Text>
                   </TouchableOpacity>
+                </View>
+                <View style={[Gutters.smallBMargin, Layout.fullWidth]}>
+                  <Text
+                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
+                  >
+                    {t('home:privacy_mode')}
+                  </Text>
+                  <View
+                    style={[
+                      Layout.rowCenter,
+                      Layout.justifyContentCenter,
+                      Gutters.tinyTMargin,
+                    ]}
+                  >
+                    <Switch
+                      onValueChange={togglePrivacy}
+                      value={privacyHidden}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      Fonts.textTinyTiny,
+                      Fonts.textLight,
+                      Fonts.textJustify,
+                      Gutters.tinyTMargin,
+                    ]}
+                  >
+                    {t('home:privacy_mode_desc')}
+                  </Text>
                 </View>
                 <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
                   <Text

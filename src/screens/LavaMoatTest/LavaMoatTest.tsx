@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -600,7 +601,7 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE_FONT,
     lineHeight: 16,
   },
   dividerItem: {

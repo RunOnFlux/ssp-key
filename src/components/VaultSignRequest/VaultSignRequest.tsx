@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -305,7 +306,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
               style={[
                 Fonts.textTiny,
                 {
-                  fontFamily: 'monospace',
+                  fontFamily: MONOSPACE_FONT,
                   lineHeight: 18,
                   marginTop: 2,
                 },
@@ -340,7 +341,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             <Text
               style={[
                 Fonts.textTiny,
-                { fontFamily: 'monospace', lineHeight: 18, marginTop: 4 },
+                { fontFamily: MONOSPACE_FONT, lineHeight: 18, marginTop: 4 },
               ]}
               selectable={true}
             >
@@ -371,7 +372,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                       Fonts.textTiny,
                       Fonts.textBold,
                       {
-                        fontFamily: 'monospace',
+                        fontFamily: MONOSPACE_FONT,
                         lineHeight: 18,
                         marginTop: 2,
                       },
@@ -389,7 +390,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                     {t('home:vault_sign_amount')}
                   </Text>
                   <Text
-                    style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBold,
+                      styles.tabular,
+                      { marginTop: 2 },
+                    ]}
                   >
                     {formatAmount(recipient.amount, amountDecimals)}{' '}
                     {amountSymbol}
@@ -414,7 +420,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_fee')}
             </Text>
-            <Text style={[Fonts.textSmall, Fonts.textBold]}>
+            <Text style={[Fonts.textSmall, Fonts.textBold, styles.tabular]}>
               {formatAmount(displayFee, chainDecimals)} {chainSymbol}
             </Text>
           </Card>
@@ -507,6 +513,9 @@ const styles = StyleSheet.create({
   card: {
     width: '90%',
     marginBottom: 12,
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
   },
 });
 

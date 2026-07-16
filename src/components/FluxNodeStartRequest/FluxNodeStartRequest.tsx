@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   mono: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE_FONT,
   },
 });
 

@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   chipIndex: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#0c0a09',
     fontVariant: ['tabular-nums'],
   },
   chipWord: {

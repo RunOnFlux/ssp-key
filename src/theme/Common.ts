@@ -44,7 +44,9 @@ export default function <C>({ Colors, ...args }: CommonParams<C>) {
       modalMenu: {
         position: 'absolute',
         right: 5,
-        width: 150,
+        // min/max width so translated menu labels neither clip nor overflow
+        minWidth: 150,
+        maxWidth: 260,
         backgroundColor: Colors.modalBackground,
         marginTop: 60,
         borderRadius: 10,

@@ -30,7 +30,14 @@ const ActionCard = ({
   const { Colors, Fonts } = useTheme();
   return (
     <Card style={[styles.card, style]}>
-      <Text style={[Fonts.textRegular, Fonts.textBold, Fonts.textCenter]}>
+      <Text
+        style={[
+          Fonts.textRegular,
+          Fonts.textBold,
+          Fonts.textCenter,
+          styles.tabular,
+        ]}
+      >
         {action}
       </Text>
       {fiat ? (
@@ -38,6 +45,7 @@ const ActionCard = ({
           style={[
             Fonts.textTiny,
             Fonts.textCenter,
+            styles.tabular,
             { color: Colors.textGray400, marginTop: 2 },
           ]}
         >
@@ -71,6 +79,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 6,
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
   },
 });
 

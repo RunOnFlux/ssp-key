@@ -40,20 +40,16 @@ const ChainSyncRequest = (props: {
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
 
   const approve = () => {
-    console.log('Approve chain sync');
     props.actionStatus(true);
   };
   const openAuthentication = () => {
-    console.log('Open Authentication');
     setAuthenticationOpen(true);
   };
   const reject = () => {
-    console.log('Reject chain sync');
     props.actionStatus(false);
   };
 
   const handleAuthenticationOpen = (status: boolean) => {
-    console.log('authentication modal close.');
     setAuthenticationOpen(false);
     if (status === true) {
       approve();

@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useTheme } from '../../hooks';
 import Icon from 'react-native-vector-icons/Feather';
+import { RiskBanner } from '../request';
 import {
   sortWarnings,
   detectDecodeMismatch,
   type ProposalSimulation,
   type SimWarning,
   type SimWarningCode,
-  type SimWarningSeverity,
 } from '../../lib/vaultSimulation';
 import type { VaultDecodedTx } from '../../lib/transactions';
 
@@ -27,6 +27,10 @@ import type { VaultDecodedTx } from '../../lib/transactions';
  * Critical/high → prominent banner. Medium/info → collapsible list.
  * SIMULATION_DECODE_MISMATCH is computed client-side by comparing the server
  * simulation to the device decode; on divergence it shows a critical banner.
+ *
+ * All banner presentation (severity color/icon/card) is delegated to the
+ * shared RiskBanner (src/components/request/RiskBanner.tsx) so severity
+ * styling and copy live in ONE place across request types.
  */
 
 interface VaultRiskStripProps {
@@ -127,17 +131,6 @@ const VaultRiskStrip: React.FC<VaultRiskStripProps> = ({
     (w) => w.severity === 'medium' || w.severity === 'info',
   );
 
-  const severityColor = (sev: SimWarningSeverity): string => {
-    switch (sev) {
-      case 'critical':
-        return Colors.error;
-      case 'high':
-        return Colors.warning;
-      default:
-        return Colors.textGray400;
-    }
-  };
-
   const cardWidth = '90%' as const;
 
   return (
@@ -158,157 +151,55 @@ const VaultRiskStrip: React.FC<VaultRiskStripProps> = ({
 
       {/* status: reverted headline (high severity) */}
       {status === 'reverted' && (
-        <View
-          style={[
-            styles.banner,
-            {
-              backgroundColor: Colors.inputBackground,
-              borderColor: Colors.warning,
-            },
+        <RiskBanner
+          severity="high"
+          title={t('home:vault_sim_reverted_title')}
+          messages={[
+            t('home:vault_sim_reverted_desc'),
+            ...(simulation?.revertReason ? [simulation.revertReason] : []),
           ]}
-        >
-          <Text
-            style={[Fonts.textTiny, Fonts.textBold, { color: Colors.warning }]}
-          >
-            {t('home:vault_sim_reverted_title')}
-          </Text>
-          <Text
-            style={[
-              Fonts.textTiny,
-              { color: Colors.textGray400, marginTop: 2 },
-            ]}
-          >
-            {t('home:vault_sim_reverted_desc')}
-          </Text>
-          {simulation?.revertReason ? (
-            <Text
-              style={[
-                Fonts.textTiny,
-                {
-                  color: Colors.textGray400,
-                  marginTop: 2,
-                  fontStyle: 'italic',
-                },
-              ]}
-            >
-              {simulation.revertReason}
-            </Text>
-          ) : null}
-        </View>
+          style={styles.innerBanner}
+        />
       )}
 
       {/* status: unavailable — best-effort notice (info) */}
       {status === 'unavailable' && (
-        <View
-          style={[
-            styles.banner,
-            {
-              backgroundColor: Colors.inputBackground,
-              borderColor: Colors.textGray200,
-            },
-          ]}
-        >
-          <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
-            {t('home:vault_sim_unavailable')}
-          </Text>
-        </View>
+        <RiskBanner
+          severity="info"
+          title={t('home:vault_sim_unavailable')}
+          style={styles.innerBanner}
+        />
       )}
 
       {/* status: pending — simulation still running */}
       {status === 'pending' && (
-        <View
-          style={[
-            styles.banner,
-            {
-              backgroundColor: Colors.inputBackground,
-              borderColor: Colors.textGray200,
-            },
-          ]}
-        >
-          <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
-            {t('home:vault_sim_pending')}
-          </Text>
-        </View>
+        <RiskBanner
+          severity="info"
+          title={t('home:vault_sim_pending')}
+          style={styles.innerBanner}
+        />
       )}
 
       {/* Critical / high warnings — prominent banners ABOVE the approve control */}
       {banners.map((w, index) => (
-        <View
+        <RiskBanner
           key={`${w.code}-${String(index)}`}
-          style={[
-            styles.banner,
-            {
-              backgroundColor: Colors.inputBackground,
-              borderColor: severityColor(w.severity),
-            },
-          ]}
-        >
-          <View style={styles.headerRow}>
-            <Icon
-              name={
-                w.severity === 'critical' ? 'alert-octagon' : 'alert-triangle'
-              }
-              size={14}
-              color={severityColor(w.severity)}
-            />
-            <Text
-              style={[
-                Fonts.textTiny,
-                Fonts.textBold,
-                {
-                  color: severityColor(w.severity),
-                  marginLeft: 6,
-                  flexShrink: 1,
-                },
-              ]}
-            >
-              {warningLabel(t, w)}
-            </Text>
-          </View>
-          {w.detail ? (
-            <Text
-              style={[
-                Fonts.textTiny,
-                { color: Colors.textGray400, marginTop: 4 },
-              ]}
-              selectable={true}
-            >
-              {w.detail}
-            </Text>
-          ) : null}
-        </View>
+          severity={w.severity === 'critical' ? 'critical' : 'high'}
+          title={warningLabel(t, w)}
+          messages={w.detail ? [w.detail] : undefined}
+          style={styles.innerBanner}
+        />
       ))}
 
       {/* Medium / info warnings — collapsible list */}
       {minor.length > 0 && (
-        <View
-          style={[
-            styles.banner,
-            {
-              backgroundColor: Colors.inputBackground,
-              borderColor: Colors.textGray200,
-            },
-          ]}
+        <RiskBanner
+          severity="info"
+          iconName={expanded ? 'chevron-down' : 'chevron-right'}
+          onPress={() => setExpanded((prev) => !prev)}
+          title={t('home:vault_sim_more_checks', { count: minor.length })}
+          style={styles.innerBanner}
         >
-          <TouchableOpacity
-            style={styles.headerRow}
-            onPress={() => setExpanded((prev) => !prev)}
-          >
-            <Icon
-              name={expanded ? 'chevron-down' : 'chevron-right'}
-              size={14}
-              color={Colors.textGray400}
-            />
-            <Text
-              style={[
-                Fonts.textTiny,
-                Fonts.textBold,
-                { color: Colors.textGray400, marginLeft: 6 },
-              ]}
-            >
-              {t('home:vault_sim_more_checks', { count: minor.length })}
-            </Text>
-          </TouchableOpacity>
           {expanded &&
             minor.map((w, index) => (
               <View
@@ -331,7 +222,7 @@ const VaultRiskStrip: React.FC<VaultRiskStripProps> = ({
                 ) : null}
               </View>
             ))}
-        </View>
+        </RiskBanner>
       )}
     </View>
   );
@@ -342,10 +233,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  banner: {
-    borderRadius: 8,
-    padding: 10,
-    borderWidth: 1,
+  // Banners live inside the strip's own 90% container — neutralize RiskBanner's
+  // standalone width/margins.
+  innerBanner: {
+    width: '100%',
+    marginBottom: 0,
     marginTop: 8,
   },
 });

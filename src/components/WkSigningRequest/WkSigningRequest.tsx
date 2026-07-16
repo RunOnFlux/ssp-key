@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -188,7 +189,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                   style={[
                     Fonts.textSmall,
                     Fonts.textBold,
-                    { fontFamily: 'monospace' },
+                    { fontFamily: MONOSPACE_FONT },
                   ]}
                   selectable={true}
                 >
@@ -238,7 +239,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
               style={[
                 Fonts.textTiny,
                 {
-                  fontFamily: 'monospace',
+                  fontFamily: MONOSPACE_FONT,
                   lineHeight: 16,
                 },
               ]}

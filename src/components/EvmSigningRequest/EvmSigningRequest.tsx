@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -224,7 +225,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
                 Fonts.textCenter,
                 Fonts.textBold,
                 {
-                  fontFamily: 'monospace',
+                  fontFamily: MONOSPACE_FONT,
                   color: Colors.textGray800,
                   lineHeight: 16,
                   paddingHorizontal: 20,
@@ -286,7 +287,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
                 <Text
                   style={[
                     Fonts.textTiny,
-                    { fontFamily: 'monospace', color: Colors.textGray800 },
+                    { fontFamily: MONOSPACE_FONT, color: Colors.textGray800 },
                   ]}
                   selectable={true}
                 >
@@ -391,7 +392,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
                 style={[
                   Fonts.textTiny,
                   {
-                    fontFamily: 'monospace',
+                    fontFamily: MONOSPACE_FONT,
                     lineHeight: 16,
                     color: Colors.textGray800,
                   },

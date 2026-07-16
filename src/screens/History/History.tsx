@@ -15,6 +15,8 @@ import Identicon from '../../components/request/Identicon';
 import Authentication from '../../components/Authentication/Authentication';
 import Divider from '../../components/Divider/Divider';
 import { truncateAddress } from '../../lib/addressDisplay';
+import { maskSensitive } from '../../lib/privacy';
+import { usePrivacyMode } from '../../contexts/PrivacyContext';
 import {
   deriveHistoryPassword,
   loadSignHistory,
@@ -54,6 +56,9 @@ function formatTimestamp(ts: number): string {
 function History({ navigation }: MainScreenProps<'History'>) {
   const { t } = useTranslation();
   const { Colors, Fonts, Gutters, Layout } = useTheme();
+  // Privacy mode: masks wallet identities and tx references in this log.
+  // Purely presentational — entries themselves are untouched.
+  const { hidden, togglePrivacy } = usePrivacyMode();
 
   // Gate state: the log is invisible until biometrics/PIN succeed.
   const [unlocked, setUnlocked] = useState(false);
@@ -142,16 +147,30 @@ function History({ navigation }: MainScreenProps<'History'>) {
         <Text style={[Fonts.textRegular, Fonts.textBold]}>
           {t('history:title')}
         </Text>
-        {entries.length > 0 ? (
+        <View style={[Layout.row, Layout.alignItemsCenter]}>
           <TouchableOpacity
-            onPress={handleClear}
+            onPress={togglePrivacy}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel={t(
+              hidden ? 'history:privacy_show' : 'history:privacy_hide',
+            )}
           >
-            <Icon name="trash-2" size={20} color={Colors.textGray400} />
+            <Icon
+              name={hidden ? 'eye-off' : 'eye'}
+              size={20}
+              color={Colors.textGray400}
+            />
           </TouchableOpacity>
-        ) : (
-          <View style={{ width: 20 }} />
-        )}
+          {entries.length > 0 ? (
+            <TouchableOpacity
+              onPress={handleClear}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={[Gutters.smallLMargin]}
+            >
+              <Icon name="trash-2" size={20} color={Colors.textGray400} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
       <Divider color={Colors.textGray200} />
 
@@ -223,13 +242,34 @@ function History({ navigation }: MainScreenProps<'History'>) {
                         style={[Fonts.textTiny, { color: Colors.textGray400 }]}
                         numberOfLines={1}
                       >
-                        {t('history:ref')}: {truncateAddress(entry.ref)}
+                        {t('history:ref')}:{' '}
+                        {maskSensitive(truncateAddress(entry.ref), hidden)}
                       </Text>
                     ) : null}
                   </View>
                   {entry.wkIdentity ? (
-                    <View style={[Layout.alignItemsCenter]}>
-                      <Identicon value={entry.wkIdentity} size={28} />
+                    // Tap-to-toggle, mirroring the wallet's tap-the-balance
+                    // semantics on its sensitive display.
+                    <TouchableOpacity
+                      style={[Layout.alignItemsCenter]}
+                      onPress={togglePrivacy}
+                      accessibilityLabel={t(
+                        hidden
+                          ? 'history:privacy_show'
+                          : 'history:privacy_hide',
+                      )}
+                    >
+                      {hidden ? (
+                        // The identicon is a visual hash of the identity —
+                        // masked too, or it would still identify the wallet.
+                        <Icon
+                          name="eye-off"
+                          size={28}
+                          color={Colors.textGray400}
+                        />
+                      ) : (
+                        <Identicon value={entry.wkIdentity} size={28} />
+                      )}
                       <Text
                         style={[
                           Fonts.textTiny,
@@ -237,9 +277,12 @@ function History({ navigation }: MainScreenProps<'History'>) {
                           { color: Colors.textGray400 },
                         ]}
                       >
-                        {truncateAddress(entry.wkIdentity, 4)}
+                        {maskSensitive(
+                          truncateAddress(entry.wkIdentity, 4),
+                          hidden,
+                        )}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   ) : null}
                 </View>
               </Card>

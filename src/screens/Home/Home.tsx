@@ -813,7 +813,6 @@ function Home({ navigation }: Props) {
       syncData.publicNonces = pNs;
     }
     // == EVM end
-    console.log('syncData', syncData);
     await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
     // Return this device's decrypted view of the pair so the batch flow can
     // derive the out-of-band verification code. Display-only — never logged.
@@ -1151,7 +1150,6 @@ function Home({ navigation }: Props) {
           redeemScript: addrInfo.redeemScript,
           witnessScript: addrInfo.witnessScript,
         };
-        console.log('syncData', syncData);
         await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
         // Capture the identity chain's verification entry so it can be folded
         // into the ONE unified session code (with any batch chains). The words

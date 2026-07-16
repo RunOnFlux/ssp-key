@@ -25,11 +25,17 @@ const FeeRow = ({ label, fee, symbol, fiat, style }: FeeRowProps) => {
           {label}
         </Text>
         <View style={styles.amounts}>
-          <Text style={[Fonts.textTiny, Fonts.textBold]}>
+          <Text style={[Fonts.textTiny, Fonts.textBold, styles.tabular]}>
             {fee} {symbol}
           </Text>
           {fiat ? (
-            <Text style={[Fonts.textTinyTiny, { color: Colors.textGray400 }]}>
+            <Text
+              style={[
+                Fonts.textTinyTiny,
+                styles.tabular,
+                { color: Colors.textGray400 },
+              ]}
+            >
               {fiat}
             </Text>
           ) : null}
@@ -51,6 +57,9 @@ const styles = StyleSheet.create({
   },
   amounts: {
     alignItems: 'flex-end',
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
   },
 });
 

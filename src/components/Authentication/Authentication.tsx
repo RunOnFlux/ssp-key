@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     left: 0,
     right: 0,
-    height: 480,
+    minHeight: 480,
     bottom: 40,
   },
   inputWithButton: {

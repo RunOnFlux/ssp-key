@@ -8,7 +8,6 @@ import {
   TextInput,
   StyleSheet,
   Modal,
-  Switch,
   ActivityIndicator,
   Linking,
 } from 'react-native';
@@ -42,6 +41,7 @@ import CreationSteps from '../../components/CreationSteps/CreationSteps';
 import ToastNotif from '../../components/Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';
 import WeakPassword from '../../components/WeakPassword/WeakPassword';
+import ConfirmSeedWords from '../../components/ConfirmSeedWords/ConfirmSeedWords';
 
 type Props = {
   navigation: any;
@@ -63,7 +63,7 @@ function Create({ navigation }: Props) {
     useState(true);
   const [rightIconConfirm, setRightIconConfirm] = useState('eye-off');
   const [mnemonicShow, setMnemonicShow] = useState(false);
-  const [WSPbackedUp, setWSPbackedUp] = useState(false);
+  const [confirmStage, setConfirmStage] = useState(false);
   const [wspWasShown, setWSPwasShown] = useState(false);
   const [weakPasswordOpen, setWeakPasswordOpen] = useState(false);
   const { t } = useTranslation(['cr', 'common']);
@@ -133,13 +133,11 @@ function Create({ navigation }: Props) {
     }
   }, [mnemonic]);
 
-  const onChangeWSP = () => {
-    setWSPbackedUp(!WSPbackedUp);
-  };
-
   const handleOk = () => {
-    if (WSPbackedUp && wspWasShown) {
-      storeMnemonic(mnemonic);
+    if (wspWasShown) {
+      // word challenge over the just-generated phrase proves the backup —
+      // storeMnemonic runs only after the user identifies the words
+      setConfirmStage(true);
     } else {
       displayMessage('info', t('cr:backup_needed'));
     }
@@ -151,7 +149,7 @@ function Create({ navigation }: Props) {
     setPassword('');
     setPasswordConfirm('');
     setWSPwasShown(false);
-    setWSPbackedUp(false);
+    setConfirmStage(false);
     setMnemonicShow(false);
   };
 
@@ -285,6 +283,8 @@ function Create({ navigation }: Props) {
       })
       .catch((error) => {
         setIsLoading(false);
+        // return to the seed phrase view so the user can retry the challenge
+        setConfirmStage(false);
         dispatch(setSSPInitialState());
         setInitialStateForAllChains();
         displayMessage('error', t('cr:err_setting_key'));
@@ -506,181 +506,179 @@ function Create({ navigation }: Props) {
             <View style={[Gutters.smallBMargin]}>
               <CreationSteps step={2} isImport={false} />
             </View>
-            <View
-              style={[
-                Layout.fill,
-                Layout.relative,
-                Layout.fullWidth,
-                Layout.alignItemsCenter,
-                Gutters.regularTMargin,
-              ]}
-            >
-              <Text
-                style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-              >
-                {t('cr:key_backup_text_1')}
-              </Text>
-              <Text
-                style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-              >
-                {t('cr:key_backup_text_2')}
-              </Text>
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Gutters.smallBMargin,
-                  Fonts.textCenter,
-                ]}
-              >
-                {t('cr:key_backup_text_3')}
-              </Text>
-              <Divider color={Colors.textGray200} />
-              <Text
-                style={[
-                  Fonts.textTinyTiny,
-                  Fonts.textLight,
-                  Gutters.tinyTMargin,
-                  Fonts.textJustify,
-                  Fonts.textError,
-                ]}
-              >
-                {t('cr:ssp_key_mnemonic_sec')}
-              </Text>
+            {confirmStage && (
+              <ConfirmSeedWords
+                phrase={mnemonic}
+                isLoading={isLoading}
+                onVerified={() => storeMnemonic(mnemonic)}
+                onBack={() => setConfirmStage(false)}
+              />
+            )}
+            {!confirmStage && (
               <View
                 style={[
-                  { borderWidth: 1, borderColor: Colors.textInput },
-                  Gutters.smallTMargin,
-                  Gutters.smallBMargin,
+                  Layout.fill,
+                  Layout.relative,
+                  Layout.fullWidth,
+                  Layout.alignItemsCenter,
+                  Gutters.regularTMargin,
                 ]}
               >
                 <Text
-                  selectable={true}
                   style={[
                     Fonts.textSmall,
+                    Gutters.tinyBMargin,
                     Fonts.textCenter,
-                    Gutters.tinyMargin,
-                    Fonts.textBold,
                   ]}
                 >
-                  {mnemonicShow
-                    ? mnemonic
-                        .split(' ')
-                        .slice(0, Math.round(mnemonic.split(' ').length / 3))
-                        .join(' ')
-                    : '*** *** *** *** *** *** *** ***'}
+                  {t('cr:key_backup_text_1')}
                 </Text>
                 <Text
-                  selectable={true}
                   style={[
                     Fonts.textSmall,
+                    Gutters.tinyBMargin,
                     Fonts.textCenter,
-                    Gutters.tinyMargin,
-                    Fonts.textBold,
                   ]}
                 >
-                  {mnemonicShow
-                    ? mnemonic
-                        .split(' ')
-                        .slice(
-                          Math.round(mnemonic.split(' ').length / 3),
-                          Math.round((mnemonic.split(' ').length / 3) * 2),
-                        )
-                        .join(' ')
-                    : '*** *** *** *** *** *** *** ***'}
+                  {t('cr:key_backup_text_2')}
                 </Text>
                 <Text
-                  selectable={true}
                   style={[
                     Fonts.textSmall,
+                    Gutters.smallBMargin,
                     Fonts.textCenter,
-                    Gutters.tinyMargin,
-                    Fonts.textBold,
                   ]}
                 >
-                  {mnemonicShow
-                    ? mnemonic
-                        .split(' ')
-                        .slice(
-                          Math.round((mnemonic.split(' ').length / 3) * 2),
-                          mnemonic.split(' ').length,
-                        )
-                        .join(' ')
-                    : '*** *** *** *** *** *** *** ***'}
+                  {t('cr:key_backup_text_3')}
                 </Text>
-              </View>
-              <View style={[Gutters.tinyBMargin]}>
-                <TouchableOpacity
+                <Divider color={Colors.textGray200} />
+                <Text
                   style={[
-                    Common.button.outlineRounded,
-                    Common.button.dashed,
-                    Common.button.secondaryButton,
+                    Fonts.textTinyTiny,
+                    Fonts.textLight,
+                    Gutters.tinyTMargin,
+                    Fonts.textJustify,
+                    Fonts.textError,
                   ]}
-                  onPress={() => {
-                    setMnemonicShow(!mnemonicShow);
-                    setWSPwasShown(true);
-                  }}
+                >
+                  {t('cr:ssp_key_mnemonic_sec')}
+                </Text>
+                <View
+                  style={[
+                    { borderWidth: 1, borderColor: Colors.textInput },
+                    Gutters.smallTMargin,
+                    Gutters.smallBMargin,
+                  ]}
                 >
                   <Text
+                    selectable={true}
                     style={[
                       Fonts.textSmall,
-                      Fonts.textPrimary,
-                      Gutters.smallHPadding,
+                      Fonts.textCenter,
+                      Gutters.tinyMargin,
+                      Fonts.textBold,
                     ]}
                   >
                     {mnemonicShow
-                      ? t('cr:hide_mnemonic')
-                      : t('cr:show_mnemonic')}{' '}
-                    {t('common:key_seed_phrase')}
+                      ? mnemonic
+                          .split(' ')
+                          .slice(0, Math.round(mnemonic.split(' ').length / 3))
+                          .join(' ')
+                      : '*** *** *** *** *** *** *** ***'}
                   </Text>
-                </TouchableOpacity>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textCenter,
+                      Gutters.tinyMargin,
+                      Fonts.textBold,
+                    ]}
+                  >
+                    {mnemonicShow
+                      ? mnemonic
+                          .split(' ')
+                          .slice(
+                            Math.round(mnemonic.split(' ').length / 3),
+                            Math.round((mnemonic.split(' ').length / 3) * 2),
+                          )
+                          .join(' ')
+                      : '*** *** *** *** *** *** *** ***'}
+                  </Text>
+                  <Text
+                    selectable={true}
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textCenter,
+                      Gutters.tinyMargin,
+                      Fonts.textBold,
+                    ]}
+                  >
+                    {mnemonicShow
+                      ? mnemonic
+                          .split(' ')
+                          .slice(
+                            Math.round((mnemonic.split(' ').length / 3) * 2),
+                            mnemonic.split(' ').length,
+                          )
+                          .join(' ')
+                      : '*** *** *** *** *** *** *** ***'}
+                  </Text>
+                </View>
+                <View style={[Gutters.tinyBMargin]}>
+                  <TouchableOpacity
+                    style={[
+                      Common.button.outlineRounded,
+                      Common.button.dashed,
+                      Common.button.secondaryButton,
+                    ]}
+                    onPress={() => {
+                      setMnemonicShow(!mnemonicShow);
+                      setWSPwasShown(true);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        Fonts.textSmall,
+                        Fonts.textPrimary,
+                        Gutters.smallHPadding,
+                      ]}
+                    >
+                      {mnemonicShow
+                        ? t('cr:hide_mnemonic')
+                        : t('cr:show_mnemonic')}{' '}
+                      {t('common:key_seed_phrase')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Divider color={Colors.textGray200} />
               </View>
-              <Divider color={Colors.textGray200} />
-              <View
-                style={[
-                  Layout.row,
-                  Gutters.smallTMargin,
-                  Gutters.smallLPadding,
-                ]}
-              >
-                <Switch
-                  onValueChange={onChangeWSP}
-                  value={WSPbackedUp}
-                  style={styles.toggleStyle}
-                />
-                <Text
-                  style={[
-                    Gutters.largeRPadding,
-                    Gutters.tinyBMargin,
-                    Fonts.textTiny,
-                  ]}
-                >
-                  {t('cr:seed_phrase_backed_up')}
-                </Text>
-              </View>
-            </View>
+            )}
             <View style={[Layout.justifyContentEnd]}>
-              <TouchableOpacity
-                style={[
-                  Common.button.rounded,
-                  Common.button.primary,
-                  Gutters.regularBMargin,
-                  Gutters.smallTMargin,
-                ]}
-                disabled={isLoading}
-                onPress={() => handleOk()}
-              >
-                {isLoading && (
-                  <ActivityIndicator
-                    size={'large'}
-                    style={[Gutters.largeVMargin]}
-                  />
-                )}
-                {!isLoading && (
-                  <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-                    {t('cr:setup_key')}
-                  </Text>
-                )}
-              </TouchableOpacity>
+              {!confirmStage && (
+                <TouchableOpacity
+                  style={[
+                    Common.button.rounded,
+                    Common.button.primary,
+                    Gutters.regularBMargin,
+                    Gutters.smallTMargin,
+                  ]}
+                  disabled={isLoading}
+                  onPress={() => handleOk()}
+                >
+                  {isLoading && (
+                    <ActivityIndicator
+                      size={'large'}
+                      style={[Gutters.largeVMargin]}
+                    />
+                  )}
+                  {!isLoading && (
+                    <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
+                      {t('cr:setup_key')}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 disabled={isLoading}
                 onPress={() => handleCancel()}
@@ -711,9 +709,6 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 10,
     marginTop: 16,
-  },
-  toggleStyle: {
-    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
 });
 

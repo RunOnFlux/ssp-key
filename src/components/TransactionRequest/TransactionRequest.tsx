@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -431,7 +432,7 @@ const TransactionRequest = (props: {
 
 const styles = StyleSheet.create({
   mono: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE_FONT,
   },
   advancedBlock: {
     marginBottom: 8,

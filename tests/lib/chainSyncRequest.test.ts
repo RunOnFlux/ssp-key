@@ -14,6 +14,11 @@ const IDENTITY_CHAIN = 'btc' as keyof cryptos;
 const VALID_XPUB =
   'xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKrhko4egpiMZbpiaQL2jkwSB1icqYh2cfDfVxdx4df189oLKnC5fSwqPfgyP3hooxujYzAu3fDVmz';
 
+// format-valid variants (regex check only — no checksum) for multi-chain tests,
+// since each chain must carry a distinct extended key
+const VALID_XPUB_2 = VALID_XPUB.slice(0, -1) + 'a';
+const VALID_XPUB_3 = VALID_XPUB.slice(0, -1) + 'b';
+
 const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz';
 
 function solPubkeyArray(): string {
@@ -49,8 +54,8 @@ describe('parseChainSyncRequest', () => {
       payload({
         chains: [
           { chain: 'eth', xpubWallet: VALID_XPUB },
-          { chain: 'flux', xpubWallet: VALID_XPUB },
-          { chain: 'polygon', xpubWallet: VALID_XPUB },
+          { chain: 'flux', xpubWallet: VALID_XPUB_2 },
+          { chain: 'polygon', xpubWallet: VALID_XPUB_3 },
         ],
       }),
       IDENTITY_CHAIN,
@@ -178,6 +183,19 @@ describe('parseChainSyncRequest', () => {
       IDENTITY_CHAIN,
     );
     expect(result).toEqual({ status: 'invalid', reason: 'duplicate_chain' });
+  });
+
+  it('rejects the same xpub reused across different chains', () => {
+    const result = parseChainSyncRequest(
+      payload({
+        chains: [
+          { chain: 'eth', xpubWallet: VALID_XPUB },
+          { chain: 'polygon', xpubWallet: VALID_XPUB },
+        ],
+      }),
+      IDENTITY_CHAIN,
+    );
+    expect(result).toEqual({ status: 'invalid', reason: 'duplicate_xpub' });
   });
 
   it('rejects missing/empty/oversized xpubs', () => {

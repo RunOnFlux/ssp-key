@@ -114,6 +114,7 @@ export function parseChainSyncRequest(
     return { status: 'invalid', reason: 'too_many_chains' };
   }
   const seen = new Set<string>();
+  const seenXpubs = new Set<string>();
   const entries: ChainSyncRequestEntry[] = [];
   for (const item of chains) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
@@ -147,6 +148,12 @@ export function parseChainSyncRequest(
     if (!xpubValid) {
       return { status: 'invalid', reason: 'bad_xpub' };
     }
+    // Each chain derives a distinct extended key; the same xpub on two
+    // chains is never produced by a well-formed wallet.
+    if (seenXpubs.has(xpubWallet)) {
+      return { status: 'invalid', reason: 'duplicate_xpub' };
+    }
+    seenXpubs.add(xpubWallet);
     entries.push({
       chain: chain as keyof cryptos,
       xpubWallet,

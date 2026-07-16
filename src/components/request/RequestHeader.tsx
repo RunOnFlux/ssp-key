@@ -1,4 +1,5 @@
 import React from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useTheme } from '../../hooks';
 import { blockchains } from '@storage/blockchains';
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   mono: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE_FONT,
   },
 });
 

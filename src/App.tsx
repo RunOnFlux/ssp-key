@@ -13,6 +13,7 @@ import './translations';
 import { Buffer } from 'buffer';
 import 'fastestsmallesttextencoderdecoder';
 import { SocketProvider } from './contexts/SocketContext';
+import { PrivacyProvider } from './contexts/PrivacyContext';
 import { notificationListener, requestUserPermission } from './lib/fcmHelper';
 import ToastNotif from './components/Toast/Toast';
 import BlurOverlay from './BlurOverlay';
@@ -49,8 +50,10 @@ const App = () => {
          */}
         <PersistGate loading={null} persistor={persistor}>
           <SocketProvider>
-            <ApplicationNavigator />
-            <BlurOverlay />
+            <PrivacyProvider>
+              <ApplicationNavigator />
+              <BlurOverlay />
+            </PrivacyProvider>
           </SocketProvider>
         </PersistGate>
         <ToastNotif />

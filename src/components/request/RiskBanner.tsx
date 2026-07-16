@@ -1,5 +1,12 @@
 import React from 'react';
-import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import {
+  StyleProp,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../hooks';
 
@@ -11,6 +18,12 @@ interface RiskBannerProps {
   /** Optional detail lines rendered under the title. */
   messages?: string[];
   style?: StyleProp<ViewStyle>;
+  /** Override the severity icon (e.g. a chevron for collapsible sections). */
+  iconName?: string;
+  /** When set, the header row becomes touchable (collapsible sections). */
+  onPress?: () => void;
+  /** Extra content rendered below the messages (e.g. an expanded list). */
+  children?: React.ReactNode;
 }
 
 /**
@@ -19,7 +32,15 @@ interface RiskBannerProps {
  * triangle, info = neutral info icon. ADVISORY presentation only: it never
  * gates or disables the approve control by itself.
  */
-const RiskBanner = ({ severity, title, messages, style }: RiskBannerProps) => {
+const RiskBanner = ({
+  severity,
+  title,
+  messages,
+  style,
+  iconName,
+  onPress,
+  children,
+}: RiskBannerProps) => {
   const { Colors, Fonts } = useTheme();
   const color =
     severity === 'critical'
@@ -27,12 +48,27 @@ const RiskBanner = ({ severity, title, messages, style }: RiskBannerProps) => {
       : severity === 'high'
         ? Colors.warning
         : Colors.textGray400;
-  const iconName =
-    severity === 'critical'
+  const icon =
+    iconName ??
+    (severity === 'critical'
       ? 'alert-octagon'
       : severity === 'high'
         ? 'alert-triangle'
-        : 'info';
+        : 'info');
+  const header = (
+    <>
+      <Icon name={icon} size={14} color={color} />
+      <Text
+        style={[
+          Fonts.textTiny,
+          Fonts.textBold,
+          { color, marginLeft: 6, flexShrink: 1 },
+        ]}
+      >
+        {title}
+      </Text>
+    </>
+  );
   return (
     <View
       style={[
@@ -41,18 +77,13 @@ const RiskBanner = ({ severity, title, messages, style }: RiskBannerProps) => {
         style,
       ]}
     >
-      <View style={styles.headerRow}>
-        <Icon name={iconName} size={14} color={color} />
-        <Text
-          style={[
-            Fonts.textTiny,
-            Fonts.textBold,
-            { color, marginLeft: 6, flexShrink: 1 },
-          ]}
-        >
-          {title}
-        </Text>
-      </View>
+      {onPress ? (
+        <TouchableOpacity style={styles.headerRow} onPress={onPress}>
+          {header}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.headerRow}>{header}</View>
+      )}
       {(messages ?? []).map((message, index) => (
         <Text
           key={index}
@@ -62,6 +93,7 @@ const RiskBanner = ({ severity, title, messages, style }: RiskBannerProps) => {
           {message}
         </Text>
       ))}
+      {children}
     </View>
   );
 };
