@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { CircleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import BlurOverlay from '../../BlurOverlay';
@@ -46,7 +46,7 @@ const WeakPassword = (props: {
               Layout.alignItemsCenter,
             ]}
           >
-            <Icon name="alert-circle" size={60} color={Colors.textGray400} />
+            <CircleAlert size={60} color={Colors.textGray400} />
             <Text
               style={[
                 Fonts.textBold,

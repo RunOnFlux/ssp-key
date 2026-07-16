@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useTheme } from '../../hooks';
-import Icon from 'react-native-vector-icons/Feather';
+import { ChevronDown, ChevronRight, TriangleAlert } from 'lucide-react-native';
 import { RiskBanner } from '../request';
 import {
   sortWarnings,
@@ -137,7 +137,7 @@ const VaultRiskStrip: React.FC<VaultRiskStripProps> = ({
     <View style={{ width: cardWidth, marginBottom: 12 }}>
       {/* Advisory label */}
       <View style={styles.headerRow}>
-        <Icon name="alert-triangle" size={14} color={Colors.textGray400} />
+        <TriangleAlert size={14} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textTiny,
@@ -195,7 +195,7 @@ const VaultRiskStrip: React.FC<VaultRiskStripProps> = ({
       {minor.length > 0 && (
         <RiskBanner
           severity="info"
-          iconName={expanded ? 'chevron-down' : 'chevron-right'}
+          icon={expanded ? ChevronDown : ChevronRight}
           onPress={() => setExpanded((prev) => !prev)}
           title={t('home:vault_sim_more_checks', { count: minor.length })}
           style={styles.innerBanner}

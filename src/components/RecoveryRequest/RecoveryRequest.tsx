@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { RefreshCw } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
@@ -59,7 +59,7 @@ const RecoveryRequest = (props: {
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="refresh-cw" size={60} color={Colors.textGray400} />
+        <RefreshCw size={60} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,

@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import Icon from 'react-native-vector-icons/Feather';
+import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -377,7 +377,7 @@ function Restore({ navigation }: Props) {
         ]}
       >
         <TouchableOpacity onPress={() => navigateBack()} style={[Layout.row]}>
-          <Icon name="chevron-left" size={20} color={Colors.primary} />
+          <ChevronLeft size={20} color={Colors.primary} />
           <Text
             style={[Fonts.textSmall, Fonts.textPrimary, Gutters.tinyLPadding]}
           >
@@ -474,7 +474,11 @@ function Restore({ navigation }: Props) {
               onPress={handlePasswordVisibility}
               style={Common.inputIcon}
             >
-              <Icon name={rightIcon} size={20} color={Colors.primary} />
+              {rightIcon === 'eye' ? (
+                <Eye size={20} color={Colors.primary} />
+              ) : (
+                <EyeOff size={20} color={Colors.primary} />
+              )}
             </TouchableOpacity>
           </View>
           <View
@@ -502,7 +506,11 @@ function Restore({ navigation }: Props) {
               onPress={handlePasswordVisibilityConfirm}
               style={Common.inputIcon}
             >
-              <Icon name={rightIconConfirm} size={20} color={Colors.primary} />
+              {rightIconConfirm === 'eye' ? (
+                <Eye size={20} color={Colors.primary} />
+              ) : (
+                <EyeOff size={20} color={Colors.primary} />
+              )}
             </TouchableOpacity>
           </View>
           <Text

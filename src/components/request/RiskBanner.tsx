@@ -7,7 +7,12 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import {
+  Info,
+  OctagonAlert,
+  TriangleAlert,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { useTheme } from '../../hooks';
 
 export type RiskBannerSeverity = 'critical' | 'high' | 'info';
@@ -19,7 +24,7 @@ interface RiskBannerProps {
   messages?: string[];
   style?: StyleProp<ViewStyle>;
   /** Override the severity icon (e.g. a chevron for collapsible sections). */
-  iconName?: string;
+  icon?: LucideIcon;
   /** When set, the header row becomes touchable (collapsible sections). */
   onPress?: () => void;
   /** Extra content rendered below the messages (e.g. an expanded list). */
@@ -37,7 +42,7 @@ const RiskBanner = ({
   title,
   messages,
   style,
-  iconName,
+  icon,
   onPress,
   children,
 }: RiskBannerProps) => {
@@ -48,16 +53,16 @@ const RiskBanner = ({
       : severity === 'high'
         ? Colors.warning
         : Colors.textGray400;
-  const icon =
-    iconName ??
+  const HeaderIcon =
+    icon ??
     (severity === 'critical'
-      ? 'alert-octagon'
+      ? OctagonAlert
       : severity === 'high'
-        ? 'alert-triangle'
-        : 'info');
+        ? TriangleAlert
+        : Info);
   const header = (
     <>
-      <Icon name={icon} size={14} color={color} />
+      <HeaderIcon size={14} color={color} />
       <Text
         style={[
           Fonts.textTiny,

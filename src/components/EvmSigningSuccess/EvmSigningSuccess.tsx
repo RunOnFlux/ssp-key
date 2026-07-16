@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
-import Icon from 'react-native-vector-icons/Feather';
+import { CircleCheck } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import BlurOverlay from '../../BlurOverlay';
@@ -50,7 +50,7 @@ const EvmSigningSuccess = (props: {
               Layout.alignItemsCenter,
             ]}
           >
-            <Icon name="check-circle" size={60} color={Colors.textGray400} />
+            <CircleCheck size={60} color={Colors.textGray400} />
             <Text
               style={[
                 Fonts.textBold,

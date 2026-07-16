@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import Icon from 'react-native-vector-icons/Feather';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import * as Keychain from 'react-native-keychain';
@@ -251,11 +251,11 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                       }
                       style={Common.inputIcon}
                     >
-                      <Icon
-                        name={redeemScriptVisible ? 'eye' : 'eye-off'}
-                        size={20}
-                        color={Colors.primary}
-                      />
+                      {redeemScriptVisible ? (
+                        <Eye size={20} color={Colors.primary} />
+                      ) : (
+                        <EyeOff size={20} color={Colors.primary} />
+                      )}
                     </TouchableOpacity>
                     <Text
                       style={[
@@ -301,11 +301,11 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                       }
                       style={Common.inputIcon}
                     >
-                      <Icon
-                        name={witnessScriptVisible ? 'eye' : 'eye-off'}
-                        size={20}
-                        color={Colors.primary}
-                      />
+                      {witnessScriptVisible ? (
+                        <Eye size={20} color={Colors.primary} />
+                      ) : (
+                        <EyeOff size={20} color={Colors.primary} />
+                      )}
                     </TouchableOpacity>
                     <Text
                       style={[
@@ -348,11 +348,11 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     onPress={() => setPrivateKeyVisible(!privateKeyVisible)}
                     style={Common.inputIcon}
                   >
-                    <Icon
-                      name={privateKeyVisible ? 'eye' : 'eye-off'}
-                      size={20}
-                      color={Colors.primary}
-                    />
+                    {privateKeyVisible ? (
+                      <Eye size={20} color={Colors.primary} />
+                    ) : (
+                      <EyeOff size={20} color={Colors.primary} />
+                    )}
                   </TouchableOpacity>
                   <Text
                     style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}

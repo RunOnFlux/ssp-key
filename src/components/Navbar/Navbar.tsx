@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Icon from 'react-native-vector-icons/Feather';
+import { CircleQuestionMark, Clock, Settings } from 'lucide-react-native';
 import { View, Image, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../hooks';
 
@@ -41,7 +41,7 @@ function Navbar(props: { openSettingsTrigger: () => void; navigation?: any }) {
               style={[Gutters.smallRMargin]}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Icon name="clock" size={22} color={Colors.textGray400} />
+              <Clock size={22} color={Colors.textGray400} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -49,13 +49,13 @@ function Navbar(props: { openSettingsTrigger: () => void; navigation?: any }) {
             style={[Gutters.smallRMargin]}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Icon name="help-circle" size={22} color={Colors.textGray400} />
+            <CircleQuestionMark size={22} color={Colors.textGray400} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => openSettings()}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Icon name="settings" size={22} color={Colors.textGray400} />
+            <Settings size={22} color={Colors.textGray400} />
           </TouchableOpacity>
         </View>
         <HelpSection

@@ -14,7 +14,7 @@ import {
   Switch,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import Icon from 'react-native-vector-icons/Feather';
+import { X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { storage } from '../../store/index'; // mmkv
@@ -519,7 +519,7 @@ const SettingsSection = (props: {
                       onPress={resetSSPRelay}
                       style={Common.inputIcon}
                     >
-                      <Icon name="x" size={20} color={Colors.primary} />
+                      <X size={20} color={Colors.primary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -561,7 +561,7 @@ const SettingsSection = (props: {
                           onPress={resetChainNodeService}
                           style={Common.inputIcon}
                         >
-                          <Icon name="x" size={20} color={Colors.primary} />
+                          <X size={20} color={Colors.primary} />
                         </TouchableOpacity>
                       </View>
                     </>
@@ -604,7 +604,7 @@ const SettingsSection = (props: {
                           onPress={resetChainApiService}
                           style={Common.inputIcon}
                         >
-                          <Icon name="x" size={20} color={Colors.primary} />
+                          <X size={20} color={Colors.primary} />
                         </TouchableOpacity>
                       </View>
                     </>
@@ -647,7 +647,7 @@ const SettingsSection = (props: {
                           onPress={resetChainExplorerService}
                           style={Common.inputIcon}
                         >
-                          <Icon name="x" size={20} color={Colors.primary} />
+                          <X size={20} color={Colors.primary} />
                         </TouchableOpacity>
                       </View>
                     </>

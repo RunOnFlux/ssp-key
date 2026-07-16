@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { Link } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
@@ -55,7 +55,7 @@ const SyncRequest = (props: {
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="link" size={60} color={Colors.textGray400} />
+        <Link size={60} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,

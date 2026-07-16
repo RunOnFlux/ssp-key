@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { CircleCheck } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { Card } from '../ui';
@@ -54,7 +54,7 @@ const ActionCard = ({
       ) : null}
       {decodedOnDevice ? (
         <View style={styles.decodedRow}>
-          <Icon name="check-circle" size={12} color={Colors.success} />
+          <CircleCheck size={12} color={Colors.success} />
           <Text
             style={[
               Fonts.textTinyTiny,

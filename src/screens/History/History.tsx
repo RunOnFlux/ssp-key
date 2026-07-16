@@ -8,7 +8,23 @@ import {
   Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Icon from 'react-native-vector-icons/Feather';
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  File,
+  FileText,
+  Hash,
+  Inbox,
+  Key,
+  LifeBuoy,
+  Lock,
+  RefreshCw,
+  Send,
+  Shield,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { useTheme } from '../../hooks';
 import { Card, ScreenContainer } from '../../components/ui';
 import Identicon from '../../components/request/Identicon';
@@ -26,17 +42,17 @@ import {
 } from '../../lib/signHistory';
 import { MainScreenProps } from '../../../@types/navigation';
 
-// i18n label + Feather icon per history type. Kept local to the screen — these
+// i18n label + Lucide icon per history type. Kept local to the screen — these
 // are pure presentation, no crypto/state semantics.
-const TYPE_META: Record<SignHistoryType, { i18n: string; icon: string }> = {
-  transaction: { i18n: 'history:type_transaction', icon: 'send' },
-  evm_message: { i18n: 'history:type_evm_message', icon: 'file-text' },
-  wk_message: { i18n: 'history:type_wk_message', icon: 'shield' },
-  vault_transaction: { i18n: 'history:type_vault_transaction', icon: 'lock' },
-  vault_xpub: { i18n: 'history:type_vault_xpub', icon: 'key' },
-  public_nonces: { i18n: 'history:type_public_nonces', icon: 'hash' },
-  recovery: { i18n: 'history:type_recovery', icon: 'life-buoy' },
-  key_nonce_sync: { i18n: 'history:type_key_nonce_sync', icon: 'refresh-cw' },
+const TYPE_META: Record<SignHistoryType, { i18n: string; icon: LucideIcon }> = {
+  transaction: { i18n: 'history:type_transaction', icon: Send },
+  evm_message: { i18n: 'history:type_evm_message', icon: FileText },
+  wk_message: { i18n: 'history:type_wk_message', icon: Shield },
+  vault_transaction: { i18n: 'history:type_vault_transaction', icon: Lock },
+  vault_xpub: { i18n: 'history:type_vault_xpub', icon: Key },
+  public_nonces: { i18n: 'history:type_public_nonces', icon: Hash },
+  recovery: { i18n: 'history:type_recovery', icon: LifeBuoy },
+  key_nonce_sync: { i18n: 'history:type_key_nonce_sync', icon: RefreshCw },
 };
 
 function formatTimestamp(ts: number): string {
@@ -142,7 +158,7 @@ function History({ navigation }: MainScreenProps<'History'>) {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Icon name="arrow-left" size={24} color={Colors.textGray400} />
+          <ArrowLeft size={24} color={Colors.textGray400} />
         </TouchableOpacity>
         <Text style={[Fonts.textRegular, Fonts.textBold]}>
           {t('history:title')}
@@ -155,11 +171,11 @@ function History({ navigation }: MainScreenProps<'History'>) {
               hidden ? 'history:privacy_show' : 'history:privacy_hide',
             )}
           >
-            <Icon
-              name={hidden ? 'eye-off' : 'eye'}
-              size={20}
-              color={Colors.textGray400}
-            />
+            {hidden ? (
+              <EyeOff size={20} color={Colors.textGray400} />
+            ) : (
+              <Eye size={20} color={Colors.textGray400} />
+            )}
           </TouchableOpacity>
           {entries.length > 0 ? (
             <TouchableOpacity
@@ -167,7 +183,7 @@ function History({ navigation }: MainScreenProps<'History'>) {
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={[Gutters.smallLMargin]}
             >
-              <Icon name="trash-2" size={20} color={Colors.textGray400} />
+              <Trash2 size={20} color={Colors.textGray400} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -194,7 +210,7 @@ function History({ navigation }: MainScreenProps<'History'>) {
 
       {!loading && entries.length === 0 && (
         <View style={[Layout.fill, Layout.colCenter, Gutters.largeTMargin]}>
-          <Icon name="inbox" size={48} color={Colors.textGray400} />
+          <Inbox size={48} color={Colors.textGray400} />
           <Text
             style={[
               Fonts.textRegular,
@@ -216,13 +232,13 @@ function History({ navigation }: MainScreenProps<'History'>) {
           {entries.map((entry) => {
             const meta = TYPE_META[entry.type] ?? {
               i18n: 'history:type_unknown',
-              icon: 'file',
+              icon: File,
             };
+            const MetaIcon = meta.icon;
             return (
               <Card key={entry.id} style={[Gutters.tinyVMargin]}>
                 <View style={[Layout.row, Layout.alignItemsCenter]}>
-                  <Icon
-                    name={meta.icon}
+                  <MetaIcon
                     size={20}
                     color={Colors.primary}
                     style={[Gutters.smallRMargin]}
@@ -262,11 +278,7 @@ function History({ navigation }: MainScreenProps<'History'>) {
                       {hidden ? (
                         // The identicon is a visual hash of the identity —
                         // masked too, or it would still identify the wallet.
-                        <Icon
-                          name="eye-off"
-                          size={28}
-                          color={Colors.textGray400}
-                        />
+                        <EyeOff size={28} color={Colors.textGray400} />
                       ) : (
                         <Identicon value={entry.wkIdentity} size={28} />
                       )}

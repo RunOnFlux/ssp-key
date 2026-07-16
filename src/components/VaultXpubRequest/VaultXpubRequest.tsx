@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
-import Icon from 'react-native-vector-icons/Feather';
+import { Lock } from 'lucide-react-native';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 
@@ -66,7 +66,7 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
         ]}
       >
         {/* Vault Icon */}
-        <Icon name="lock" size={40} color={Colors.textGray400} />
+        <Lock size={40} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,

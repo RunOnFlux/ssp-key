@@ -10,8 +10,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
-import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Eye, EyeOff, FingerprintPattern } from 'lucide-react-native';
 import * as CryptoJS from 'crypto-js';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
@@ -337,11 +336,10 @@ const Authentication = (props: {
               )}
 
               {biometricsAvailable && (
-                <IconB
-                  name="fingerprint"
+                <FingerprintPattern
                   size={50}
                   color={Colors.primary}
-                  style={[Fonts.textCenter, Gutters.regularTMargin]}
+                  style={[{ alignSelf: 'center' }, Gutters.regularTMargin]}
                   onPress={() => initiateFingerprint()}
                 />
               )}
@@ -371,11 +369,11 @@ const Authentication = (props: {
                   onPress={() => setPasswordVisibility(!passwordVisibility)}
                   style={Common.inputIcon}
                 >
-                  <Icon
-                    name={passwordVisibility ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={Colors.primary}
-                  />
+                  {passwordVisibility ? (
+                    <Eye size={20} color={Colors.primary} />
+                  ) : (
+                    <EyeOff size={20} color={Colors.primary} />
+                  )}
                 </TouchableOpacity>
               </View>
             </View>

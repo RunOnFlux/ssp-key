@@ -26,7 +26,7 @@ import {
   RESULTS,
   openSettings,
 } from 'react-native-permissions';
-import Icon from 'react-native-vector-icons/Feather';
+import { ChevronLeft } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../../hooks';
 import { useDispatch } from 'react-redux';
@@ -251,7 +251,7 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
           onPress={onClose}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Icon name="chevron-left" size={32} color={Colors.white} />
+          <ChevronLeft size={32} color={Colors.white} />
         </TouchableOpacity>
         <View style={styles.camera}>
           <Text style={{ color: Colors.white }}>
@@ -270,7 +270,7 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
         onPress={onClose}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Icon name="chevron-left" size={32} color={Colors.white} />
+        <ChevronLeft size={32} color={Colors.white} />
       </TouchableOpacity>
       {hasCameraPermission ? (
         <>

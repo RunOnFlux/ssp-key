@@ -7,7 +7,7 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { CircleCheck, Shield, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import BlurOverlay from '../../BlurOverlay';
@@ -62,7 +62,7 @@ const VerificationCode = (props: {
         ]}
         accessibilityLiveRegion="polite"
       >
-        <Icon name="check-circle" size={22} color={Colors.textOnPrimary} />
+        <CircleCheck size={22} color={Colors.textOnPrimary} />
         <Text
           style={[
             Fonts.textSmall,
@@ -82,7 +82,7 @@ const VerificationCode = (props: {
         ]}
         accessibilityLiveRegion="assertive"
       >
-        <Icon name="alert-triangle" size={22} color={Colors.white} />
+        <TriangleAlert size={22} color={Colors.white} />
         <Text
           style={[Fonts.textSmall, styles.bannerText, { color: Colors.white }]}
         >
@@ -118,7 +118,7 @@ const VerificationCode = (props: {
               Layout.alignItemsCenter,
             ]}
           >
-            <Icon name="shield" size={60} color={Colors.textGray400} />
+            <Shield size={60} color={Colors.textGray400} />
             <View style={[Gutters.smallTMargin, { width: '100%' }]}>
               <VerificationWords
                 heading={t('home:verify_words_heading_key')}

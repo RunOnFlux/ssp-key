@@ -7,7 +7,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { Card } from '../ui';
@@ -39,11 +39,11 @@ const AdvancedSection = ({ children, title, style }: AdvancedSectionProps) => {
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         style={styles.headerRow}
       >
-        <Icon
-          name={expanded ? 'chevron-down' : 'chevron-right'}
-          size={16}
-          color={Colors.textGray400}
-        />
+        {expanded ? (
+          <ChevronDown size={16} color={Colors.textGray400} />
+        ) : (
+          <ChevronRight size={16} color={Colors.textGray400} />
+        )}
         <Text
           style={[
             Fonts.textTiny,

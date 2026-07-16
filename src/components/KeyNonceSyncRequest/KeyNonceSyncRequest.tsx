@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
-import Icon from 'react-native-vector-icons/Feather';
+import { RefreshCw } from 'lucide-react-native';
 
 import { SlideToApprove } from '../request';
 interface KeyNonceSyncRequestProps {
@@ -49,7 +49,7 @@ const KeyNonceSyncRequest: React.FC<KeyNonceSyncRequestProps> = ({
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="refresh-cw" size={40} color={Colors.textGray400} />
+        <RefreshCw size={40} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,

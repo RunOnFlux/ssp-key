@@ -1,6 +1,6 @@
 import React from 'react';
 import StepIndicator from '@runonflux/react-native-step-indicator';
-import Icon from 'react-native-vector-icons/Feather';
+import { Check } from 'lucide-react-native';
 import { Text, TextStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -58,7 +58,7 @@ const CreationSteps = ({ step, isImport }: Props) => {
     stepStatus: string;
   }) => {
     if (stepStatus === 'finished') {
-      return <Icon name="check" color="#000" size={17} />;
+      return <Check color="#000" size={17} />;
     }
     return <Text style={indicatorLabelStyle}>{`${position + 1}`}</Text>;
   };

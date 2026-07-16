@@ -10,7 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
-import Icon from 'react-native-vector-icons/Feather';
+import { Server } from 'lucide-react-native';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 
@@ -93,7 +93,7 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
         showsVerticalScrollIndicator={true}
       >
         {/* Header */}
-        <Icon name="server" size={36} color={Colors.textGray400} />
+        <Server size={36} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,

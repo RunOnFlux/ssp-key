@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { SquarePen } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { useAppSelector } from '../../hooks';
@@ -160,7 +160,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="edit" size={60} color={Colors.textGray400} />
+        <SquarePen size={60} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,

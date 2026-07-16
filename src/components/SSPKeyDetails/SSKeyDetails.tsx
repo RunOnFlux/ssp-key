@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import Icon from 'react-native-vector-icons/Feather';
+import { Eye, EyeOff } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -201,11 +201,11 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     onPress={() => setXpubVisible(!xpubVisible)}
                     style={Common.inputIcon}
                   >
-                    <Icon
-                      name={xpubVisible ? 'eye' : 'eye-off'}
-                      size={20}
-                      color={Colors.primary}
-                    />
+                    {xpubVisible ? (
+                      <Eye size={20} color={Colors.primary} />
+                    ) : (
+                      <EyeOff size={20} color={Colors.primary} />
+                    )}
                   </TouchableOpacity>
                   <Text
                     style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
@@ -254,11 +254,11 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     onPress={() => setXprivVisible(!xprivVisible)}
                     style={Common.inputIcon}
                   >
-                    <Icon
-                      name={xprivVisible ? 'eye' : 'eye-off'}
-                      size={20}
-                      color={Colors.primary}
-                    />
+                    {xprivVisible ? (
+                      <Eye size={20} color={Colors.primary} />
+                    ) : (
+                      <EyeOff size={20} color={Colors.primary} />
+                    )}
                   </TouchableOpacity>
                   <Text
                     style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
@@ -335,11 +335,11 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     onPress={() => setMnemonicVisible(!mnemonicVisible)}
                     style={Common.inputIcon}
                   >
-                    <Icon
-                      name={mnemonicVisible ? 'eye' : 'eye-off'}
-                      size={20}
-                      color={Colors.primary}
-                    />
+                    {mnemonicVisible ? (
+                      <Eye size={20} color={Colors.primary} />
+                    ) : (
+                      <EyeOff size={20} color={Colors.primary} />
+                    )}
                   </TouchableOpacity>
                   <Text
                     style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}

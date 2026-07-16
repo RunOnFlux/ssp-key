@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
-import Icon from 'react-native-vector-icons/Feather';
+import { Globe, Pen } from 'lucide-react-native';
 
 import { SlideToApprove } from '../request';
 interface WkSignRequesterInfo {
@@ -68,7 +68,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
         ]}
       >
         {/* Signing Icon */}
-        <Icon name="edit-3" size={40} color={Colors.textGray400} />
+        <Pen size={40} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -159,7 +159,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                         justifyContent: 'center',
                       }}
                     >
-                      <Icon name="globe" size={14} color={Colors.textGray400} />
+                      <Globe size={14} color={Colors.textGray400} />
                     </View>
                   )}
                   <Text

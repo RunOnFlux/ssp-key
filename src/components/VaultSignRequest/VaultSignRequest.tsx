@@ -10,7 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
-import Icon from 'react-native-vector-icons/Feather';
+import { Shield } from 'lucide-react-native';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 import type { VaultDecodedTx } from '../../lib/transactions';
@@ -153,7 +153,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
         showsVerticalScrollIndicator={true}
       >
         {/* Header */}
-        <Icon name="shield" size={36} color={Colors.textGray400} />
+        <Shield size={36} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,

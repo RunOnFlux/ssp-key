@@ -16,7 +16,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import Icon from 'react-native-vector-icons/Feather';
+import { Check, ChevronsRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import {
@@ -181,8 +181,7 @@ const SlideToApprove = ({
         >
           {label}
         </Text>
-        <Icon
-          name="chevrons-right"
+        <ChevronsRight
           size={16}
           color={Colors.textGray400}
           style={styles.labelChevron}
@@ -210,8 +209,7 @@ const SlideToApprove = ({
           >
             {label}
           </Text>
-          <Icon
-            name="chevrons-right"
+          <ChevronsRight
             size={16}
             color={Colors.textOnPrimary}
             style={styles.labelChevron}
@@ -228,12 +226,10 @@ const SlideToApprove = ({
         >
           {loading ? (
             <ActivityIndicator size="small" color={Colors.textOnPrimary} />
+          ) : completed ? (
+            <Check size={22} color={Colors.textOnPrimary} />
           ) : (
-            <Icon
-              name={completed ? 'check' : 'chevrons-right'}
-              size={22}
-              color={Colors.textOnPrimary}
-            />
+            <ChevronsRight size={22} color={Colors.textOnPrimary} />
           )}
         </Animated.View>
       </GestureDetector>

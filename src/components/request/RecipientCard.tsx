@@ -8,7 +8,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useTheme } from '../../hooks';
 import { splitAddressForDisplay } from '../../lib/addressDisplay';
 import { Card } from '../ui';
@@ -70,11 +70,11 @@ const RecipientCard = ({ label, address, style }: RecipientCardProps) => {
               </Text>
             ) : null}
           </Text>
-          <Icon
-            name={expanded ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={Colors.textGray400}
-          />
+          {expanded ? (
+            <ChevronUp size={16} color={Colors.textGray400} />
+          ) : (
+            <ChevronDown size={16} color={Colors.textGray400} />
+          )}
         </View>
       </TouchableOpacity>
       {expanded ? (
