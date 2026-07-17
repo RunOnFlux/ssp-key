@@ -1,11 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -86,9 +80,6 @@ const ConfirmSeedWords = ({ phrase, isLoading, onVerified, onBack }: Props) => {
         >
           {t('cr:backup_confirmed')}
         </Text>
-        {isLoading && (
-          <ActivityIndicator size={'large'} style={[Gutters.regularVMargin]} />
-        )}
       </View>
     );
   }

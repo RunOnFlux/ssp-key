@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Key, Send } from 'lucide-react-native';
 import { useTheme } from '../../../hooks';
 import { blockchains } from '@storage/blockchains';
 import { cryptos } from '../../../types';
+import PillarMark from '../../../components/PillarMark/PillarMark';
 
 export interface ChainSyncProgressState {
   current: number;
@@ -51,10 +52,7 @@ const HomeProgress = (props: {
           >
             {t('home:submitting_transaction')}
           </Text>
-          <ActivityIndicator
-            size={'large'}
-            style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
-          />
+          <PillarMark size={30} pulse={true} style={Gutters.regularVMargin} />
         </View>
       )}
       {!submittingTransaction && !preparingChainKeys && chainSyncProgress && (
@@ -84,10 +82,7 @@ const HomeProgress = (props: {
               total: chainSyncProgress.total,
             })}
           </Text>
-          <ActivityIndicator
-            size={'large'}
-            style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
-          />
+          <PillarMark size={30} pulse={true} style={Gutters.regularVMargin} />
         </View>
       )}
       {!submittingTransaction && preparingChainKeys && (
@@ -111,10 +106,7 @@ const HomeProgress = (props: {
           >
             {t('home:preparing_chain_keys')}
           </Text>
-          <ActivityIndicator
-            size={'large'}
-            style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
-          />
+          <PillarMark size={30} pulse={true} style={Gutters.regularVMargin} />
         </View>
       )}
     </>

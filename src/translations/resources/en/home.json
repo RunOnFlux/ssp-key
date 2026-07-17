@@ -254,6 +254,7 @@
   "token_base_units": "{{amount}} token units",
   "risk_unlimited_spender": "Grants {{spender}} the right to spend an unlimited amount of this token.",
   "risk_bounded_approval": "Grants {{spender}} permission to spend {{amount}}.",
+  "risk_revoked_approval": "Revokes {{spender}}'s permission to spend this token.",
   "risk_approval_for_all": "Collection-wide approval — grants control of ALL tokens.",
   "risk_approval_for_all_operator": "{{operator}} will be able to transfer every token you own in this contract.",
   "action_transfer_from": "Move {{amount}} {{symbol}} from another address",

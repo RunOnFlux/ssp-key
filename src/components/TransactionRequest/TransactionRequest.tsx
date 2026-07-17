@@ -311,10 +311,16 @@ const TransactionRequest = (props: {
             {isAllowanceGrant && humanCalldata && !humanCalldata.unlimited ? (
               <RiskBanner
                 severity="info"
-                title={t('home:risk_bounded_approval', {
-                  spender: truncateAddress(humanCalldata.counterparty),
-                  amount: allowanceAmountText,
-                })}
+                title={
+                  humanCalldata.amountRaw === '0'
+                    ? t('home:risk_revoked_approval', {
+                        spender: truncateAddress(humanCalldata.counterparty),
+                      })
+                    : t('home:risk_bounded_approval', {
+                        spender: truncateAddress(humanCalldata.counterparty),
+                        amount: allowanceAmountText,
+                      })
+                }
               />
             ) : null}
             {humanCalldata?.kind === 'setApprovalForAll' &&

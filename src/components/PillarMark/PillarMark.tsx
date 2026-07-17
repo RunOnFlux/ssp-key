@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Animated, StyleProp, ViewStyle } from 'react-native';
+import {
+  AccessibilityInfo,
+  Animated,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '../../hooks';
 
@@ -20,9 +25,33 @@ const PillarMark = ({ size = 40, pulse = false, style }: Props) => {
   const { darkMode } = useTheme();
   // lazy useState keeps a stable Animated.Value without touching a ref in render
   const [opacity] = useState(() => new Animated.Value(1));
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  // Respect the OS reduce-motion setting: render a static mark instead of the
+  // pulse loop, and track live changes to the setting.
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (mounted) {
+          setReduceMotion(enabled);
+        }
+      })
+      .catch(() => {
+        // accessibility query unavailable — keep animations enabled
+      });
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotion,
+    );
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
-    if (!pulse) {
+    if (!pulse || reduceMotion) {
       opacity.setValue(1);
       return;
     }
@@ -42,7 +71,7 @@ const PillarMark = ({ size = 40, pulse = false, style }: Props) => {
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse, opacity]);
+  }, [pulse, reduceMotion, opacity]);
 
   const width = (size * 184) / 240;
 

@@ -115,12 +115,13 @@ export function usePendingRequests(identityChain: keyof cryptos) {
     setPublicNoncesReq(chain);
   };
   const handleEvmSigningRequest = (data: evmSigningRequest) => {
-    console.log('[EVM Signing] handleEvmSigningRequest:', data);
+    // never log the request body — it carries the wallet's partial signature
+    console.log('[EVM Signing] request received:', data.chain);
     setActiveChain(data.chain as keyof cryptos);
     setEvmSigningData(data);
   };
   const handleWkSigningRequest = (data: wkSigningRequest) => {
-    console.log('[WK Sign] Request received:', data);
+    console.log('[WK Sign] request received');
     setWkSigningData(data);
   };
   const handleSyncRequest = (xpubw: string, chain: keyof cryptos) => {

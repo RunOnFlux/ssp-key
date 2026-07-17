@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks';
 import { VERIFY_ACCENTS } from '../../lib/pairingVerification';
+import { MONOSPACE_FONT } from '../../lib/typography';
 
 /**
  * Pairing verification-code display — the out-of-band cross-check that defeats
@@ -118,12 +119,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipIndex: {
+    fontFamily: 'Inter',
     fontSize: 10,
     fontWeight: '700',
     color: '#0c0a09',
     fontVariant: ['tabular-nums'],
   },
   chipWord: {
+    // Deliberately monospace, NOT Inter: fixed-width glyphs make single
+    // character differences between words pop during the side-by-side check,
+    // and SSP Wallet renders its verification words in the same mono stack
+    // (--ssp-mono), so both devices show identical word shapes.
+    fontFamily: MONOSPACE_FONT,
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: 0.3,

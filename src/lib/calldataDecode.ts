@@ -22,7 +22,7 @@ const SELECTOR_TRANSFER = 'a9059cbb'; // transfer(address,uint256)
 const SELECTOR_APPROVE = '095ea7b3'; // approve(address,uint256)
 const SELECTOR_TRANSFER_FROM = '23b872dd'; // transferFrom(address,address,uint256)
 const SELECTOR_INCREASE_ALLOWANCE = '39509351'; // increaseAllowance(address,uint256)
-const SELECTOR_SET_APPROVAL_FOR_ALL = 'a22cb442'; // setApprovalForAll(address,bool)
+const SELECTOR_SET_APPROVAL_FOR_ALL = 'a22cb465'; // setApprovalForAll(address,bool)
 
 const WORD_HEX_LEN = 64; // 32 bytes
 const SELECTOR_HEX_LEN = 8; // 4 bytes

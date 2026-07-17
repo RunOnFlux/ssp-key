@@ -264,10 +264,8 @@ export const approveTransaction = async (
         utxos,
       );
       const finalTx = finaliseTransaction(signedTx, chain);
-      console.log(finalTx);
       ttxid = await broadcastTx(finalTx, chain);
     }
-    console.log(ttxid);
     setRawTx('');
     setTxPath('');
     setTxUtxos([]);

@@ -108,9 +108,5 @@ export default function ({ FontSize, Colors }: ThemeVariables) {
     textOnPrimary: {
       color: Colors.textOnPrimary,
     },
-    textLobster: {
-      fontFamily: 'lobster',
-      fontWeight: 'normal',
-    },
   });
 }

@@ -157,15 +157,24 @@ async function saveSignHistory(
 
 /**
  * Append an entry (newest-first), capped at MAX_SIGN_HISTORY_ENTRIES.
- * Load → prepend → cap → save. Append-only in intent; the cap drops the oldest.
+ * Load → prepend → cap → save, serialized through a module-level queue so
+ * concurrent appends (rapid sequential approvals) can't interleave their
+ * load/save halves and drop an entry.
  */
-export async function appendSignHistory(
+let appendChain: Promise<void> = Promise.resolve();
+
+export function appendSignHistory(
   entry: SignHistoryEntry,
   pwForEncryption: string,
 ): Promise<void> {
-  const existing = await loadSignHistory(pwForEncryption);
-  const next = [entry, ...existing].slice(0, MAX_SIGN_HISTORY_ENTRIES);
-  await saveSignHistory(next, pwForEncryption);
+  const run = appendChain.then(async () => {
+    const existing = await loadSignHistory(pwForEncryption);
+    const next = [entry, ...existing].slice(0, MAX_SIGN_HISTORY_ENTRIES);
+    await saveSignHistory(next, pwForEncryption);
+  });
+  // keep the chain alive even if this append fails
+  appendChain = run.catch(() => {});
+  return run;
 }
 
 /** Erase the local history entirely (used by the History screen's clear action). */

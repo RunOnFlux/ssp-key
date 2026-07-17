@@ -274,11 +274,13 @@ function Create({ navigation }: Props) {
           });
         }
         setIsModalOpen(false);
-        setIsModalOpen(false);
         setIsLoading(false);
         setMnemonic('');
         setPassword('');
         setPasswordConfirm('');
+        // reset challenge-flow flags so a re-mounted Create starts fresh
+        setConfirmStage(false);
+        setWSPwasShown(false);
         navigation.navigate('Home');
       })
       .catch((error) => {

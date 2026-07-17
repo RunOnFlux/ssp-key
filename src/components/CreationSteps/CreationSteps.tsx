@@ -3,6 +3,7 @@ import StepIndicator from '@runonflux/react-native-step-indicator';
 import { Check } from 'lucide-react-native';
 import { Text, TextStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../../hooks';
 
 type Props = {
   step: number;
@@ -11,36 +12,42 @@ type Props = {
 
 const CreationSteps = ({ step, isImport }: Props) => {
   const { t } = useTranslation(['cr']);
+  const { Colors, darkMode } = useTheme();
   const labels = [
     t('cr:get_started'),
     isImport ? t('cr:import_key') : t('cr:create_key'),
     t('cr:backup_key'),
     t('cr:sync_wallet'),
   ];
+  // Number color on the neutral (warm-stone) indicator fill — mirrors the
+  // black-on-amber rule: dark text on light fills, light text on dark fills.
+  // Light mode fill is textGray400 #57534E (white on it 7.4:1); dark mode
+  // fill is textGray400 #A8A29E (near-black on it 9.6:1).
+  const onNeutralFill = darkMode ? '#0C0A09' : '#FFFFFF';
   const customStyles = {
     stepIndicatorSize: 25,
     currentStepIndicatorSize: 25,
     separatorStrokeWidth: 1,
     currentStepStrokeWidth: 2,
-    stepStrokeCurrentColor: '#9a9a9a',
+    stepStrokeCurrentColor: Colors.textGray400,
     stepStrokeWidth: 2,
     separatorStrokeFinishedWidth: 3,
-    stepStrokeFinishedColor: '#FBBF24',
-    stepStrokeUnFinishedColor: '#9a9a9a',
-    separatorFinishedColor: '#FBBF24',
-    separatorUnFinishedColor: '#9a9a9a',
-    stepIndicatorFinishedColor: '#FBBF24',
-    stepIndicatorUnFinishedColor: '#9a9a9a',
-    stepIndicatorCurrentColor: '#9a9a9a',
+    stepStrokeFinishedColor: Colors.primary,
+    stepStrokeUnFinishedColor: Colors.borderSecondary,
+    separatorFinishedColor: Colors.primary,
+    separatorUnFinishedColor: Colors.borderSecondary,
+    stepIndicatorFinishedColor: Colors.primary,
+    stepIndicatorUnFinishedColor: Colors.textGray400,
+    stepIndicatorCurrentColor: Colors.textGray400,
     stepIndicatorLabelFontSize: 15,
     currentStepIndicatorLabelFontSize: 15,
-    stepIndicatorLabelCurrentColor: '#fff',
-    stepIndicatorLabelFinishedColor: '#000',
-    stepIndicatorLabelUnFinishedColor: '#fff',
-    labelColor: '#9a9a9a',
+    stepIndicatorLabelCurrentColor: onNeutralFill,
+    stepIndicatorLabelFinishedColor: Colors.textOnPrimary,
+    stepIndicatorLabelUnFinishedColor: onNeutralFill,
+    labelColor: Colors.textGray400,
     labelSize: 11,
-    currentStepLabelColor: '#9a9a9a',
-    finishedStepLabelColor: '#F59E0B',
+    currentStepLabelColor: Colors.textGray800,
+    finishedStepLabelColor: Colors.primaryDeep,
     borderRadiusSize: 15,
   };
 
@@ -58,7 +65,7 @@ const CreationSteps = ({ step, isImport }: Props) => {
     stepStatus: string;
   }) => {
     if (stepStatus === 'finished') {
-      return <Check color="#000" size={17} />;
+      return <Check color={Colors.textOnPrimary} size={17} />;
     }
     return <Text style={indicatorLabelStyle}>{`${position + 1}`}</Text>;
   };

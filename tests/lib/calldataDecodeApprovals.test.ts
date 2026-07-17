@@ -1,4 +1,21 @@
+import { keccak_256 } from '@noble/hashes/sha3.js';
 import { decodeErc20Calldata } from '../../src/lib/calldataDecode';
+
+/**
+ * Derive a 4-byte function selector from its canonical signature. Test
+ * vectors are built from DERIVED selectors, never hardcoded hex — a wrong
+ * constant in the decoder then fails these tests instead of being
+ * self-confirmed by vectors built from the same wrong constant (which is
+ * exactly how a broken setApprovalForAll selector once slipped through).
+ */
+const selector = (signature: string) =>
+  Buffer.from(keccak_256(new TextEncoder().encode(signature)))
+    .toString('hex')
+    .slice(0, 8);
+
+const SEL_APPROVE = selector('approve(address,uint256)');
+const SEL_INCREASE_ALLOWANCE = selector('increaseAllowance(address,uint256)');
+const SEL_SET_APPROVAL_FOR_ALL = selector('setApprovalForAll(address,bool)');
 
 /**
  * Allowance-granting calldata decode — increaseAllowance, setApprovalForAll
@@ -18,11 +35,11 @@ const pad = (hex: string) => hex.padStart(64, '0');
 const amountWord = (value: bigint) => pad(value.toString(16));
 
 const approveData = (spender: string, amount: bigint) =>
-  `0x095ea7b3${pad(spender)}${amountWord(amount)}`;
+  `0x${SEL_APPROVE}${pad(spender)}${amountWord(amount)}`;
 const increaseAllowanceData = (spender: string, amount: bigint) =>
-  `0x39509351${pad(spender)}${amountWord(amount)}`;
+  `0x${SEL_INCREASE_ALLOWANCE}${pad(spender)}${amountWord(amount)}`;
 const setApprovalForAllData = (operator: string, boolWord: string) =>
-  `0xa22cb442${pad(operator)}${boolWord}`;
+  `0x${SEL_SET_APPROVAL_FOR_ALL}${pad(operator)}${boolWord}`;
 
 const TRUE_WORD = pad('1');
 const FALSE_WORD = pad('0');
@@ -72,7 +89,7 @@ describe('decodeErc20Calldata — allowance-granting calls', () => {
     });
 
     it('rejects truncated increaseAllowance calldata', () => {
-      const truncated = `0x39509351${pad(SPENDER)}`;
+      const truncated = `0x${SEL_INCREASE_ALLOWANCE}${pad(SPENDER)}`;
       expect(decodeErc20Calldata(truncated, USDT_CONTRACT, 'eth')).toBeNull();
     });
   });
@@ -209,7 +226,7 @@ describe('decodeErc20Calldata — allowance-granting calls', () => {
       const dirtyOperator = `ff${'0'.repeat(22)}${SPENDER}`;
       expect(
         decodeErc20Calldata(
-          `0xa22cb442${dirtyOperator}${TRUE_WORD}`,
+          `0x${SEL_SET_APPROVAL_FOR_ALL}${dirtyOperator}${TRUE_WORD}`,
           NFT_CONTRACT,
           'eth',
         ),
@@ -218,9 +235,19 @@ describe('decodeErc20Calldata — allowance-granting calls', () => {
 
     it('rejects truncated setApprovalForAll calldata', () => {
       expect(
-        decodeErc20Calldata(`0xa22cb442${pad(SPENDER)}`, NFT_CONTRACT, 'eth'),
+        decodeErc20Calldata(
+          `0x${SEL_SET_APPROVAL_FOR_ALL}${pad(SPENDER)}`,
+          NFT_CONTRACT,
+          'eth',
+        ),
       ).toBeNull();
-      expect(decodeErc20Calldata('0xa22cb442', NFT_CONTRACT, 'eth')).toBeNull();
+      expect(
+        decodeErc20Calldata(
+          `0x${SEL_SET_APPROVAL_FOR_ALL}`,
+          NFT_CONTRACT,
+          'eth',
+        ),
+      ).toBeNull();
     });
 
     it('rejects extra trailing bytes', () => {
@@ -237,11 +264,11 @@ describe('decodeErc20Calldata — allowance-granting calls', () => {
   describe('robustness of the new selectors', () => {
     it('never throws on garbage inputs', () => {
       const garbage = [
-        '0x39509351',
-        '0xa22cb442',
-        '0x3950935100',
-        '0xa22cb442zznothex',
-        `0x39509351${'f'.repeat(128)}`, // non-canonical address padding
+        `0x${SEL_INCREASE_ALLOWANCE}`,
+        `0x${SEL_SET_APPROVAL_FOR_ALL}`,
+        `0x${SEL_INCREASE_ALLOWANCE}00`,
+        `0x${SEL_SET_APPROVAL_FOR_ALL}zznothex`,
+        `0x${SEL_INCREASE_ALLOWANCE}${'f'.repeat(128)}`, // non-canonical address padding
       ];
       for (const input of garbage) {
         expect(() =>

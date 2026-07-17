@@ -1,14 +1,9 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  Linking,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Key, Pointer, QrCode } from 'lucide-react-native';
 import { useTheme } from '../../../hooks';
+import PillarMark from '../../../components/PillarMark/PillarMark';
 
 /**
  * The idle (no pending action) section of the Home screen: receive link,
@@ -100,10 +95,7 @@ const HomeIdle = (props: {
           </>
         )}
         {isRefreshing && (
-          <ActivityIndicator
-            size={'large'}
-            style={[Layout.row, Gutters.regularVMargin, { height: 30 }]}
-          />
+          <PillarMark size={30} pulse={true} style={Gutters.regularVMargin} />
         )}
         {!isRefreshing && (
           <TouchableOpacity

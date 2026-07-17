@@ -82,9 +82,15 @@ const VerificationCode = (props: {
         ]}
         accessibilityLiveRegion="assertive"
       >
-        <TriangleAlert size={22} color={Colors.white} />
+        {/* Black on #EF4444 (5.6:1) — white fails AA at 3.76:1. Matches the
+            match banner (black on green) and the black-on-amber rule family. */}
+        <TriangleAlert size={22} color={Colors.textOnPrimary} />
         <Text
-          style={[Fonts.textSmall, styles.bannerText, { color: Colors.white }]}
+          style={[
+            Fonts.textSmall,
+            styles.bannerText,
+            { color: Colors.textOnPrimary },
+          ]}
         >
           {t('home:verify_scan_mismatch')}
         </Text>
