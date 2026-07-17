@@ -134,9 +134,3 @@ dependencies {
         implementation jscFlavor
     }
 }
-
-project.ext.vectoricons = [
-    iconFontNames: [ 'Feather.ttf', 'MaterialCommunityIcons.ttf' ] // only these fonts, icons are used
-]
-
-apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
