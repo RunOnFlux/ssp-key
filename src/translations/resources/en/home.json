@@ -267,5 +267,14 @@
   "action_contract_interaction": "Contract interaction",
   "risk_unreadable_contract_call": "This transaction calls a contract this device can't fully read. Review the raw data under Advanced before approving.",
   "tx_decode_failed_title": "Can't verify this transaction",
-  "tx_decode_failed_desc": "Your SSP Key couldn't read this transaction, so it can't show you what it would do. To keep your funds safe it can't be approved. Reject it and try again from your SSP Wallet."
+  "tx_decode_failed_desc": "Your SSP Key couldn't read this transaction, so it can't show you what it would do. To keep your funds safe it can't be approved. Reject it and try again from your SSP Wallet.",
+  "backup_checkup_title": "Backup checkup",
+  "backup_checkup_body": "It's been a while — confirm your SSP Key seed words still match your backup. No one can recover them for you.",
+  "backup_checkup_verify": "Verify",
+  "backup_checkup_later": "Later",
+  "backup_checkup_settings_row": "Verify seed backup",
+  "backup_checkup_verify_title": "Verify seed backup",
+  "backup_checkup_verify_lead": "Confirm you still have your SSP Key seed words. No one can recover them for you.",
+  "backup_checkup_verify_decrypt_error": "Couldn't unlock your seed words. Please try again.",
+  "backup_checkup_verified_toast": "Backup confirmed — your SSP Key seed is safe."
 }

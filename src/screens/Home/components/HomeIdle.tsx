@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Key, Pointer, QrCode } from 'lucide-react-native';
 import { useTheme } from '../../../hooks';
 import PillarMark from '../../../components/PillarMark/PillarMark';
+import BackupCheckupCard from '../../../components/BackupCheckupCard/BackupCheckupCard';
 
 /**
  * The idle (no pending action) section of the Home screen: receive link,
@@ -48,6 +49,8 @@ const HomeIdle = (props: {
           {t('common:receive')}
         </Text>
       </TouchableOpacity>
+      {/* Periodic backup checkup — routine, due-gated; hidden by default. */}
+      <BackupCheckupCard />
       <View
         style={[
           Layout.fill,

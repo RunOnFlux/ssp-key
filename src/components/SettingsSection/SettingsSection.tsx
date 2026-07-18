@@ -20,6 +20,7 @@ import {
   KeyRound,
   Trash2,
   ShieldCheck,
+  ListChecks,
   SlidersHorizontal,
   Server,
   Info,
@@ -30,6 +31,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { storage } from '../../store/index'; // mmkv
 import Authentication from '../Authentication/Authentication';
+import VerifyBackupModal from '../VerifyBackup/VerifyBackupModal';
 import { setSSPInitialState } from '../../store/ssp';
 
 import { setInitialStateForAllChains } from '../../store';
@@ -94,6 +96,7 @@ const SettingsSection = (props: {
   const apiDefault = chainOriginal.api;
   const explorerDefault = chainOriginal.explorer;
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
+  const [verifyBackupOpen, setVerifyBackupOpen] = useState(false);
   const deviceLanguage =
     Platform.OS === 'ios'
       ? Settings.get('AppleLocale') || Settings.get('AppleLanguages')[0]
@@ -292,6 +295,23 @@ const SettingsSection = (props: {
     } else {
       setIsMainModalOpen(true);
     }
+  };
+
+  // On-demand seed backup verification — close the settings modal first so the
+  // verify flow's own auth + word-challenge modals present cleanly, then reopen
+  // settings when it finishes (matching the delete-flow modal handoff).
+  const handleOpenVerifyBackup = () => {
+    setIsMainModalOpen(false);
+    setTimeout(() => {
+      setVerifyBackupOpen(true);
+    }, 100);
+  };
+
+  const handleVerifyBackupClose = () => {
+    setVerifyBackupOpen(false);
+    setTimeout(() => {
+      setIsMainModalOpen(true);
+    }, 100);
   };
 
   // Hidden security-test trigger — 5 taps on the version caption, mirroring
@@ -612,6 +632,34 @@ const SettingsSection = (props: {
                       numberOfLines={1}
                     >
                       {t('home:change_pw')}
+                    </Text>
+                  </View>
+                  <ChevronRight
+                    size={18}
+                    color={Colors.textGray200}
+                    style={styles.chevron}
+                  />
+                </TouchableOpacity>
+                {rowDivider}
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={t('home:backup_checkup_settings_row')}
+                  style={styles.row}
+                  onPress={() => handleOpenVerifyBackup()}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={styles.rowIcon}>
+                      <ListChecks size={20} color={Colors.textGray400} />
+                    </View>
+                    <Text
+                      style={[
+                        Fonts.textSmall,
+                        styles.rowLabelText,
+                        { color: Colors.textGray800 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t('home:backup_checkup_settings_row')}
                     </Text>
                   </View>
                   <ChevronRight
@@ -955,6 +1003,10 @@ const SettingsSection = (props: {
           biomatricsAllowed={false}
         />
       )}
+      <VerifyBackupModal
+        open={verifyBackupOpen}
+        onClose={handleVerifyBackupClose}
+      />
     </>
   );
 };

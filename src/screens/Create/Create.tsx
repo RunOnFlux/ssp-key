@@ -31,6 +31,7 @@ import {
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
 import { setXpubKeyIdentity, setXprivKeyIdentity } from '../../store';
 import { setInitialStateForAllChains } from '../../store';
+import { markBackupVerifyNow } from '../../contexts/BackupCheckupContext';
 
 import { useAppDispatch, useAppSelector } from '../../hooks';
 
@@ -267,6 +268,9 @@ function Create({ navigation }: Props) {
         // reset challenge-flow flags so a re-mounted Create starts fresh
         setConfirmStage(false);
         setWSPwasShown(false);
+        // The create word challenge just passed — that IS the first backup
+        // verification, so a brand-new user isn't asked to re-verify right away.
+        markBackupVerifyNow(Date.now());
         navigation.navigate('Home');
       })
       .catch((error) => {

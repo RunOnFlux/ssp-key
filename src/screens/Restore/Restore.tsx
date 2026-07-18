@@ -35,6 +35,7 @@ import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
 import { setXpubKeyIdentity, setXprivKeyIdentity } from '../../store';
 
 import { setInitialStateForAllChains } from '../../store';
+import { markBackupVerifyNow } from '../../contexts/BackupCheckupContext';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 
@@ -299,6 +300,9 @@ function Restore({ navigation }: Props) {
         setWSPwasShown(false);
         setWSPbackedUp(false);
         setMnemonicShow(false);
+        // Typing the seed to restore proves the user holds the backup — record
+        // it as a verification so the checkup card isn't shown immediately.
+        markBackupVerifyNow(Date.now());
         navigation.navigate('Home');
       })
       .catch((error) => {
