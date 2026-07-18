@@ -35,7 +35,9 @@ const SecondaryButton = ({
           style={[{ position: 'absolute' }]}
         />
       )}
-      <Text style={[Fonts.textRegular, Fonts.textPrimary]}>{label}</Text>
+      <Text style={[Fonts.textRegular, Fonts.textPrimary, Fonts.textCenter]}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 };

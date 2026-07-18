@@ -5,31 +5,41 @@ import {
   TouchableOpacity,
   Modal,
   TouchableWithoutFeedback,
+  StyleSheet,
 } from 'react-native';
+import {
+  ClipboardPen,
+  KeyRound,
+  RotateCcw,
+  Settings,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import BlurOverlay from '../../BlurOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const ManualInput = (props: { actionStatus: (data: string) => void }) => {
+/**
+ * The Home overflow menu — icon + left-aligned label rows (mirrors the
+ * wallet's tidied menu), 44pt touch targets, popover card from the theme.
+ */
+const MenuModal = (props: { actionStatus: (data: string) => void }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { Fonts, Gutters, Layout, Common } = useTheme();
+  const { Fonts, Layout, Common, Colors } = useTheme();
 
-  const openManualInput = () => {
-    props.actionStatus('manualinput');
-  };
-  const openAddressDetails = () => {
-    props.actionStatus('addressdetails');
-  };
-  const openSSPKeyDetails = () => {
-    props.actionStatus('sspkeydetails');
-  };
-  const openMenuSettings = () => {
-    props.actionStatus('menusettings');
-  };
-  const handleRestore = () => {
-    props.actionStatus('restore');
-  };
+  const items: { key: string; label: string; icon: LucideIcon }[] = [
+    { key: 'manualinput', label: t('home:manual_input'), icon: ClipboardPen },
+    {
+      key: 'addressdetails',
+      label: t('home:synced_ssp_address'),
+      icon: Wallet,
+    },
+    { key: 'sspkeydetails', label: t('home:ssp_key_details'), icon: KeyRound },
+    { key: 'menusettings', label: t('common:settings'), icon: Settings },
+    { key: 'restore', label: t('common:restore'), icon: RotateCcw },
+  ];
+
   const handleCancel = () => {
     props.actionStatus('cancel');
   };
@@ -51,67 +61,31 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
       >
         <SafeAreaView style={[Layout.fill]}>
           <View>
-            <View style={[Common.modalMenu]}>
-              <TouchableOpacity onPress={() => openManualInput()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textPrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('home:manual_input')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => openAddressDetails()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textPrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('home:synced_ssp_address')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => openSSPKeyDetails()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textPrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('home:ssp_key_details')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => openMenuSettings()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textPrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('common:settings')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleRestore()}>
-                <Text
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textPrimary,
-                    Fonts.textCenter,
-                    Gutters.tinyPadding,
-                  ]}
-                >
-                  {t('common:restore')}
-                </Text>
-              </TouchableOpacity>
+            <View style={[Common.modalMenu, styles.menu]}>
+              {items.map((item) => {
+                const ItemIcon = item.icon;
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    accessibilityRole="menuitem"
+                    accessibilityLabel={item.label}
+                    onPress={() => props.actionStatus(item.key)}
+                    style={styles.row}
+                  >
+                    <ItemIcon size={18} color={Colors.textGray400} />
+                    <Text
+                      style={[
+                        Fonts.textSmall,
+                        styles.rowLabel,
+                        { color: Colors.textGray800 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         </SafeAreaView>
@@ -120,4 +94,20 @@ const ManualInput = (props: { actionStatus: (data: string) => void }) => {
   );
 };
 
-export default ManualInput;
+const styles = StyleSheet.create({
+  menu: {
+    paddingVertical: 6,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    paddingHorizontal: 16,
+  },
+  rowLabel: {
+    marginLeft: 12,
+    flexShrink: 1,
+  },
+});
+
+export default MenuModal;

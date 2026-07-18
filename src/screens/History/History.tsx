@@ -3,6 +3,7 @@ import {
   View,
   Text,
   ScrollView,
+  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -155,6 +156,8 @@ function History({ navigation }: MainScreenProps<'History'>) {
         ]}
       >
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('common:back')}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
@@ -179,6 +182,8 @@ function History({ navigation }: MainScreenProps<'History'>) {
           </TouchableOpacity>
           {entries.length > 0 ? (
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t('history:clear_action')}
               onPress={handleClear}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={[Gutters.smallLMargin]}
@@ -248,7 +253,11 @@ function History({ navigation }: MainScreenProps<'History'>) {
                       {t(meta.i18n)}
                     </Text>
                     <Text
-                      style={[Fonts.textTiny, { color: Colors.textGray400 }]}
+                      style={[
+                        Fonts.textTiny,
+                        { color: Colors.textGray400 },
+                        styles.tabular,
+                      ]}
                     >
                       {formatTimestamp(entry.timestamp)}
                       {entry.chain ? ` · ${entry.chain.toUpperCase()}` : ''}
@@ -305,5 +314,11 @@ function History({ navigation }: MainScreenProps<'History'>) {
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  tabular: {
+    fontVariant: ['tabular-nums'],
+  },
+});
 
 export default History;

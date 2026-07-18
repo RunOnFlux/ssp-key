@@ -20,5 +20,12 @@
   "wallet": "Wallet",
   "receive": "Receive",
   "reject": "Reject",
-  "approve": "Approve"
+  "approve": "Approve",
+  "warning": "Warning",
+  "show_password": "Show password",
+  "hide_password": "Hide password",
+  "use_biometrics": "Authenticate with biometrics",
+  "reset": "Reset",
+  "show": "Show",
+  "hide": "Hide"
 }

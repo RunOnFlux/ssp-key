@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { CircleQuestionMark, Clock, Settings } from 'lucide-react-native';
 import { View, Image, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
 import HelpSection from '../../components/HelpSection/HelpSection';
 
 function Navbar(props: { openSettingsTrigger: () => void; navigation?: any }) {
+  const { t } = useTranslation(['common', 'history']);
   const { darkMode, Gutters, Layout, Images, Colors } = useTheme();
   const [helpSectionModalOpen, setHelpSectionModalOpen] = useState(false);
   const openHelp = () => {
@@ -37,6 +39,8 @@ function Navbar(props: { openSettingsTrigger: () => void; navigation?: any }) {
         <View style={[Layout.row, Gutters.tinyTMargin]}>
           {props.navigation && (
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t('history:title')}
               onPress={() => props.navigation?.navigate('History')}
               style={[Gutters.smallRMargin]}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -45,6 +49,8 @@ function Navbar(props: { openSettingsTrigger: () => void; navigation?: any }) {
             </TouchableOpacity>
           )}
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('common:help')}
             onPress={() => openHelp()}
             style={[Gutters.smallRMargin]}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -52,6 +58,8 @@ function Navbar(props: { openSettingsTrigger: () => void; navigation?: any }) {
             <CircleQuestionMark size={22} color={Colors.textGray400} />
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('common:settings')}
             onPress={() => openSettings()}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >

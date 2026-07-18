@@ -18,6 +18,7 @@ import * as Keychain from 'react-native-keychain';
 import { useTheme } from '../../hooks';
 import ToastNotif from '../Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';
+import { PrimaryButton } from '../ui';
 
 // Copy maps — per-request-type prompt copy. Unknown types fall back to the
 // generic "sensitive information" wording, matching the previous ternaries.
@@ -336,12 +337,15 @@ const Authentication = (props: {
               )}
 
               {biometricsAvailable && (
-                <FingerprintPattern
-                  size={50}
-                  color={Colors.primary}
-                  style={[{ alignSelf: 'center' }, Gutters.regularTMargin]}
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={t('common:use_biometrics')}
                   onPress={() => initiateFingerprint()}
-                />
+                  style={[{ alignSelf: 'center' }, Gutters.regularTMargin]}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <FingerprintPattern size={50} color={Colors.primary} />
+                </TouchableOpacity>
               )}
               {!biometricsAvailable && <View style={[Gutters.smallMargin]} />}
               <View
@@ -366,6 +370,12 @@ const Authentication = (props: {
                   onPressIn={() => textInputA.current?.focus()}
                 />
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={t(
+                    passwordVisibility
+                      ? 'common:hide_password'
+                      : 'common:show_password',
+                  )}
                   onPress={() => setPasswordVisibility(!passwordVisibility)}
                   style={Common.inputIcon}
                 >
@@ -378,22 +388,20 @@ const Authentication = (props: {
               </View>
             </View>
             <View style={[Layout.justifyContentEnd]}>
-              <TouchableOpacity
-                style={[
-                  Common.button.rounded,
-                  Common.button.primary,
-                  Gutters.regularBMargin,
-                  Gutters.smallTMargin,
-                ]}
-                onPress={() => grantAccess()}
-              >
-                <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-                  {props.type === 'sensitive'
+              <PrimaryButton
+                label={
+                  props.type === 'sensitive'
                     ? t('home:grant_access')
-                    : t('common:confirm')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => close()}>
+                    : t('common:confirm')
+                }
+                style={[Gutters.regularBMargin, Gutters.smallTMargin]}
+                onPress={() => grantAccess()}
+              />
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => close()}
+                hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
+              >
                 <Text
                   style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
                 >
@@ -422,6 +430,7 @@ const styles = StyleSheet.create({
   inputWithButton: {
     marginTop: 30,
     width: '100%',
-    borderRadius: 10,
+    // design tokens: radius 8 for controls
+    borderRadius: 8,
   },
 });

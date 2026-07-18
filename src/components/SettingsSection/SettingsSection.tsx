@@ -419,6 +419,8 @@ const SettingsSection = (props: {
                   style={[
                     Common.button.outlineRounded,
                     Common.button.secondaryButton,
+                    // destructive action — semantic error, never amber
+                    { borderColor: Colors.error },
                     Gutters.tinyTMargin,
                   ]}
                   onPress={() => handleBeginDeletion()}
@@ -426,7 +428,7 @@ const SettingsSection = (props: {
                   <Text
                     style={[
                       Fonts.textTiny,
-                      Fonts.textPrimary,
+                      { color: Colors.error },
                       Gutters.tinyVPadding,
                       Gutters.tinyHPadding,
                     ]}
@@ -516,6 +518,8 @@ const SettingsSection = (props: {
                       onPressIn={() => textInputA.current?.focus()}
                     />
                     <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel={t('common:reset')}
                       onPress={resetSSPRelay}
                       style={Common.inputIcon}
                     >
@@ -558,6 +562,8 @@ const SettingsSection = (props: {
                           onPressIn={() => textInputB.current?.focus()}
                         />
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={t('common:reset')}
                           onPress={resetChainNodeService}
                           style={Common.inputIcon}
                         >
@@ -601,6 +607,8 @@ const SettingsSection = (props: {
                           onPressIn={() => textInputB.current?.focus()}
                         />
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={t('common:reset')}
                           onPress={resetChainApiService}
                           style={Common.inputIcon}
                         >
@@ -644,6 +652,8 @@ const SettingsSection = (props: {
                           onPressIn={() => textInputB.current?.focus()}
                         />
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={t('common:reset')}
                           onPress={resetChainExplorerService}
                           style={Common.inputIcon}
                         >
@@ -840,6 +850,7 @@ const styles = StyleSheet.create({
   inputWithButton: {
     marginTop: 12,
     width: '100%',
-    borderRadius: 10,
+    // design tokens: radius 8 for controls
+    borderRadius: 8,
   },
 });

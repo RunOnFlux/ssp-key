@@ -22,6 +22,8 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     color: Colors.primary,
     backgroundColor: Colors.secondaryButtonBackground,
     borderColor: Colors.primary,
+    // match primary: keep wrapped labels off the border
+    ...Gutters.regularHPadding,
   };
   const danger = {
     ...base,
@@ -55,9 +57,6 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     outlineRounded: {
       ...rounded,
       borderWidth: 1,
-    },
-    dashed: {
-      borderStyle: 'dashed',
     },
   });
 }

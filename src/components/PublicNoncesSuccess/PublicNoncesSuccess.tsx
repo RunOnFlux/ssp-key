@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { CircleCheck } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import BlurOverlay from '../../BlurOverlay';
+import { PrimaryButton, SuccessHeader } from '../ui';
 
 const PublicNoncesSuccess = (props: {
   actionStatus: (status: boolean) => void;
@@ -50,36 +50,28 @@ const PublicNoncesSuccess = (props: {
               Layout.alignItemsCenter,
             ]}
           >
-            <CircleCheck size={60} color={Colors.textGray400} />
+            <SuccessHeader title={t('home:public_nonces_request_approved')} />
             <Text
               style={[
-                Fonts.textBold,
-                Fonts.textRegular,
-                Gutters.smallMargin,
+                Fonts.textTiny,
                 Fonts.textCenter,
+                { color: Colors.textGray400 },
               ]}
             >
-              {t('home:public_nonces_request_approved')}
-            </Text>
-            <Text style={[Fonts.textTiny, Fonts.textCenter]}>
               {t('home:public_nonces_request_approved_info')}
             </Text>
           </View>
           <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.rounded,
-                Common.button.primary,
-                Gutters.regularBMargin,
-                Gutters.smallTMargin,
-              ]}
+            <PrimaryButton
+              label={t('home:close')}
+              style={[Gutters.regularBMargin, Gutters.smallTMargin]}
               onPress={() => close()}
+            />
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => copyToClipboard()}
+              hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
             >
-              <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-                {t('home:close')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => copyToClipboard()}>
               <Text
                 style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
               >

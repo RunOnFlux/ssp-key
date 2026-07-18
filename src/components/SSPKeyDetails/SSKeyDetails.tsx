@@ -12,6 +12,8 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import { MONOSPACE_FONT } from '../../lib/typography';
+import { SeedPhraseGrid } from '../SeedPhraseBackup/SeedPhraseBackup';
 import * as Keychain from 'react-native-keychain';
 import { useAppSelector } from '../../hooks';
 import { cryptos } from '../../types';
@@ -198,6 +200,12 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t(
+                      xpubVisible ? 'common:hide' : 'common:show',
+                    )} ${t('home:chain_xpub', {
+                      chain: blockchainConfig.name,
+                    })}`}
                     onPress={() => setXpubVisible(!xpubVisible)}
                     style={Common.inputIcon}
                   >
@@ -231,6 +239,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                         Fonts.textTiny,
                         Fonts.textCenter,
                         Gutters.smallMargin,
+                        { fontFamily: MONOSPACE_FONT },
                       ]}
                     >
                       {xpubVisible ? decryptedXpub : '*** *** *** *** *** ***'}
@@ -251,6 +260,12 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t(
+                      xprivVisible ? 'common:hide' : 'common:show',
+                    )} ${t('home:chain_xpriv', {
+                      chain: blockchainConfig.name,
+                    })}`}
                     onPress={() => setXprivVisible(!xprivVisible)}
                     style={Common.inputIcon}
                   >
@@ -300,6 +315,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                           Fonts.textTiny,
                           Fonts.textCenter,
                           Gutters.tinyMargin,
+                          { fontFamily: MONOSPACE_FONT },
                         ]}
                       >
                         {xprivVisible
@@ -316,6 +332,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                           Fonts.textCenter,
                           Gutters.tinyMargin,
                           Gutters.smallBMargin,
+                          { fontFamily: MONOSPACE_FONT },
                         ]}
                       >
                         {xprivVisible
@@ -332,6 +349,10 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t(
+                      mnemonicVisible ? 'common:hide' : 'common:show',
+                    )} ${t('home:ssp_key_mnemonic')}`}
                     onPress={() => setMnemonicVisible(!mnemonicVisible)}
                     style={Common.inputIcon}
                   >
@@ -367,74 +388,11 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 >
                   {t('cr:ssp_key_mnemonic_sec')}
                 </Text>
-                <View
-                  style={[
-                    { borderWidth: 1, borderColor: Colors.textInput },
-                    Gutters.smallTMargin,
-                    Gutters.smallBMargin,
-                  ]}
-                >
-                  <Text
-                    selectable={true}
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textCenter,
-                      Gutters.tinyMargin,
-                      Fonts.textBold,
-                    ]}
-                  >
-                    {mnemonicVisible
-                      ? decryptedMnemonic
-                          .split(' ')
-                          .slice(
-                            0,
-                            Math.round(decryptedMnemonic.split(' ').length / 3),
-                          )
-                          .join(' ')
-                      : '*** *** *** *** *** *** *** ***'}
-                  </Text>
-                  <Text
-                    selectable={true}
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textCenter,
-                      Gutters.tinyMargin,
-                      Fonts.textBold,
-                    ]}
-                  >
-                    {mnemonicVisible
-                      ? decryptedMnemonic
-                          .split(' ')
-                          .slice(
-                            Math.round(decryptedMnemonic.split(' ').length / 3),
-                            Math.round(
-                              (decryptedMnemonic.split(' ').length / 3) * 2,
-                            ),
-                          )
-                          .join(' ')
-                      : '*** *** *** *** *** *** *** ***'}
-                  </Text>
-                  <Text
-                    selectable={true}
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textCenter,
-                      Gutters.tinyMargin,
-                      Fonts.textBold,
-                    ]}
-                  >
-                    {mnemonicVisible
-                      ? decryptedMnemonic
-                          .split(' ')
-                          .slice(
-                            Math.round(
-                              (decryptedMnemonic.split(' ').length / 3) * 2,
-                            ),
-                            decryptedMnemonic.split(' ').length,
-                          )
-                          .join(' ')
-                      : '*** *** *** *** *** *** *** ***'}
-                  </Text>
+                <View style={[Gutters.smallTMargin, Gutters.smallBMargin]}>
+                  <SeedPhraseGrid
+                    phrase={decryptedMnemonic}
+                    visible={mnemonicVisible}
+                  />
                 </View>
               </View>
             </View>

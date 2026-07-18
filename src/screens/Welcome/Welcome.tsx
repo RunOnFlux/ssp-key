@@ -3,13 +3,14 @@ import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
+import { PrimaryButton } from '../../components/ui';
 import * as Keychain from 'react-native-keychain';
 
 type Props = { navigation: any };
 
 function Welcome({ navigation }: Props) {
   const { t } = useTranslation(['welcome']);
-  const { darkMode, Common, Fonts, Gutters, Layout, Images } = useTheme();
+  const { darkMode, Fonts, Gutters, Layout, Images } = useTheme();
 
   const init = async () => {
     try {
@@ -63,19 +64,16 @@ function Welcome({ navigation }: Props) {
         <Text style={[Fonts.textSmall, Gutters.largeBMargin]}>
           {t('welcome:description')}
         </Text>
-        <TouchableOpacity
-          style={[
-            Common.button.rounded,
-            Common.button.primary,
-            Gutters.regularBMargin,
-          ]}
+        <PrimaryButton
+          label={t('welcome:synchronise_key')}
+          style={[Gutters.regularBMargin]}
           onPress={() => navigation.navigate('Create')}
+        />
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('Restore')}
+          hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
         >
-          <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-            {t('welcome:synchronise_key')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
           <Text style={[Fonts.textSmall, Fonts.textPrimary]}>
             {t('welcome:restore_key')}
           </Text>

@@ -20,7 +20,8 @@ export default function <C>({ Colors, ...args }: CommonParams<C>) {
       textInput: {
         backgroundColor: Colors.inputBackground,
         color: Colors.textInput,
-        borderRadius: 10,
+        // design tokens: radius 8 for controls
+        borderRadius: 8,
         flex: 1,
         padding: 12,
       },
@@ -31,7 +32,8 @@ export default function <C>({ Colors, ...args }: CommonParams<C>) {
         backgroundColor: Colors.modalBackground,
         margin: 30,
         marginTop: 60,
-        borderRadius: 20,
+        // design tokens: radius 16 for sheets/modals
+        borderRadius: 16,
         padding: 20,
         shadowColor: Colors.shadowColor,
         shadowOffset: {
@@ -49,7 +51,8 @@ export default function <C>({ Colors, ...args }: CommonParams<C>) {
         maxWidth: 260,
         backgroundColor: Colors.modalBackground,
         marginTop: 60,
-        borderRadius: 10,
+        // design tokens: radius 12 for cards/popovers
+        borderRadius: 12,
         shadowColor: Colors.shadowColor,
         shadowOffset: {
           width: 0,
@@ -64,7 +67,8 @@ export default function <C>({ Colors, ...args }: CommonParams<C>) {
       inputArea: {
         flex: 1,
         padding: 12,
-        borderRadius: 10,
+        // design tokens: radius 8 for controls
+        borderRadius: 8,
         marginTop: 16,
       },
       inputAreaColors: {
