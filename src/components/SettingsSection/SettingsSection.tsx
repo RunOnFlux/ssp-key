@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,21 @@ import {
   Platform,
   Settings,
   I18nManager,
-  Switch,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { X } from 'lucide-react-native';
+import {
+  X,
+  Languages,
+  EyeOff,
+  KeyRound,
+  Trash2,
+  ShieldCheck,
+  SlidersHorizontal,
+  Server,
+  Info,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { storage } from '../../store/index'; // mmkv
@@ -39,6 +50,9 @@ import { blockchains } from '@storage/blockchains';
 import * as resources from '../../translations/resources';
 import BlurOverlay from '../../BlurOverlay';
 import { usePrivacyMode } from '../../contexts/PrivacyContext';
+import { Card } from '../ui';
+import PoweredByFlux from '../PoweredByFlux/PoweredByFlux';
+import packageJson from '../../../package.json';
 
 const backendsOriginalConfig = backendsOriginal();
 const originalConfig = sspConfigOriginal();
@@ -47,13 +61,14 @@ const SettingsSection = (props: {
   actionStatus: (status: boolean) => void;
   navigation: any;
 }) => {
-  // focusability of inputs
-  const textInputA = useRef<TextInput | null>(null);
-  const textInputB = useRef<TextInput | null>(null);
   const { identityChain } = useAppSelector((state) => state.ssp);
   const [isMainModalOpen, setIsMainModalOpen] = useState(true);
   const [isChainSelectOpen, setIsChainSelectOpen] = useState(false);
   const [isLanguageSelectOpen, setIsLanguageSelectOpen] = useState(false);
+  // Advanced (network plumbing) starts collapsed so the everyday user sees a
+  // clean Preferences + Security modal.
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [versionTapCount, setVersionTapCount] = useState(0);
   const [selectedChain, setSelectedChain] =
     useState<keyof cryptos>(identityChain);
   const currentLanguage = storage.getString('language');
@@ -72,6 +87,12 @@ const SettingsSection = (props: {
   const { i18n } = useTranslation();
   const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const blockchainConfig = blockchains[selectedChain];
+  // Original endpoint defaults for the active chain — a stable const identifier
+  // so the presence checks below narrow each field to a defined string.
+  const chainOriginal = backendsOriginalConfig[selectedChain];
+  const nodeDefault = chainOriginal.node;
+  const apiDefault = chainOriginal.api;
+  const explorerDefault = chainOriginal.explorer;
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const deviceLanguage =
     Platform.OS === 'ios'
@@ -273,6 +294,20 @@ const SettingsSection = (props: {
     }
   };
 
+  // Hidden security-test trigger — 5 taps on the version caption, mirroring
+  // the Help/About surface. Closes the modal first, then navigates.
+  const handleVersionTap = () => {
+    const newCount = versionTapCount + 1;
+    setVersionTapCount(newCount);
+    if (newCount >= 5) {
+      setVersionTapCount(0);
+      props.actionStatus(false);
+      setTimeout(() => {
+        props.navigation.navigate('LavaMoatTest');
+      }, 100);
+    }
+  };
+
   const resetSSPRelay = () => {
     console.log('Reset SSP Relay');
     console.log(originalConfig.relay);
@@ -342,6 +377,86 @@ const SettingsSection = (props: {
     });
   };
 
+  // Concise trailing value for the Language row. When the system default is
+  // active we show a short "System" chip instead of the long "Use System
+  // Language" string (which used to truncate); otherwise the picked language's
+  // own native name (e.g. "English", "Deutsch").
+  const pickedLanguageDesc = languages.find(
+    (language) => language.value === selectedLanguage,
+  )?.desc;
+  const languageValue =
+    selectedLanguage === 'system'
+      ? t('home:settings_language_system')
+      : (pickedLanguageDesc ?? t('home:settings_language_system'));
+
+  // Endpoint field surface — a subtly recessed well that reads identically in
+  // both themes (light: warm-stone tint on white; dark: a shade below the card
+  // fill), fenced by a hairline so the input never dissolves into the card.
+  const fieldBg = darkMode ? '#1F1D1C' : Colors.bgInputAreaModalColor;
+  const fieldBorder = Colors.borderSecondary;
+
+  // One relay/node/API/explorer endpoint: an uppercase gray sub-label (matching
+  // the outer section headers' type scale) above a recessed input+reset field,
+  // inset to the same column rhythm as the polished rows above.
+  const endpointField = (
+    label: string,
+    value: string | undefined,
+    placeholder: string,
+    onChangeText: (text: string) => void,
+    onReset: () => void,
+  ) => (
+    <View style={styles.endpointGroup}>
+      <Text
+        style={[styles.endpointLabel, { color: Colors.textGray400 }]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      <View
+        style={[
+          styles.endpointField,
+          { backgroundColor: fieldBg, borderColor: fieldBorder },
+        ]}
+      >
+        <TextInput
+          style={[styles.endpointInput, { color: Colors.textInput }]}
+          autoCapitalize="none"
+          placeholder={placeholder}
+          placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+          onChangeText={onChangeText}
+          value={value}
+          autoCorrect={false}
+        />
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('common:reset')}
+          onPress={onReset}
+          style={styles.endpointReset}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <X size={18} color={Colors.primary} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // iOS grouped-list section header — muted, uppercase, letter-spaced label
+  // with a small leading glyph, rendered ABOVE its card (native convention).
+  const groupHeader = (icon: React.ReactNode, label: string) => (
+    <View style={styles.groupHeader}>
+      {icon}
+      <Text style={[styles.groupHeaderText, { color: Colors.textGray400 }]}>
+        {label}
+      </Text>
+    </View>
+  );
+
+  // Hairline divider between rows inside a card, inset to the label column so
+  // the leading icons "float" free of the rule — matches iOS inset lists.
+  const rowDivider = (
+    <View style={[styles.divider, { backgroundColor: Colors.border }]} />
+  );
+
   return (
     <>
       <Modal
@@ -362,327 +477,327 @@ const SettingsSection = (props: {
             ]}
           >
             <View style={[Layout.fill, Common.modalView]}>
-              <Text style={[Fonts.titleSmall, Fonts.textCenter]}>
+              <Text
+                style={[Fonts.titleSmall, Fonts.textCenter, styles.modalTitle]}
+              >
                 {t('common:settings')}
               </Text>
-              <View
-                style={[
-                  Layout.fill,
-                  Layout.relative,
-                  Layout.fullWidth,
-                  Layout.alignItemsCenter,
-                  Gutters.regularTMargin,
-                ]}
-              >
-                <View style={[Gutters.regularBMargin]}>
-                  <Text
-                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                  >
-                    {t('home:change_pw')}
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      Common.button.outlineRounded,
-                      Common.button.secondaryButton,
-                      Gutters.smallTMargin,
-                    ]}
-                    onPress={() => handleRestore()}
-                  >
+
+              {/* PREFERENCES — everyday inline controls: language + privacy. */}
+              {groupHeader(
+                <SlidersHorizontal size={14} color={Colors.textGray400} />,
+                t('home:settings_preferences'),
+              )}
+              <Card style={styles.card}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={t('home:language')}
+                  style={styles.row}
+                  onPress={() => openLanguageSelect()}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={styles.rowIcon}>
+                      <Languages size={20} color={Colors.textGray400} />
+                    </View>
+                    <Text
+                      style={[
+                        Fonts.textSmall,
+                        styles.rowLabelText,
+                        { color: Colors.textGray800 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t('home:language')}
+                    </Text>
+                  </View>
+                  <View style={styles.rowTrailing}>
                     <Text
                       style={[
                         Fonts.textTiny,
-                        Fonts.textPrimary,
-                        Gutters.tinyVPadding,
-                        Gutters.tinyHPadding,
+                        styles.rowValueText,
+                        { color: Colors.textGray400 },
                       ]}
+                      numberOfLines={1}
                     >
-                      {t('home:change_pw_restore')}
+                      {languageValue}
                     </Text>
+                    <ChevronRight
+                      size={18}
+                      color={Colors.textGray200}
+                      style={styles.chevron}
+                    />
+                  </View>
+                </TouchableOpacity>
+                {rowDivider}
+                <View style={styles.row}>
+                  <View style={styles.rowLeft}>
+                    <View style={styles.rowIcon}>
+                      <EyeOff size={20} color={Colors.textGray400} />
+                    </View>
+                    <Text
+                      style={[
+                        Fonts.textSmall,
+                        styles.rowLabelText,
+                        { color: Colors.textGray800 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t('home:privacy_mode')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    accessibilityRole="switch"
+                    accessibilityLabel={t('home:privacy_mode')}
+                    accessibilityState={{ checked: privacyHidden }}
+                    activeOpacity={0.8}
+                    onPress={togglePrivacy}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={[
+                      styles.toggleTrack,
+                      {
+                        backgroundColor: privacyHidden
+                          ? Colors.primary
+                          : Colors.borderSecondary,
+                        alignItems: privacyHidden ? 'flex-end' : 'flex-start',
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.toggleKnob,
+                        {
+                          backgroundColor: privacyHidden
+                            ? Colors.textOnPrimary
+                            : Colors.white,
+                        },
+                      ]}
+                    />
                   </TouchableOpacity>
                 </View>
-                <Text
-                  style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                >
-                  {t('home:delete_ssp_key_data')}
-                </Text>
+              </Card>
+              <View style={styles.footnote}>
                 <Text
                   style={[
                     Fonts.textTinyTiny,
-                    Fonts.textLight,
-                    Fonts.textJustify,
-                    Gutters.tinyTMargin,
+                    styles.footnoteText,
+                    { color: Colors.textGray400 },
+                  ]}
+                >
+                  {t('home:privacy_mode_desc')}
+                </Text>
+              </View>
+
+              {/* SECURITY — change password, then the destructive delete. */}
+              {groupHeader(
+                <ShieldCheck size={14} color={Colors.textGray400} />,
+                t('home:settings_security'),
+              )}
+              <Card style={styles.card}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={t('home:change_pw')}
+                  style={styles.row}
+                  onPress={() => handleRestore()}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={styles.rowIcon}>
+                      <KeyRound size={20} color={Colors.textGray400} />
+                    </View>
+                    <Text
+                      style={[
+                        Fonts.textSmall,
+                        styles.rowLabelText,
+                        { color: Colors.textGray800 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t('home:change_pw')}
+                    </Text>
+                  </View>
+                  <ChevronRight
+                    size={18}
+                    color={Colors.textGray200}
+                    style={styles.chevron}
+                  />
+                </TouchableOpacity>
+                {rowDivider}
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={t('home:delete_ssp_key')}
+                  // destructive action — semantic error, never amber
+                  style={styles.row}
+                  onPress={() => handleBeginDeletion()}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={styles.rowIcon}>
+                      <Trash2 size={20} color={Colors.error} />
+                    </View>
+                    <Text
+                      style={[
+                        Fonts.textSmall,
+                        styles.rowLabelText,
+                        { color: Colors.error },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t('home:delete_ssp_key_data')}
+                    </Text>
+                  </View>
+                  <ChevronRight
+                    size={18}
+                    color={Colors.error}
+                    style={styles.chevron}
+                  />
+                </TouchableOpacity>
+              </Card>
+              <View style={styles.footnote}>
+                <Text
+                  style={[
+                    Fonts.textTinyTiny,
+                    styles.footnoteText,
+                    { color: Colors.textGray400 },
                   ]}
                 >
                   {t('home:delete_ssp_key_data_desc')}
                 </Text>
+              </View>
+
+              {/* ADVANCED — collapsed-by-default expander: relay + per-chain
+                  node/API/explorer endpoints + chain selector. Header-less (the
+                  disclosure row is its own header, mirroring the wallet Menu) so
+                  the everyday user sees a clean two-line "Advanced" affordance. */}
+              <View style={styles.groupSpacer} />
+              <Card style={styles.card}>
                 <TouchableOpacity
-                  style={[
-                    Common.button.outlineRounded,
-                    Common.button.secondaryButton,
-                    // destructive action — semantic error, never amber
-                    { borderColor: Colors.error },
-                    Gutters.tinyTMargin,
-                  ]}
-                  onPress={() => handleBeginDeletion()}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('home:advanced')}
+                  accessibilityState={{ expanded: advancedOpen }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.row}
+                  onPress={() => setAdvancedOpen((previous) => !previous)}
                 >
-                  <Text
-                    style={[
-                      Fonts.textTiny,
-                      { color: Colors.error },
-                      Gutters.tinyVPadding,
-                      Gutters.tinyHPadding,
-                    ]}
-                  >
-                    {t('home:delete_ssp_key')}
-                  </Text>
+                  <View style={styles.rowLeft}>
+                    <View style={styles.rowIcon}>
+                      <Server size={20} color={Colors.textGray400} />
+                    </View>
+                    <View style={styles.rowLabelText}>
+                      <Text
+                        style={[Fonts.textSmall, { color: Colors.textGray800 }]}
+                        numberOfLines={1}
+                      >
+                        {t('home:advanced')}
+                      </Text>
+                      <Text
+                        style={[
+                          Fonts.textTinyTiny,
+                          styles.rowSubLabel,
+                          { color: Colors.textGray400 },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {t('home:settings_advanced_hint')}
+                      </Text>
+                    </View>
+                  </View>
+                  {advancedOpen ? (
+                    <ChevronDown
+                      size={18}
+                      color={Colors.textGray200}
+                      style={styles.chevron}
+                    />
+                  ) : (
+                    <ChevronRight
+                      size={18}
+                      color={Colors.textGray200}
+                      style={styles.chevron}
+                    />
+                  )}
                 </TouchableOpacity>
-                <View style={[Gutters.smallBMargin, Gutters.regularTMargin]}>
-                  <Text
-                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                  >
-                    {t('home:language')}
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      Common.button.outlineRounded,
-                      Common.button.secondaryButton,
-                      Gutters.smallTMargin,
-                    ]}
-                    onPress={() => openLanguageSelect()}
-                  >
-                    <Text
-                      style={[
-                        Fonts.textTiny,
-                        Fonts.textPrimary,
-                        Gutters.tinyVPadding,
-                        Gutters.tinyHPadding,
-                      ]}
-                    >
-                      {languages.find(
-                        (language) => language.value === selectedLanguage,
-                      )?.desc ?? t('home:use_system_language')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={[Gutters.smallBMargin, Layout.fullWidth]}>
-                  <Text
-                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                  >
-                    {t('home:privacy_mode')}
-                  </Text>
-                  <View
-                    style={[
-                      Layout.rowCenter,
-                      Layout.justifyContentCenter,
-                      Gutters.tinyTMargin,
-                    ]}
-                  >
-                    <Switch
-                      onValueChange={togglePrivacy}
-                      value={privacyHidden}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      Fonts.textTinyTiny,
-                      Fonts.textLight,
-                      Fonts.textJustify,
-                      Gutters.tinyTMargin,
-                    ]}
-                  >
-                    {t('home:privacy_mode_desc')}
-                  </Text>
-                </View>
-                <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
-                  <Text
-                    style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
-                  >
-                    {t('home:ssp_relay_server')}
-                  </Text>
-                  <View
-                    style={[
-                      Layout.rowCenter,
-                      Common.inputWithButtonBgModalColors,
-                      styles.inputWithButton,
-                    ]}
-                  >
-                    <TextInput
-                      style={[Common.textInput, Common.textInputBgModal]}
-                      autoCapitalize="none"
-                      placeholder={originalConfig.relay}
-                      placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                      onChangeText={onChangeSSPrelay}
-                      value={sspConfigRelay}
-                      autoCorrect={false}
-                      ref={textInputA}
-                      onPressIn={() => textInputA.current?.focus()}
-                    />
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      accessibilityLabel={t('common:reset')}
-                      onPress={resetSSPRelay}
-                      style={Common.inputIcon}
-                    >
-                      <X size={20} color={Colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={[Gutters.regularTMargin, Gutters.smallBMargin]}>
-                  {backendsOriginalConfig[selectedChain].node && (
-                    <>
-                      <Text
-                        style={[
-                          Fonts.textBold,
-                          Fonts.textSmall,
-                          Fonts.textCenter,
-                        ]}
-                      >
-                        {t('home:chain_node_service', {
-                          chain: blockchainConfig.name,
-                        })}
-                      </Text>
-                      <View
-                        style={[
-                          Layout.rowCenter,
-                          Common.inputWithButtonBgModalColors,
-                          styles.inputWithButton,
-                        ]}
-                      >
-                        <TextInput
-                          style={[Common.textInput, Common.textInputBgModal]}
-                          autoCapitalize="none"
-                          placeholder={
-                            backendsOriginalConfig[selectedChain].node
-                          }
-                          placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                          onChangeText={onChangeChainNodeService}
-                          value={nodeConfig}
-                          autoCorrect={false}
-                          ref={textInputB}
-                          onPressIn={() => textInputB.current?.focus()}
-                        />
-                        <TouchableOpacity
-                          accessibilityRole="button"
-                          accessibilityLabel={t('common:reset')}
-                          onPress={resetChainNodeService}
-                          style={Common.inputIcon}
-                        >
-                          <X size={20} color={Colors.primary} />
-                        </TouchableOpacity>
-                      </View>
-                    </>
-                  )}
-                  {backendsOriginalConfig[selectedChain].api && (
-                    <>
-                      <Text
-                        style={[
-                          Fonts.textBold,
-                          Fonts.textSmall,
-                          Fonts.textCenter,
-                          Gutters.smallTMargin,
-                        ]}
-                      >
-                        {t('home:chain_api_service', {
-                          chain: blockchainConfig.name,
-                        })}
-                      </Text>
-                      <View
-                        style={[
-                          Layout.rowCenter,
-                          Common.inputWithButtonBgModalColors,
-                          styles.inputWithButton,
-                        ]}
-                      >
-                        <TextInput
-                          style={[Common.textInput, Common.textInputBgModal]}
-                          autoCapitalize="none"
-                          placeholder={
-                            backendsOriginalConfig[selectedChain].api
-                          }
-                          placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                          onChangeText={onChangeChainApiService}
-                          value={apiConfig}
-                          autoCorrect={false}
-                          ref={textInputB}
-                          onPressIn={() => textInputB.current?.focus()}
-                        />
-                        <TouchableOpacity
-                          accessibilityRole="button"
-                          accessibilityLabel={t('common:reset')}
-                          onPress={resetChainApiService}
-                          style={Common.inputIcon}
-                        >
-                          <X size={20} color={Colors.primary} />
-                        </TouchableOpacity>
-                      </View>
-                    </>
-                  )}
-                  {backendsOriginalConfig[selectedChain].explorer && (
-                    <>
-                      <Text
-                        style={[
-                          Fonts.textBold,
-                          Fonts.textSmall,
-                          Fonts.textCenter,
-                          Gutters.smallTMargin,
-                        ]}
-                      >
-                        {t('home:chain_explorer_service', {
-                          chain: blockchainConfig.name,
-                        })}
-                      </Text>
-                      <View
-                        style={[
-                          Layout.rowCenter,
-                          Common.inputWithButtonBgModalColors,
-                          styles.inputWithButton,
-                        ]}
-                      >
-                        <TextInput
-                          style={[Common.textInput, Common.textInputBgModal]}
-                          autoCapitalize="none"
-                          placeholder={
-                            backendsOriginalConfig[selectedChain].explorer
-                          }
-                          placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-                          onChangeText={onChangeChainExplorerService}
-                          value={explorerConfig}
-                          autoCorrect={false}
-                          ref={textInputB}
-                          onPressIn={() => textInputB.current?.focus()}
-                        />
-                        <TouchableOpacity
-                          accessibilityRole="button"
-                          accessibilityLabel={t('common:reset')}
-                          onPress={resetChainExplorerService}
-                          style={Common.inputIcon}
-                        >
-                          <X size={20} color={Colors.primary} />
-                        </TouchableOpacity>
-                      </View>
-                    </>
-                  )}
-                  <View style={[Gutters.tinyTMargin, Layout.colCenter]}>
+                {advancedOpen && rowDivider}
+                {advancedOpen && (
+                  <View style={styles.expanderBody}>
+                    {endpointField(
+                      t('home:ssp_relay_server'),
+                      sspConfigRelay,
+                      originalConfig.relay,
+                      onChangeSSPrelay,
+                      resetSSPRelay,
+                    )}
+                    {nodeDefault
+                      ? endpointField(
+                          t('home:chain_node_service', {
+                            chain: blockchainConfig.name,
+                          }),
+                          nodeConfig,
+                          nodeDefault,
+                          onChangeChainNodeService,
+                          resetChainNodeService,
+                        )
+                      : null}
+                    {apiDefault
+                      ? endpointField(
+                          t('home:chain_api_service', {
+                            chain: blockchainConfig.name,
+                          }),
+                          apiConfig,
+                          apiDefault,
+                          onChangeChainApiService,
+                          resetChainApiService,
+                        )
+                      : null}
+                    {explorerDefault
+                      ? endpointField(
+                          t('home:chain_explorer_service', {
+                            chain: blockchainConfig.name,
+                          }),
+                          explorerConfig,
+                          explorerDefault,
+                          onChangeChainExplorerService,
+                          resetChainExplorerService,
+                        )
+                      : null}
                     <TouchableOpacity
                       style={[
                         Common.button.outlineRounded,
                         Common.button.secondaryButton,
+                        styles.selectChainButton,
                       ]}
                       onPress={() => openChainSelect()}
                     >
-                      <Text
-                        style={[
-                          Fonts.textSmall,
-                          Fonts.textPrimary,
-                          Gutters.regularHPadding,
-                        ]}
-                      >
+                      <Text style={[Fonts.textSmall, Fonts.textPrimary]}>
                         {t('home:select_chain')}
                       </Text>
                     </TouchableOpacity>
                   </View>
+                )}
+              </Card>
+
+              {/* ABOUT — version + Powered by Flux. */}
+              {groupHeader(
+                <Info size={14} color={Colors.textGray400} />,
+                t('home:settings_about'),
+              )}
+              <Card style={styles.card}>
+                <View style={styles.aboutFooter}>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`v${packageJson.version}`}
+                    onPress={handleVersionTap}
+                  >
+                    <Text
+                      style={[
+                        Fonts.textTiny,
+                        Fonts.textCenter,
+                        Gutters.tinyBMargin,
+                      ]}
+                    >
+                      v{packageJson.version}
+                    </Text>
+                  </TouchableOpacity>
+                  <PoweredByFlux about isClickeable />
                 </View>
-              </View>
+              </Card>
+
               <View style={[Layout.justifyContentEnd]}>
                 <TouchableOpacity
                   style={[
@@ -846,11 +961,157 @@ const SettingsSection = (props: {
 
 export default SettingsSection;
 
+// Leading column geometry — the icon well and the gap before the label, reused
+// to inset the row dividers so they align to the label text (iOS convention).
+const ROW_PAD_H = 16;
+const ROW_ICON_WELL = 26;
+const ROW_LABEL_GAP = 12;
+
 const styles = StyleSheet.create({
-  inputWithButton: {
-    marginTop: 12,
+  modalTitle: {
+    marginBottom: 4,
+  },
+  // Muted, uppercase section header rendered ABOVE its card.
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 22,
+    marginBottom: 7,
+    paddingHorizontal: 6,
+  },
+  groupHeaderText: {
+    marginLeft: 7,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  // Card override: no inner padding so rows can span edge-to-edge and dividers
+  // sit flush; corners clip the inset rules cleanly.
+  card: {
     width: '100%',
-    // design tokens: radius 8 for controls
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48,
+    width: '100%',
+    paddingHorizontal: ROW_PAD_H,
+    paddingVertical: 9,
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  rowIcon: {
+    width: ROW_ICON_WELL,
+    alignItems: 'center',
+  },
+  rowLabelText: {
+    marginLeft: ROW_LABEL_GAP,
+    flexShrink: 1,
+  },
+  rowSubLabel: {
+    marginTop: 1,
+  },
+  // Vertical gap standing in for a section header on the header-less Advanced
+  // card, so its top margin matches the other groups' rhythm.
+  groupSpacer: {
+    height: 16,
+  },
+  rowTrailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    marginLeft: 10,
+  },
+  rowValueText: {
+    flexShrink: 1,
+  },
+  chevron: {
+    marginLeft: 4,
+  },
+  // Compact, brand-tinted toggle — a bespoke amber pill (on = amber track,
+  // black knob per the black-on-amber rule) sized to sit as a refined control
+  // in the row rather than the oversized native RN Switch it replaces.
+  toggleTrack: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    padding: 3,
+    justifyContent: 'center',
+  },
+  toggleKnob: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  // Hairline row divider, inset to the label column.
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: ROW_PAD_H + ROW_ICON_WELL + ROW_LABEL_GAP,
+  },
+  // Footnote below a card — the quiet secondary caption (iOS grouped list).
+  footnote: {
+    marginTop: 7,
+    paddingHorizontal: 6,
+  },
+  footnoteText: {
+    lineHeight: 17,
+    textAlign: 'left',
+  },
+  expanderBody: {
+    width: '100%',
+    paddingHorizontal: ROW_PAD_H,
+    paddingTop: 14,
+    paddingBottom: 16,
+  },
+  // One endpoint block (sub-label + field), spaced to the card's row rhythm.
+  endpointGroup: {
+    marginBottom: 14,
+  },
+  // Sub-section label — same muted, uppercase, letter-spaced type scale as the
+  // outer PREFERENCES / SECURITY / ABOUT headers, left-aligned for coherence.
+  endpointLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 7,
+  },
+  // Recessed input well — bg + hairline supplied inline so both themes match.
+  endpointField: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 44,
+    paddingLeft: 12,
+    paddingRight: 2,
+  },
+  endpointInput: {
+    flex: 1,
+    fontSize: 13,
+    paddingVertical: 11,
+    paddingRight: 4,
+  },
+  endpointReset: {
+    padding: 6,
+  },
+  // Chain selector — full width to the field grid with clear breathing room
+  // above so it reads as the closing action of the endpoint list.
+  selectChainButton: {
+    width: '100%',
+    marginTop: 6,
+  },
+  aboutFooter: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 18,
   },
 });
