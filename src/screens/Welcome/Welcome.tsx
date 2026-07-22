@@ -5,6 +5,7 @@ import { useTheme } from '../../hooks';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import { PrimaryButton } from '../../components/ui';
 import * as Keychain from 'react-native-keychain';
+import { clearSignHistory } from '../../lib/signHistory';
 
 type Props = { navigation: any };
 
@@ -20,6 +21,9 @@ function Welcome({ navigation }: Props) {
       await Keychain.resetGenericPassword({ service: 'sspkey_pw_hash' });
       await Keychain.resetGenericPassword({ service: 'fcm_key_token' });
       await Keychain.resetGenericPassword({ service: 'salt' });
+      // the wipe contract says ALL data — the encrypted sign-history blob
+      // (service sspkey_sign_history) must not linger on a "cleaned" device
+      await clearSignHistory();
     } catch (error) {
       console.log(error);
     }

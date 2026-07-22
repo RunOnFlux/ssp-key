@@ -9,7 +9,9 @@ import {
 } from 'react-native';
 import { CircleCheck, Shield, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { useDispatch } from 'react-redux';
 import { useTheme } from '../../hooks';
+import { changeTheme } from '../../store/theme';
 import BlurOverlay from '../../BlurOverlay';
 import VerificationWords from '../VerificationWords/VerificationWords';
 import Scanner from '../Scanner/Scanner';
@@ -34,6 +36,7 @@ const VerificationCode = (props: {
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const dispatch = useDispatch();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<'match' | 'mismatch' | null>(null);
 
@@ -41,15 +44,43 @@ const VerificationCode = (props: {
     props.actionStatus(false);
   };
 
+  // Scanner forces darkMode: true on mount and the theme slice is
+  // redux-persisted — without this restore (the same one Home's scanner
+  // paths do) a light-theme user would be stuck in dark mode for good.
+  const restoreTheme = () => {
+    dispatch(changeTheme({ theme: 'default', darkMode: null }));
+  };
+
   const onScanned = (scanned: string) => {
     setScanning(false);
+    restoreTheme();
     // Recompute-free local check: compare the scanned wallet code against THIS
     // device's own words. Equal ⇒ the two devices derived the same keys.
     setResult(verificationMatches(props.words, scanned) ? 'match' : 'mismatch');
   };
 
   if (scanning) {
-    return <Scanner onRead={onScanned} onClose={() => setScanning(false)} />;
+    // Full-screen Modal so the camera surface covers the viewport — rendered
+    // inline it would only fill Home's inner scroll content view.
+    return (
+      <Modal
+        animationType="fade"
+        transparent={false}
+        visible={true}
+        onRequestClose={() => {
+          setScanning(false);
+          restoreTheme();
+        }}
+      >
+        <Scanner
+          onRead={onScanned}
+          onClose={() => {
+            setScanning(false);
+            restoreTheme();
+          }}
+        />
+      </Modal>
+    );
   }
 
   const resultBanner =
