@@ -185,17 +185,23 @@ describe('parseChainSyncRequest', () => {
     expect(result).toEqual({ status: 'invalid', reason: 'duplicate_chain' });
   });
 
-  it('rejects the same xpub reused across different chains', () => {
+  it('accepts the same xpub on two different chains (testnets share slip 1 and derive identical xpubs)', () => {
     const result = parseChainSyncRequest(
       payload({
         chains: [
-          { chain: 'eth', xpubWallet: VALID_XPUB },
-          { chain: 'polygon', xpubWallet: VALID_XPUB },
+          { chain: 'sepolia', xpubWallet: VALID_XPUB },
+          { chain: 'amoy', xpubWallet: VALID_XPUB },
         ],
       }),
       IDENTITY_CHAIN,
     );
-    expect(result).toEqual({ status: 'invalid', reason: 'duplicate_xpub' });
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.request.chains.map((c) => c.chain)).toEqual([
+        'sepolia',
+        'amoy',
+      ]);
+    }
   });
 
   it('rejects missing/empty/oversized xpubs', () => {

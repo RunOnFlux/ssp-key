@@ -26,9 +26,12 @@ export const CHAIN_SYNC_MAX_CHAINS = 20;
 /**
  * Spacing between per-chain POST /v1/sync calls. The relay sync document is
  * last-write-wins keyed on walletIdentity and the wallet polls it every 1s —
- * posting faster than the poll interval could make the wallet miss a chain.
+ * posting faster than the poll interval makes the wallet miss a chain. 3s
+ * gives the poll 2-3 chances per document (1.5s left almost no margin for
+ * network jitter on already-derived chains, and a missed doc is never
+ * re-posted); still far inside the wallet's 60s per-chain stall window.
  */
-export const CHAIN_SYNC_POST_SPACING_MS = 1500;
+export const CHAIN_SYNC_POST_SPACING_MS = 3000;
 
 const MAX_XPUB_LENGTH = 3000; // solana pubkey arrays are ~950 chars; xpubs ~112
 
@@ -114,7 +117,6 @@ export function parseChainSyncRequest(
     return { status: 'invalid', reason: 'too_many_chains' };
   }
   const seen = new Set<string>();
-  const seenXpubs = new Set<string>();
   const entries: ChainSyncRequestEntry[] = [];
   for (const item of chains) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
@@ -148,12 +150,10 @@ export function parseChainSyncRequest(
     if (!xpubValid) {
       return { status: 'invalid', reason: 'bad_xpub' };
     }
-    // Each chain derives a distinct extended key; the same xpub on two
-    // chains is never produced by a well-formed wallet.
-    if (seenXpubs.has(xpubWallet)) {
-      return { status: 'invalid', reason: 'duplicate_xpub' };
-    }
-    seenXpubs.add(xpubWallet);
+    // NOTE: the same xpub CAN legitimately appear on two different chains —
+    // all testnets share slip 1, so e.g. Sepolia and Amoy (both p2sh/evm,
+    // default bip32 bytes) derive byte-identical xpubs. Only duplicate CHAIN
+    // entries are invalid (checked above).
     entries.push({
       chain: chain as keyof cryptos,
       xpubWallet,

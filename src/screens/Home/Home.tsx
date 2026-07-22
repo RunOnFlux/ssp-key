@@ -489,6 +489,15 @@ function Home({ navigation }: Props) {
     }
     console.log('[Chain Sync] Invalid request:', parsed.reason);
     displayMessage('error', t('home:err_invalid_request'));
+    // Tell the wallet immediately — without this it waits out the full 30s
+    // fallback timeout before offering per-chain QR sync.
+    postAction(
+      'chainsyncrejected',
+      buildChainSyncRejectionPayload('invalid'),
+      identityChain,
+      '',
+      sspWalletKeyInternalIdentity,
+    ).catch((error) => console.log(error));
   };
 
   const handleChainSyncRequestAction = (status: boolean) => {
@@ -497,6 +506,16 @@ function Home({ navigation }: Props) {
     } else {
       // reject — notify wallet so it can offer per-chain QR sync right away
       setChainSyncData(null);
+      // The declined batch will never drive the code screen. If identity was
+      // paired this session, show its code now (the wallet shows one), and
+      // clear the batch flag so a later pairing starts clean — leaving it set
+      // would suppress every future identity code this session.
+      batchStartedRef.current = false;
+      if (identityVerifyEntryRef.current) {
+        setBatchVerifyWords(
+          sessionVerificationWords([identityVerifyEntryRef.current]),
+        );
+      }
       postAction(
         'chainsyncrejected',
         buildChainSyncRejectionPayload('declined'),
