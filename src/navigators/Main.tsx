@@ -1,5 +1,12 @@
 import React from 'react';
-import { Home, Welcome, Create, Restore, LavaMoatTest } from '../screens';
+import {
+  Home,
+  Welcome,
+  Create,
+  Restore,
+  History,
+  LavaMoatTest,
+} from '../screens';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAppSelector } from '../hooks';
 import type { MainParamsList } from '../../@types/navigation';
@@ -18,6 +25,7 @@ const MainNavigator = () => {
       )}
       <Stack.Screen name="Create" component={Create} />
       <Stack.Screen name="Restore" component={Restore} />
+      <Stack.Screen name="History" component={History} />
       <Stack.Screen name="LavaMoatTest" component={LavaMoatTest} />
     </Stack.Navigator>
   );

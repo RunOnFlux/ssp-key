@@ -77,6 +77,16 @@ export default [
     },
   },
   {
+    // Reanimated shared values are read/written from gesture worklets created
+    // during render — the designed Reanimated pattern. react-hooks/refs
+    // cannot distinguish a SharedValue from a React ref and flags it. Scoped
+    // to the one gesture component; do not disable globally.
+    files: ['src/components/request/SlideToApprove.tsx'],
+    rules: {
+      'react-hooks/refs': 'off',
+    },
+  },
+  {
     files: ['tests/**/*.ts', 'tests/**/*.tsx'],
     rules: {
       '@typescript-eslint/unbound-method': 'off',

@@ -399,6 +399,9 @@ interface tokenInfo {
   tokenSymbol: string;
   token?: string;
   data?: string;
+  // UTXO only: number of non-change destinations. >1 means `amount` is their
+  // sum and `receiver` is the first — the approval UI warns on this.
+  recipientCount?: number;
 }
 
 export async function decodeTransactionForApproval(
@@ -490,19 +493,33 @@ export async function decodeTransactionForApproval(
       senderAddress = utxolib.address.fromOutputScript(scriptPubKey, network);
     }
 
+    // Accumulate ALL non-change recipients. The prior code overwrote
+    // txReceiver/amount on each output, so a multi-output tx displayed only
+    // the LAST recipient and understated the total sent — a compromised
+    // wallet could hide extra outputs behind one shown recipient. Now the
+    // amount is the SUM across every non-self output and recipientCount
+    // surfaces when more than one destination is present.
+    let recipientTotal = new BigNumber(0);
+    let recipientCount = 0;
     txb.tx.outs.forEach((out: output) => {
       if (out.value) {
         const address = utxolib.address.fromOutputScript(out.script, network);
         console.log(address);
         totalOutputsAmount = totalOutputsAmount.plus(new BigNumber(out.value));
         if (address !== senderAddress) {
-          txReceiver = address;
-          amount = new BigNumber(out.value)
-            .dividedBy(new BigNumber(10 ** decimals))
-            .toFixed();
+          if (recipientCount === 0) {
+            txReceiver = address;
+          }
+          recipientCount += 1;
+          recipientTotal = recipientTotal.plus(new BigNumber(out.value));
         }
       }
     });
+    if (recipientCount > 0) {
+      amount = recipientTotal
+        .dividedBy(new BigNumber(10 ** decimals))
+        .toFixed();
+    }
     if (txReceiver === 'decodingError') {
       // use first output as being the receiver
       const outOne = txb.tx.outs[0];
@@ -545,6 +562,9 @@ export async function decodeTransactionForApproval(
       amount,
       fee,
       tokenSymbol: blockchains[chain].symbol,
+      // >1 when the tx pays multiple non-change destinations; amount is their
+      // sum and receiver is the first. The approval UI warns on this.
+      recipientCount,
     };
     return txInfo;
   } catch (error) {

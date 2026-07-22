@@ -1,0 +1,20 @@
+{
+  "title": "Signing History",
+  "local_only_notice": "This log is stored only on this device, encrypted, and is never sent anywhere.",
+  "empty": "No signed actions yet. Actions you co-sign will appear here.",
+  "ref": "Ref",
+  "privacy_hide": "Hide wallet identities and references",
+  "privacy_show": "Show wallet identities and references",
+  "clear_title": "Clear history",
+  "clear_confirm": "This permanently deletes the local signing history on this device. This cannot be undone.",
+  "clear_action": "Clear",
+  "type_transaction": "Transaction signed",
+  "type_evm_message": "EVM message signed",
+  "type_wk_message": "Identity message signed",
+  "type_vault_transaction": "Vault transaction signed",
+  "type_vault_xpub": "Vault key shared",
+  "type_public_nonces": "Public nonces shared",
+  "type_recovery": "Recovery response",
+  "type_key_nonce_sync": "Key nonce sync",
+  "type_unknown": "Signed action"
+}

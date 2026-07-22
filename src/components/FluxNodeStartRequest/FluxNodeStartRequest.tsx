@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -9,11 +10,11 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
-import Icon from 'react-native-vector-icons/Feather';
+import { Server } from 'lucide-react-native';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 interface FluxNodeStartRequestProps {
   activityStatus: boolean;
   chain: string;
@@ -92,7 +93,7 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
         showsVerticalScrollIndicator={true}
       >
         {/* Header */}
-        <Icon name="server" size={36} color={Colors.textGray400} />
+        <Server size={36} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -198,12 +199,13 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
           Gutters.regularRMargin,
         ]}
       >
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || activityStatus}
           loading={authenticationOpen || activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   mono: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE_FONT,
   },
 });
 

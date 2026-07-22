@@ -47,7 +47,9 @@ const PrimaryButton = ({
           style={[{ position: 'absolute' }]}
         />
       )}
-      <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>{label}</Text>
+      <Text style={[Fonts.textRegular, Fonts.textOnPrimary, Fonts.textCenter]}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 };

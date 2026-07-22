@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import Icon from 'react-native-vector-icons/Feather';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import * as Keychain from 'react-native-keychain';
 import {
   generateAddressKeypair,
@@ -237,6 +238,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                     Fonts.textTiny,
                     Fonts.textCenter,
                     Gutters.smallMargin,
+                    { fontFamily: MONOSPACE_FONT },
                   ]}
                 >
                   {address}
@@ -246,16 +248,20 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <View>
                   <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                     <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t(
+                        redeemScriptVisible ? 'common:hide' : 'common:show',
+                      )} ${t('home:wallet_redeem_script')}`}
                       onPress={() =>
                         setRedeemScriptVisible(!redeemScriptVisible)
                       }
                       style={Common.inputIcon}
                     >
-                      <Icon
-                        name={redeemScriptVisible ? 'eye' : 'eye-off'}
-                        size={20}
-                        color={Colors.primary}
-                      />
+                      {redeemScriptVisible ? (
+                        <Eye size={20} color={Colors.primary} />
+                      ) : (
+                        <EyeOff size={20} color={Colors.primary} />
+                      )}
                     </TouchableOpacity>
                     <Text
                       style={[
@@ -283,6 +289,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                         Fonts.textTiny,
                         Fonts.textCenter,
                         Gutters.smallMargin,
+                        { fontFamily: MONOSPACE_FONT },
                       ]}
                     >
                       {redeemScriptVisible
@@ -296,16 +303,20 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <View>
                   <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                     <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t(
+                        witnessScriptVisible ? 'common:hide' : 'common:show',
+                      )} ${t('home:wallet_witness_script')}`}
                       onPress={() =>
                         setWitnessScriptVisible(!witnessScriptVisible)
                       }
                       style={Common.inputIcon}
                     >
-                      <Icon
-                        name={witnessScriptVisible ? 'eye' : 'eye-off'}
-                        size={20}
-                        color={Colors.primary}
-                      />
+                      {witnessScriptVisible ? (
+                        <Eye size={20} color={Colors.primary} />
+                      ) : (
+                        <EyeOff size={20} color={Colors.primary} />
+                      )}
                     </TouchableOpacity>
                     <Text
                       style={[
@@ -333,6 +344,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                         Fonts.textTiny,
                         Fonts.textCenter,
                         Gutters.smallMargin,
+                        { fontFamily: MONOSPACE_FONT },
                       ]}
                     >
                       {witnessScriptVisible
@@ -345,14 +357,18 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
               <View>
                 <View style={[Layout.rowCenter, Gutters.tinyRMargin]}>
                   <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t(
+                      privateKeyVisible ? 'common:hide' : 'common:show',
+                    )} ${t('home:wallet_private_key')}`}
                     onPress={() => setPrivateKeyVisible(!privateKeyVisible)}
                     style={Common.inputIcon}
                   >
-                    <Icon
-                      name={privateKeyVisible ? 'eye' : 'eye-off'}
-                      size={20}
-                      color={Colors.primary}
-                    />
+                    {privateKeyVisible ? (
+                      <Eye size={20} color={Colors.primary} />
+                    ) : (
+                      <EyeOff size={20} color={Colors.primary} />
+                    )}
                   </TouchableOpacity>
                   <Text
                     style={[Fonts.textBold, Fonts.textSmall, Fonts.textCenter]}
@@ -392,6 +408,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                         Gutters.tinyMargin,
                         Gutters.smallBMargin,
                         Gutters.smallTMargin,
+                        { fontFamily: MONOSPACE_FONT },
                       ]}
                     >
                       {privateKeyVisible
@@ -408,6 +425,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                           Fonts.textCenter,
                           Gutters.tinyMargin,
                           Gutters.smallTMargin,
+                          { fontFamily: MONOSPACE_FONT },
                         ]}
                       >
                         {privateKeyVisible
@@ -424,6 +442,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                           Fonts.textCenter,
                           Gutters.tinyMargin,
                           Gutters.smallBMargin,
+                          { fontFamily: MONOSPACE_FONT },
                         ]}
                       >
                         {privateKeyVisible

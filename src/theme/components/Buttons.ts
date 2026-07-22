@@ -4,7 +4,8 @@ import { CommonParams } from '../../../@types/theme';
 export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
   const base = {
     ...Layout.center,
-    height: 44,
+    // minHeight (not height) so long translations can wrap without clipping
+    minHeight: 44,
   };
   const rounded = {
     ...base,
@@ -21,6 +22,8 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     color: Colors.primary,
     backgroundColor: Colors.secondaryButtonBackground,
     borderColor: Colors.primary,
+    // match primary: keep wrapped labels off the border
+    ...Gutters.regularHPadding,
   };
   const danger = {
     ...base,
@@ -54,9 +57,6 @@ export default function <C>({ Colors, Gutters, Layout }: CommonParams<C>) {
     outlineRounded: {
       ...rounded,
       borderWidth: 1,
-    },
-    dashed: {
-      borderStyle: 'dashed',
     },
   });
 }

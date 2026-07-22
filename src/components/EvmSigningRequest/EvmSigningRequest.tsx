@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -6,7 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { SquarePen } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { useAppSelector } from '../../hooks';
@@ -19,7 +20,7 @@ import CryptoJS from 'crypto-js';
 import { cryptos } from '../../types';
 import Authentication from '../Authentication/Authentication';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 interface EvmSigningRequestProps {
   activityStatus: boolean;
   dataToSign: string;
@@ -159,7 +160,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="edit" size={60} color={Colors.textGray400} />
+        <SquarePen size={60} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -224,7 +225,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
                 Fonts.textCenter,
                 Fonts.textBold,
                 {
-                  fontFamily: 'monospace',
+                  fontFamily: MONOSPACE_FONT,
                   color: Colors.textGray800,
                   lineHeight: 16,
                   paddingHorizontal: 20,
@@ -286,7 +287,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
                 <Text
                   style={[
                     Fonts.textTiny,
-                    { fontFamily: 'monospace', color: Colors.textGray800 },
+                    { fontFamily: MONOSPACE_FONT, color: Colors.textGray800 },
                   ]}
                   selectable={true}
                 >
@@ -391,7 +392,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
                 style={[
                   Fonts.textTiny,
                   {
-                    fontFamily: 'monospace',
+                    fontFamily: MONOSPACE_FONT,
                     lineHeight: 16,
                     color: Colors.textGray800,
                   },
@@ -411,12 +412,13 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           Gutters.regularRMargin,
         ]}
       >
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || activityStatus}
           loading={authenticationOpen || activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"

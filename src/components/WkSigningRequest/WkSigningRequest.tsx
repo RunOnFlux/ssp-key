@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
-import Icon from 'react-native-vector-icons/Feather';
+import { Globe, Pen } from 'lucide-react-native';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 interface WkSignRequesterInfo {
   origin: string;
   siteName?: string;
@@ -67,7 +68,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
         ]}
       >
         {/* Signing Icon */}
-        <Icon name="edit-3" size={40} color={Colors.textGray400} />
+        <Pen size={40} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -158,7 +159,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                         justifyContent: 'center',
                       }}
                     >
-                      <Icon name="globe" size={14} color={Colors.textGray400} />
+                      <Globe size={14} color={Colors.textGray400} />
                     </View>
                   )}
                   <Text
@@ -188,7 +189,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
                   style={[
                     Fonts.textSmall,
                     Fonts.textBold,
-                    { fontFamily: 'monospace' },
+                    { fontFamily: MONOSPACE_FONT },
                   ]}
                   selectable={true}
                 >
@@ -238,7 +239,7 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
               style={[
                 Fonts.textTiny,
                 {
-                  fontFamily: 'monospace',
+                  fontFamily: MONOSPACE_FONT,
                   lineHeight: 16,
                 },
               ]}
@@ -251,12 +252,13 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
       </View>
 
       <View style={[Layout.justifyContentEnd]}>
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || activityStatus}
           loading={authenticationOpen || activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"

@@ -8,12 +8,10 @@ import {
   TextInput,
   StyleSheet,
   Modal,
-  Switch,
-  ActivityIndicator,
   Linking,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import Icon from 'react-native-vector-icons/Feather';
+import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -33,15 +31,18 @@ import {
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
 import { setXpubKeyIdentity, setXprivKeyIdentity } from '../../store';
 import { setInitialStateForAllChains } from '../../store';
+import { markBackupVerifyNow } from '../../contexts/BackupCheckupContext';
 
 import { useAppDispatch, useAppSelector } from '../../hooks';
 
-import Divider from '../../components/Divider/Divider';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from '../../components/CreationSteps/CreationSteps';
 import ToastNotif from '../../components/Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';
 import WeakPassword from '../../components/WeakPassword/WeakPassword';
+import ConfirmSeedWords from '../../components/ConfirmSeedWords/ConfirmSeedWords';
+import SeedPhraseBackup from '../../components/SeedPhraseBackup/SeedPhraseBackup';
+import { PrimaryButton } from '../../components/ui';
 
 type Props = {
   navigation: any;
@@ -57,13 +58,11 @@ function Create({ navigation }: Props) {
   const [mnemonic, setMnemonic] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(true);
-  const [rightIcon, setRightIcon] = useState('eye-off');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [passwordVisibilityConfirm, setPasswordVisibilityConfirm] =
     useState(true);
-  const [rightIconConfirm, setRightIconConfirm] = useState('eye-off');
   const [mnemonicShow, setMnemonicShow] = useState(false);
-  const [WSPbackedUp, setWSPbackedUp] = useState(false);
+  const [confirmStage, setConfirmStage] = useState(false);
   const [wspWasShown, setWSPwasShown] = useState(false);
   const [weakPasswordOpen, setWeakPasswordOpen] = useState(false);
   const { t } = useTranslation(['cr', 'common']);
@@ -94,23 +93,11 @@ function Create({ navigation }: Props) {
   };
 
   const handlePasswordVisibility = () => {
-    if (rightIcon === 'eye') {
-      setRightIcon('eye-off');
-      setPasswordVisibility(!passwordVisibility);
-    } else if (rightIcon === 'eye-off') {
-      setRightIcon('eye');
-      setPasswordVisibility(!passwordVisibility);
-    }
+    setPasswordVisibility((previous) => !previous);
   };
 
   const handlePasswordVisibilityConfirm = () => {
-    if (rightIconConfirm === 'eye') {
-      setRightIconConfirm('eye-off');
-      setPasswordVisibilityConfirm(!passwordVisibilityConfirm);
-    } else if (rightIconConfirm === 'eye-off') {
-      setRightIconConfirm('eye');
-      setPasswordVisibilityConfirm(!passwordVisibilityConfirm);
-    }
+    setPasswordVisibilityConfirm((previous) => !previous);
   };
 
   const setupKey = () => {
@@ -133,13 +120,11 @@ function Create({ navigation }: Props) {
     }
   }, [mnemonic]);
 
-  const onChangeWSP = () => {
-    setWSPbackedUp(!WSPbackedUp);
-  };
-
   const handleOk = () => {
-    if (WSPbackedUp && wspWasShown) {
-      storeMnemonic(mnemonic);
+    if (wspWasShown) {
+      // word challenge over the just-generated phrase proves the backup —
+      // storeMnemonic runs only after the user identifies the words
+      setConfirmStage(true);
     } else {
       displayMessage('info', t('cr:backup_needed'));
     }
@@ -151,7 +136,7 @@ function Create({ navigation }: Props) {
     setPassword('');
     setPasswordConfirm('');
     setWSPwasShown(false);
-    setWSPbackedUp(false);
+    setConfirmStage(false);
     setMnemonicShow(false);
   };
 
@@ -276,15 +261,22 @@ function Create({ navigation }: Props) {
           });
         }
         setIsModalOpen(false);
-        setIsModalOpen(false);
         setIsLoading(false);
         setMnemonic('');
         setPassword('');
         setPasswordConfirm('');
+        // reset challenge-flow flags so a re-mounted Create starts fresh
+        setConfirmStage(false);
+        setWSPwasShown(false);
+        // The create word challenge just passed — that IS the first backup
+        // verification, so a brand-new user isn't asked to re-verify right away.
+        markBackupVerifyNow(Date.now());
         navigation.navigate('Home');
       })
       .catch((error) => {
         setIsLoading(false);
+        // return to the seed phrase view so the user can retry the challenge
+        setConfirmStage(false);
         dispatch(setSSPInitialState());
         setInitialStateForAllChains();
         displayMessage('error', t('cr:err_setting_key'));
@@ -334,7 +326,7 @@ function Create({ navigation }: Props) {
           onPress={() => navigation.navigate('Welcome')}
           style={[Layout.row]}
         >
-          <Icon name="chevron-left" size={20} color={Colors.primary} />
+          <ChevronLeft size={20} color={Colors.primary} />
           <Text
             style={[Fonts.textSmall, Fonts.textPrimary, Gutters.tinyLPadding]}
           >
@@ -415,10 +407,20 @@ function Create({ navigation }: Props) {
               onPressIn={() => passwordInputA.current?.focus()}
             />
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t(
+                passwordVisibility
+                  ? 'common:show_password'
+                  : 'common:hide_password',
+              )}
               onPress={handlePasswordVisibility}
               style={Common.inputIcon}
             >
-              <Icon name={rightIcon} size={20} color={Colors.primary} />
+              {passwordVisibility ? (
+                <EyeOff size={20} color={Colors.primary} />
+              ) : (
+                <Eye size={20} color={Colors.primary} />
+              )}
             </TouchableOpacity>
           </View>
           <View
@@ -443,10 +445,20 @@ function Create({ navigation }: Props) {
               onPressIn={() => passwordInputB.current?.focus()}
             />
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t(
+                passwordVisibilityConfirm
+                  ? 'common:show_password'
+                  : 'common:hide_password',
+              )}
               onPress={handlePasswordVisibilityConfirm}
               style={Common.inputIcon}
             >
-              <Icon name={rightIconConfirm} size={20} color={Colors.primary} />
+              {passwordVisibilityConfirm ? (
+                <EyeOff size={20} color={Colors.primary} />
+              ) : (
+                <Eye size={20} color={Colors.primary} />
+              )}
             </TouchableOpacity>
           </View>
           <Text
@@ -461,20 +473,16 @@ function Create({ navigation }: Props) {
           >
             {t('cr:strong_password')}
           </Text>
-          <TouchableOpacity
-            style={[
-              Common.button.rounded,
-              Common.button.primary,
-              Gutters.regularBMargin,
-              Gutters.smallTMargin,
-            ]}
+          <PrimaryButton
+            label={t('cr:setup_key')}
+            style={[Gutters.regularBMargin, Gutters.smallTMargin]}
             onPress={() => checkPasswordStrength()}
+          />
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('Restore')}
+            hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
           >
-            <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-              {t('cr:setup_key')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
             <Text style={[Fonts.textSmall, Fonts.textPrimary]}>
               {t('cr:restore_key')}
             </Text>
@@ -506,184 +514,77 @@ function Create({ navigation }: Props) {
             <View style={[Gutters.smallBMargin]}>
               <CreationSteps step={2} isImport={false} />
             </View>
-            <View
-              style={[
-                Layout.fill,
-                Layout.relative,
-                Layout.fullWidth,
-                Layout.alignItemsCenter,
-                Gutters.regularTMargin,
-              ]}
-            >
-              <Text
-                style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-              >
-                {t('cr:key_backup_text_1')}
-              </Text>
-              <Text
-                style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-              >
-                {t('cr:key_backup_text_2')}
-              </Text>
-              <Text
-                style={[
-                  Fonts.textSmall,
-                  Gutters.smallBMargin,
-                  Fonts.textCenter,
-                ]}
-              >
-                {t('cr:key_backup_text_3')}
-              </Text>
-              <Divider color={Colors.textGray200} />
-              <Text
-                style={[
-                  Fonts.textTinyTiny,
-                  Fonts.textLight,
-                  Gutters.tinyTMargin,
-                  Fonts.textJustify,
-                  Fonts.textError,
-                ]}
-              >
-                {t('cr:ssp_key_mnemonic_sec')}
-              </Text>
+            {confirmStage && (
+              <ConfirmSeedWords
+                phrase={mnemonic}
+                isLoading={isLoading}
+                onVerified={() => storeMnemonic(mnemonic)}
+                onBack={() => setConfirmStage(false)}
+              />
+            )}
+            {!confirmStage && (
               <View
                 style={[
-                  { borderWidth: 1, borderColor: Colors.textInput },
-                  Gutters.smallTMargin,
-                  Gutters.smallBMargin,
+                  Layout.fill,
+                  Layout.relative,
+                  Layout.fullWidth,
+                  Layout.alignItemsCenter,
+                  Gutters.regularTMargin,
                 ]}
               >
                 <Text
-                  selectable={true}
                   style={[
                     Fonts.textSmall,
+                    Gutters.tinyBMargin,
                     Fonts.textCenter,
-                    Gutters.tinyMargin,
-                    Fonts.textBold,
                   ]}
                 >
-                  {mnemonicShow
-                    ? mnemonic
-                        .split(' ')
-                        .slice(0, Math.round(mnemonic.split(' ').length / 3))
-                        .join(' ')
-                    : '*** *** *** *** *** *** *** ***'}
+                  {t('cr:key_backup_text_1')}
                 </Text>
                 <Text
-                  selectable={true}
                   style={[
                     Fonts.textSmall,
+                    Gutters.tinyBMargin,
                     Fonts.textCenter,
-                    Gutters.tinyMargin,
-                    Fonts.textBold,
                   ]}
                 >
-                  {mnemonicShow
-                    ? mnemonic
-                        .split(' ')
-                        .slice(
-                          Math.round(mnemonic.split(' ').length / 3),
-                          Math.round((mnemonic.split(' ').length / 3) * 2),
-                        )
-                        .join(' ')
-                    : '*** *** *** *** *** *** *** ***'}
+                  {t('cr:key_backup_text_2')}
                 </Text>
                 <Text
-                  selectable={true}
                   style={[
                     Fonts.textSmall,
+                    Gutters.smallBMargin,
                     Fonts.textCenter,
-                    Gutters.tinyMargin,
-                    Fonts.textBold,
                   ]}
                 >
-                  {mnemonicShow
-                    ? mnemonic
-                        .split(' ')
-                        .slice(
-                          Math.round((mnemonic.split(' ').length / 3) * 2),
-                          mnemonic.split(' ').length,
-                        )
-                        .join(' ')
-                    : '*** *** *** *** *** *** *** ***'}
+                  {t('cr:key_backup_text_3')}
                 </Text>
-              </View>
-              <View style={[Gutters.tinyBMargin]}>
-                <TouchableOpacity
-                  style={[
-                    Common.button.outlineRounded,
-                    Common.button.dashed,
-                    Common.button.secondaryButton,
-                  ]}
-                  onPress={() => {
+                <SeedPhraseBackup
+                  phrase={mnemonic}
+                  visible={mnemonicShow}
+                  onToggle={() => {
                     setMnemonicShow(!mnemonicShow);
                     setWSPwasShown(true);
                   }}
-                >
-                  <Text
-                    style={[
-                      Fonts.textSmall,
-                      Fonts.textPrimary,
-                      Gutters.smallHPadding,
-                    ]}
-                  >
-                    {mnemonicShow
-                      ? t('cr:hide_mnemonic')
-                      : t('cr:show_mnemonic')}{' '}
-                    {t('common:key_seed_phrase')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <Divider color={Colors.textGray200} />
-              <View
-                style={[
-                  Layout.row,
-                  Gutters.smallTMargin,
-                  Gutters.smallLPadding,
-                ]}
-              >
-                <Switch
-                  onValueChange={onChangeWSP}
-                  value={WSPbackedUp}
-                  style={styles.toggleStyle}
                 />
-                <Text
-                  style={[
-                    Gutters.largeRPadding,
-                    Gutters.tinyBMargin,
-                    Fonts.textTiny,
-                  ]}
-                >
-                  {t('cr:seed_phrase_backed_up')}
-                </Text>
               </View>
-            </View>
+            )}
             <View style={[Layout.justifyContentEnd]}>
+              {!confirmStage && (
+                <PrimaryButton
+                  label={t('cr:setup_key')}
+                  style={[Gutters.regularBMargin, Gutters.smallTMargin]}
+                  disabled={isLoading}
+                  loading={isLoading}
+                  onPress={() => handleOk()}
+                />
+              )}
               <TouchableOpacity
-                style={[
-                  Common.button.rounded,
-                  Common.button.primary,
-                  Gutters.regularBMargin,
-                  Gutters.smallTMargin,
-                ]}
-                disabled={isLoading}
-                onPress={() => handleOk()}
-              >
-                {isLoading && (
-                  <ActivityIndicator
-                    size={'large'}
-                    style={[Gutters.largeVMargin]}
-                  />
-                )}
-                {!isLoading && (
-                  <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-                    {t('cr:setup_key')}
-                  </Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
+                accessibilityRole="button"
                 disabled={isLoading}
                 onPress={() => handleCancel()}
+                hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
+                style={[Gutters.smallTMargin]}
               >
                 <Text
                   style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
@@ -709,11 +610,9 @@ const styles = StyleSheet.create({
   inputWithButton: {
     width: '80%',
     height: 50,
-    borderRadius: 10,
+    // design tokens: radius 8 for controls
+    borderRadius: 8,
     marginTop: 16,
-  },
-  toggleStyle: {
-    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
 });
 

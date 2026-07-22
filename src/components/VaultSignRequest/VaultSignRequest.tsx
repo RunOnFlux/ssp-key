@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -9,14 +10,15 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
-import Icon from 'react-native-vector-icons/Feather';
+import { Shield } from 'lucide-react-native';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 import type { VaultDecodedTx } from '../../lib/transactions';
 import type { ProposalSimulation } from '../../lib/vaultSimulation';
 import VaultRiskStrip from './VaultRiskStrip';
 
-import { Card, PrimaryButton } from '../ui';
+import { Card } from '../ui';
+import { SlideToApprove } from '../request';
 /**
  * Format a base-unit amount (satoshis/wei) to human-readable using chain decimals.
  */
@@ -151,7 +153,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
         showsVerticalScrollIndicator={true}
       >
         {/* Header */}
-        <Icon name="shield" size={36} color={Colors.textGray400} />
+        <Shield size={36} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -304,7 +306,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
               style={[
                 Fonts.textTiny,
                 {
-                  fontFamily: 'monospace',
+                  fontFamily: MONOSPACE_FONT,
                   lineHeight: 18,
                   marginTop: 2,
                 },
@@ -339,7 +341,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             <Text
               style={[
                 Fonts.textTiny,
-                { fontFamily: 'monospace', lineHeight: 18, marginTop: 4 },
+                { fontFamily: MONOSPACE_FONT, lineHeight: 18, marginTop: 4 },
               ]}
               selectable={true}
             >
@@ -370,7 +372,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                       Fonts.textTiny,
                       Fonts.textBold,
                       {
-                        fontFamily: 'monospace',
+                        fontFamily: MONOSPACE_FONT,
                         lineHeight: 18,
                         marginTop: 2,
                       },
@@ -388,7 +390,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                     {t('home:vault_sign_amount')}
                   </Text>
                   <Text
-                    style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBold,
+                      styles.tabular,
+                      { marginTop: 2 },
+                    ]}
                   >
                     {formatAmount(recipient.amount, amountDecimals)}{' '}
                     {amountSymbol}
@@ -413,7 +420,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_fee')}
             </Text>
-            <Text style={[Fonts.textSmall, Fonts.textBold]}>
+            <Text style={[Fonts.textSmall, Fonts.textBold, styles.tabular]}>
               {formatAmount(displayFee, chainDecimals)} {chainSymbol}
             </Text>
           </Card>
@@ -454,8 +461,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           Gutters.regularRMargin,
         ]}
       >
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[
             Gutters.regularBMargin,
             Gutters.smallTMargin,
@@ -465,7 +473,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             authenticationOpen || activityStatus || solBlocked || solPending
           }
           loading={authenticationOpen || activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"
@@ -505,6 +513,9 @@ const styles = StyleSheet.create({
   card: {
     width: '90%',
     marginBottom: 12,
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
   },
 });
 

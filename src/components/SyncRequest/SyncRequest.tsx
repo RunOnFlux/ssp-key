@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { Link } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
@@ -9,7 +9,7 @@ import { blockchains } from '@storage/blockchains';
 
 import { cryptos } from '../../types';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 const SyncRequest = (props: {
   chain: keyof cryptos;
   activityStatus: boolean;
@@ -55,7 +55,7 @@ const SyncRequest = (props: {
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="link" size={60} color={Colors.textGray400} />
+        <Link size={60} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -81,12 +81,13 @@ const SyncRequest = (props: {
         </Text>
       </View>
       <View style={[Layout.justifyContentEnd]}>
-        <PrimaryButton
-          label={t('home:approve_sync')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_sync')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || props.activityStatus}
           loading={authenticationOpen || props.activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"

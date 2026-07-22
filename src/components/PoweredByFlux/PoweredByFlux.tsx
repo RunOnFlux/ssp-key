@@ -6,14 +6,47 @@ import { useTheme } from '../../hooks';
 
 type Props = {
   isClickeable?: boolean;
+  /**
+   * Inline variant for the Menu / About block: rendered in normal document
+   * flow (no absolute bottom pin, no footer shadow) so it can sit inside a
+   * scrolling section. Same logo + click behavior; version caption is owned
+   * by the host surface.
+   */
+  about?: boolean;
 };
 
-const PoweredByFlux = ({ isClickeable = false }: Props) => {
+const PoweredByFlux = ({ isClickeable = false, about = false }: Props) => {
   const { darkMode: isDark, Images, Layout, NavigationColors } = useTheme();
 
   const openFlux = () => {
     Linking.openURL('https://runonflux.io');
   };
+
+  if (about) {
+    return (
+      <View style={[Layout.fullWidth, Layout.alignItemsCenter]}>
+        {isClickeable ? (
+          <TouchableOpacity onPress={() => openFlux()}>
+            <Image
+              testID={'powered-by-flux-img'}
+              style={{ height: 18, width: 130 }}
+              source={
+                isDark ? Images.ssp.poweredByLight : Images.ssp.poweredByDark
+              }
+            />
+          </TouchableOpacity>
+        ) : (
+          <Image
+            testID={'powered-by-flux-img'}
+            style={{ height: 18, width: 130 }}
+            source={
+              isDark ? Images.ssp.poweredByLight : Images.ssp.poweredByDark
+            }
+          />
+        )}
+      </View>
+    );
+  }
 
   // const onChangeTheme = ({ theme, darkMode }: Partial<ThemeState>) => {
   //   dispatch(changeTheme({ theme, darkMode }));

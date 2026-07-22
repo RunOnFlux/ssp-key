@@ -1,12 +1,5 @@
 import React, { useEffect } from 'react';
-import {
-  ActivityIndicator,
-  View,
-  Settings,
-  I18nManager,
-  Platform,
-  Alert,
-} from 'react-native';
+import { View, Settings, I18nManager, Platform, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import * as Keychain from 'react-native-keychain';
@@ -15,6 +8,7 @@ import { getUniqueId } from 'react-native-device-info';
 import JailMonkey from 'jail-monkey';
 import { useTheme } from '../../hooks';
 import { Brand } from '../../components';
+import PillarMark from '../../components/PillarMark/PillarMark';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import { setDefaultTheme } from '../../store/theme';
 import { ApplicationScreenProps } from '../../../@types/navigation';
@@ -158,7 +152,7 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
   return (
     <View style={[Layout.fill, Layout.colCenter, Gutters.largeTMargin]}>
       <Brand />
-      <ActivityIndicator size={'large'} style={[Gutters.largeVMargin]} />
+      <PillarMark size={48} pulse={true} style={Gutters.largeVMargin} />
       <PoweredByFlux isClickeable={true} />
     </View>
   );

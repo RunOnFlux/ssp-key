@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { RefreshCw } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 /**
  * RecoveryRequest — approval UI for a wallet-issued randomParams recovery
  * request. Matches the existing request-component pattern:
@@ -59,7 +59,7 @@ const RecoveryRequest = (props: {
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="refresh-cw" size={60} color={Colors.textGray400} />
+        <RefreshCw size={60} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -93,12 +93,13 @@ const RecoveryRequest = (props: {
         </Text>
       </View>
       <View style={[Layout.justifyContentEnd]}>
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || props.activityStatus}
           loading={authenticationOpen || props.activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"
