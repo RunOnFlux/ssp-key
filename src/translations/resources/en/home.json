@@ -212,6 +212,8 @@
   "auth_confirm_nonce_sync_info": "You are about to regenerate and sync enterprise signing nonces. This will replace all existing nonces.",
   "vault_sign_success": "Vault transaction signed successfully.",
   "err_vault_sign_failed": "Failed to sign vault transaction. Try again.",
+  "err_vault_sign_mismatch": "Signing blocked: the transaction does not match what was shown for approval. Do not retry — contact support.",
+  "err_vault_sign_unverifiable": "Signing blocked: this request could not be independently verified on your device.",
   "enterprise_nonce_sync_request": "Nonce Sync Request",
   "enterprise_nonce_sync_request_info": "SSP Wallet is requesting to synchronise enterprise signing nonces. This will generate fresh nonces for vault transaction signing. No funds will be moved.",
   "enterprise_nonce_sync_started": "Syncing enterprise nonces...",
@@ -276,5 +278,6 @@
   "backup_checkup_verify_title": "Verify seed backup",
   "backup_checkup_verify_lead": "Confirm you still have your SSP Key seed words. No one can recover them for you.",
   "backup_checkup_verify_decrypt_error": "Couldn't unlock your seed words. Please try again.",
-  "backup_checkup_verified_toast": "Backup confirmed — your SSP Key seed is safe."
+  "backup_checkup_verified_toast": "Backup confirmed — your SSP Key seed is safe.",
+  "warn_multi_recipient": "This transaction pays multiple destinations. The amount shown is the total across all of them; the address shown is the first. Only approve if you expect a multi-output transaction."
 }

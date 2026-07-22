@@ -58,6 +58,7 @@ const TransactionRequest = (props: {
   const [fee, setFee] = useState('');
   const [usdRate, setUsdRate] = useState(0);
   const [decodeFailed, setDecodeFailed] = useState(false);
+  const [multiRecipient, setMultiRecipient] = useState(false);
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
 
@@ -108,6 +109,7 @@ const TransactionRequest = (props: {
         console.log(txInfo);
         setSendingAmount(txInfo.amount);
         setReceiverAddress(txInfo.receiver);
+        setMultiRecipient((txInfo.recipientCount ?? 0) > 1);
         setSenderAddress(txInfo.sender);
         setToken(txInfo.token || '');
         setTokenSymbol(txInfo.tokenSymbol);
@@ -355,6 +357,16 @@ const TransactionRequest = (props: {
                 label={recipientLabel}
                 address={recipientAddress}
               />
+            ) : null}
+            {multiRecipient ? (
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  { color: Colors.error, marginBottom: 8 },
+                ]}
+              >
+                {t('home:warn_multi_recipient')}
+              </Text>
             ) : null}
             {fee ? (
               <FeeRow

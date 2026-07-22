@@ -11,6 +11,10 @@ import {
   getLibId,
 } from '../../../lib/wallet';
 import { continueVaultSigningSchnorrMultisig } from '../../../lib/evmSigning';
+import {
+  userOpHashMatches,
+  messageDigestMatches,
+} from '../../../lib/userOpVerify';
 import { signMessage } from '../../../lib/relayAuth';
 import { setSspKeyEnterprisePublicNonces } from '../../../store/ssp';
 import { cryptos, publicPrivateNonce } from '../../../types';
@@ -508,7 +512,39 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       parsedAllSignerKeys &&
       parsedAllSignerNonces
     ) {
-      // EVM: Complete Schnorr multi-party signing
+      // EVM: Complete Schnorr multi-party signing.
+      // TRUSTLESS BINDING (parity with the Solana vault path): the approval UI
+      // decodes/displays evmUserOp (tx) or signMessage (personal_sign), but the
+      // Schnorr sign consumes rawUnsignedTx — a hash the SDK's fromJson trusts
+      // and never recomputes. Recompute it on-device from what was DISPLAYED
+      // and refuse to sign on mismatch, so a compromised wallet can't show a
+      // benign operation while the key co-signs a vault-draining one. The
+      // recompute uses the same aa-core entry-point hash the wallet builds
+      // with, so a legitimate operation always matches.
+      if (vaultSigningData.signMessage !== undefined) {
+        if (
+          !messageDigestMatches(
+            vaultSigningData.signMessage,
+            vaultSigningData.rawUnsignedTx,
+          )
+        ) {
+          throw new Error(t('home:err_vault_sign_mismatch'));
+        }
+      } else if (vaultSigningData.evmUserOp !== undefined) {
+        const userOp =
+          typeof vaultSigningData.evmUserOp === 'string'
+            ? (JSON.parse(vaultSigningData.evmUserOp) as unknown)
+            : vaultSigningData.evmUserOp;
+        if (
+          !userOpHashMatches(userOp, vaultChain, vaultSigningData.rawUnsignedTx)
+        ) {
+          throw new Error(t('home:err_vault_sign_mismatch'));
+        }
+      } else {
+        // No decodable preimage accompanied the hash — cannot verify what we
+        // would sign. Fail closed rather than blind-sign.
+        throw new Error(t('home:err_vault_sign_unverifiable'));
+      }
       // Derive keypair at the transaction's source address index
       const evmAddressIndex = parsedInputDetails[0]?.addressIndex ?? 0;
       const signingKeypair = generateAddressKeypair(
@@ -654,10 +690,40 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       }
 
       // Parse wallet-signed TX into TransactionBuilder
-      const txb = utxolib.TransactionBuilder.fromTransaction(
-        utxolib.Transaction.fromHex(walletSignedHex, network),
-        network,
-      );
+      const signedTx = utxolib.Transaction.fromHex(walletSignedHex, network);
+      const txb = utxolib.TransactionBuilder.fromTransaction(signedTx, network);
+
+      // TRUSTLESS BINDING (parity with the Solana vault path): the approval UI
+      // decodes/displays rawUnsignedTx, but the key SIGNS the outputs of
+      // walletSignedHex. A compromised wallet could show a benign
+      // rawUnsignedTx and submit a walletSignedHex with attacker outputs.
+      // Assert the OUTPUT SET (value + script) the key is about to commit to
+      // matches exactly what was displayed, and refuse on any divergence.
+      if (vaultSigningData.rawUnsignedTx) {
+        type TxOut = { value: number; script: Buffer };
+        const displayedOuts = (
+          utxolib.Transaction.fromHex(
+            vaultSigningData.rawUnsignedTx,
+            network,
+          ) as { outs: TxOut[] }
+        ).outs;
+        const signedOuts = (signedTx as { outs: TxOut[] }).outs;
+        const sameOutputs =
+          displayedOuts.length === signedOuts.length &&
+          displayedOuts.every((out: TxOut, i: number) => {
+            const signed = signedOuts[i];
+            return (
+              out.value === signed.value &&
+              Buffer.compare(out.script, signed.script) === 0
+            );
+          });
+        if (!sameOutputs) {
+          throw new Error(t('home:err_vault_sign_mismatch'));
+        }
+      } else {
+        // Nothing to verify the signed outputs against — fail closed.
+        throw new Error(t('home:err_vault_sign_unverifiable'));
+      }
 
       // Validate input details match TX inputs
       if (parsedInputDetails.length === 0) {
