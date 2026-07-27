@@ -4,14 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Divider from '../../components/Divider/Divider';
-import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
+import PoweredByFlux, {
+  POWERED_BY_FLUX_HEIGHT,
+} from '../../components/PoweredByFlux/PoweredByFlux';
 import Scanner from '../../components/Scanner/Scanner';
 import Navbar from '../../components/Navbar/Navbar';
 import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
-import { cryptos, utxo } from '../../types';
+import { chainStateKey, cryptos, utxo } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
 import * as CryptoJS from 'crypto-js';
@@ -29,11 +31,17 @@ import { setXpubKey, setXprivKey } from '../../store';
 import {
   setSspWalletKeyInternalIdentityWitnessScript,
   setSspWalletKeyInternalIdentityPubKey,
+  setSspKeyRecoveryKeys,
 } from '../../store/ssp';
+import { deriveRecoveryAccount } from '../../lib/recoveryAccount';
 
 import { useAppSelector, useAppDispatch, useRelayAuth } from '../../hooks';
 import { useSocket } from '../../hooks/useSocket';
-import { usePendingRequests } from './hooks/usePendingRequests';
+import {
+  usePendingRequests,
+  routeRelayAction,
+  type PendingRequestKind,
+} from './hooks/usePendingRequests';
 import {
   getFCMToken,
   refreshFCMToken,
@@ -64,6 +72,26 @@ import { MainScreenProps } from '../../../@types/navigation';
 
 type Props = MainScreenProps<'Home'>;
 
+// Stable fallback for a chain key with no registered store slice. Module
+// level on purpose: useSelector compares by reference, so a fresh object
+// literal in the selector would re-render on every dispatch.
+const EMPTY_CHAIN_KEYS: chainStateKey = {
+  xpubWallet: '',
+  xpubKey: '',
+  xprivKey: '',
+};
+
+// What we post back when a request names a chain this build does not know,
+// so SSP Wallet stops waiting instead of timing out. A sync request has no
+// rejection action — the wallet already falls back on its own.
+const UNSUPPORTED_CHAIN_REJECTIONS: Partial<
+  Record<PendingRequestKind, string>
+> = {
+  tx: 'txrejected',
+  publicnonces: 'publicnoncesrejected',
+  evmsigning: 'evmsigningrejected',
+};
+
 function Home({ navigation }: Props) {
   // focusability of inputs
   const alreadyMounted = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
@@ -75,6 +103,8 @@ function Home({ navigation }: Props) {
   const nonceReplenishInProgressRef = useRef(false);
   const {
     seedPhrase,
+    xprivRecovery,
+    xpubRecovery,
     sspWalletKeyInternalIdentity,
     sspWalletKeyInternalIdentityWitnessScript,
     sspWalletKeyInternalIdentityPubKey,
@@ -103,6 +133,27 @@ function Home({ navigation }: Props) {
   const [evmSigningSignature, setEvmSigningSignature] = useState<string | null>(
     null,
   );
+  // A request naming a chain this build does not register is dropped before
+  // it can reach state (usePendingRequests / isSupportedChain) — telling the
+  // wallet keeps it from waiting out its full timeout. Declared above the
+  // usePendingRequests call because the hook takes it; it only ever runs from
+  // an effect or an async handler, long after postAction below is initialised.
+  const rejectUnsupportedChainRequest = (
+    kind: PendingRequestKind,
+    chain: string,
+  ) => {
+    const rejectionAction = UNSUPPORTED_CHAIN_REJECTIONS[kind];
+    if (!rejectionAction || !sspWalletKeyInternalIdentity) {
+      return;
+    }
+    postAction(
+      rejectionAction,
+      '{}',
+      chain,
+      '',
+      sspWalletKeyInternalIdentity,
+    ).catch((error) => console.log(error));
+  };
   // Pending-request state + socket -> pending-request mapping effects.
   // Mechanical relocation from this file — see usePendingRequests.
   const {
@@ -131,6 +182,8 @@ function Home({ navigation }: Props) {
     setFluxNodeStartData,
     keyNonceSyncDialogOpen,
     setKeyNonceSyncDialogOpen,
+    recoveryRequestData,
+    setRecoveryRequestData,
     handleTxRequest,
     handlePublicNoncesRequest,
     handleEvmSigningRequest,
@@ -138,12 +191,19 @@ function Home({ navigation }: Props) {
     handleSyncRequest,
     ingestVaultSigningRequest,
     clearVaultSigningState,
-  } = usePendingRequests(identityChain);
+  } = usePendingRequests(identityChain, rejectUnsupportedChainRequest);
+  // Safety net for the store lookups below. Chains from the relay are
+  // validated before they reach state, but identityChain is persisted, so an
+  // upgrade that drops a chain could leave a key with no registered slice —
+  // and destructuring undefined here throws in the render body, which with no
+  // ErrorBoundary in the app takes the whole screen down until state clears.
   const { xpubWallet, xpubKey, xprivKey } = useAppSelector(
-    (state) => state[activeChain],
+    (state) => state[activeChain] ?? EMPTY_CHAIN_KEYS,
   );
   // Get identity chain state for migration
-  const identityChainState = useAppSelector((state) => state[identityChain]);
+  const identityChainState = useAppSelector(
+    (state) => state[identityChain] ?? EMPTY_CHAIN_KEYS,
+  );
   const { publicNonces, enterprisePublicNonces } = useAppSelector(
     (state) => state.ssp,
   );
@@ -179,12 +239,22 @@ function Home({ navigation }: Props) {
     clearVaultXpubRequest,
     clearVaultSigningRequest,
     clearKeyNonceSyncRequest,
-    recoveryRequest,
-    clearRecoveryRequest,
+    recoveryRequest: socketRecoveryRequest,
+    clearRecoveryRequest: clearSocketRecoveryRequest,
     chainSyncRequest: socketChainSyncRequest,
     clearChainSyncRequest,
   } = useSocket();
   const { createWkIdentityAuth } = useRelayAuth();
+
+  // A recovery request can arrive over either transport: the socket keeps it
+  // in SocketContext, the GET /v1/action poll (handleRefresh, also the
+  // notification-open handler) in usePendingRequests because the context
+  // exposes no setter. Consume whichever one arrived, clear both.
+  const recoveryRequest = socketRecoveryRequest ?? recoveryRequestData;
+  const clearRecoveryRequest = () => {
+    clearSocketRecoveryRequest?.();
+    setRecoveryRequestData(null);
+  };
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -433,6 +503,49 @@ function Home({ navigation }: Props) {
     }
   };
 
+  // Provision the recovery account for installs created before it existed.
+  // Runs once, here, because deriving it needs the mnemonic — the recovery
+  // request path itself only ever uses the stored account key.
+  useEffect(() => {
+    if (!seedPhrase || xprivRecovery) {
+      return;
+    }
+    void (async () => {
+      try {
+        const idData = await Keychain.getGenericPassword({
+          service: 'enc_key',
+        });
+        const passwordData = await Keychain.getGenericPassword({
+          service: 'sspkey_pw',
+        });
+        if (!passwordData || !idData) {
+          return;
+        }
+        const pwForEncryption =
+          idData.password +
+          CryptoJS.AES.decrypt(passwordData.password, idData.password).toString(
+            CryptoJS.enc.Utf8,
+          );
+        const mnemonicPhrase = CryptoJS.AES.decrypt(
+          seedPhrase,
+          pwForEncryption,
+        ).toString(CryptoJS.enc.Utf8);
+        if (!mnemonicPhrase) {
+          return;
+        }
+        const keys = deriveRecoveryAccount(mnemonicPhrase, identityChain);
+        dispatch(
+          setSspKeyRecoveryKeys({
+            xpriv: CryptoJS.AES.encrypt(keys.xpriv, pwForEncryption).toString(),
+            xpub: CryptoJS.AES.encrypt(keys.xpub, pwForEncryption).toString(),
+          }),
+        );
+      } catch (error) {
+        console.log(error);
+      }
+    })();
+  }, [seedPhrase, xprivRecovery, identityChain, dispatch]);
+
   const displayMessage = (
     type: string,
     content: string,
@@ -642,6 +755,8 @@ function Home({ navigation }: Props) {
   // exactly the values the former inline closures captured.
   const actionCtx: HomeActionContext = {
     seedPhrase,
+    xprivRecovery,
+    xpubRecovery,
     identityChain,
     identityChainState,
     sspWalletKeyInternalIdentity,
@@ -693,7 +808,18 @@ function Home({ navigation }: Props) {
     clearVaultSigningRequest,
     recoveryRequest,
     clearRecoveryRequest,
+    createWkAuth: (action, wkIdentity, requestBody) =>
+      createWkIdentityAuth(action, wkIdentity, requestBody) as Promise<Record<
+        string,
+        unknown
+      > | null>,
   };
+  // Latest context for effects that must not re-run on every render (actionCtx
+  // is rebuilt each time).
+  const actionCtxRef = useRef(actionCtx);
+  useEffect(() => {
+    actionCtxRef.current = actionCtx;
+  });
   const approvePublicNoncesAction = async (chain: keyof cryptos) =>
     signingActions.approvePublicNoncesAction(actionCtx, chain);
   const approveRecoveryRequest = async () =>
@@ -701,6 +827,38 @@ function Home({ navigation }: Props) {
 
   const denyRecoveryRequest = async () =>
     recoveryActions.denyRecoveryRequest(actionCtx);
+
+  // Publish the recovery account xpub to its persistent relay record, once the
+  // account exists and this device is paired with the fields the relay request
+  // is signed with. The wallet may need the record at a moment this app is not
+  // running, so it cannot be request-driven. Cheap and idempotent — the relay
+  // upserts one row.
+  //
+  // Only a confirmed publish counts as done: the witness script and identity
+  // pubkey are written by a separate async effect, so an early attempt can find
+  // them missing, and a retry has to remain possible.
+  const recoveryPubPublishedRef = useRef(false);
+  useEffect(() => {
+    if (
+      !xpubRecovery ||
+      !sspWalletKeyInternalIdentity ||
+      !sspWalletKeyInternalIdentityWitnessScript ||
+      !sspWalletKeyInternalIdentityPubKey
+    ) {
+      return;
+    }
+    if (recoveryPubPublishedRef.current) return;
+    void recoveryActions
+      .publishRecoveryXpub(actionCtxRef.current)
+      .then((published) => {
+        recoveryPubPublishedRef.current = published;
+      });
+  }, [
+    xpubRecovery,
+    sspWalletKeyInternalIdentity,
+    sspWalletKeyInternalIdentityWitnessScript,
+    sspWalletKeyInternalIdentityPubKey,
+  ]);
 
   /**
    * Wired from RecoveryRequest component after the user tapped Approve and
@@ -927,57 +1085,37 @@ function Home({ navigation }: Props) {
           }/v1/action/${sspWalletKeyInternalIdentity}`,
         );
         console.log('result', result.data);
-        if (result.data.action === 'tx') {
-          handleTxRequest(
-            result.data.payload,
-            result.data.chain,
-            result.data.path,
-            result.data.utxos,
-          );
-        } else if (result.data.action === 'publicnoncesrequest') {
-          handlePublicNoncesRequest(result.data.chain);
-        } else if (result.data.action === 'evmsigningrequest') {
-          try {
-            const evmData = JSON.parse(result.data.payload);
-            handleEvmSigningRequest(evmData);
-          } catch {
-            displayMessage('error', t('home:err_invalid_request'));
-          }
-        } else if (result.data.action === 'wksigningrequest') {
-          try {
-            const wkData = JSON.parse(result.data.payload);
-            handleWkSigningRequest(wkData);
-          } catch {
-            displayMessage('error', t('home:err_invalid_request'));
-          }
-        } else if (result.data.action === 'enterprisevaultsign') {
-          try {
-            const vaultSignData = JSON.parse(result.data.payload);
-            // Shared ingestion (defensive JSON-string field parsing +
-            // trustless decode) — same code path as the socket effect in
-            // usePendingRequests.
-            ingestVaultSigningRequest(
-              vaultSignData,
-              '[Vault Signing] handleRefresh recipients type:',
-            );
-          } catch {
-            displayMessage('error', t('home:err_invalid_request'));
-          }
-        } else if (result.data.action === 'enterprisevaultxpub') {
-          try {
-            const vaultData = JSON.parse(result.data.payload);
-            setVaultXpubData(vaultData);
-          } catch {
-            displayMessage('error', t('home:err_invalid_request'));
-          }
-        } else if (result.data.action === 'enterprisekeynoncesync') {
-          setKeyNonceSyncDialogOpen(true);
-        } else if (result.data.action === 'chainsyncrequest') {
-          if (typeof result.data.payload === 'string') {
-            handleChainSyncRequestPayload(result.data.payload);
-          } else {
-            displayMessage('error', t('home:err_invalid_request'));
-          }
+        // Single dispatch table shared with the socket transport's action
+        // list (see routeRelayAction / KEY_RELAY_ACTIONS) so this path cannot
+        // silently drop actions the relay push-notifies about again.
+        const handled = routeRelayAction(result.data, {
+          onTx: handleTxRequest,
+          onPublicNoncesRequest: handlePublicNoncesRequest,
+          onEvmSigningRequest: handleEvmSigningRequest,
+          onWkSigningRequest: handleWkSigningRequest,
+          onVaultSigningRequest: (vaultSignData) => {
+            try {
+              // Shared ingestion (defensive JSON-string field parsing +
+              // trustless decode) — same code path as the socket effect in
+              // usePendingRequests.
+              ingestVaultSigningRequest(
+                vaultSignData,
+                '[Vault Signing] handleRefresh recipients type:',
+              );
+            } catch {
+              displayMessage('error', t('home:err_invalid_request'));
+            }
+          },
+          onVaultXpubRequest: setVaultXpubData,
+          onFluxNodeStartRequest: setFluxNodeStartData,
+          onKeyNonceSyncRequest: () => setKeyNonceSyncDialogOpen(true),
+          onRecoveryRequest: setRecoveryRequestData,
+          onChainSyncRequest: handleChainSyncRequestPayload,
+          onInvalidPayload: () =>
+            displayMessage('error', t('home:err_invalid_request')),
+        });
+        if (!handled && result.data.action) {
+          console.log('[Home] Unhandled relay action:', result.data.action);
         }
       } else {
         // here open sync needed modal
@@ -986,6 +1124,17 @@ function Home({ navigation }: Props) {
       }
     } catch (error) {
       console.log(error);
+      // The relay answers 404 when nothing is pending, so the error branch is
+      // ALSO the normal branch. Without splitting them a device that cannot
+      // reach the relay looks exactly like "nothing to approve" and the user
+      // never learns to fall back to the QR path.
+      if (axios.isAxiosError(error) && !error.response) {
+        displayMessage('error', t('home:err_relay_unreachable'), 6000);
+      } else if (axios.isAxiosError(error) && error.response?.status === 404) {
+        displayMessage('info', t('home:no_pending_actions'));
+      } else {
+        displayMessage('error', t('home:err_refresh_failed'));
+      }
     } finally {
       setIsRefreshing(false);
       // Non-blocking: replenish enterprise nonces on every refresh
@@ -1028,7 +1177,26 @@ function Home({ navigation }: Props) {
 
     try {
       displayMessage('info', t('home:enterprise_nonce_sync_started'));
-      await checkAndReplenishEnterpriseNonces(true);
+      // The replenish reports its outcome instead of throwing (it must not be
+      // able to break the fire-and-forget refresh path), so check the result:
+      // without this the user and the wallet were told the sync succeeded even
+      // when nothing was submitted to the relay.
+      const result = await checkAndReplenishEnterpriseNonces(true);
+      if (!result.ok || result.generated === 0) {
+        console.log(
+          '[Enterprise Nonces] Key nonce sync did not submit nonces:',
+          result.reason,
+        );
+        displayMessage('error', t('home:enterprise_nonce_sync_failed'));
+        await postAction(
+          'enterprisekeynoncesyncrejected',
+          'enterprisekeynoncesyncrejected',
+          identityChain,
+          '',
+          sspWalletKeyInternalIdentity,
+        ).catch(() => {});
+        return;
+      }
       displayMessage('success', t('home:enterprise_nonce_sync_success'));
       await postAction(
         'enterprisekeynoncesynced',
@@ -1361,7 +1529,13 @@ function Home({ navigation }: Props) {
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="always"
         extraScrollHeight={20}
-        contentContainerStyle={[Layout.fullWidth, Layout.scrollSpaceBetween]}
+        contentContainerStyle={[
+          Layout.fullWidth,
+          Layout.scrollSpaceBetween,
+          // The pinned footer is opaque; without this the Reject link under a
+          // request's slide-to-approve can end up behind it.
+          { paddingBottom: POWERED_BY_FLUX_HEIGHT },
+        ]}
       >
         <View
           style={[

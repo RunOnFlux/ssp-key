@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { RefreshCw } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
+import VerificationWords from '../VerificationWords/VerificationWords';
+import { recoveryVerificationWords } from '../../lib/verificationCode';
+import { type RecoveryRequestPayload } from '../../lib/recoveryHandler';
 
 import { SlideToApprove } from '../request';
 /**
@@ -18,14 +21,23 @@ import { SlideToApprove } from '../request';
  *      wrap + relay post.
  *
  * Reject flows straight through to `actionStatus(false)` (no auth needed).
+ *
+ * The screen also shows the six-word code for this exchange, derived from the
+ * request's own public fields. SSP Wallet shows the same words while it waits,
+ * so a request altered in transit is visible before approval.
  */
 const RecoveryRequest = (props: {
   activityStatus: boolean;
   actionStatus: (status: boolean) => void;
+  request: RecoveryRequestPayload;
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
+  const verifyWords = useMemo(
+    () => recoveryVerificationWords(props.request.pkEph, props.request.nonce),
+    [props.request.pkEph, props.request.nonce],
+  );
 
   const approve = () => {
     console.log('Approve recovery');
@@ -91,8 +103,15 @@ const RecoveryRequest = (props: {
         >
           {t('home:ssp_recovery_request_warning')}
         </Text>
+        <View style={Gutters.regularTMargin}>
+          <VerificationWords
+            heading={t('home:recovery_verify_heading')}
+            body={t('home:recovery_verify_body')}
+            words={verifyWords}
+          />
+        </View>
       </View>
-      <View style={[Layout.justifyContentEnd]}>
+      <View style={[Layout.selfStretch, Layout.justifyContentEnd]}>
         <SlideToApprove
           label={t('home:slide_to_approve')}
           accessibilityLabel={t('home:approve_request')}

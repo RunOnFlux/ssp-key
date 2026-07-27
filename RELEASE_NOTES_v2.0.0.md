@@ -33,9 +33,10 @@ they were.
 
 ## Security
 
-- No changes to signing, key derivation, seed handling, or encryption —
+- No changes to how transactions are signed or how your seed is stored —
   verified by independent audit, including token-level proof that the large
   internal refactor changed zero behavior.
 - All dependencies updated and exactly pinned; every fixable vulnerability
   resolved.
-- Works with SSP Wallet v1 and v2 — update in any order.
+- Works with SSP Wallet v1 and v2 — update in any order; a few v2 features
+  switch on once both apps are updated.

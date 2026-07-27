@@ -30,9 +30,16 @@ export function looksLikeXpub(input: string): boolean {
   return xpubRegex.test(input) || isSolanaPubkeyArrayString(input);
 }
 
+// A wallet segment is always `typeIndex-addressIndex` (both numeric, see
+// generateAddressDetailsForSending). Anything else in that position is the
+// first segment of the payload itself, not a wallet specifier.
+const walletSegmentRegex = /^\d+-\d+$/;
+
 // Splits a `chain:wallet:data` / `chain:data` / `data` input into its
 // parts. Exact logic the manual-input and QR-scan handlers in Home.tsx
 // both used inline (they were verbatim-identical copies).
+// The payload may itself contain colons — EVM operations arrive as
+// JSON-stringified userOps — so the tail is always rejoined in full.
 export function splitSSPInput(
   input: string,
   defaultChain: keyof cryptos,
@@ -44,13 +51,13 @@ export function splitSSPInput(
   if (splittedInput[1]) {
     // all is default
     chain = splittedInput[0] as keyof cryptos;
-    if (splittedInput[1].includes('-')) {
-      // wallet specifiedd
+    if (walletSegmentRegex.test(splittedInput[1])) {
+      // wallet specified
       wallet = splittedInput[1];
-      dataToProcess = splittedInput[2];
+      dataToProcess = splittedInput.slice(2).join(':');
     } else {
       // wallet default
-      dataToProcess = splittedInput[1];
+      dataToProcess = splittedInput.slice(1).join(':');
     }
   } else {
     // only data

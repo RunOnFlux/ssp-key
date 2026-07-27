@@ -70,7 +70,7 @@ const PublicNoncesRequest = (props: {
           {t('home:ssp_public_nonces_request')}
         </Text>
       </View>
-      <View style={[Layout.justifyContentEnd]}>
+      <View style={[Layout.selfStretch, Layout.justifyContentEnd]}>
         <SlideToApprove
           label={t('home:slide_to_approve')}
           accessibilityLabel={t('home:approve_request')}

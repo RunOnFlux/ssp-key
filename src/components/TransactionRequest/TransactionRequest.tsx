@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MONOSPACE_FONT } from '../../lib/typography';
 import {
+  ActivityIndicator,
   View,
   Text,
   TouchableOpacity,
@@ -38,6 +39,12 @@ import {
  * Raw calldata hex is no longer primary content — it lives in Advanced.
  * Decode failures show a clear blocking error state instead of silently
  * auto-rejecting (approval is impossible; reject stays reachable).
+ *
+ * Payload identity is the safety invariant here: what is DISPLAYED and what
+ * approval SIGNS must always be the same transaction. A new rawTx therefore
+ * resets every displayed field synchronously and only the newest decode may
+ * write state (see decodeSeqRef); until it resolves the screen shows the
+ * loading state and approval is disabled.
  */
 const TransactionRequest = (props: {
   rawTx: string;
@@ -46,7 +53,13 @@ const TransactionRequest = (props: {
   activityStatus: boolean;
   actionStatus: (status: boolean) => void;
 }) => {
-  const alreadyRunning = useRef(false); // as of react strict mode, useEffect is triggered twice. This is a hack to prevent that without disabling strict mode
+  // Monotonic decode token. Every decode run captures its value; a run whose
+  // token is no longer current has been superseded by a newer payload and
+  // must not write ANY state. This replaces an earlier boolean re-entrancy
+  // guard that returned from the whole effect while a decode was in flight —
+  // a request arriving mid-decode was then never decoded at all, so the
+  // screen kept showing transaction #1 while approval signed #2.
+  const decodeSeqRef = useRef(0);
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [sendingAmount, setSendingAmount] = useState('');
@@ -57,6 +70,10 @@ const TransactionRequest = (props: {
   const [txData, setTxData] = useState('');
   const [fee, setFee] = useState('');
   const [usdRate, setUsdRate] = useState(0);
+  // Starts true and only ever goes false for a decode that is still current:
+  // no payload has been read yet, so there is nothing safe to display or
+  // approve (fail closed — a component mounted without a rawTx stays here).
+  const [decoding, setDecoding] = useState(true);
   const [decodeFailed, setDecodeFailed] = useState(false);
   const [multiRecipient, setMultiRecipient] = useState(false);
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
@@ -64,6 +81,11 @@ const TransactionRequest = (props: {
 
   const approve = () => {
     console.log('Approve');
+    if (decoding || decodeFailed) {
+      // Single choke point for BOTH approve paths (slider and a completed
+      // Authentication): what was not decoded and displayed is never signed.
+      return;
+    }
     props.actionStatus(true);
   };
   const openAuthentication = () => {
@@ -83,22 +105,35 @@ const TransactionRequest = (props: {
     }
   };
   useEffect(() => {
-    if (alreadyRunning.current) {
-      return;
-    }
     if (!props.rawTx || !props.chain) {
+      setDecoding(true); // nothing to decode — stay in the fail-closed state
       return;
     }
-    alreadyRunning.current = true;
-    // Cancellation flag for the fire-and-forget USD rate fetch — an in-flight
-    // fetch from a previous tx must never set a rate used with values from a
-    // different transaction while a new transaction is displayed.
-    let cancelled = false;
+    // Claim this decode run. Anything still in flight for an older payload is
+    // superseded from here on and its results are dropped.
+    decodeSeqRef.current += 1;
+    const decodeSeq = decodeSeqRef.current;
+    const isCurrentDecode = () => decodeSeqRef.current === decodeSeq;
     console.log('Transaction Request');
     console.log(props.rawTx);
     console.log(props.chain);
-    setUsdRate(0); // never show a stale fiat value on a re-used component
+    // Reset EVERY displayed field synchronously, before the first await: while
+    // this decode runs the screen must show the loading state, never a value
+    // that belongs to the payload the user is no longer being asked about.
+    setDecoding(true);
     setDecodeFailed(false);
+    // An Authentication started for the previous payload must not carry over
+    // into this one — the user re-approves what is now on screen.
+    setAuthenticationOpen(false);
+    setSendingAmount('');
+    setReceiverAddress('');
+    setSenderAddress('');
+    setMultiRecipient(false);
+    setToken('');
+    setTokenSymbol('');
+    setTxData('');
+    setFee('');
+    setUsdRate(0); // never show a stale fiat value on a re-used component
     void (async function () {
       try {
         const txInfo = await decodeTransactionForApproval(
@@ -106,6 +141,9 @@ const TransactionRequest = (props: {
           props.chain,
           props.utxos,
         );
+        if (!isCurrentDecode()) {
+          return; // a newer payload arrived — these values are not on screen
+        }
         console.log(txInfo);
         setSendingAmount(txInfo.amount);
         setReceiverAddress(txInfo.receiver);
@@ -128,7 +166,7 @@ const TransactionRequest = (props: {
         // block or fail the decode/approval path.
         if (txInfo.amount !== 'decodingError') {
           void getCryptoUsdRate(props.chain).then((rate) => {
-            if (cancelled) {
+            if (!isCurrentDecode()) {
               return; // effect re-ran for a new tx — this rate is stale
             }
             if (rate > 0) {
@@ -148,14 +186,21 @@ const TransactionRequest = (props: {
         }
       } catch (error) {
         console.log(error);
+        if (!isCurrentDecode()) {
+          return; // failure of a superseded payload — never shown or blocked on
+        }
         displayMessage('error', t('home:err_tx_decode'));
         setDecodeFailed(true);
       } finally {
-        alreadyRunning.current = false;
+        if (isCurrentDecode()) {
+          setDecoding(false);
+        }
       }
     })();
     return () => {
-      cancelled = true;
+      // Props changed or unmounted: bumping the token discards whatever this
+      // run still has in flight (including its USD rate fetch).
+      decodeSeqRef.current += 1;
     };
   }, [props.rawTx, props.chain]);
   const displayMessage = (type: string, content: string) => {
@@ -297,6 +342,22 @@ const TransactionRequest = (props: {
             title={t('home:tx_decode_failed_title')}
             messages={[t('home:tx_decode_failed_desc')]}
           />
+        ) : decoding ? (
+          // Nothing has been decoded from the CURRENT payload yet, so there is
+          // nothing to show: the value blocks below stay unmounted rather than
+          // render blanks (or, before the reset above, the previous payload).
+          <View style={[Layout.alignItemsCenter, Gutters.regularTMargin]}>
+            <ActivityIndicator size="large" color={Colors.textGray400} />
+            <Text
+              style={[
+                Fonts.textSmall,
+                Fonts.textCenter,
+                { color: Colors.textGray400, marginTop: 8 },
+              ]}
+            >
+              {t('home:tx_decoding')}
+            </Text>
+          </View>
         ) : (
           <>
             {isAllowanceGrant && humanCalldata?.unlimited ? (
@@ -462,18 +523,24 @@ const TransactionRequest = (props: {
           </>
         )}
       </ScrollView>
-      <View style={[Layout.justifyContentEnd]}>
+      <View style={[Layout.selfStretch, Layout.justifyContentEnd]}>
         {!decodeFailed && (
           <SlideToApprove
             label={t('home:slide_to_approve')}
-            accessibilityLabel={t('home:a11y_approve_send', {
-              amount: sendingAmount,
-              symbol: displaySymbol,
-              recipient: recipientAddress,
-            })}
+            // While decoding there is no amount/recipient to announce — and
+            // nothing may be approved either, hence disabled below.
+            accessibilityLabel={
+              decoding
+                ? t('home:tx_decoding')
+                : t('home:a11y_approve_send', {
+                    amount: sendingAmount,
+                    symbol: displaySymbol,
+                    recipient: recipientAddress,
+                  })
+            }
             style={[Gutters.regularBMargin, Gutters.smallTMargin]}
-            disabled={authenticationOpen || props.activityStatus}
-            loading={authenticationOpen || props.activityStatus}
+            disabled={decoding || authenticationOpen || props.activityStatus}
+            loading={decoding || authenticationOpen || props.activityStatus}
             onComplete={() => openAuthentication()}
           />
         )}

@@ -8,6 +8,23 @@ import { publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
 
 /**
+ * Outcome of a replenish attempt. The function never rejects — the
+ * fire-and-forget refresh caller must not be able to break Home — so callers
+ * that need to know whether nonces actually reached the relay (the manual
+ * "Sync Nonces" action) read this instead of relying on a thrown error.
+ */
+export interface EnterpriseNonceSyncResult {
+  ok: boolean;
+  generated: number;
+  reason?:
+    | 'no_identity'
+    | 'busy'
+    | 'not_needed'
+    | 'no_credentials'
+    | 'submit_failed';
+}
+
+/**
  * Check enterprise nonce pool and replenish if below threshold.
  * Generates nonces locally, stores private parts in Keychain,
  * submits public parts to relay.
@@ -18,16 +35,20 @@ import type { HomeActionContext } from './types';
 export const checkAndReplenishEnterpriseNonces = async (
   ctx: HomeActionContext,
   forceReplace = false,
-) => {
+): Promise<EnterpriseNonceSyncResult> => {
   const {
     sspWalletKeyInternalIdentity,
     nonceReplenishInProgressRef,
     enterprisePublicNonces,
     dispatch,
   } = ctx;
-  if (!sspWalletKeyInternalIdentity) return;
+  if (!sspWalletKeyInternalIdentity) {
+    return { ok: false, generated: 0, reason: 'no_identity' };
+  }
   if (nonceReplenishInProgressRef.current) {
-    if (!forceReplace) return;
+    if (!forceReplace) {
+      return { ok: false, generated: 0, reason: 'busy' };
+    }
     // Force replace: wait for background replenish to finish before proceeding
     const maxWait = 30_000;
     const start = Date.now();
@@ -37,7 +58,9 @@ export const checkAndReplenishEnterpriseNonces = async (
     ) {
       await new Promise((r) => setTimeout(r, 200));
     }
-    if (nonceReplenishInProgressRef.current) return; // timed out
+    if (nonceReplenishInProgressRef.current) {
+      return { ok: false, generated: 0, reason: 'busy' }; // timed out
+    }
   }
   nonceReplenishInProgressRef.current = true;
   try {
@@ -50,7 +73,9 @@ export const checkAndReplenishEnterpriseNonces = async (
         `https://${sspConfig().relay}/v1/nonces/status/${sspWalletKeyInternalIdentity}`,
       );
       const poolData = statusRes.data?.data;
-      if (!forceReplace && !poolData?.replenishNeeded?.key) return;
+      if (!forceReplace && !poolData?.replenishNeeded?.key) {
+        return { ok: true, generated: 0, reason: 'not_needed' };
+      }
       serverAvailable = poolData?.key?.available ?? 0;
     } catch {
       // If status check fails, proceed with replenishment based on local count
@@ -63,7 +88,9 @@ export const checkAndReplenishEnterpriseNonces = async (
     const passwordData = await Keychain.getGenericPassword({
       service: 'sspkey_pw',
     });
-    if (!encryptionKey || !passwordData) return;
+    if (!encryptionKey || !passwordData) {
+      return { ok: false, generated: 0, reason: 'no_credentials' };
+    }
 
     const passwordDecrypted = CryptoJS.AES.decrypt(
       passwordData.password,
@@ -142,7 +169,9 @@ export const checkAndReplenishEnterpriseNonces = async (
       TARGET_COUNT - serverAvailable,
       0,
     );
-    if (toGenerate <= 0) return;
+    if (toGenerate <= 0) {
+      return { ok: true, generated: 0, reason: 'not_needed' };
+    }
 
     // Generate new nonces
     const newNonces: publicPrivateNonce[] = [];
@@ -172,9 +201,13 @@ export const checkAndReplenishEnterpriseNonces = async (
     console.log(
       `[Enterprise Nonces] Key: Generated and submitted ${toGenerate} nonces (server had ${serverAvailable}, local had ${existingNonces.length})`,
     );
+    return { ok: true, generated: toGenerate };
   } catch (error) {
-    // Non-critical — don't block Key functionality
+    // Non-critical — don't block Key functionality. The mandatory POST
+    // /v1/nonces lands here too, so report the failure instead of swallowing
+    // it: callers that told the user a sync started must not claim success.
     console.log('[Enterprise Nonces] Key replenish error:', error);
+    return { ok: false, generated: 0, reason: 'submit_failed' };
   } finally {
     nonceReplenishInProgressRef.current = false;
   }

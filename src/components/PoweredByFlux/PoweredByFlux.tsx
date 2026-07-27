@@ -4,6 +4,17 @@ import { View, TouchableOpacity, Linking, Image } from 'react-native';
 // import { changeTheme, ThemeState } from '../../store/theme';
 import { useTheme } from '../../hooks';
 
+/**
+ * Height of the pinned footer variant: paddingTop 8 + logo 18 + paddingBottom
+ * 12. The footer is absolutely positioned with an OPAQUE background, so every
+ * screen that renders it must reserve this much room at the end of its
+ * scrollable content. Otherwise the footer covers whatever comes last — and
+ * because its background matches the page, the covered control looks absent
+ * rather than obscured. Restore's "Import Key" button was hidden exactly this
+ * way. Exported so the inset cannot drift from the real height.
+ */
+export const POWERED_BY_FLUX_HEIGHT = 38;
+
 type Props = {
   isClickeable?: boolean;
   /**

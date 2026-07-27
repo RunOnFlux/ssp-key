@@ -22,7 +22,15 @@ export interface VaultDecodedTx {
   tokenSymbol?: string;
   tokenContract?: string;
   tokenDecimals?: number;
+  /**
+   * Set whenever this device could NOT establish what the transaction does.
+   * The approval screen must fail closed on it — show the error and refuse to
+   * sign — because an unverified payload is exactly what the Key exists to
+   * catch.
+   */
   error?: string;
+  /** Raw inner calldata, when it could not be decoded into recipients. */
+  callData?: string;
 }
 
 /**
@@ -233,9 +241,23 @@ function decodeVaultEvmTransaction(
             amount: decodedContract.args[1].toString(),
           },
         ];
+      } else {
+        // Decodable, but NOT a transfer — approve / transferFrom /
+        // setApprovalForAll grant spend RIGHTS rather than moving funds. Leaving
+        // recipients empty rendered "No recipient data available" next to an
+        // ENABLED slide-to-approve, so surface it as a decode error instead:
+        // the approval screen then shows its error card and refuses to sign.
+        result.callData = contractData;
+        result.error = `Contract call is not a token transfer (${
+          decodedContract?.functionName ?? 'unknown'
+        })`;
       }
     } catch {
-      result.recipients = [{ address: executeTarget, amount: '0' }];
+      // Not ERC-20 calldata at all. This used to fabricate a single recipient at
+      // the execute target with amount '0' and set NO error, so an arbitrary
+      // contract call was presented as a harmless zero-value transfer.
+      result.callData = decodedData.args[2];
+      result.error = 'Could not decode the contract call';
     }
   }
 
@@ -493,12 +515,10 @@ export async function decodeTransactionForApproval(
       senderAddress = utxolib.address.fromOutputScript(scriptPubKey, network);
     }
 
-    // Accumulate ALL non-change recipients. The prior code overwrote
-    // txReceiver/amount on each output, so a multi-output tx displayed only
-    // the LAST recipient and understated the total sent — a compromised
-    // wallet could hide extra outputs behind one shown recipient. Now the
-    // amount is the SUM across every non-self output and recipientCount
-    // surfaces when more than one destination is present.
+    // Accumulate ALL non-change recipients, so the amount is the SUM across
+    // every non-self output and recipientCount surfaces when more than one
+    // destination is present. The approval screen has to describe the whole
+    // transaction, not one output of it.
     let recipientTotal = new BigNumber(0);
     let recipientCount = 0;
     txb.tx.outs.forEach((out: output) => {
@@ -688,11 +708,18 @@ export async function decodeEVMTransactionForApproval(
           .args[2] as `0x${string}`;
         // most likely we are dealing with a contract call, sending some erc20 token
         // docode args[2] which is operation
-        const decodedDataContract: decodedAbiData = decodeFunctionData({
-          abi: erc20Abi,
-          data: contractData,
-        }) as unknown as decodedAbiData; // Cast decodedDataContract to decodedAbiData type.
-        console.log(decodedDataContract);
+        let decodedDataContract: decodedAbiData | null = null;
+        try {
+          decodedDataContract = decodeFunctionData({
+            abi: erc20Abi,
+            data: contractData,
+          }) as unknown as decodedAbiData; // Cast decodedDataContract to decodedAbiData type.
+        } catch {
+          // Not an ERC-20 call at all (arbitrary calldata aimed at a contract
+          // we happen to recognise as a token). Handled below by retaining the
+          // raw calldata rather than failing the whole decode.
+          decodedDataContract = null;
+        }
         if (
           decodedDataContract &&
           decodedDataContract.functionName === 'transfer' &&
@@ -703,6 +730,19 @@ export async function decodeEVMTransactionForApproval(
           txInfo.amount = new BigNumber(decodedDataContract.args[1].toString())
             .dividedBy(new BigNumber(10 ** decimals))
             .toFixed();
+        } else {
+          // NOT a plain transfer — approve / transferFrom / setApprovalForAll /
+          // unrecognised calldata. Retain the raw inner calldata so the approval
+          // screen runs decodeErc20Calldata and raises its allowance-risk or
+          // unreadable-calldata banner. Without this, `data` stayed empty and
+          // an unlimited approve() rendered as "Send 0 <SYMBOL>" — a
+          // spend-rights grant presented as moving no funds.
+          //
+          // Deliberately NOT set for a recognised transfer: the amount decoded
+          // above uses relay-supplied decimals, which decodeErc20Calldata will
+          // not guess, so re-deriving it there would downgrade a good display
+          // to raw base units.
+          txInfo.data = contractData;
         }
       } else {
         // this is not a standard token transfer, treat it as a contract execution and only display data information
@@ -793,8 +833,15 @@ async function decodeSOLTransactionForApproval(
 
     let vaultPubkey = accountKeys[0]; // convention: vault is at index 0
     let userReceiver = '';
-    let userAmountBase = '0';
     let feeBase = '0';
+    // ACCUMULATORS, not last-write-wins: the total and recipient count have to
+    // cover every user transfer in the proposal, matching how the paymaster
+    // branch already sums its fee. recipientCount is returned so the approval
+    // screen's warn_multi_recipient banner reflects Solana proposals too.
+    let recipientTotal = new BigNumber(0);
+    let recipientCount = 0;
+    let sawNative = false;
+    const splMints = new Set<string>();
     let userTokenSymbol = tokenSymbol; // default to native
     let userTokenContract: string | undefined;
     let isSpl = false; // explicit — don't rely on userTokenSymbol === tokenSymbol
@@ -828,9 +875,14 @@ async function decodeSOLTransactionForApproval(
         if (toPubkey.equals(paymasterPubkey)) {
           feeBase = new BigNumber(feeBase).plus(amountLamports).toFixed();
         } else {
+          // ACCUMULATE, do not overwrite. See the note at recipientCount below.
           vaultPubkey = accountKeys[fromIdx];
-          userReceiver = toPubkey.toBase58();
-          userAmountBase = amountLamports;
+          if (recipientCount === 0) {
+            userReceiver = toPubkey.toBase58();
+          }
+          recipientCount += 1;
+          recipientTotal = recipientTotal.plus(amountLamports);
+          sawNative = true;
         }
         continue;
       }
@@ -861,12 +913,18 @@ async function decodeSOLTransactionForApproval(
               'SPL decimals mismatch: wallet-supplied decimals differ from signed transaction',
             );
           }
-          userReceiver = destAta.toBase58();
-          userAmountBase = ixData.readBigUInt64LE(1).toString();
+          if (recipientCount === 0) {
+            userReceiver = destAta.toBase58();
+          }
+          recipientCount += 1;
+          recipientTotal = recipientTotal.plus(
+            ixData.readBigUInt64LE(1).toString(),
+          );
           userTokenSymbol = tokenMeta?.symbol || '(token)';
           userTokenContract = ixMint.toBase58(); // trustless from signed bytes
           verifiedDecimals = ixDecimals; // authoritative — on-chain re-verifies
           isSpl = true;
+          splMints.add(ixMint.toBase58());
           continue;
         }
         if (tag === 3 && ixData.length >= 9 && accountIdxs.length >= 3) {
@@ -874,17 +932,38 @@ async function decodeSOLTransactionForApproval(
           // + decimals are NOT in the bytes — wallet metadata is unverified.
           const destAta = accountKeys[accountIdxs[1]];
           if (!destAta) continue;
-          userReceiver = destAta.toBase58();
-          userAmountBase = ixData.readBigUInt64LE(1).toString();
+          if (recipientCount === 0) {
+            userReceiver = destAta.toBase58();
+          }
+          recipientCount += 1;
+          recipientTotal = recipientTotal.plus(
+            ixData.readBigUInt64LE(1).toString(),
+          );
           userTokenSymbol = tokenMeta?.symbol || '(token)';
           userTokenContract = tokenMeta?.mint;
           verifiedDecimals = tokenMeta?.decimals;
           isSpl = true;
+          if (tokenMeta?.mint) {
+            splMints.add(tokenMeta.mint);
+          }
           continue;
         }
         continue;
       }
     }
+
+    // A single amount + symbol cannot honestly represent a proposal that mixes
+    // native SOL with SPL transfers, or mixes two different mints. Rather than
+    // show one of them and sign all of them, fail closed — TransactionRequest
+    // renders a visible decode error and approval becomes impossible while
+    // reject stays reachable.
+    if ((sawNative && isSpl) || splMints.size > 1) {
+      throw new Error(
+        'Solana proposal mixes transfer types or mints — cannot be represented as one amount',
+      );
+    }
+
+    const userAmountBase = recipientTotal.toFixed();
 
     // SPL amounts use decimals from the signed TransferChecked bytes when
     // available (authoritative), else wallet-supplied (legacy Transfer).
@@ -906,6 +985,7 @@ async function decodeSOLTransactionForApproval(
       fee: displayFee,
       tokenSymbol: userTokenSymbol,
       token: userTokenContract,
+      recipientCount,
     };
   } catch (e) {
     console.log('[decodeSOLTransactionForApproval] error', e);

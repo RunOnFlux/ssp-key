@@ -239,7 +239,13 @@ const SlideToApprove = ({
 
 const styles = StyleSheet.create({
   track: {
-    width: '100%',
+    // alignSelf, NOT width: '100%'. Every child of this View is absolutely
+    // positioned, so the track has zero intrinsic width — and a percentage
+    // width resolves to 0 in Yoga whenever the parent's width is indefinite
+    // (which it is for any caller inside an alignItems:'center' column).
+    // That collapsed the whole control to its two 1pt borders. Stretching
+    // also respects the caller's horizontal margins, which 100% does not.
+    alignSelf: 'stretch',
     borderWidth: 1,
     justifyContent: 'center',
     overflow: 'hidden',

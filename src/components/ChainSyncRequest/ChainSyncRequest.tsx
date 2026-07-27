@@ -99,7 +99,7 @@ const ChainSyncRequest = (props: {
           messages={[t('home:chainsync_info_msg')]}
         />
       </ScrollView>
-      <View style={[Layout.justifyContentEnd]}>
+      <View style={[Layout.selfStretch, Layout.justifyContentEnd]}>
         <SlideToApprove
           label={t('home:slide_to_approve')}
           accessibilityLabel={t('home:approve_chainsync')}

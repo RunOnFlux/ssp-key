@@ -119,9 +119,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   // proposal-record amounts (verified at creation).
   const solBlocked = solDecodeMismatch === true;
   // Fail closed: while the async byte-decode is still pending there is no
-  // verdict yet — keep Approve disabled (no attack banner, just disabled)
-  // until the decode resolves.
+  // verdict yet, so Approve stays disabled (no banner, just disabled) until the
+  // decode resolves.
   const solPending = solDecodePending === true;
+  // Fail closed on ANY decode error, matching TransactionRequest: nothing this
+  // device cannot read is approvable. Reject stays reachable.
+  const decodeBlocked = !!decodedTx?.error;
 
   const approve = () => {
     actionStatus(true);
@@ -456,6 +459,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
       {/* Action Buttons — fixed at bottom */}
       <View
         style={[
+          Layout.selfStretch,
           Layout.justifyContentEnd,
           Gutters.regularLMargin,
           Gutters.regularRMargin,
@@ -467,10 +471,14 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           style={[
             Gutters.regularBMargin,
             Gutters.smallTMargin,
-            solBlocked || solPending ? { opacity: 0.4 } : {},
+            solBlocked || solPending || decodeBlocked ? { opacity: 0.4 } : {},
           ]}
           disabled={
-            authenticationOpen || activityStatus || solBlocked || solPending
+            authenticationOpen ||
+            activityStatus ||
+            solBlocked ||
+            solPending ||
+            decodeBlocked
           }
           loading={authenticationOpen || activityStatus}
           onComplete={() => openAuthentication()}

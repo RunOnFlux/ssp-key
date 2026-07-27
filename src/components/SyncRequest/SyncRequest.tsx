@@ -56,12 +56,15 @@ const SyncRequest = (props: {
         ]}
       >
         <Link size={60} color={Colors.textGray400} />
+        {/* Screen heading — the title color token, so this H1 does not render
+            in the same gray as the paragraph beneath it. */}
         <Text
           style={[
             Fonts.textBold,
             Fonts.textCenter,
             Fonts.textRegular,
             Gutters.smallMargin,
+            { color: Colors.textGray800 },
           ]}
         >
           {t('home:sync_request')}
@@ -80,7 +83,7 @@ const SyncRequest = (props: {
           })}
         </Text>
       </View>
-      <View style={[Layout.justifyContentEnd]}>
+      <View style={[Layout.selfStretch, Layout.justifyContentEnd]}>
         <SlideToApprove
           label={t('home:slide_to_approve')}
           accessibilityLabel={t('home:approve_sync')}

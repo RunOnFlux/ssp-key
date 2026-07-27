@@ -10,6 +10,14 @@ export interface seedPhraseState {
   publicNonces: string;
   enterprisePublicNonces: string;
   identityChain: 'btc';
+  /**
+   * Encrypted xpriv/xpub of the recovery account m/48'/coin'/99'/scriptType',
+   * whose keys are what the recovery flow releases. Stored rather than derived
+   * on demand so that path works from this key alone and never the mnemonic.
+   * See lib/recoveryAccount.ts.
+   */
+  xprivRecovery: string;
+  xpubRecovery: string;
 }
 
 const initialStateSeedPhrase: seedPhraseState = {
@@ -22,6 +30,8 @@ const initialStateSeedPhrase: seedPhraseState = {
   publicNonces: '',
   enterprisePublicNonces: '',
   identityChain: 'btc',
+  xprivRecovery: '',
+  xpubRecovery: '',
 };
 
 const seedPhraseSlice = createSlice({
@@ -59,6 +69,13 @@ const seedPhraseSlice = createSlice({
     setSspKeyEnterprisePublicNonces: (state, action: PayloadAction<string>) => {
       state.enterprisePublicNonces = action.payload;
     },
+    setSspKeyRecoveryKeys: (
+      state,
+      action: PayloadAction<{ xpriv: string; xpub: string }>,
+    ) => {
+      state.xprivRecovery = action.payload.xpriv;
+      state.xpubRecovery = action.payload.xpub;
+    },
     setSSPInitialState: (state) => {
       state.seedPhrase = '';
       state.sspWalletKeyInternalIdentity = '';
@@ -69,6 +86,8 @@ const seedPhraseSlice = createSlice({
       state.identityChain = 'btc';
       state.publicNonces = '';
       state.enterprisePublicNonces = '';
+      state.xprivRecovery = '';
+      state.xpubRecovery = '';
     },
   },
 });
@@ -82,6 +101,7 @@ export const {
   setSspKeyInternalIdentity,
   setSspKeyPublicNonces,
   setSspKeyEnterprisePublicNonces,
+  setSspKeyRecoveryKeys,
   setSSPInitialState,
 } = seedPhraseSlice.actions;
 

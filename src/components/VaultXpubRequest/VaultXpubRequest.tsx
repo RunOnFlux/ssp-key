@@ -133,6 +133,7 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
 
       <View
         style={[
+          Layout.selfStretch,
           Layout.justifyContentEnd,
           Gutters.regularLMargin,
           Gutters.regularRMargin,

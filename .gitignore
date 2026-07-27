@@ -74,3 +74,6 @@ yarn-error.log
 
 .nyc_output/
 coverage/
+
+# dev-only screenshot artifacts (regenerable — any *-shots dir + capture scripts)
+.*-shots/

@@ -46,13 +46,25 @@ const RiskBanner = ({
   onPress,
   children,
 }: RiskBannerProps) => {
-  const { Colors, Fonts } = useTheme();
+  const { Colors, Fonts, darkMode } = useTheme();
   const color =
     severity === 'critical'
       ? Colors.error
       : severity === 'high'
         ? Colors.warning
         : Colors.textGray400;
+  // The border keeps the bright semantic amber/red, but as 14pt TEXT on the
+  // light banner fill those are 2.2:1 (warning) and 3.8:1 (error) — below AA,
+  // on the label that flags the block as security-critical. Light mode
+  // therefore titles in the deep ramp step (5.0:1 / 6.5:1 on #FFFFFF); dark
+  // mode keeps the bright value, which is already ~7:1 on the dark fill.
+  const titleColor = darkMode
+    ? color
+    : severity === 'critical'
+      ? Colors.errorDeep
+      : severity === 'high'
+        ? Colors.warningDeep
+        : color;
   const HeaderIcon =
     icon ??
     (severity === 'critical'
@@ -62,12 +74,14 @@ const RiskBanner = ({
         : Info);
   const header = (
     <>
-      <HeaderIcon size={14} color={color} />
+      {/* icon takes the title color — it sits on the label's baseline, so the
+          two must match, and the bright amber is 2.2:1 on the light fill */}
+      <HeaderIcon size={14} color={titleColor} />
       <Text
         style={[
           Fonts.textTiny,
           Fonts.textBold,
-          { color, marginLeft: 6, flexShrink: 1 },
+          { color: titleColor, marginLeft: 6, flexShrink: 1 },
         ]}
       >
         {title}

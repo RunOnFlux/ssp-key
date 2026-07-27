@@ -32,9 +32,83 @@ import {
   sessionVerificationWords,
   type VerifyEntry,
 } from '../../../lib/pairingVerification';
+import { signRecoveryXpub } from '../../../lib/recoveryPublish';
 import { CHAIN_SYNC_POST_SPACING_MS } from '../../../lib/chainSyncRequest';
 import { cryptos, syncSSPRelay, publicNonce } from '../../../types';
 import type { HomeActionContext } from './types';
+
+/**
+ * The recovery account xpub for the sync payload, with this Key's signature
+ * over it. SSP Wallet verifies that signature against the identity key it
+ * derives from the xpub it already holds, so the value it caches does not
+ * depend on trusting whatever delivered it.
+ *
+ * Returns empty fields until the recovery account is provisioned; the wallet
+ * then simply has nothing to cache yet.
+ */
+const recoveryFieldsForSync = (
+  xpubRecovery: string,
+  xprivKeyIdentity: string,
+  wkIdentity: string,
+  identityChain: keyof cryptos,
+  pwForEncryption: string,
+): { recoveryXpub?: string; xpubSignature?: string } => {
+  if (!xpubRecovery || !wkIdentity || !xprivKeyIdentity) return {};
+  try {
+    const recoveryXpub = CryptoJS.AES.decrypt(
+      xpubRecovery,
+      pwForEncryption,
+    ).toString(CryptoJS.enc.Utf8);
+    if (!recoveryXpub) return {};
+    return {
+      recoveryXpub,
+      xpubSignature: signRecoveryXpub({
+        xprivKeyIdentity,
+        wkIdentity,
+        recoveryXpub,
+        identityChain,
+      }),
+    };
+  } catch (error) {
+    // Never block a sync on this: the wallet asks again on the next one.
+    console.log('[recovery] could not attach recovery xpub to sync', error);
+    return {};
+  }
+};
+
+// Generate a fresh Schnorr public-nonce pool, store it (encrypted) and return
+// just the public parts for the wallet.
+//
+// The pool is PER-INSTALL, not per-chain: one redux slot here (store/ssp
+// publicNonces), one localForage key in SSP Wallet — every EVM chain draws
+// from the same pool. So a batch sync must generate it exactly ONCE and report
+// the SAME public parts for every EVM chain it answers; regenerating per chain
+// would leave this device holding only the last chain's pool while the wallet
+// kept an earlier one, and every EVM send would then use a nonce the other
+// side never had (the wallet waits forever, no error).
+const generateKeyPublicNonces = (
+  dispatch: HomeActionContext['dispatch'],
+  pwForEncryption: string,
+): publicNonce[] => {
+  const ppNonces = [];
+  // generate and replace nonces
+  for (let i = 0; i < 50; i += 1) {
+    // max 50 txs
+    const nonce = generatePublicNonce();
+    ppNonces.push(nonce);
+  }
+  const stringifiedNonces = JSON.stringify(ppNonces);
+  const encryptedNonces = CryptoJS.AES.encrypt(
+    stringifiedNonces,
+    pwForEncryption,
+  ).toString();
+  dispatch(setSspKeyPublicNonces(encryptedNonces));
+  // on publicNonces delete k and kTwo, leave only public parts
+  return ppNonces.map((nonce) => ({
+    kPublic: nonce.kPublic,
+    kTwoPublic: nonce.kTwoPublic,
+  }));
+};
 
 // Shared per-chain sync core: decrypts the key xpub for the chain, runs the
 // Solana on-the-fly migration when needed, generates + verifies the first
@@ -43,6 +117,10 @@ import type { HomeActionContext } from './types';
 // (generateAddressesForActiveChain) and looped over by the batch chain sync
 // (processChainSyncBatch) — same crypto calls, same sync POST, unchanged
 // endpoint so old wallets keep working.
+//
+// sharedPublicNonces: returns the batch flow's ONE pool for the whole batch,
+// generating it on first use (see generateKeyPublicNonces). Omitted by the
+// single-chain flow, which generates its own pool exactly as before.
 export const syncChainToRelay = async (
   ctx: HomeActionContext,
   chain: keyof cryptos,
@@ -50,13 +128,23 @@ export const syncChainToRelay = async (
   pwForEncryption: string,
   xpubKeyEncrypted: string,
   xprivKeyEncrypted: string,
+  sharedPublicNonces?: () => publicNonce[],
 ) => {
   const {
     sspWalletInternalIdentity,
     sspWalletKeyInternalIdentity,
     sspKeyInternalIdentity,
+    xpubRecovery,
     dispatch,
   } = ctx;
+  const xprk = CryptoJS.AES.decrypt(xprivKeyEncrypted, pwForEncryption);
+  const recoveryFields = recoveryFieldsForSync(
+    xpubRecovery,
+    xprk.toString(CryptoJS.enc.Utf8),
+    sspWalletKeyInternalIdentity,
+    ctx.identityChain,
+    pwForEncryption,
+  );
   const xpk = CryptoJS.AES.decrypt(xpubKeyEncrypted, pwForEncryption);
   let xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
   // For Solana chains, "xpub" is actually a JSON-stringified array of
@@ -118,28 +206,15 @@ export const syncChainToRelay = async (
     // Scripts from first address (index 0) - not strictly needed but extra assurance
     redeemScript: addrInfo.redeemScript,
     witnessScript: addrInfo.witnessScript,
+    ...recoveryFields,
   };
   // == EVM ==
   if (blockchains[chain].chainType === 'evm') {
-    const ppNonces = [];
-    // generate and replace nonces
-    for (let i = 0; i < 50; i += 1) {
-      // max 50 txs
-      const nonce = generatePublicNonce();
-      ppNonces.push(nonce);
-    }
-    const stringifiedNonces = JSON.stringify(ppNonces);
-    const encryptedNonces = CryptoJS.AES.encrypt(
-      stringifiedNonces,
-      pwForEncryption,
-    ).toString();
-    dispatch(setSspKeyPublicNonces(encryptedNonces));
-    // on publicNonces delete k and kTwo, leave only public parts
-    const pNs: publicNonce[] = ppNonces.map((nonce) => ({
-      kPublic: nonce.kPublic,
-      kTwoPublic: nonce.kTwoPublic,
-    }));
-    syncData.publicNonces = pNs;
+    // one pool per install: reuse the batch's pool when the caller supplied
+    // one, otherwise generate (and store) a fresh one for this single chain
+    syncData.publicNonces = sharedPublicNonces
+      ? sharedPublicNonces()
+      : generateKeyPublicNonces(dispatch, pwForEncryption);
   }
   // == EVM end
   await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
@@ -324,6 +399,13 @@ export const generateAddressesForSyncIdentity = (
         // Scripts from first address (index 0) - not strictly needed but extra assurance
         redeemScript: addrInfo.redeemScript,
         witnessScript: addrInfo.witnessScript,
+        ...recoveryFieldsForSync(
+          ctx.xpubRecovery,
+          xprivKeyDecrypted,
+          generatedSspWalletKeyInternalIdentity.address,
+          identityChain,
+          pwForEncryption,
+        ),
       };
       await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
       // Capture the identity chain's verification entry so it can be folded
@@ -355,6 +437,7 @@ export const processChainSyncBatch = async (ctx: HomeActionContext) => {
     setChainSyncData,
     setBatchVerifyWords,
     identityVerifyEntryRef,
+    dispatch,
     displayMessage,
     t,
   } = ctx;
@@ -387,6 +470,17 @@ export const processChainSyncBatch = async (ctx: HomeActionContext) => {
       walletXpub: string;
       keyXpub: string;
     }[] = [];
+    // ONE nonce pool for the whole batch — every EVM chain of this batch
+    // reports the same public parts, so the wallet ends up on exactly the pool
+    // this device kept no matter which of the batch's sync docs it observed
+    // (see generateKeyPublicNonces). Created on first use so a batch with no
+    // EVM chain — or one that never gets as far as posting — leaves the
+    // existing pool alone.
+    let pool: publicNonce[] | undefined;
+    const batchPublicNonces = () => {
+      pool ??= generateKeyPublicNonces(dispatch, pwForEncryption);
+      return pool;
+    };
     for (let i = 0; i < total; i += 1) {
       const entry = request.chains[i];
       setChainSyncProgress({
@@ -438,6 +532,7 @@ export const processChainSyncBatch = async (ctx: HomeActionContext) => {
           pwForEncryption,
           chainXpubKey,
           chainXprivKey,
+          batchPublicNonces,
         );
         verifyEntries.push(synced);
       } catch (error) {

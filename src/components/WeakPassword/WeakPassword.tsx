@@ -47,12 +47,15 @@ const WeakPassword = (props: {
             ]}
           >
             <CircleAlert size={60} color={Colors.textGray400} />
+            {/* Heading — the title color token, matching every other modal
+                title instead of the body-copy gray. */}
             <Text
               style={[
                 Fonts.textBold,
                 Fonts.textRegular,
                 Gutters.smallMargin,
                 Fonts.textCenter,
+                { color: Colors.textGray800 },
               ]}
             >
               {t('cr:weak_password')}

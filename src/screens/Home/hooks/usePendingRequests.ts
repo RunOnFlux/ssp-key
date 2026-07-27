@@ -19,6 +19,215 @@ import {
   VaultSolDecodeState,
 } from '../../../lib/vaultSolanaDecode';
 import { useSocket } from '../../../hooks/useSocket';
+import type { RecoveryRequestPayload } from '../../../lib/recoveryHandler';
+
+/**
+ * True when `chain` is a chain this build actually registers. The redux
+ * store creates exactly one slice per key of `blockchains`, so an unknown
+ * chain id makes `state[chain]` undefined — and Home (plus EvmSigningRequest,
+ * SyncSuccess, ...) destructure that slice straight in the render body, which
+ * throws and, with no ErrorBoundary in the app, takes the screen down for as
+ * long as the request state lives. Every chain that arrives from the relay
+ * MUST pass this before it is written to state.
+ */
+export const isSupportedChain = (chain: unknown): chain is keyof cryptos =>
+  typeof chain === 'string' &&
+  Object.prototype.hasOwnProperty.call(blockchains, chain);
+
+/** The pending-request kinds that carry a chain from the relay. */
+export type PendingRequestKind = 'tx' | 'publicnonces' | 'evmsigning' | 'sync';
+
+/** One action as delivered by the relay (socket event or GET /v1/action). */
+export interface RelayActionEnvelope {
+  action?: unknown;
+  payload?: unknown;
+  chain?: unknown;
+  path?: unknown;
+  utxos?: unknown;
+}
+
+/**
+ * Every Key-directed relay action, in the order routeRelayAction handles
+ * them. SocketContext listens for exactly this set — tests/lib/
+ * relayActionRouting.test.ts asserts the two cannot drift apart again.
+ */
+export const KEY_RELAY_ACTIONS = [
+  'tx',
+  'publicnoncesrequest',
+  'evmsigningrequest',
+  'wksigningrequest',
+  'enterprisevaultsign',
+  'enterprisevaultxpub',
+  'enterprisefluxnodestart',
+  'enterprisekeynoncesync',
+  'recoveryrequest',
+  'chainsyncrequest',
+] as const;
+
+export type KeyRelayAction = (typeof KEY_RELAY_ACTIONS)[number];
+
+/**
+ * What a routed relay action is handed to. Home wires these to the
+ * pending-request setters; tests wire them to spies.
+ */
+export interface RelayActionHandlers {
+  onTx: (payload: string, chain: string, path: string, utxos: utxo[]) => void;
+  onPublicNoncesRequest: (chain: string) => void;
+  onEvmSigningRequest: (data: evmSigningRequest) => void;
+  onWkSigningRequest: (data: wkSigningRequest) => void;
+  onVaultSigningRequest: (data: vaultSigningRequest) => void;
+  onVaultXpubRequest: (data: vaultXpubRequest) => void;
+  onFluxNodeStartRequest: (data: Record<string, unknown>) => void;
+  onKeyNonceSyncRequest: () => void;
+  onRecoveryRequest: (data: RecoveryRequestPayload) => void;
+  onChainSyncRequest: (payload: string) => void;
+  onInvalidPayload: () => void;
+}
+
+const parseActionPayload = <T>(payload: unknown): T | null => {
+  if (typeof payload !== 'string' || !payload) {
+    return null;
+  }
+  try {
+    return JSON.parse(payload) as T;
+  } catch {
+    return null;
+  }
+};
+
+const asActionString = (value: unknown): string =>
+  typeof value === 'string' ? value : '';
+
+/**
+ * Validates a recoveryrequest payload exactly the way SocketContext does, so the
+ * socket and poll transports agree on what a well-formed request is.
+ *
+ * `recoveryIndex` is required: it tells this device which key of the recovery
+ * account the requester's envelope is sealed to. A request without it is asking
+ * for something this build does not produce, so it is dropped here rather than
+ * put in front of the user — approving it could only end in a failure on the
+ * requesting side.
+ */
+export const parseRecoveryRequestPayload = (
+  payload: unknown,
+): RecoveryRequestPayload | null => {
+  const parsed = parseActionPayload<RecoveryRequestPayload>(payload);
+  if (
+    !parsed ||
+    typeof parsed.pkEph !== 'string' ||
+    typeof parsed.nonce !== 'string' ||
+    typeof parsed.timestamp !== 'number' ||
+    typeof parsed.recoveryIndex !== 'number'
+  ) {
+    return null;
+  }
+  return parsed;
+};
+
+/**
+ * Routes ONE relay action envelope to the matching handler. Home's
+ * `GET /v1/action` poll (handleRefresh, also the notification-open handler)
+ * goes through here so it answers every action the socket transport does —
+ * it used to silently drop `recoveryrequest` and `enterprisefluxnodestart`,
+ * which left a tapped push notification opening an idle Home screen.
+ *
+ * Returns false when the action is not one this screen answers, so the
+ * caller can log it instead of idling.
+ */
+export const routeRelayAction = (
+  envelope: RelayActionEnvelope,
+  handlers: RelayActionHandlers,
+): boolean => {
+  const { action, payload } = envelope;
+  switch (action) {
+    case 'tx': {
+      if (typeof payload !== 'string' || !payload) {
+        handlers.onInvalidPayload();
+        return true;
+      }
+      handlers.onTx(
+        payload,
+        asActionString(envelope.chain),
+        asActionString(envelope.path),
+        // relay-supplied; shape is validated downstream when the tx is signed
+        Array.isArray(envelope.utxos) ? (envelope.utxos as utxo[]) : [],
+      );
+      return true;
+    }
+    case 'publicnoncesrequest': {
+      handlers.onPublicNoncesRequest(asActionString(envelope.chain));
+      return true;
+    }
+    case 'evmsigningrequest': {
+      const data = parseActionPayload<evmSigningRequest>(payload);
+      if (!data) {
+        handlers.onInvalidPayload();
+        return true;
+      }
+      handlers.onEvmSigningRequest(data);
+      return true;
+    }
+    case 'wksigningrequest': {
+      const data = parseActionPayload<wkSigningRequest>(payload);
+      if (!data) {
+        handlers.onInvalidPayload();
+        return true;
+      }
+      handlers.onWkSigningRequest(data);
+      return true;
+    }
+    case 'enterprisevaultsign': {
+      const data = parseActionPayload<vaultSigningRequest>(payload);
+      if (!data) {
+        handlers.onInvalidPayload();
+        return true;
+      }
+      handlers.onVaultSigningRequest(data);
+      return true;
+    }
+    case 'enterprisevaultxpub': {
+      const data = parseActionPayload<vaultXpubRequest>(payload);
+      if (!data) {
+        handlers.onInvalidPayload();
+        return true;
+      }
+      handlers.onVaultXpubRequest(data);
+      return true;
+    }
+    case 'enterprisefluxnodestart': {
+      const data = parseActionPayload<Record<string, unknown>>(payload);
+      if (!data || typeof data !== 'object') {
+        handlers.onInvalidPayload();
+        return true;
+      }
+      handlers.onFluxNodeStartRequest(data);
+      return true;
+    }
+    case 'enterprisekeynoncesync': {
+      handlers.onKeyNonceSyncRequest();
+      return true;
+    }
+    case 'recoveryrequest': {
+      const data = parseRecoveryRequestPayload(payload);
+      if (!data) {
+        handlers.onInvalidPayload();
+        return true;
+      }
+      handlers.onRecoveryRequest(data);
+      return true;
+    }
+    case 'chainsyncrequest': {
+      if (typeof payload !== 'string' || !payload) {
+        handlers.onInvalidPayload();
+        return true;
+      }
+      handlers.onChainSyncRequest(payload);
+      return true;
+    }
+    default:
+      return false;
+  }
+};
 
 /**
  * Owns the pending-request state of the Home screen and the socket ->
@@ -36,8 +245,16 @@ import { useSocket } from '../../../hooks/useSocket';
  *   session refs which live in Home),
  * - handleRefresh (HTTP-poll counterpart; it ingests requests through the
  *   functions this hook returns).
+ *
+ * @param onUnsupportedChain called when a request names a chain this build
+ *   does not register. The request is already dropped by then; Home uses this
+ *   to post the matching `*rejected` action so SSP Wallet is not left waiting
+ *   for its timeout (posting needs relay auth, which lives in Home).
  */
-export function usePendingRequests(identityChain: keyof cryptos) {
+export function usePendingRequests(
+  identityChain: keyof cryptos,
+  onUnsupportedChain?: (kind: PendingRequestKind, chain: string) => void,
+) {
   const { t } = useTranslation(['home', 'common']);
   const [rawTx, setRawTx] = useState('');
   const [activeChain, setActiveChain] = useState<keyof cryptos>(identityChain);
@@ -69,6 +286,11 @@ export function usePendingRequests(identityChain: keyof cryptos) {
     unknown
   > | null>(null);
   const [keyNonceSyncDialogOpen, setKeyNonceSyncDialogOpen] = useState(false);
+  // Recovery requests that arrived over the GET /v1/action poll. The socket
+  // transport keeps its own copy in SocketContext (which exposes no setter),
+  // so Home merges the two sources.
+  const [recoveryRequestData, setRecoveryRequestData] =
+    useState<RecoveryRequestPayload | null>(null);
 
   const {
     newTx,
@@ -96,12 +318,31 @@ export function usePendingRequests(identityChain: keyof cryptos) {
     });
   };
 
+  // An unknown chain is dropped BEFORE it reaches state — activeChain indexes
+  // the store and every consumer destructures that slice. `chain` is typed as
+  // a plain string on the ingestion functions on purpose: it arrives from the
+  // relay / a scanned QR, so it is not a keyof cryptos until checked here.
+  const rejectUnsupportedChain = (kind: PendingRequestKind, chain: unknown) => {
+    const chainName = asActionString(chain);
+    console.log(
+      '[Pending Requests] Unsupported chain, dropping request:',
+      kind,
+      chainName,
+    );
+    displayMessage('error', t('home:err_invalid_request'), 5000);
+    onUnsupportedChain?.(kind, chainName);
+  };
+
   const handleTxRequest = (
     rawTransaction: string,
-    chain: keyof cryptos,
+    chain: string,
     path: string,
     utxos: utxo[] = [],
   ) => {
+    if (!isSupportedChain(chain)) {
+      rejectUnsupportedChain('tx', chain);
+      return;
+    }
     setActiveChain(chain);
     if (utxos) {
       setTxUtxos(utxos);
@@ -109,22 +350,34 @@ export function usePendingRequests(identityChain: keyof cryptos) {
     setRawTx(rawTransaction);
     setTxPath(path);
   };
-  const handlePublicNoncesRequest = (chain: keyof cryptos) => {
+  const handlePublicNoncesRequest = (chain: string) => {
     console.log(chain);
+    if (!isSupportedChain(chain)) {
+      rejectUnsupportedChain('publicnonces', chain);
+      return;
+    }
     setActiveChain(chain);
     setPublicNoncesReq(chain);
   };
   const handleEvmSigningRequest = (data: evmSigningRequest) => {
     // never log the request body — it carries the wallet's partial signature
     console.log('[EVM Signing] request received:', data.chain);
-    setActiveChain(data.chain as keyof cryptos);
+    if (!isSupportedChain(data.chain)) {
+      rejectUnsupportedChain('evmsigning', data.chain);
+      return;
+    }
+    setActiveChain(data.chain);
     setEvmSigningData(data);
   };
   const handleWkSigningRequest = (data: wkSigningRequest) => {
     console.log('[WK Sign] request received');
     setWkSigningData(data);
   };
-  const handleSyncRequest = (xpubw: string, chain: keyof cryptos) => {
+  const handleSyncRequest = (xpubw: string, chain: string) => {
+    if (!isSupportedChain(chain)) {
+      rejectUnsupportedChain('sync', chain);
+      return;
+    }
     setActiveChain(chain);
     setSyncReq(xpubw);
   };
@@ -251,12 +504,7 @@ export function usePendingRequests(identityChain: keyof cryptos) {
 
   useEffect(() => {
     if (newTx.rawTx) {
-      handleTxRequest(
-        newTx.rawTx,
-        newTx.chain as keyof cryptos,
-        newTx.path,
-        newTx.utxos,
-      );
+      handleTxRequest(newTx.rawTx, newTx.chain, newTx.path, newTx.utxos);
       clearTx?.();
     }
   }, [newTx.rawTx]);
@@ -270,9 +518,10 @@ export function usePendingRequests(identityChain: keyof cryptos) {
 
   useEffect(() => {
     if (evmSigningRequest) {
-      console.log('[EVM Signing] Received request:', evmSigningRequest);
-      setActiveChain(evmSigningRequest.chain as keyof cryptos);
-      setEvmSigningData(evmSigningRequest);
+      // Routed through handleEvmSigningRequest so the socket path gets the
+      // same chain validation as the poll path (and so the request body,
+      // which carries the wallet's partial signature, is not logged).
+      handleEvmSigningRequest(evmSigningRequest);
     }
   }, [evmSigningRequest]);
 
@@ -350,6 +599,8 @@ export function usePendingRequests(identityChain: keyof cryptos) {
     setFluxNodeStartData,
     keyNonceSyncDialogOpen,
     setKeyNonceSyncDialogOpen,
+    recoveryRequestData,
+    setRecoveryRequestData,
     // request ingestion helpers (same bodies as the former Home.tsx ones)
     handleTxRequest,
     handlePublicNoncesRequest,

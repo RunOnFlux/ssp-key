@@ -75,6 +75,7 @@ const KeyNonceSyncRequest: React.FC<KeyNonceSyncRequestProps> = ({
 
       <View
         style={[
+          Layout.selfStretch,
           Layout.justifyContentEnd,
           Gutters.regularLMargin,
           Gutters.regularRMargin,

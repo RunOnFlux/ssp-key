@@ -137,7 +137,14 @@ const HomeRequests = (props: {
   return (
     <>
       {!submittingTransaction && rawTx && xpubWallet && xpubKey && (
+        // Keyed on the payload: a transaction request that arrives while
+        // another one is on screen gets a FRESH mount, which makes showing
+        // one transaction while approving another structurally impossible
+        // (no decoded value, and no half-finished Authentication, survives a
+        // payload change). TransactionRequest guards the same invariant
+        // internally for prop changes that keep the same rawTx.
         <TransactionRequest
+          key={rawTx}
           rawTx={rawTx}
           chain={activeChain}
           utxos={txUtxos}
@@ -170,6 +177,7 @@ const HomeRequests = (props: {
         <RecoveryRequest
           activityStatus={activityStatus}
           actionStatus={handleRecoveryRequestAction}
+          request={recoveryRequest}
         />
       )}
       {publicNoncesShared && (

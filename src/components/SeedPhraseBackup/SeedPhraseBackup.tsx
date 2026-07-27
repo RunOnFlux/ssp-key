@@ -42,13 +42,14 @@ export const SeedPhraseGrid = ({
             >
               {index + 1}
             </Text>
+            {/* No numberOfLines: on a very narrow device the word must WRAP,
+                never ellipsize — a truncated seed word is unwritable. */}
             <Text
               style={[
                 Fonts.textTiny,
                 styles.wordText,
                 { color: Colors.textGray800 },
               ]}
-              numberOfLines={1}
             >
               {visible && word ? word : '•••••'}
             </Text>
@@ -104,10 +105,14 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 12,
   },
+  // A real grid: intrinsically-sized chips in a centred wrap left every row a
+  // different width (one- vs two-digit ordinals alone shifted the whole row),
+  // so the columns never lined up. Chips now share a fixed basis and the wrap
+  // starts at the leading edge.
   wordsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: 6,
   },
   wordChip: {
@@ -117,13 +122,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 5,
+    // Two columns, not three: at the modal width three equal columns leave
+    // ~45pt for the word and the longest BIP39 words need ~67pt at 14pt mono,
+    // which would clip the one thing on screen that must be transcribed. 47%
+    // (not 50%) leaves room for the 6pt gap on the narrowest phones.
+    flexBasis: '47%',
   },
   wordNumber: {
     fontVariant: ['tabular-nums'],
     marginRight: 5,
+    // fixed ordinal column so "1" and "24" put their words at the same x
+    minWidth: 18,
+    textAlign: 'right',
   },
   wordText: {
     fontFamily: MONOSPACE_FONT,
+    flexShrink: 1,
   },
 });
 

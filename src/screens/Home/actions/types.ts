@@ -30,6 +30,17 @@ export type PostActionFn = (
 ) => Promise<unknown>;
 
 /**
+ * Builds wkIdentity auth fields for a relay request, binding a hash of the
+ * body so the signature covers what is actually posted. Same helper Home uses
+ * for postAction; exposed here for actions that post to their own endpoint.
+ */
+export type CreateWkAuthFn = (
+  action: 'sync' | 'action' | 'token' | 'join',
+  wkIdentity: string,
+  requestBody?: Record<string, unknown>,
+) => Promise<Record<string, unknown> | null>;
+
+/**
  * Everything the extracted Home action functions previously captured from
  * the Home component's render scope. Home builds this object once per
  * render and its thin wrapper handlers pass it to the action modules —
@@ -40,6 +51,14 @@ export type PostActionFn = (
 export interface HomeActionContext {
   // redux/session state
   seedPhrase: string;
+  /**
+   * Encrypted xpriv of the recovery account m/48'/coin'/99'/scriptType' — the
+   * key the recovery flow releases. Empty until the account is provisioned,
+   * in which case recovery is declined.
+   */
+  xprivRecovery: string;
+  /** Encrypted xpub of the recovery account; published in the sync payload. */
+  xpubRecovery: string;
   identityChain: keyof cryptos;
   identityChainState: {
     xpubWallet?: string;
@@ -60,6 +79,7 @@ export interface HomeActionContext {
   t: TFunction<['home', 'common']>;
   displayMessage: DisplayMessageFn;
   postAction: PostActionFn;
+  createWkAuth: CreateWkAuthFn;
   // pending-request state + setters (from usePendingRequests / Home state)
   activeChain: keyof cryptos;
   setActiveChain: React.Dispatch<React.SetStateAction<keyof cryptos>>;

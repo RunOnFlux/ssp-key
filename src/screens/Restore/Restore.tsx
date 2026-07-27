@@ -11,6 +11,7 @@ import {
   Switch,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
@@ -33,13 +34,17 @@ import {
 
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
 import { setXpubKeyIdentity, setXprivKeyIdentity } from '../../store';
+import { setSspKeyRecoveryKeys } from '../../store/ssp';
+import { deriveRecoveryAccount } from '../../lib/recoveryAccount';
 
 import { setInitialStateForAllChains } from '../../store';
 import { markBackupVerifyNow } from '../../contexts/BackupCheckupContext';
 
 import { useAppSelector, useAppDispatch } from '../../hooks';
 
-import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
+import PoweredByFlux, {
+  POWERED_BY_FLUX_HEIGHT,
+} from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from '../../components/CreationSteps/CreationSteps';
 import WeakPassword from '../../components/WeakPassword/WeakPassword';
 import SeedPhraseBackup from '../../components/SeedPhraseBackup/SeedPhraseBackup';
@@ -246,6 +251,26 @@ function Restore({ navigation }: Props) {
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
         setXprivKeyIdentity(xprivBlob);
         setXpubKeyIdentity(xpubBlob);
+        // Recovery account m/48'/coin'/99'/scriptType' — the ONLY branch whose
+        // private key is ever released to the wallet. Derived here, once, from
+        // the mnemonic; the recovery request path only ever decrypts this and
+        // never touches the seed. See lib/recoveryAccount.ts.
+        const recoveryKeys = deriveRecoveryAccount(
+          mnemonicPhrase,
+          identityChain,
+        );
+        dispatch(
+          setSspKeyRecoveryKeys({
+            xpriv: CryptoJS.AES.encrypt(
+              recoveryKeys.xpriv,
+              pwForEncryption,
+            ).toString(),
+            xpub: CryptoJS.AES.encrypt(
+              recoveryKeys.xpub,
+              pwForEncryption,
+            ).toString(),
+          }),
+        );
         // generate hash of our password
         const key256Bits1000Iterations = CryptoJS.PBKDF2(password, salt, {
           keySize: 256 / 32,
@@ -392,6 +417,9 @@ function Restore({ navigation }: Props) {
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="always"
         extraScrollHeight={20}
+        // Reserve the pinned Powered-by-Flux footer's height, or it covers the
+        // "Import Key" button — this is the tallest onboarding screen.
+        contentContainerStyle={{ paddingBottom: POWERED_BY_FLUX_HEIGHT }}
       >
         <View
           style={[
@@ -550,107 +578,132 @@ function Restore({ navigation }: Props) {
         onRequestClose={() => handleCancel()}
       >
         <BlurOverlay />
-        <ScrollView
-          keyboardShouldPersistTaps="always"
+        {/* The scroll VIEWPORT must be inset, not just its first child: this
+            sheet is taller than the screen, so once scrolled, a static
+            marginTop scrolls away and the seed-loss warning passes under the
+            status bar and Dynamic Island. */}
+        <SafeAreaView
           style={[Layout.fill, Common.modalBackdrop]}
-          contentInset={{ bottom: 80 }}
-          contentContainerStyle={[
-            Gutters.smallBPadding,
-            Layout.scrollSpaceBetween,
-          ]}
+          edges={['top', 'bottom']}
         >
-          <View style={[Layout.fill, Common.modalView]}>
-            <Text
-              style={[Fonts.titleSmall, Gutters.smallBMargin, Fonts.textCenter]}
-            >
-              {t('cr:key_backup')}
-            </Text>
-            <View style={[Gutters.smallBMargin]}>
-              <CreationSteps step={2} isImport={true} />
-            </View>
-            <View
-              style={[
-                Layout.fill,
-                Layout.relative,
-                Layout.fullWidth,
-                Layout.alignItemsCenter,
-                Gutters.regularTMargin,
-              ]}
-            >
-              <Text
-                style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-              >
-                {t('cr:key_backup_text_1')}
-              </Text>
-              <Text
-                style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-              >
-                {t('cr:key_backup_text_2')}
-              </Text>
+          <ScrollView
+            keyboardShouldPersistTaps="always"
+            style={Layout.fill}
+            contentInset={{ bottom: 80 }}
+            contentContainerStyle={[
+              Gutters.smallBPadding,
+              Layout.scrollSpaceBetween,
+            ]}
+          >
+            <View style={[Layout.fill, Common.modalView, { marginTop: 12 }]}>
               <Text
                 style={[
-                  Fonts.textSmall,
+                  Fonts.titleSmall,
                   Gutters.smallBMargin,
                   Fonts.textCenter,
                 ]}
               >
-                {t('cr:key_backup_text_3')}
+                {t('cr:key_backup')}
               </Text>
-              <SeedPhraseBackup
-                phrase={mnemonic}
-                visible={mnemonicShow}
-                onToggle={() => {
-                  setMnemonicShow(!mnemonicShow);
-                  setWSPwasShown(true);
-                }}
-              />
+              <View style={[Gutters.smallBMargin]}>
+                <CreationSteps step={2} isImport={true} />
+              </View>
               <View
                 style={[
-                  Layout.row,
+                  Layout.fill,
+                  Layout.relative,
                   Layout.fullWidth,
                   Layout.alignItemsCenter,
-                  Gutters.smallTMargin,
+                  Gutters.regularTMargin,
                 ]}
               >
-                <Switch
-                  onValueChange={onChangeWSP}
-                  value={WSPbackedUp}
-                  trackColor={{ true: Colors.primary }}
-                  thumbColor={WSPbackedUp ? Colors.textOnPrimary : undefined}
-                  accessibilityLabel={t('cr:seed_phrase_backed_up')}
-                  style={styles.toggleStyle}
-                />
                 <Text
-                  style={[Fonts.textTiny, Gutters.smallLMargin, Layout.fill]}
+                  style={[
+                    Fonts.textSmall,
+                    Gutters.tinyBMargin,
+                    Fonts.textCenter,
+                  ]}
                 >
-                  {t('cr:seed_phrase_backed_up')}
+                  {t('cr:key_backup_text_1')}
                 </Text>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Gutters.tinyBMargin,
+                    Fonts.textCenter,
+                  ]}
+                >
+                  {t('cr:key_backup_text_2')}
+                </Text>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    Gutters.smallBMargin,
+                    Fonts.textCenter,
+                  ]}
+                >
+                  {t('cr:key_backup_text_3')}
+                </Text>
+                <SeedPhraseBackup
+                  phrase={mnemonic}
+                  visible={mnemonicShow}
+                  onToggle={() => {
+                    setMnemonicShow(!mnemonicShow);
+                    setWSPwasShown(true);
+                  }}
+                />
+                <View
+                  style={[
+                    Layout.row,
+                    Layout.fullWidth,
+                    Layout.alignItemsCenter,
+                    Gutters.smallTMargin,
+                  ]}
+                >
+                  <Switch
+                    onValueChange={onChangeWSP}
+                    value={WSPbackedUp}
+                    trackColor={{ true: Colors.primary }}
+                    thumbColor={WSPbackedUp ? Colors.textOnPrimary : undefined}
+                    accessibilityLabel={t('cr:seed_phrase_backed_up')}
+                    style={styles.toggleStyle}
+                  />
+                  <Text
+                    style={[Fonts.textTiny, Gutters.smallLMargin, Layout.fill]}
+                  >
+                    {t('cr:seed_phrase_backed_up')}
+                  </Text>
+                </View>
+              </View>
+              <View style={[Layout.justifyContentEnd]}>
+                <PrimaryButton
+                  label={t('cr:setup_key')}
+                  style={[Gutters.regularBMargin, Gutters.smallTMargin]}
+                  disabled={isLoading}
+                  loading={isLoading}
+                  onPress={() => handleOk()}
+                />
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  disabled={isLoading}
+                  onPress={() => handleCancel()}
+                  hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
+                  style={[Gutters.smallTMargin]}
+                >
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textPrimary,
+                      Fonts.textCenter,
+                    ]}
+                  >
+                    {t('common:cancel')}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-            <View style={[Layout.justifyContentEnd]}>
-              <PrimaryButton
-                label={t('cr:setup_key')}
-                style={[Gutters.regularBMargin, Gutters.smallTMargin]}
-                disabled={isLoading}
-                loading={isLoading}
-                onPress={() => handleOk()}
-              />
-              <TouchableOpacity
-                accessibilityRole="button"
-                disabled={isLoading}
-                onPress={() => handleCancel()}
-                hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
-                style={[Gutters.smallTMargin]}
-              >
-                <Text
-                  style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
-                >
-                  {t('common:cancel')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </SafeAreaView>
         <ToastNotif />
       </Modal>
       <WeakPassword

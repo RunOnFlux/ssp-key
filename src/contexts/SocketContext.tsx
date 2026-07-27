@@ -303,10 +303,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('[Socket] Recovery request received');
         try {
           const parsed = JSON.parse(data.payload) as RecoveryRequestPayload;
+          // recoveryIndex included: see parseRecoveryRequestPayload, which the
+          // poll transport uses — the two must agree.
           if (
             typeof parsed.pkEph !== 'string' ||
             typeof parsed.nonce !== 'string' ||
-            typeof parsed.timestamp !== 'number'
+            typeof parsed.timestamp !== 'number' ||
+            typeof parsed.recoveryIndex !== 'number'
           ) {
             console.error('[Socket] Malformed recovery request payload');
             return;

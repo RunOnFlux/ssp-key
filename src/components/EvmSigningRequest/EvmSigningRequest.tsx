@@ -407,6 +407,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
       </View>
       <View
         style={[
+          Layout.selfStretch,
           Layout.justifyContentEnd,
           Gutters.regularLMargin,
           Gutters.regularRMargin,

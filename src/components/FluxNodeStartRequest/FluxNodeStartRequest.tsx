@@ -194,6 +194,7 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
       {/* Action Buttons */}
       <View
         style={[
+          Layout.selfStretch,
           Layout.justifyContentEnd,
           Gutters.regularLMargin,
           Gutters.regularRMargin,

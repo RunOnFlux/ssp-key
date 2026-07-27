@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -117,10 +117,10 @@ const SettingsSection = (props: {
     { value: 'bg', label: 'bg', desc: 'Български' },
     { value: 'bn', label: 'bn', desc: 'বাংলা' },
     { value: 'zh', label: 'zh', desc: '简体中文' },
-    { value: 'zh_TW', label: 'zh_TW', desc: '繁体中文' },
+    { value: 'zh_TW', label: 'zh_TW', desc: '繁體中文' },
     { value: 'cs', label: 'cs', desc: 'Čeština' },
     { value: 'de', label: 'de', desc: 'Deutsch' },
-    { value: 'nl', label: 'nl', desc: 'Dutch' },
+    { value: 'nl', label: 'nl', desc: 'Nederlands' },
     { value: 'es', label: 'es', desc: 'Español' },
     { value: 'fi', label: 'fi', desc: 'Suomen kieli' },
     { value: 'sl', label: 'sl', desc: 'Slovenščina' },
@@ -132,14 +132,14 @@ const SettingsSection = (props: {
     { value: 'it', label: 'it', desc: 'Italiano' },
     { value: 'ko', label: 'ko', desc: '한국어' },
     { value: 'hu', label: 'hu', desc: 'Magyar' },
-    { value: 'no', label: 'no', desc: 'Norwegian' },
+    { value: 'no', label: 'no', desc: 'Norsk' },
     { value: 'ja', label: 'ja', desc: '日本語' },
-    { value: 'pl', label: 'pl', desc: 'Polish' },
+    { value: 'pl', label: 'pl', desc: 'Polski' },
     { value: 'pt', label: 'pt', desc: 'Português' },
     { value: 'ru', label: 'ru', desc: 'Русский' },
-    { value: 'ro', label: 'ro', desc: 'Romanian' },
-    { value: 'sk', label: 'sk', desc: 'Slovak' },
-    { value: 'sv', label: 'sv', desc: 'Swedish' },
+    { value: 'ro', label: 'ro', desc: 'Română' },
+    { value: 'sk', label: 'sk', desc: 'Slovenčina' },
+    { value: 'sv', label: 'sv', desc: 'Svenska' },
     { value: 'uk', label: 'uk', desc: 'Українська' },
     { value: 'ta', label: 'ta', desc: 'தமிழ்' },
     { value: 'th', label: 'th', desc: 'ไทย' },
@@ -164,15 +164,22 @@ const SettingsSection = (props: {
     setExplorerConfig(EXPLORERnew);
   }, [selectedChain]);
 
+  // Language and privacy mode are live-preview rows: they apply the instant they
+  // change, so the values this modal opened with are captured here and restored
+  // by Cancel. Without that, Cancel kept the changes made behind it (including
+  // the app language, which also relabels Cancel itself).
+  const entryLanguage = useRef(currentLanguage ?? 'system');
+  const entryPrivacyHidden = useRef(privacyHidden);
+
+  const applyLanguage = async (language: string) => {
+    await i18n.changeLanguage(
+      language === 'system' ? deviceLanguageShort : language,
+    );
+    storage.set('language', language);
+  };
+
   useEffect(() => {
-    void (async function () {
-      if (selectedLanguage === 'system') {
-        await i18n.changeLanguage(deviceLanguageShort);
-      } else {
-        await i18n.changeLanguage(selectedLanguage);
-      }
-      storage.set('language', selectedLanguage);
-    })();
+    void applyLanguage(selectedLanguage);
   }, [selectedLanguage]);
 
   const handleCancel = () => {
@@ -187,6 +194,14 @@ const SettingsSection = (props: {
     }
     if (EXPLORER !== explorerConfig) {
       setExplorerConfig(EXPLORER);
+    }
+    // Undo the instant rows imperatively — this component unmounts on
+    // actionStatus(false), so a state change alone would never re-apply them.
+    if (selectedLanguage !== entryLanguage.current) {
+      void applyLanguage(entryLanguage.current);
+    }
+    if (privacyHidden !== entryPrivacyHidden.current) {
+      togglePrivacy();
     }
     loadBackendsConfig();
     loadSSPConfig();
@@ -442,7 +457,9 @@ const SettingsSection = (props: {
           style={[styles.endpointInput, { color: Colors.textInput }]}
           autoCapitalize="none"
           placeholder={placeholder}
-          placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+          // token, not a literal: #57534E light / #A8A29E dark, >= 6:1 on the
+          // field fill in both themes (the old #c7c7c7 was 1.55:1 here)
+          placeholderTextColor={Colors.textGray400}
           onChangeText={onChangeText}
           value={value}
           autoCorrect={false}

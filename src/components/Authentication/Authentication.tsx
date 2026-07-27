@@ -20,54 +20,108 @@ import ToastNotif from '../Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';
 import { PrimaryButton } from '../ui';
 
-// Copy maps — per-request-type prompt copy. Unknown types fall back to the
-// generic "sensitive information" wording, matching the previous ternaries.
-const BIOMETRIC_PROMPT_KEY = {
-  tx: 'home:auth_confirm_sign_send',
-  sync: 'home:auth_confirm_sync',
-  pubnonces: 'home:auth_confirm_public_nonces',
-  evmsigning: 'home:auth_confirm_evm_signing',
-  wksigning: 'home:auth_confirm_wk_signing',
-  vaultxpub: 'home:auth_confirm_vault_xpub',
-  vaultsigning: 'home:auth_confirm_vault_signing',
-  noncesync: 'home:auth_confirm_nonce_sync',
-  recovery: 'home:auth_confirm_recovery',
-} as const;
+/** Every request type this gate can be opened for. */
+export type AuthenticationType =
+  | 'tx'
+  | 'sync'
+  | 'pubnonces'
+  | 'evmsigning'
+  | 'wksigning'
+  | 'vaultxpub'
+  | 'vaultsigning'
+  | 'noncesync'
+  | 'recovery'
+  | 'fluxnodestart'
+  | 'delete'
+  | 'sensitive';
 
-const INFO_KEY = {
-  tx: 'home:auth_sign_tx',
-  sync: 'home:auth_sync_ssp',
-  pubnonces: 'home:auth_sync_pub_nonces',
-  evmsigning: 'home:auth_sync_evm_signing',
-  wksigning: 'home:auth_sync_wk_signing',
-  vaultxpub: 'home:auth_confirm_vault_xpub_info',
-  vaultsigning: 'home:auth_confirm_vault_signing_info',
-  noncesync: 'home:auth_confirm_nonce_sync_info',
-  delete: 'home:auth_delete_ssp_key_data',
-} as const;
+interface AuthCopy {
+  /** Biometric prompt title. */
+  biometric: string;
+  /** Headline — states what is about to happen. */
+  info: string;
+  /** Sub-line above the password field, or null to render none (delete). */
+  confirm: string | null;
+}
 
-// Types whose second line says "Confirm with password." — every other type
-// (sensitive access etc.) says "Grant access with password."
-const CONFIRM_PW_KEY = {
-  tx: 'home:auth_confirm_with_pw',
-  sync: 'home:auth_confirm_with_pw',
-  pubnonces: 'home:auth_confirm_with_pw',
-  evmsigning: 'home:auth_confirm_with_pw',
-  wksigning: 'home:auth_confirm_with_pw',
-  vaultxpub: 'home:auth_confirm_with_pw',
-  vaultsigning: 'home:auth_confirm_with_pw',
-  noncesync: 'home:auth_confirm_with_pw',
-} as const;
+// Copy map — per-request-type prompt copy. `satisfies` a FULL Record so a new
+// request type cannot silently inherit the generic "sensitive information"
+// wording (the compiler demands copy stating what is actually being approved)
+// while `as const` keeps the literal key types t() needs (which in turn makes
+// every string below compile-checked against the en locale).
+const AUTH_COPY = {
+  tx: {
+    biometric: 'home:auth_confirm_sign_send',
+    info: 'home:auth_sign_tx',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  sync: {
+    biometric: 'home:auth_confirm_sync',
+    info: 'home:auth_sync_ssp',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  pubnonces: {
+    biometric: 'home:auth_confirm_public_nonces',
+    info: 'home:auth_sync_pub_nonces',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  evmsigning: {
+    biometric: 'home:auth_confirm_evm_signing',
+    info: 'home:auth_sync_evm_signing',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  wksigning: {
+    biometric: 'home:auth_confirm_wk_signing',
+    info: 'home:auth_sync_wk_signing',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  vaultxpub: {
+    biometric: 'home:auth_confirm_vault_xpub',
+    info: 'home:auth_confirm_vault_xpub_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  vaultsigning: {
+    biometric: 'home:auth_confirm_vault_signing',
+    info: 'home:auth_confirm_vault_signing_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  noncesync: {
+    biometric: 'home:auth_confirm_nonce_sync',
+    info: 'home:auth_confirm_nonce_sync_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  recovery: {
+    biometric: 'home:auth_confirm_recovery',
+    info: 'home:auth_recovery_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  fluxnodestart: {
+    biometric: 'home:auth_confirm_flux_node_start',
+    info: 'home:auth_flux_node_start_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  delete: {
+    biometric: 'home:auth_sensitive_information',
+    info: 'home:auth_delete_ssp_key_data',
+    // the destructive-delete headline is the whole message; no sub-line
+    confirm: null,
+  },
+  sensitive: {
+    biometric: 'home:auth_sensitive_information',
+    info: 'home:auth_sensitive_inf',
+    confirm: 'home:auth_grant_access_pw',
+  },
+} as const satisfies Record<AuthenticationType, AuthCopy>;
 
 const Authentication = (props: {
   actionStatus: (status: boolean) => void;
-  type: string;
+  type: AuthenticationType;
   biomatricsAllowed: boolean;
 }) => {
   // focusability of inputs
   const textInputA = useRef<TextInput | null>(null);
   const { t } = useTranslation(['home', 'common', 'cr']);
-  const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
+  const { Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(false);
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
@@ -77,6 +131,9 @@ const Authentication = (props: {
   // cancel) firing after a cancel propagation already started, which
   // would otherwise call actionStatus(true) seconds after actionStatus(false).
   const propagated = useRef(false);
+  // Defensive lookup: the prop is typed, so this only guards a caller that
+  // reaches this component from untyped JS.
+  const copy = AUTH_COPY[props.type] ?? AUTH_COPY.sensitive;
 
   // Fade out the modal before the parent unmounts us. Without this, an
   // abrupt unmount during the same render commit (e.g. Home setting
@@ -128,10 +185,7 @@ const Authentication = (props: {
   }, []);
 
   const initiateFingerprint = () => {
-    const textForPrompt = t(
-      BIOMETRIC_PROMPT_KEY[props.type as keyof typeof BIOMETRIC_PROMPT_KEY] ??
-        'home:auth_sensitive_information',
-    );
+    const textForPrompt = t(copy.biometric);
     console.log('Initiate Fingerprint');
     // if success continue, if fail, show error message and only allow password authentication
     // get from keychain
@@ -315,12 +369,9 @@ const Authentication = (props: {
                   Gutters.smallTMargin,
                 ]}
               >
-                {t(
-                  INFO_KEY[props.type as keyof typeof INFO_KEY] ??
-                    'home:auth_sensitive_inf',
-                )}
+                {t(copy.info)}
               </Text>
-              {props.type !== 'delete' && (
+              {copy.confirm && (
                 <Text
                   style={[
                     Fonts.textBold,
@@ -329,10 +380,7 @@ const Authentication = (props: {
                     Gutters.smallTMargin,
                   ]}
                 >
-                  {t(
-                    CONFIRM_PW_KEY[props.type as keyof typeof CONFIRM_PW_KEY] ??
-                      'home:auth_grant_access_pw',
-                  )}
+                  {t(copy.confirm)}
                 </Text>
               )}
 
@@ -353,6 +401,7 @@ const Authentication = (props: {
                   Layout.rowCenter,
                   Common.inputWithButtonBgModalColors,
                   styles.inputWithButton,
+                  { borderColor: Colors.borderStrong },
                 ]}
               >
                 <TextInput
@@ -361,7 +410,9 @@ const Authentication = (props: {
                   textContentType="password"
                   autoCapitalize="none"
                   placeholder={t('cr:confirm_key_pin')}
-                  placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                  // token, not a literal: #57534E light / #A8A29E dark, >= 6:1
+                  // on the field fill in both themes (the old #c7c7c7 was 1.6:1)
+                  placeholderTextColor={Colors.textGray400}
                   secureTextEntry={passwordVisibility ? false : true}
                   onChangeText={onChangePassword}
                   value={password}
@@ -432,5 +483,8 @@ const styles = StyleSheet.create({
     width: '100%',
     // design tokens: radius 8 for controls
     borderRadius: 8,
+    // visible control boundary (WCAG 1.4.11) — the field fill alone is only
+    // ~1.1:1 against the light modal surface; borderColor comes from the theme
+    borderWidth: 1,
   },
 });
