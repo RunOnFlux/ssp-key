@@ -60,7 +60,7 @@ const ChainSyncRequest = (props: {
     <>
       <ScrollView
         style={[Layout.fullWidth]}
-        contentContainerStyle={[Layout.alignItemsCenter]}
+        contentContainerStyle={[Layout.alignItemsCenter, Gutters.tinyHPadding]}
       >
         <RequestHeader
           title={t('home:chainsync_request')}
@@ -99,7 +99,13 @@ const ChainSyncRequest = (props: {
           messages={[t('home:chainsync_info_msg')]}
         />
       </ScrollView>
-      <View style={[Layout.selfStretch, Layout.justifyContentEnd]}>
+      <View
+        style={[
+          Layout.selfStretch,
+          Layout.justifyContentEnd,
+          Gutters.tinyHMargin,
+        ]}
+      >
         <SlideToApprove
           label={t('home:slide_to_approve')}
           accessibilityLabel={t('home:approve_chainsync')}
@@ -139,7 +145,8 @@ const ChainSyncRequest = (props: {
 
 const styles = StyleSheet.create({
   chainListCard: {
-    width: '90%',
+    // Screen owns the side gutter — see request/ActionCard.
+    alignSelf: 'stretch',
     marginBottom: 12,
   },
   chainRow: {

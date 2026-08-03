@@ -123,3 +123,25 @@ describe('every request screen gives the slider a definite width', () => {
     expect(mounted).toEqual([...REQUEST_COMPONENTS].sort());
   });
 });
+
+describe('slideGesture worklets never use default-parameter values', () => {
+  // The worklets Babel plugin captures outer identifiers referenced in a
+  // worklet's BODY, but NOT ones inside default-parameter initializers. A
+  // module constant used as a parameter default therefore evaluates on the
+  // UI runtime against a scope where it does not exist — a ReferenceError
+  // that a release build turns into an app abort the moment the pan
+  // gesture's onEnd runs (the 2026-08-03 TestFlight slide-to-approve
+  // SIGABRT). Defaults must be resolved inside the body via `??`.
+  it('has no `=` defaults in any worklet signature', () => {
+    const source = read(path.join(SRC, 'lib', 'slideGesture.ts'));
+    const signatures = [
+      ...source.matchAll(
+        /export function \w+\(([\s\S]*?)\)[\s\S]*?\{\s*\n\s*'worklet'/g,
+      ),
+    ];
+    expect(signatures.length).toBeGreaterThanOrEqual(4);
+    for (const match of signatures) {
+      expect(match[1]).not.toContain('=');
+    }
+  });
+});

@@ -71,7 +71,10 @@ const ActionCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    width: '90%',
+    // Stretch to the host screen's padded content width — the screen owns the
+    // side gutter, not the block (a % width also misbehaves against the
+    // indefinite parents these render into; see SlideToApprove's track note).
+    alignSelf: 'stretch',
     marginBottom: 12,
   },
   decodedRow: {

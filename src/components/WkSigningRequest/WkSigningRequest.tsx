@@ -106,13 +106,12 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
             </View>
             <View
               style={[
-                Gutters.smallLMargin,
-                Gutters.smallRMargin,
+                Gutters.tinyHMargin,
                 {
                   backgroundColor: Colors.inputBackground,
                   borderRadius: 8,
                   padding: 12,
-                  width: '90%',
+                  alignSelf: 'stretch',
                   borderWidth: 1,
                   borderColor: Colors.textGray200,
                 },
@@ -219,16 +218,19 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
           </Text>
         </View>
         <View
-          style={{
-            height: 80,
-            maxHeight: 80,
-            backgroundColor: Colors.inputBackground,
-            borderRadius: 8,
-            padding: 10,
-            width: '90%',
-            borderWidth: 1,
-            borderColor: Colors.textGray200,
-          }}
+          style={[
+            Gutters.tinyHMargin,
+            {
+              height: 80,
+              maxHeight: 80,
+              backgroundColor: Colors.inputBackground,
+              borderRadius: 8,
+              padding: 10,
+              alignSelf: 'stretch',
+              borderWidth: 1,
+              borderColor: Colors.textGray200,
+            },
+          ]}
         >
           <ScrollView
             style={{ flex: 1 }}
@@ -251,7 +253,13 @@ const WkSigningRequest: React.FC<WkSigningRequestProps> = ({
         </View>
       </View>
 
-      <View style={[Layout.selfStretch, Layout.justifyContentEnd]}>
+      <View
+        style={[
+          Layout.selfStretch,
+          Layout.justifyContentEnd,
+          Gutters.tinyHMargin,
+        ]}
+      >
         <SlideToApprove
           label={t('home:slide_to_approve')}
           accessibilityLabel={t('home:approve_request')}

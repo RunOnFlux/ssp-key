@@ -151,6 +151,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
         style={[Layout.fill, Layout.fullWidth]}
         contentContainerStyle={[
           Layout.alignItemsCenter,
+          Gutters.tinyHPadding,
           { paddingTop: 20, paddingBottom: 20 },
         ]}
         showsVerticalScrollIndicator={true}
@@ -461,8 +462,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
         style={[
           Layout.selfStretch,
           Layout.justifyContentEnd,
-          Gutters.regularLMargin,
-          Gutters.regularRMargin,
+          Gutters.tinyHMargin,
         ]}
       >
         <SlideToApprove
@@ -519,7 +519,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   card: {
-    width: '90%',
+    // Screen owns the side gutter — see request/ActionCard.
+    alignSelf: 'stretch',
     marginBottom: 12,
   },
   tabular: {

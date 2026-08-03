@@ -327,6 +327,7 @@ const TransactionRequest = (props: {
         style={[Layout.fill, Layout.fullWidth]}
         contentContainerStyle={[
           Layout.alignItemsCenter,
+          Gutters.tinyHPadding,
           { paddingTop: 20, paddingBottom: 20 },
         ]}
         showsVerticalScrollIndicator={true}
@@ -523,7 +524,13 @@ const TransactionRequest = (props: {
           </>
         )}
       </ScrollView>
-      <View style={[Layout.selfStretch, Layout.justifyContentEnd]}>
+      <View
+        style={[
+          Layout.selfStretch,
+          Layout.justifyContentEnd,
+          Gutters.tinyHMargin,
+        ]}
+      >
         {!decodeFailed && (
           <SlideToApprove
             label={t('home:slide_to_approve')}

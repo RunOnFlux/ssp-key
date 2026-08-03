@@ -258,13 +258,14 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
         {decoded.summary ? (
           <View
             style={[
+              Gutters.tinyHMargin,
               {
                 backgroundColor: Colors.inputBackground,
                 borderRadius: 8,
                 padding: 12,
                 borderWidth: 1,
                 borderColor: Colors.textGray200,
-                width: '90%',
+                alignSelf: 'stretch',
               },
             ]}
           >
@@ -334,15 +335,18 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
         {/* Warning when the payload could not be confidently recognized */}
         {!decoded.recognized && (
           <View
-            style={{
-              width: '90%',
-              marginTop: 10,
-              backgroundColor: Colors.inputBackground,
-              borderRadius: 8,
-              padding: 10,
-              borderWidth: 1,
-              borderColor: Colors.error,
-            }}
+            style={[
+              Gutters.tinyHMargin,
+              {
+                alignSelf: 'stretch',
+                marginTop: 10,
+                backgroundColor: Colors.inputBackground,
+                borderRadius: 8,
+                padding: 10,
+                borderWidth: 1,
+                borderColor: Colors.error,
+              },
+            ]}
           >
             <Text
               style={[
@@ -370,6 +374,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
         {showRawData && (
           <View
             style={[
+              Gutters.tinyHMargin,
               {
                 height: 100,
                 maxHeight: 100,
@@ -379,7 +384,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
                 padding: 10,
                 borderWidth: 1,
                 borderColor: Colors.textGray200,
-                width: '90%',
+                alignSelf: 'stretch',
               },
             ]}
           >
@@ -409,8 +414,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
         style={[
           Layout.selfStretch,
           Layout.justifyContentEnd,
-          Gutters.regularLMargin,
-          Gutters.regularRMargin,
+          Gutters.tinyHMargin,
         ]}
       >
         <SlideToApprove

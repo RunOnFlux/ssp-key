@@ -83,7 +83,13 @@ const SyncRequest = (props: {
           })}
         </Text>
       </View>
-      <View style={[Layout.selfStretch, Layout.justifyContentEnd]}>
+      <View
+        style={[
+          Layout.selfStretch,
+          Layout.justifyContentEnd,
+          Gutters.tinyHMargin,
+        ]}
+      >
         <SlideToApprove
           label={t('home:slide_to_approve')}
           accessibilityLabel={t('home:approve_sync')}

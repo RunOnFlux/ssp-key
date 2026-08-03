@@ -131,10 +131,9 @@ const VaultRiskStrip: React.FC<VaultRiskStripProps> = ({
     (w) => w.severity === 'medium' || w.severity === 'info',
   );
 
-  const cardWidth = '90%' as const;
-
   return (
-    <View style={{ width: cardWidth, marginBottom: 12 }}>
+    // Screen owns the side gutter — see request/ActionCard.
+    <View style={{ alignSelf: 'stretch', marginBottom: 12 }}>
       {/* Advisory label */}
       <View style={styles.headerRow}>
         <TriangleAlert size={14} color={Colors.textGray400} />

@@ -18,17 +18,28 @@ export const SLIDE_THUMB_SIZE = 48;
 /** Inner padding between track edge and thumb. */
 export const SLIDE_TRACK_PADDING = 4;
 
+// NOTE: none of these worklets may use a module constant as a DEFAULT
+// PARAMETER value. The worklets Babel plugin captures outer identifiers
+// referenced in a worklet's BODY, but not ones in default-parameter
+// initializers — on the UI runtime the default then evaluates against a
+// scope where the module constant does not exist, which is a ReferenceError
+// ("property doesn't exist") and, in a release build, an app abort the
+// moment the gesture handler runs it. Defaults are therefore resolved
+// inside the body via `??`.
+
 /**
  * Maximum horizontal travel of the thumb inside a track of the given width.
  * Never negative (zero-width / unmeasured tracks cannot complete).
  */
 export function maxSlideTravel(
   trackWidth: number,
-  thumbSize: number = SLIDE_THUMB_SIZE,
-  padding: number = SLIDE_TRACK_PADDING,
+  thumbSize?: number,
+  padding?: number,
 ): number {
   'worklet';
-  const travel = trackWidth - thumbSize - 2 * padding;
+  const thumb = thumbSize ?? SLIDE_THUMB_SIZE;
+  const pad = padding ?? SLIDE_TRACK_PADDING;
+  const travel = trackWidth - thumb - 2 * pad;
   return travel > 0 ? travel : 0;
 }
 
@@ -58,11 +69,12 @@ export function slideProgress(translationX: number, maxTravel: number): number {
 export function shouldCompleteSlide(
   translationX: number,
   maxTravel: number,
-  fraction: number = SLIDE_COMPLETE_FRACTION,
+  fraction?: number,
 ): boolean {
   'worklet';
+  const completeFraction = fraction ?? SLIDE_COMPLETE_FRACTION;
   if (maxTravel <= 0) {
     return false;
   }
-  return clampSlide(translationX, maxTravel) >= maxTravel * fraction;
+  return clampSlide(translationX, maxTravel) >= maxTravel * completeFraction;
 }

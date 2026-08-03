@@ -61,7 +61,8 @@ const AdvancedSection = ({ children, title, style }: AdvancedSectionProps) => {
 
 const styles = StyleSheet.create({
   card: {
-    width: '90%',
+    // Screen owns the side gutter — see ActionCard.
+    alignSelf: 'stretch',
     marginBottom: 12,
   },
   headerRow: {

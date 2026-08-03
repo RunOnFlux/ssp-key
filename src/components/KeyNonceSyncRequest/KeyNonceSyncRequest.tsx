@@ -77,8 +77,7 @@ const KeyNonceSyncRequest: React.FC<KeyNonceSyncRequestProps> = ({
         style={[
           Layout.selfStretch,
           Layout.justifyContentEnd,
-          Gutters.regularLMargin,
-          Gutters.regularRMargin,
+          Gutters.tinyHMargin,
         ]}
       >
         <SlideToApprove

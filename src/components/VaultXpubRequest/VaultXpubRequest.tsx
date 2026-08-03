@@ -110,13 +110,12 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
         </View>
         <View
           style={[
-            Gutters.regularLMargin,
-            Gutters.regularRMargin,
+            Gutters.tinyHMargin,
             {
               backgroundColor: Colors.inputBackground,
               borderRadius: 8,
               padding: 12,
-              width: '90%',
+              alignSelf: 'stretch',
               borderWidth: 1,
               borderColor: Colors.textGray200,
             },
@@ -135,8 +134,7 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
         style={[
           Layout.selfStretch,
           Layout.justifyContentEnd,
-          Gutters.regularLMargin,
-          Gutters.regularRMargin,
+          Gutters.tinyHMargin,
         ]}
       >
         <SlideToApprove

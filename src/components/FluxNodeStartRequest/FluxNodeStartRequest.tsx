@@ -58,7 +58,9 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
     backgroundColor: Colors.inputBackground,
     borderRadius: 8,
     padding: 12,
-    width: '90%' as const,
+    // Screen owns the side gutter — see request/ActionCard.
+    alignSelf: 'stretch' as const,
+    marginHorizontal: 10,
     borderWidth: 1,
     borderColor: Colors.textGray200,
   };
@@ -196,8 +198,7 @@ const FluxNodeStartRequest: React.FC<FluxNodeStartRequestProps> = ({
         style={[
           Layout.selfStretch,
           Layout.justifyContentEnd,
-          Gutters.regularLMargin,
-          Gutters.regularRMargin,
+          Gutters.tinyHMargin,
         ]}
       >
         <SlideToApprove

@@ -76,7 +76,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '90%',
+    // Screen owns the side gutter — see ActionCard.
+    alignSelf: 'stretch',
     marginBottom: 12,
   },
   titleBlock: {

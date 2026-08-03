@@ -119,7 +119,8 @@ const RiskBanner = ({
 
 const styles = StyleSheet.create({
   banner: {
-    width: '90%',
+    // Screen owns the side gutter — see ActionCard.
+    alignSelf: 'stretch',
     borderRadius: 8,
     padding: 10,
     borderWidth: 1,
