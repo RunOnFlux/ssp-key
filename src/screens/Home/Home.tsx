@@ -262,8 +262,10 @@ function Home({ navigation }: Props) {
     }
     alreadyMounted.current = true;
     if (sspWalletKeyInternalIdentity) {
-      // get some pending request on W-K identity
-      handleRefresh();
+      // get some pending request on W-K identity. Silent: on app open,
+      // "nothing pending" (the relay's 404) is the normal case and not worth
+      // a toast — the toast stays for the user-initiated refresh button.
+      handleRefresh({ silent: true });
     }
 
     if (!sspWalletKeyInternalIdentity || !sspWalletInternalIdentity) {
@@ -1072,7 +1074,7 @@ function Home({ navigation }: Props) {
   const checkAndReplenishEnterpriseNonces = async (forceReplace = false) =>
     nonceActions.checkAndReplenishEnterpriseNonces(actionCtx, forceReplace);
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (options?: { silent?: boolean }) => {
     try {
       console.log('refresh');
       setIsRefreshing(true);
@@ -1131,7 +1133,9 @@ function Home({ navigation }: Props) {
       if (axios.isAxiosError(error) && !error.response) {
         displayMessage('error', t('home:err_relay_unreachable'), 6000);
       } else if (axios.isAxiosError(error) && error.response?.status === 404) {
-        displayMessage('info', t('home:no_pending_actions'));
+        if (!options?.silent) {
+          displayMessage('info', t('home:no_pending_actions'));
+        }
       } else {
         displayMessage('error', t('home:err_refresh_failed'));
       }
@@ -1529,6 +1533,15 @@ function Home({ navigation }: Props) {
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="always"
         extraScrollHeight={20}
+        // selfStretch: the root column is alignItems:'center', which
+        // shrink-wraps an unstyled child to its content width — every
+        // request screen then rendered narrower than the phone with big
+        // side gaps. Stretching pins the scroll view (and so all request
+        // content) to the full screen width. fill: without flex:1 the
+        // scroll area also shrink-wraps VERTICALLY, so the idle screen's
+        // centered message / bottom Scan Code (and every request screen's
+        // bottom-pinned slider) collapsed into a cluster at the top.
+        style={[Layout.selfStretch, Layout.fill]}
         contentContainerStyle={[
           Layout.fullWidth,
           Layout.scrollSpaceBetween,
@@ -1542,6 +1555,11 @@ function Home({ navigation }: Props) {
             Gutters.largeBMargin,
             Gutters.regularTMargin,
             Layout.colCenter,
+            Layout.selfStretch,
+            // Fill the scroll viewport so HomeIdle's flex:1 middle section
+            // and the request screens' justifyContentEnd footers actually
+            // have height to distribute.
+            Layout.fill,
           ]}
         >
           <HomeProgress
