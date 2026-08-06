@@ -39,6 +39,16 @@ export const Colors = {
   // Borders — warm stone
   border: '#E7E5E4',
   borderSecondary: '#D6D3D1',
+  // Control boundary (WCAG 1.4.11 needs 3:1). Stone-500 is the one value that
+  // clears it against BOTH field fills, so it is intentionally not overridden
+  // per theme: 4.8:1 on the light #FFFFFF field, 3.2:1 on the dark #272524 one.
+  borderStrong: '#78716C',
+  // Deep steps of the semantic ramp, for semantic TEXT on a light fill: the
+  // bright variants above are icon/border colors (warning is 2.2:1 and error
+  // 3.8:1 on white — both fail body text). Light surfaces only; on the dark
+  // surfaces the bright variants already clear 4.5:1.
+  warningDeep: '#B45309',
+  errorDeep: '#B91C1C',
   //ComponentColors
   circleButtonBackground: '#FEF3C7',
   circleButtonColor: '#92400E',

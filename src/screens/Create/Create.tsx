@@ -8,12 +8,11 @@ import {
   TextInput,
   StyleSheet,
   Modal,
-  Switch,
-  ActivityIndicator,
   Linking,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import Icon from 'react-native-vector-icons/Feather';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -32,16 +31,23 @@ import {
 
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
 import { setXpubKeyIdentity, setXprivKeyIdentity } from '../../store';
+import { setSspKeyRecoveryKeys } from '../../store/ssp';
+import { deriveRecoveryAccount } from '../../lib/recoveryAccount';
 import { setInitialStateForAllChains } from '../../store';
+import { markBackupVerifyNow } from '../../contexts/BackupCheckupContext';
 
 import { useAppDispatch, useAppSelector } from '../../hooks';
 
-import Divider from '../../components/Divider/Divider';
-import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
+import PoweredByFlux, {
+  POWERED_BY_FLUX_HEIGHT,
+} from '../../components/PoweredByFlux/PoweredByFlux';
 import CreationSteps from '../../components/CreationSteps/CreationSteps';
 import ToastNotif from '../../components/Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';
 import WeakPassword from '../../components/WeakPassword/WeakPassword';
+import ConfirmSeedWords from '../../components/ConfirmSeedWords/ConfirmSeedWords';
+import SeedPhraseBackup from '../../components/SeedPhraseBackup/SeedPhraseBackup';
+import { PrimaryButton } from '../../components/ui';
 
 type Props = {
   navigation: any;
@@ -57,13 +63,11 @@ function Create({ navigation }: Props) {
   const [mnemonic, setMnemonic] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(true);
-  const [rightIcon, setRightIcon] = useState('eye-off');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [passwordVisibilityConfirm, setPasswordVisibilityConfirm] =
     useState(true);
-  const [rightIconConfirm, setRightIconConfirm] = useState('eye-off');
   const [mnemonicShow, setMnemonicShow] = useState(false);
-  const [WSPbackedUp, setWSPbackedUp] = useState(false);
+  const [confirmStage, setConfirmStage] = useState(false);
   const [wspWasShown, setWSPwasShown] = useState(false);
   const [weakPasswordOpen, setWeakPasswordOpen] = useState(false);
   const { t } = useTranslation(['cr', 'common']);
@@ -72,6 +76,9 @@ function Create({ navigation }: Props) {
   const { identityChain } = useAppSelector((state) => state.ssp);
   const blockchainConfig = blockchains[identityChain];
   const keyboardVisible = useKeyboardVisible();
+  // Brand amber is 1.6:1 on the light page fill, so the light theme links in
+  // the deep amber step (6.8:1) and the dark theme in the brand amber (11.8:1).
+  const linkColor = darkMode ? Colors.primary : Colors.circleButtonColor;
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -94,23 +101,11 @@ function Create({ navigation }: Props) {
   };
 
   const handlePasswordVisibility = () => {
-    if (rightIcon === 'eye') {
-      setRightIcon('eye-off');
-      setPasswordVisibility(!passwordVisibility);
-    } else if (rightIcon === 'eye-off') {
-      setRightIcon('eye');
-      setPasswordVisibility(!passwordVisibility);
-    }
+    setPasswordVisibility((previous) => !previous);
   };
 
   const handlePasswordVisibilityConfirm = () => {
-    if (rightIconConfirm === 'eye') {
-      setRightIconConfirm('eye-off');
-      setPasswordVisibilityConfirm(!passwordVisibilityConfirm);
-    } else if (rightIconConfirm === 'eye-off') {
-      setRightIconConfirm('eye');
-      setPasswordVisibilityConfirm(!passwordVisibilityConfirm);
-    }
+    setPasswordVisibilityConfirm((previous) => !previous);
   };
 
   const setupKey = () => {
@@ -133,13 +128,11 @@ function Create({ navigation }: Props) {
     }
   }, [mnemonic]);
 
-  const onChangeWSP = () => {
-    setWSPbackedUp(!WSPbackedUp);
-  };
-
   const handleOk = () => {
-    if (WSPbackedUp && wspWasShown) {
-      storeMnemonic(mnemonic);
+    if (wspWasShown) {
+      // word challenge over the just-generated phrase proves the backup —
+      // storeMnemonic runs only after the user identifies the words
+      setConfirmStage(true);
     } else {
       displayMessage('info', t('cr:backup_needed'));
     }
@@ -151,7 +144,7 @@ function Create({ navigation }: Props) {
     setPassword('');
     setPasswordConfirm('');
     setWSPwasShown(false);
-    setWSPbackedUp(false);
+    setConfirmStage(false);
     setMnemonicShow(false);
   };
 
@@ -229,6 +222,26 @@ function Create({ navigation }: Props) {
         const xpubBlob = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
         setXprivKeyIdentity(xprivBlob);
         setXpubKeyIdentity(xpubBlob);
+        // Recovery account m/48'/coin'/99'/scriptType' — the ONLY branch whose
+        // private key is ever released to the wallet. Derived here, once, from
+        // the mnemonic; the recovery request path only ever decrypts this and
+        // never touches the seed. See lib/recoveryAccount.ts.
+        const recoveryKeys = deriveRecoveryAccount(
+          mnemonicPhrase,
+          identityChain,
+        );
+        dispatch(
+          setSspKeyRecoveryKeys({
+            xpriv: CryptoJS.AES.encrypt(
+              recoveryKeys.xpriv,
+              pwForEncryption,
+            ).toString(),
+            xpub: CryptoJS.AES.encrypt(
+              recoveryKeys.xpub,
+              pwForEncryption,
+            ).toString(),
+          }),
+        );
         // generate hash of our password
         const key256Bits1000Iterations = CryptoJS.PBKDF2(password, salt, {
           keySize: 256 / 32,
@@ -276,15 +289,22 @@ function Create({ navigation }: Props) {
           });
         }
         setIsModalOpen(false);
-        setIsModalOpen(false);
         setIsLoading(false);
         setMnemonic('');
         setPassword('');
         setPasswordConfirm('');
+        // reset challenge-flow flags so a re-mounted Create starts fresh
+        setConfirmStage(false);
+        setWSPwasShown(false);
+        // The create word challenge just passed — that IS the first backup
+        // verification, so a brand-new user isn't asked to re-verify right away.
+        markBackupVerifyNow(Date.now());
         navigation.navigate('Home');
       })
       .catch((error) => {
         setIsLoading(false);
+        // return to the seed phrase view so the user can retry the challenge
+        setConfirmStage(false);
         dispatch(setSSPInitialState());
         setInitialStateForAllChains();
         displayMessage('error', t('cr:err_setting_key'));
@@ -334,7 +354,7 @@ function Create({ navigation }: Props) {
           onPress={() => navigation.navigate('Welcome')}
           style={[Layout.row]}
         >
-          <Icon name="chevron-left" size={20} color={Colors.primary} />
+          <ChevronLeft size={20} color={Colors.primary} />
           <Text
             style={[Fonts.textSmall, Fonts.textPrimary, Gutters.tinyLPadding]}
           >
@@ -348,6 +368,9 @@ function Create({ navigation }: Props) {
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="always"
         extraScrollHeight={20}
+        // Reserve the pinned Powered-by-Flux footer's height so it cannot cover
+        // the primary action at the end of the form.
+        contentContainerStyle={{ paddingBottom: POWERED_BY_FLUX_HEIGHT }}
       >
         <View
           style={[
@@ -379,8 +402,13 @@ function Create({ navigation }: Props) {
             {t('cr:ssp_key_2fa')}
           </Text>
           <TouchableOpacity
+            accessibilityRole="link"
+            accessibilityLabel={t('cr:ssp_key_2fa_info')}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => Linking.openURL('https://sspwallet.io/guide')}
           >
+            {/* Opens an external guide — link color + underline so it does not
+                read as one more line of body copy. */}
             <Text
               style={[
                 Fonts.textTinyTiny,
@@ -388,6 +416,7 @@ function Create({ navigation }: Props) {
                 Fonts.textCenter,
                 Gutters.largeLMargin,
                 Gutters.largeRMargin,
+                { color: linkColor, textDecorationLine: 'underline' },
               ]}
             >
               {t('cr:ssp_key_2fa_info')}
@@ -398,6 +427,7 @@ function Create({ navigation }: Props) {
               Layout.rowCenter,
               Common.inputWithButtonBgColors,
               styles.inputWithButton,
+              { borderColor: Colors.borderStrong },
             ]}
           >
             <TextInput
@@ -406,7 +436,9 @@ function Create({ navigation }: Props) {
               textContentType="password"
               autoCapitalize="none"
               placeholder={t('cr:set_key_pin')}
-              placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+              // token, not a literal: #57534E light / #A8A29E dark, >= 6:1 on
+              // the field fill in both themes (the old #c7c7c7 was 1.7:1)
+              placeholderTextColor={Colors.textGray400}
               secureTextEntry={passwordVisibility ? true : false}
               onChangeText={onChangePassword}
               value={password}
@@ -415,10 +447,20 @@ function Create({ navigation }: Props) {
               onPressIn={() => passwordInputA.current?.focus()}
             />
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t(
+                passwordVisibility
+                  ? 'common:show_password'
+                  : 'common:hide_password',
+              )}
               onPress={handlePasswordVisibility}
               style={Common.inputIcon}
             >
-              <Icon name={rightIcon} size={20} color={Colors.primary} />
+              {passwordVisibility ? (
+                <EyeOff size={20} color={Colors.primary} />
+              ) : (
+                <Eye size={20} color={Colors.primary} />
+              )}
             </TouchableOpacity>
           </View>
           <View
@@ -426,6 +468,7 @@ function Create({ navigation }: Props) {
               Layout.rowCenter,
               Common.inputWithButtonBgColors,
               styles.inputWithButton,
+              { borderColor: Colors.borderStrong },
             ]}
           >
             <TextInput
@@ -434,7 +477,7 @@ function Create({ navigation }: Props) {
               textContentType="password"
               autoCapitalize="none"
               placeholder={t('cr:confirm_key_pin')}
-              placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+              placeholderTextColor={Colors.textGray400}
               secureTextEntry={passwordVisibilityConfirm ? true : false}
               onChangeText={onChangePasswordConfirm}
               value={passwordConfirm}
@@ -443,10 +486,20 @@ function Create({ navigation }: Props) {
               onPressIn={() => passwordInputB.current?.focus()}
             />
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t(
+                passwordVisibilityConfirm
+                  ? 'common:show_password'
+                  : 'common:hide_password',
+              )}
               onPress={handlePasswordVisibilityConfirm}
               style={Common.inputIcon}
             >
-              <Icon name={rightIconConfirm} size={20} color={Colors.primary} />
+              {passwordVisibilityConfirm ? (
+                <EyeOff size={20} color={Colors.primary} />
+              ) : (
+                <Eye size={20} color={Colors.primary} />
+              )}
             </TouchableOpacity>
           </View>
           <Text
@@ -461,20 +514,16 @@ function Create({ navigation }: Props) {
           >
             {t('cr:strong_password')}
           </Text>
-          <TouchableOpacity
-            style={[
-              Common.button.rounded,
-              Common.button.primary,
-              Gutters.regularBMargin,
-              Gutters.smallTMargin,
-            ]}
+          <PrimaryButton
+            label={t('cr:setup_key')}
+            style={[Gutters.regularBMargin, Gutters.smallTMargin]}
             onPress={() => checkPasswordStrength()}
+          />
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('Restore')}
+            hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
           >
-            <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-              {t('cr:setup_key')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Restore')}>
             <Text style={[Fonts.textSmall, Fonts.textPrimary]}>
               {t('cr:restore_key')}
             </Text>
@@ -488,212 +537,122 @@ function Create({ navigation }: Props) {
         onRequestClose={() => handleCancel()}
       >
         <BlurOverlay />
-        <ScrollView
-          keyboardShouldPersistTaps="always"
+        {/* The scroll VIEWPORT must be inset, not just its first child: this
+            sheet is taller than the screen, so once scrolled, a static
+            marginTop scrolls away and the seed-loss warning passes under the
+            status bar and Dynamic Island. */}
+        <SafeAreaView
           style={[Layout.fill, Common.modalBackdrop]}
-          contentInset={{ bottom: 80 }}
-          contentContainerStyle={[
-            Gutters.smallBPadding,
-            Layout.scrollSpaceBetween,
-          ]}
+          edges={['top', 'bottom']}
         >
-          <View style={[Layout.fill, Common.modalView]}>
-            <Text
-              style={[Fonts.titleSmall, Gutters.smallBMargin, Fonts.textCenter]}
-            >
-              {t('cr:key_backup')}
-            </Text>
-            <View style={[Gutters.smallBMargin]}>
-              <CreationSteps step={2} isImport={false} />
-            </View>
-            <View
-              style={[
-                Layout.fill,
-                Layout.relative,
-                Layout.fullWidth,
-                Layout.alignItemsCenter,
-                Gutters.regularTMargin,
-              ]}
-            >
-              <Text
-                style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-              >
-                {t('cr:key_backup_text_1')}
-              </Text>
-              <Text
-                style={[Fonts.textSmall, Gutters.tinyBMargin, Fonts.textCenter]}
-              >
-                {t('cr:key_backup_text_2')}
-              </Text>
+          <ScrollView
+            keyboardShouldPersistTaps="always"
+            style={Layout.fill}
+            contentInset={{ bottom: 80 }}
+            contentContainerStyle={[
+              Gutters.smallBPadding,
+              Layout.scrollSpaceBetween,
+            ]}
+          >
+            <View style={[Layout.fill, Common.modalView, { marginTop: 12 }]}>
               <Text
                 style={[
-                  Fonts.textSmall,
+                  Fonts.titleSmall,
                   Gutters.smallBMargin,
                   Fonts.textCenter,
                 ]}
               >
-                {t('cr:key_backup_text_3')}
+                {t('cr:key_backup')}
               </Text>
-              <Divider color={Colors.textGray200} />
-              <Text
-                style={[
-                  Fonts.textTinyTiny,
-                  Fonts.textLight,
-                  Gutters.tinyTMargin,
-                  Fonts.textJustify,
-                  Fonts.textError,
-                ]}
-              >
-                {t('cr:ssp_key_mnemonic_sec')}
-              </Text>
-              <View
-                style={[
-                  { borderWidth: 1, borderColor: Colors.textInput },
-                  Gutters.smallTMargin,
-                  Gutters.smallBMargin,
-                ]}
-              >
-                <Text
-                  selectable={true}
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textCenter,
-                    Gutters.tinyMargin,
-                    Fonts.textBold,
-                  ]}
-                >
-                  {mnemonicShow
-                    ? mnemonic
-                        .split(' ')
-                        .slice(0, Math.round(mnemonic.split(' ').length / 3))
-                        .join(' ')
-                    : '*** *** *** *** *** *** *** ***'}
-                </Text>
-                <Text
-                  selectable={true}
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textCenter,
-                    Gutters.tinyMargin,
-                    Fonts.textBold,
-                  ]}
-                >
-                  {mnemonicShow
-                    ? mnemonic
-                        .split(' ')
-                        .slice(
-                          Math.round(mnemonic.split(' ').length / 3),
-                          Math.round((mnemonic.split(' ').length / 3) * 2),
-                        )
-                        .join(' ')
-                    : '*** *** *** *** *** *** *** ***'}
-                </Text>
-                <Text
-                  selectable={true}
-                  style={[
-                    Fonts.textSmall,
-                    Fonts.textCenter,
-                    Gutters.tinyMargin,
-                    Fonts.textBold,
-                  ]}
-                >
-                  {mnemonicShow
-                    ? mnemonic
-                        .split(' ')
-                        .slice(
-                          Math.round((mnemonic.split(' ').length / 3) * 2),
-                          mnemonic.split(' ').length,
-                        )
-                        .join(' ')
-                    : '*** *** *** *** *** *** *** ***'}
-                </Text>
+              <View style={[Gutters.smallBMargin]}>
+                <CreationSteps step={2} isImport={false} />
               </View>
-              <View style={[Gutters.tinyBMargin]}>
-                <TouchableOpacity
+              {confirmStage && (
+                <ConfirmSeedWords
+                  phrase={mnemonic}
+                  isLoading={isLoading}
+                  onVerified={() => storeMnemonic(mnemonic)}
+                  onBack={() => setConfirmStage(false)}
+                />
+              )}
+              {!confirmStage && (
+                <View
                   style={[
-                    Common.button.outlineRounded,
-                    Common.button.dashed,
-                    Common.button.secondaryButton,
+                    Layout.fill,
+                    Layout.relative,
+                    Layout.fullWidth,
+                    Layout.alignItemsCenter,
+                    Gutters.regularTMargin,
                   ]}
-                  onPress={() => {
-                    setMnemonicShow(!mnemonicShow);
-                    setWSPwasShown(true);
-                  }}
+                >
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Gutters.tinyBMargin,
+                      Fonts.textCenter,
+                    ]}
+                  >
+                    {t('cr:key_backup_text_1')}
+                  </Text>
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Gutters.tinyBMargin,
+                      Fonts.textCenter,
+                    ]}
+                  >
+                    {t('cr:key_backup_text_2')}
+                  </Text>
+                  <Text
+                    style={[
+                      Fonts.textSmall,
+                      Gutters.smallBMargin,
+                      Fonts.textCenter,
+                    ]}
+                  >
+                    {t('cr:key_backup_text_3')}
+                  </Text>
+                  <SeedPhraseBackup
+                    phrase={mnemonic}
+                    visible={mnemonicShow}
+                    onToggle={() => {
+                      setMnemonicShow(!mnemonicShow);
+                      setWSPwasShown(true);
+                    }}
+                  />
+                </View>
+              )}
+              <View style={[Layout.justifyContentEnd]}>
+                {!confirmStage && (
+                  <PrimaryButton
+                    label={t('cr:setup_key')}
+                    style={[Gutters.regularBMargin, Gutters.smallTMargin]}
+                    disabled={isLoading}
+                    loading={isLoading}
+                    onPress={() => handleOk()}
+                  />
+                )}
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  disabled={isLoading}
+                  onPress={() => handleCancel()}
+                  hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
+                  style={[Gutters.smallTMargin]}
                 >
                   <Text
                     style={[
                       Fonts.textSmall,
                       Fonts.textPrimary,
-                      Gutters.smallHPadding,
+                      Fonts.textCenter,
                     ]}
                   >
-                    {mnemonicShow
-                      ? t('cr:hide_mnemonic')
-                      : t('cr:show_mnemonic')}{' '}
-                    {t('common:key_seed_phrase')}
+                    {t('common:cancel')}
                   </Text>
                 </TouchableOpacity>
               </View>
-              <Divider color={Colors.textGray200} />
-              <View
-                style={[
-                  Layout.row,
-                  Gutters.smallTMargin,
-                  Gutters.smallLPadding,
-                ]}
-              >
-                <Switch
-                  onValueChange={onChangeWSP}
-                  value={WSPbackedUp}
-                  style={styles.toggleStyle}
-                />
-                <Text
-                  style={[
-                    Gutters.largeRPadding,
-                    Gutters.tinyBMargin,
-                    Fonts.textTiny,
-                  ]}
-                >
-                  {t('cr:seed_phrase_backed_up')}
-                </Text>
-              </View>
             </View>
-            <View style={[Layout.justifyContentEnd]}>
-              <TouchableOpacity
-                style={[
-                  Common.button.rounded,
-                  Common.button.primary,
-                  Gutters.regularBMargin,
-                  Gutters.smallTMargin,
-                ]}
-                disabled={isLoading}
-                onPress={() => handleOk()}
-              >
-                {isLoading && (
-                  <ActivityIndicator
-                    size={'large'}
-                    style={[Gutters.largeVMargin]}
-                  />
-                )}
-                {!isLoading && (
-                  <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-                    {t('cr:setup_key')}
-                  </Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                disabled={isLoading}
-                onPress={() => handleCancel()}
-              >
-                <Text
-                  style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
-                >
-                  {t('common:cancel')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </SafeAreaView>
         <ToastNotif />
       </Modal>
       <WeakPassword
@@ -709,11 +668,12 @@ const styles = StyleSheet.create({
   inputWithButton: {
     width: '80%',
     height: 50,
-    borderRadius: 10,
+    // design tokens: radius 8 for controls
+    borderRadius: 8,
     marginTop: 16,
-  },
-  toggleStyle: {
-    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
+    // visible control boundary (WCAG 1.4.11) — the white field fill is only
+    // ~1.04:1 against the light page; borderColor comes from the theme
+    borderWidth: 1,
   },
 });
 

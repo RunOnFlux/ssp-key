@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -7,7 +8,7 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../../hooks';
 
 interface TestResult {
@@ -420,7 +421,7 @@ const LavaMoatTest: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           >
-            <Icon name="arrow-left" size={24} color="#fff" />
+            <ArrowLeft size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.title}>🔒 LavaMoat Security Test</Text>
           <View style={{ width: 24 }} />
@@ -600,7 +601,7 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE_FONT,
     lineHeight: 16,
   },
   dividerItem: {

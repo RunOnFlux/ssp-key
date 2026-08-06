@@ -46,10 +46,14 @@ export async function getCryptoUsdRate(chain: string): Promise<number> {
   }
 }
 
-/** Format a USD value with thousands separators and exactly 2 decimals. */
+/**
+ * Format a USD value with thousands separators and exactly 2 decimals.
+ * Formatted by hand rather than via toLocaleString: on Hermes builds where
+ * Intl data is unavailable the locale options are silently ignored and the
+ * raw float (with its full decimal tail) leaks onto the approval screen.
+ */
 export function formatUsdAmount(value: number): string {
-  return value.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const fixed = value.toFixed(2);
+  const [whole, frac] = fixed.split('.');
+  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${frac}`;
 }

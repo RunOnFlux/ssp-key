@@ -1,0 +1,1 @@
+Your phone holds the second key: every transaction needs both your browser and your SSP Key to sign. True 2-of-2 multisig self-custody — open source, audited by Halborn.

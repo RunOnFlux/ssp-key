@@ -6,6 +6,7 @@ import React, {
   useMemo,
 } from 'react';
 import {
+  AccessibilityInfo,
   View,
   StyleSheet,
   Text,
@@ -26,7 +27,7 @@ import {
   RESULTS,
   openSettings,
 } from 'react-native-permissions';
-import Icon from 'react-native-vector-icons/Feather';
+import { ChevronLeft } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../../hooks';
 import { useDispatch } from 'react-redux';
@@ -48,13 +49,43 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
   const device = useCameraDevice('back');
   const isScanned = useRef(false);
   const scanLineAnim = useMemo(() => new Animated.Value(0), []);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
-  setTimeout(() => {
+  // The camera surface is always dark — force the dark theme while the
+  // scanner is up. Effect (not render body) so it dispatches once.
+  useEffect(() => {
     dispatch(changeTheme({ theme: 'default', darkMode: true }));
-  }, 0);
+  }, [dispatch]);
+
+  // Respect the OS reduce-motion setting (same pattern as PillarMark):
+  // render a static scan frame instead of the sweeping line.
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (mounted) {
+          setReduceMotion(enabled);
+        }
+      })
+      .catch(() => {
+        // accessibility query unavailable — keep animations enabled
+      });
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotion,
+    );
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
 
   // Animate scan line
   useEffect(() => {
+    if (reduceMotion) {
+      scanLineAnim.setValue(0);
+      return;
+    }
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(scanLineAnim, {
@@ -73,7 +104,7 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
     );
     animation.start();
     return () => animation.stop();
-  }, [scanLineAnim]);
+  }, [scanLineAnim, reduceMotion]);
 
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -220,15 +251,17 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
           <View style={[styles.corner, styles.cornerBottomLeft]} />
           <View style={[styles.corner, styles.cornerBottomRight]} />
 
-          {/* Animated scan line */}
-          <Animated.View
-            style={[
-              styles.scanLine,
-              {
-                transform: [{ translateY: scanLineTranslateY }],
-              },
-            ]}
-          />
+          {/* Animated scan line (hidden when the OS asks for reduced motion) */}
+          {!reduceMotion && (
+            <Animated.View
+              style={[
+                styles.scanLine,
+                {
+                  transform: [{ translateY: scanLineTranslateY }],
+                },
+              ]}
+            />
+          )}
         </View>
 
         {/* Right overlay */}
@@ -247,14 +280,16 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
       <View style={styles.container}>
         <StatusBar hidden />
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('common:back')}
           style={styles.backButton}
           onPress={onClose}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Icon name="chevron-left" size={32} color={Colors.white} />
+          <ChevronLeft size={32} color={Colors.white} />
         </TouchableOpacity>
-        <View style={styles.camera}>
-          <Text style={{ color: Colors.white }}>
+        <View style={[styles.camera, styles.messageWrap]}>
+          <Text style={styles.messageText}>
             {t('home:err_camera_unavailable')}
           </Text>
         </View>
@@ -270,7 +305,7 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
         onPress={onClose}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Icon name="chevron-left" size={32} color={Colors.white} />
+        <ChevronLeft size={32} color={Colors.white} />
       </TouchableOpacity>
       {hasCameraPermission ? (
         <>
@@ -284,8 +319,10 @@ const Scanner: React.FC<QRScannerProps> = ({ onRead, onClose }) => {
           {renderScanOverlay()}
         </>
       ) : (
-        <View style={styles.camera}>
-          <Text>{t('home:scan_camra_permission_not_granted')}</Text>
+        <View style={[styles.camera, styles.messageWrap]}>
+          <Text style={styles.messageText}>
+            {t('home:scan_camra_permission_not_granted')}
+          </Text>
         </View>
       )}
     </View>
@@ -316,11 +353,22 @@ const styles = StyleSheet.create({
     top: 10,
     left: 10,
     zIndex: 10,
-    width: 40,
-    height: 40,
+    // 44pt minimum touch target
+    width: 44,
+    height: 44,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  messageWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  messageText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
   },
   overlay: {
     position: 'absolute',

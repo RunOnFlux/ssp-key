@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { RefreshCw } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
+import VerificationWords from '../VerificationWords/VerificationWords';
+import { recoveryVerificationWords } from '../../lib/verificationCode';
+import { type RecoveryRequestPayload } from '../../lib/recoveryHandler';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 /**
  * RecoveryRequest — approval UI for a wallet-issued randomParams recovery
  * request. Matches the existing request-component pattern:
@@ -18,14 +21,23 @@ import { PrimaryButton } from '../ui';
  *      wrap + relay post.
  *
  * Reject flows straight through to `actionStatus(false)` (no auth needed).
+ *
+ * The screen also shows the six-word code for this exchange, derived from the
+ * request's own public fields. SSP Wallet shows the same words while it waits,
+ * so a request altered in transit is visible before approval.
  */
 const RecoveryRequest = (props: {
   activityStatus: boolean;
   actionStatus: (status: boolean) => void;
+  request: RecoveryRequestPayload;
 }) => {
   const { t } = useTranslation(['home', 'common']);
   const { Fonts, Gutters, Layout, Colors } = useTheme();
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
+  const verifyWords = useMemo(
+    () => recoveryVerificationWords(props.request.pkEph, props.request.nonce),
+    [props.request.pkEph, props.request.nonce],
+  );
 
   const approve = () => {
     console.log('Approve recovery');
@@ -59,7 +71,7 @@ const RecoveryRequest = (props: {
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="refresh-cw" size={60} color={Colors.textGray400} />
+        <RefreshCw size={60} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -91,14 +103,28 @@ const RecoveryRequest = (props: {
         >
           {t('home:ssp_recovery_request_warning')}
         </Text>
+        <View style={Gutters.regularTMargin}>
+          <VerificationWords
+            heading={t('home:recovery_verify_heading')}
+            body={t('home:recovery_verify_body')}
+            words={verifyWords}
+          />
+        </View>
       </View>
-      <View style={[Layout.justifyContentEnd]}>
-        <PrimaryButton
-          label={t('home:approve_request')}
+      <View
+        style={[
+          Layout.selfStretch,
+          Layout.justifyContentEnd,
+          Gutters.tinyHMargin,
+        ]}
+      >
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || props.activityStatus}
           loading={authenticationOpen || props.activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"

@@ -7,7 +7,7 @@ import {
   ScrollView,
   Linking,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { Link } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import CreationSteps from '../CreationSteps/CreationSteps';
@@ -65,7 +65,7 @@ const SyncNeeded = (props: { actionStatus: (status: string) => void }) => {
               Layout.alignItemsCenter,
             ]}
           >
-            <Icon name="link" size={60} color={Colors.textGray400} />
+            <Link size={60} color={Colors.textGray400} />
             <Text
               style={[
                 Fonts.textBold,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Image, TouchableOpacity, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
 };
 
 const Headerbar = ({ headerText, backNavigation, navigation }: Props) => {
+  const { t } = useTranslation(['common']);
   const { darkMode, Gutters, Layout, Images, Fonts } = useTheme();
   return (
     <>
@@ -21,6 +23,8 @@ const Headerbar = ({ headerText, backNavigation, navigation }: Props) => {
         ]}
       >
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('common:back')}
           onPress={() => navigation.navigate(backNavigation)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >

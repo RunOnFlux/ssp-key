@@ -7,11 +7,12 @@ import {
   ScrollView,
   Linking,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { explorerTxUrl } from '../../lib/explorerUrl';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import BlurOverlay from '../../BlurOverlay';
+import { PrimaryButton, SuccessHeader } from '../ui';
 
 import { cryptos } from '../../types';
 
@@ -60,36 +61,30 @@ const TxSent = (props: {
               Layout.alignItemsCenter,
             ]}
           >
-            <Icon name="check-circle" size={60} color={Colors.textGray400} />
+            <SuccessHeader title={t('home:transaction_sent')} />
             <Text
+              selectable={true}
               style={[
-                Fonts.textBold,
-                Fonts.textRegular,
-                Gutters.smallMargin,
+                Fonts.textTiny,
                 Fonts.textCenter,
+                Gutters.smallTMargin,
+                { fontFamily: MONOSPACE_FONT, color: Colors.textGray400 },
               ]}
             >
-              {t('home:transaction_sent')}
-            </Text>
-            <Text style={[Fonts.textSmall, Fonts.textCenter]}>
               {props.txid}
             </Text>
           </View>
           <View style={[Layout.justifyContentEnd]}>
-            <TouchableOpacity
-              style={[
-                Common.button.rounded,
-                Common.button.primary,
-                Gutters.regularBMargin,
-                Gutters.smallTMargin,
-              ]}
+            <PrimaryButton
+              label={t('home:show_in_explorer')}
+              style={[Gutters.regularBMargin, Gutters.smallTMargin]}
               onPress={() => openExplorer()}
+            />
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => close()}
+              hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
             >
-              <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-                {t('home:show_in_explorer')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => close()}>
               <Text
                 style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
               >

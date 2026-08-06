@@ -10,8 +10,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
-import IconB from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Eye, EyeOff, FingerprintPattern } from 'lucide-react-native';
 import * as CryptoJS from 'crypto-js';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
@@ -19,16 +18,110 @@ import * as Keychain from 'react-native-keychain';
 import { useTheme } from '../../hooks';
 import ToastNotif from '../Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';
+import { PrimaryButton } from '../ui';
+
+/** Every request type this gate can be opened for. */
+export type AuthenticationType =
+  | 'tx'
+  | 'sync'
+  | 'pubnonces'
+  | 'evmsigning'
+  | 'wksigning'
+  | 'vaultxpub'
+  | 'vaultsigning'
+  | 'noncesync'
+  | 'recovery'
+  | 'fluxnodestart'
+  | 'delete'
+  | 'sensitive';
+
+interface AuthCopy {
+  /** Biometric prompt title. */
+  biometric: string;
+  /** Headline — states what is about to happen. */
+  info: string;
+  /** Sub-line above the password field, or null to render none (delete). */
+  confirm: string | null;
+}
+
+// Copy map — per-request-type prompt copy. `satisfies` a FULL Record so a new
+// request type cannot silently inherit the generic "sensitive information"
+// wording (the compiler demands copy stating what is actually being approved)
+// while `as const` keeps the literal key types t() needs (which in turn makes
+// every string below compile-checked against the en locale).
+const AUTH_COPY = {
+  tx: {
+    biometric: 'home:auth_confirm_sign_send',
+    info: 'home:auth_sign_tx',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  sync: {
+    biometric: 'home:auth_confirm_sync',
+    info: 'home:auth_sync_ssp',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  pubnonces: {
+    biometric: 'home:auth_confirm_public_nonces',
+    info: 'home:auth_sync_pub_nonces',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  evmsigning: {
+    biometric: 'home:auth_confirm_evm_signing',
+    info: 'home:auth_sync_evm_signing',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  wksigning: {
+    biometric: 'home:auth_confirm_wk_signing',
+    info: 'home:auth_sync_wk_signing',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  vaultxpub: {
+    biometric: 'home:auth_confirm_vault_xpub',
+    info: 'home:auth_confirm_vault_xpub_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  vaultsigning: {
+    biometric: 'home:auth_confirm_vault_signing',
+    info: 'home:auth_confirm_vault_signing_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  noncesync: {
+    biometric: 'home:auth_confirm_nonce_sync',
+    info: 'home:auth_confirm_nonce_sync_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  recovery: {
+    biometric: 'home:auth_confirm_recovery',
+    info: 'home:auth_recovery_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  fluxnodestart: {
+    biometric: 'home:auth_confirm_flux_node_start',
+    info: 'home:auth_flux_node_start_info',
+    confirm: 'home:auth_confirm_with_pw',
+  },
+  delete: {
+    biometric: 'home:auth_sensitive_information',
+    info: 'home:auth_delete_ssp_key_data',
+    // the destructive-delete headline is the whole message; no sub-line
+    confirm: null,
+  },
+  sensitive: {
+    biometric: 'home:auth_sensitive_information',
+    info: 'home:auth_sensitive_inf',
+    confirm: 'home:auth_grant_access_pw',
+  },
+} as const satisfies Record<AuthenticationType, AuthCopy>;
 
 const Authentication = (props: {
   actionStatus: (status: boolean) => void;
-  type: string;
+  type: AuthenticationType;
   biomatricsAllowed: boolean;
 }) => {
   // focusability of inputs
   const textInputA = useRef<TextInput | null>(null);
   const { t } = useTranslation(['home', 'common', 'cr']);
-  const { darkMode, Fonts, Gutters, Layout, Common, Colors } = useTheme();
+  const { Fonts, Gutters, Layout, Common, Colors } = useTheme();
   const [password, setPassword] = useState('');
   const [passwordVisibility, setPasswordVisibility] = useState(false);
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
@@ -38,6 +131,9 @@ const Authentication = (props: {
   // cancel) firing after a cancel propagation already started, which
   // would otherwise call actionStatus(true) seconds after actionStatus(false).
   const propagated = useRef(false);
+  // Defensive lookup: the prop is typed, so this only guards a caller that
+  // reaches this component from untyped JS.
+  const copy = AUTH_COPY[props.type] ?? AUTH_COPY.sensitive;
 
   // Fade out the modal before the parent unmounts us. Without this, an
   // abrupt unmount during the same render commit (e.g. Home setting
@@ -89,26 +185,7 @@ const Authentication = (props: {
   }, []);
 
   const initiateFingerprint = () => {
-    let textForPrompt = t('home:auth_sensitive_information');
-    if (props.type === 'tx') {
-      textForPrompt = t('home:auth_confirm_sign_send');
-    } else if (props.type === 'sync') {
-      textForPrompt = t('home:auth_confirm_sync');
-    } else if (props.type === 'pubnonces') {
-      textForPrompt = t('home:auth_confirm_public_nonces');
-    } else if (props.type === 'evmsigning') {
-      textForPrompt = t('home:auth_confirm_evm_signing');
-    } else if (props.type === 'wksigning') {
-      textForPrompt = t('home:auth_confirm_wk_signing');
-    } else if (props.type === 'vaultxpub') {
-      textForPrompt = t('home:auth_confirm_vault_xpub');
-    } else if (props.type === 'vaultsigning') {
-      textForPrompt = t('home:auth_confirm_vault_signing');
-    } else if (props.type === 'noncesync') {
-      textForPrompt = t('home:auth_confirm_nonce_sync');
-    } else if (props.type === 'recovery') {
-      textForPrompt = t('home:auth_confirm_recovery');
-    }
+    const textForPrompt = t(copy.biometric);
     console.log('Initiate Fingerprint');
     // if success continue, if fail, show error message and only allow password authentication
     // get from keychain
@@ -292,27 +369,9 @@ const Authentication = (props: {
                   Gutters.smallTMargin,
                 ]}
               >
-                {props.type === 'tx'
-                  ? t('home:auth_sign_tx')
-                  : props.type === 'sync'
-                    ? t('home:auth_sync_ssp')
-                    : props.type === 'pubnonces'
-                      ? t('home:auth_sync_pub_nonces')
-                      : props.type === 'evmsigning'
-                        ? t('home:auth_sync_evm_signing')
-                        : props.type === 'wksigning'
-                          ? t('home:auth_sync_wk_signing')
-                          : props.type === 'vaultxpub'
-                            ? t('home:auth_confirm_vault_xpub_info')
-                            : props.type === 'vaultsigning'
-                              ? t('home:auth_confirm_vault_signing_info')
-                              : props.type === 'noncesync'
-                                ? t('home:auth_confirm_nonce_sync_info')
-                                : props.type === 'delete'
-                                  ? t('home:auth_delete_ssp_key_data')
-                                  : t('home:auth_sensitive_inf')}
+                {t(copy.info)}
               </Text>
-              {props.type !== 'delete' && (
+              {copy.confirm && (
                 <Text
                   style={[
                     Fonts.textBold,
@@ -321,34 +380,20 @@ const Authentication = (props: {
                     Gutters.smallTMargin,
                   ]}
                 >
-                  {props.type === 'tx'
-                    ? t('home:auth_confirm_with_pw')
-                    : props.type === 'sync'
-                      ? t('home:auth_confirm_with_pw')
-                      : props.type === 'pubnonces'
-                        ? t('home:auth_confirm_with_pw')
-                        : props.type === 'evmsigning'
-                          ? t('home:auth_confirm_with_pw')
-                          : props.type === 'wksigning'
-                            ? t('home:auth_confirm_with_pw')
-                            : props.type === 'vaultxpub'
-                              ? t('home:auth_confirm_with_pw')
-                              : props.type === 'vaultsigning'
-                                ? t('home:auth_confirm_with_pw')
-                                : props.type === 'noncesync'
-                                  ? t('home:auth_confirm_with_pw')
-                                  : t('home:auth_grant_access_pw')}
+                  {t(copy.confirm)}
                 </Text>
               )}
 
               {biometricsAvailable && (
-                <IconB
-                  name="fingerprint"
-                  size={50}
-                  color={Colors.primary}
-                  style={[Fonts.textCenter, Gutters.regularTMargin]}
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={t('common:use_biometrics')}
                   onPress={() => initiateFingerprint()}
-                />
+                  style={[{ alignSelf: 'center' }, Gutters.regularTMargin]}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <FingerprintPattern size={50} color={Colors.primary} />
+                </TouchableOpacity>
               )}
               {!biometricsAvailable && <View style={[Gutters.smallMargin]} />}
               <View
@@ -356,6 +401,7 @@ const Authentication = (props: {
                   Layout.rowCenter,
                   Common.inputWithButtonBgModalColors,
                   styles.inputWithButton,
+                  { borderColor: Colors.borderStrong },
                 ]}
               >
                 <TextInput
@@ -364,7 +410,9 @@ const Authentication = (props: {
                   textContentType="password"
                   autoCapitalize="none"
                   placeholder={t('cr:confirm_key_pin')}
-                  placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                  // token, not a literal: #57534E light / #A8A29E dark, >= 6:1
+                  // on the field fill in both themes (the old #c7c7c7 was 1.6:1)
+                  placeholderTextColor={Colors.textGray400}
                   secureTextEntry={passwordVisibility ? false : true}
                   onChangeText={onChangePassword}
                   value={password}
@@ -373,34 +421,38 @@ const Authentication = (props: {
                   onPressIn={() => textInputA.current?.focus()}
                 />
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={t(
+                    passwordVisibility
+                      ? 'common:hide_password'
+                      : 'common:show_password',
+                  )}
                   onPress={() => setPasswordVisibility(!passwordVisibility)}
                   style={Common.inputIcon}
                 >
-                  <Icon
-                    name={passwordVisibility ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={Colors.primary}
-                  />
+                  {passwordVisibility ? (
+                    <Eye size={20} color={Colors.primary} />
+                  ) : (
+                    <EyeOff size={20} color={Colors.primary} />
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
             <View style={[Layout.justifyContentEnd]}>
-              <TouchableOpacity
-                style={[
-                  Common.button.rounded,
-                  Common.button.primary,
-                  Gutters.regularBMargin,
-                  Gutters.smallTMargin,
-                ]}
-                onPress={() => grantAccess()}
-              >
-                <Text style={[Fonts.textRegular, Fonts.textOnPrimary]}>
-                  {props.type === 'sensitive'
+              <PrimaryButton
+                label={
+                  props.type === 'sensitive'
                     ? t('home:grant_access')
-                    : t('common:confirm')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => close()}>
+                    : t('common:confirm')
+                }
+                style={[Gutters.regularBMargin, Gutters.smallTMargin]}
+                onPress={() => grantAccess()}
+              />
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => close()}
+                hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
+              >
                 <Text
                   style={[Fonts.textSmall, Fonts.textPrimary, Fonts.textCenter]}
                 >
@@ -423,12 +475,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     left: 0,
     right: 0,
-    height: 480,
+    minHeight: 480,
     bottom: 40,
   },
   inputWithButton: {
     marginTop: 30,
     width: '100%',
-    borderRadius: 10,
+    // design tokens: radius 8 for controls
+    borderRadius: 8,
+    // visible control boundary (WCAG 1.4.11) — the field fill alone is only
+    // ~1.1:1 against the light modal surface; borderColor comes from the theme
+    borderWidth: 1,
   },
 });

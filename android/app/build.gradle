@@ -86,8 +86,8 @@ android {
         applicationId "io.runonflux.sspkey"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 59
-        versionName "1.28.0"
+        versionCode 60
+        versionName "2.0.0"
     }
     signingConfigs {
         debug {
@@ -134,9 +134,3 @@ dependencies {
         implementation jscFlavor
     }
 }
-
-project.ext.vectoricons = [
-    iconFontNames: [ 'Feather.ttf', 'MaterialCommunityIcons.ttf' ] // only these fonts, icons are used
-]
-
-apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { Link } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
@@ -9,7 +9,7 @@ import { blockchains } from '@storage/blockchains';
 
 import { cryptos } from '../../types';
 
-import { PrimaryButton } from '../ui';
+import { SlideToApprove } from '../request';
 const SyncRequest = (props: {
   chain: keyof cryptos;
   activityStatus: boolean;
@@ -55,13 +55,16 @@ const SyncRequest = (props: {
           Layout.alignItemsCenter,
         ]}
       >
-        <Icon name="link" size={60} color={Colors.textGray400} />
+        <Link size={60} color={Colors.textGray400} />
+        {/* Screen heading — the title color token, so this H1 does not render
+            in the same gray as the paragraph beneath it. */}
         <Text
           style={[
             Fonts.textBold,
             Fonts.textCenter,
             Fonts.textRegular,
             Gutters.smallMargin,
+            { color: Colors.textGray800 },
           ]}
         >
           {t('home:sync_request')}
@@ -80,13 +83,20 @@ const SyncRequest = (props: {
           })}
         </Text>
       </View>
-      <View style={[Layout.justifyContentEnd]}>
-        <PrimaryButton
-          label={t('home:approve_sync')}
+      <View
+        style={[
+          Layout.selfStretch,
+          Layout.justifyContentEnd,
+          Gutters.tinyHMargin,
+        ]}
+      >
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_sync')}
           style={[Gutters.regularBMargin, Gutters.smallTMargin]}
           disabled={authenticationOpen || props.activityStatus}
           loading={authenticationOpen || props.activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"

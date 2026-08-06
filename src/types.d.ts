@@ -347,6 +347,11 @@ export interface syncSSPRelay {
   // Scripts from first address (index 0) - not strictly needed but extra assurance
   redeemScript?: string;
   witnessScript?: string;
+  // Recovery account xpub (m/48'/coin'/99'/scriptType') and this Key's
+  // signature over it. SSP Wallet verifies the signature against the identity
+  // key it derives itself, so the value does not depend on trusting the relay.
+  recoveryXpub?: string;
+  xpubSignature?: string;
 }
 
 export interface actionSSPRelay {

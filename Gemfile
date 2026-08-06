@@ -7,7 +7,10 @@ ruby ">= 2.6.10"
 gem 'cocoapods', '>= 1.13', '!= 1.15.0', '!= 1.15.1'
 gem 'activesupport', '>= 6.1.7.5', '!= 7.1.0'
 gem 'xcodeproj', '< 1.26.0'
-gem 'concurrent-ruby', '< 1.3.4'
+# concurrent-ruby < 1.3.7 has lock/atomicity CVEs (GHSA-h8w8-99g7-qmvj et al).
+# The old '< 1.3.4' pin guarded against a Logger break in activesupport < 7.1;
+# we run activesupport 7.2 with an explicit 'logger' gem, so it is no longer needed.
+gem 'concurrent-ruby', '>= 1.3.7'
 
 # json >= 2.10 fails to compile on the Xcode Cloud image: mkmf misdetects
 # rb_hash_bulk_insert/rb_str_to_interned_str as missing, and the gem's static

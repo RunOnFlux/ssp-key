@@ -8,7 +8,7 @@ import {
   Linking,
   Image,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { CircleQuestionMark, Globe, MessageCircle } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import BlurOverlay from '../../BlurOverlay';
@@ -112,21 +112,21 @@ const HelpSection = (props: {
               onPress={openWebsite}
               style={[Layout.center, Gutters.smallVPadding]}
             >
-              <Icon name={'web'} size={30} color={Colors.primary} />
+              <Globe size={30} color={Colors.primary} />
               <Text style={[Fonts.textSmall, Fonts.textCenter]}>Website</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={openSupport}
               style={[Layout.center, Gutters.tinyVPadding]}
             >
-              <Icon name={'help'} size={30} color={Colors.primary} />
+              <CircleQuestionMark size={30} color={Colors.primary} />
               <Text style={[Fonts.textSmall, Fonts.textCenter]}>Support</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={openDiscord}
               style={[Layout.center, Gutters.smallVPadding]}
             >
-              <Icon name={'discord'} size={30} color={Colors.primary} />
+              <MessageCircle size={30} color={Colors.primary} />
               <Text style={[Fonts.textSmall, Fonts.textCenter]}>Discord</Text>
             </TouchableOpacity>
             <TouchableOpacity

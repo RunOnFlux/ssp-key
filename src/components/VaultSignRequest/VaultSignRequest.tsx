@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
   Text,
@@ -9,14 +10,15 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import Authentication from '../Authentication/Authentication';
-import Icon from 'react-native-vector-icons/Feather';
+import { Shield } from 'lucide-react-native';
 import { blockchains } from '../../storage/blockchains';
 import type { cryptos } from '../../types';
 import type { VaultDecodedTx } from '../../lib/transactions';
 import type { ProposalSimulation } from '../../lib/vaultSimulation';
 import VaultRiskStrip from './VaultRiskStrip';
 
-import { Card, PrimaryButton } from '../ui';
+import { Card } from '../ui';
+import { SlideToApprove } from '../request';
 /**
  * Format a base-unit amount (satoshis/wei) to human-readable using chain decimals.
  */
@@ -117,9 +119,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   // proposal-record amounts (verified at creation).
   const solBlocked = solDecodeMismatch === true;
   // Fail closed: while the async byte-decode is still pending there is no
-  // verdict yet — keep Approve disabled (no attack banner, just disabled)
-  // until the decode resolves.
+  // verdict yet, so Approve stays disabled (no banner, just disabled) until the
+  // decode resolves.
   const solPending = solDecodePending === true;
+  // Fail closed on ANY decode error, matching TransactionRequest: nothing this
+  // device cannot read is approvable. Reject stays reachable.
+  const decodeBlocked = !!decodedTx?.error;
 
   const approve = () => {
     actionStatus(true);
@@ -146,12 +151,13 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
         style={[Layout.fill, Layout.fullWidth]}
         contentContainerStyle={[
           Layout.alignItemsCenter,
+          Gutters.tinyHPadding,
           { paddingTop: 20, paddingBottom: 20 },
         ]}
         showsVerticalScrollIndicator={true}
       >
         {/* Header */}
-        <Icon name="shield" size={36} color={Colors.textGray400} />
+        <Shield size={36} color={Colors.textGray400} />
         <Text
           style={[
             Fonts.textBold,
@@ -304,7 +310,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
               style={[
                 Fonts.textTiny,
                 {
-                  fontFamily: 'monospace',
+                  fontFamily: MONOSPACE_FONT,
                   lineHeight: 18,
                   marginTop: 2,
                 },
@@ -339,7 +345,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             <Text
               style={[
                 Fonts.textTiny,
-                { fontFamily: 'monospace', lineHeight: 18, marginTop: 4 },
+                { fontFamily: MONOSPACE_FONT, lineHeight: 18, marginTop: 4 },
               ]}
               selectable={true}
             >
@@ -370,7 +376,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                       Fonts.textTiny,
                       Fonts.textBold,
                       {
-                        fontFamily: 'monospace',
+                        fontFamily: MONOSPACE_FONT,
                         lineHeight: 18,
                         marginTop: 2,
                       },
@@ -388,7 +394,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                     {t('home:vault_sign_amount')}
                   </Text>
                   <Text
-                    style={[Fonts.textSmall, Fonts.textBold, { marginTop: 2 }]}
+                    style={[
+                      Fonts.textSmall,
+                      Fonts.textBold,
+                      styles.tabular,
+                      { marginTop: 2 },
+                    ]}
                   >
                     {formatAmount(recipient.amount, amountDecimals)}{' '}
                     {amountSymbol}
@@ -413,7 +424,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_fee')}
             </Text>
-            <Text style={[Fonts.textSmall, Fonts.textBold]}>
+            <Text style={[Fonts.textSmall, Fonts.textBold, styles.tabular]}>
               {formatAmount(displayFee, chainDecimals)} {chainSymbol}
             </Text>
           </Card>
@@ -449,23 +460,28 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
       {/* Action Buttons — fixed at bottom */}
       <View
         style={[
+          Layout.selfStretch,
           Layout.justifyContentEnd,
-          Gutters.regularLMargin,
-          Gutters.regularRMargin,
+          Gutters.tinyHMargin,
         ]}
       >
-        <PrimaryButton
-          label={t('home:approve_request')}
+        <SlideToApprove
+          label={t('home:slide_to_approve')}
+          accessibilityLabel={t('home:approve_request')}
           style={[
             Gutters.regularBMargin,
             Gutters.smallTMargin,
-            solBlocked || solPending ? { opacity: 0.4 } : {},
+            solBlocked || solPending || decodeBlocked ? { opacity: 0.4 } : {},
           ]}
           disabled={
-            authenticationOpen || activityStatus || solBlocked || solPending
+            authenticationOpen ||
+            activityStatus ||
+            solBlocked ||
+            solPending ||
+            decodeBlocked
           }
           loading={authenticationOpen || activityStatus}
-          onPress={() => openAuthentication()}
+          onComplete={() => openAuthentication()}
         />
         <TouchableOpacity
           accessibilityRole="button"
@@ -503,8 +519,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   card: {
-    width: '90%',
+    // Screen owns the side gutter — see request/ActionCard.
+    alignSelf: 'stretch',
     marginBottom: 12,
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
   },
 });
 

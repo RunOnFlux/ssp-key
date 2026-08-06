@@ -52,6 +52,8 @@ interface SocketContextType {
   clearFluxNodeStartRequest?: () => void;
   recoveryRequest: RecoveryRequestPayload | null;
   clearRecoveryRequest?: () => void;
+  chainSyncRequest: string | null;
+  clearChainSyncRequest?: () => void;
 }
 
 const defaultValue: SocketContextType = {
@@ -70,6 +72,7 @@ const defaultValue: SocketContextType = {
   keyNonceSyncRequest: false,
   fluxNodeStartRequest: null,
   recoveryRequest: null,
+  chainSyncRequest: null,
 };
 
 export const SocketContext = createContext<SocketContextType>(defaultValue);
@@ -102,6 +105,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   > | null>(null);
   const [recoveryRequest, setRecoveryRequest] =
     useState<RecoveryRequestPayload | null>(null);
+  const [chainSyncRequest, setChainSyncRequest] = useState<string | null>(null);
 
   /**
    * Emit an authenticated join event.
@@ -299,10 +303,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('[Socket] Recovery request received');
         try {
           const parsed = JSON.parse(data.payload) as RecoveryRequestPayload;
+          // recoveryIndex included: see parseRecoveryRequestPayload, which the
+          // poll transport uses — the two must agree.
           if (
             typeof parsed.pkEph !== 'string' ||
             typeof parsed.nonce !== 'string' ||
-            typeof parsed.timestamp !== 'number'
+            typeof parsed.timestamp !== 'number' ||
+            typeof parsed.recoveryIndex !== 'number'
           ) {
             console.error('[Socket] Malformed recovery request payload');
             return;
@@ -311,6 +318,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         } catch {
           console.error('[Socket] Failed to parse recovery request payload');
         }
+      },
+    );
+
+    // Handle batch chain sync request from the wallet (versioned payload,
+    // parsed and validated in Home via parseChainSyncRequest)
+    newSocket.on(
+      'chainsyncrequest',
+      (data: { chain?: string; path?: string; payload: string }) => {
+        console.log('[Socket] Chain sync request received');
+        if (typeof data.payload !== 'string' || !data.payload) {
+          console.error('[Socket] Malformed chain sync request payload');
+          return;
+        }
+        setChainSyncRequest(data.payload);
       },
     );
 
@@ -402,6 +423,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     setRecoveryRequest(null);
   };
 
+  const clearChainSyncRequest = () => {
+    setChainSyncRequest(null);
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -424,6 +449,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         clearFluxNodeStartRequest,
         recoveryRequest,
         clearRecoveryRequest,
+        chainSyncRequest,
+        clearChainSyncRequest,
       }}
     >
       {children}
