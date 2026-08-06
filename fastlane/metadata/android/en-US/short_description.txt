@@ -1,0 +1,1 @@
+The second key to your SSP Wallet — true 2-of-2 multisig self-custody.

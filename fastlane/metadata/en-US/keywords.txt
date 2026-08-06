@@ -1,0 +1,1 @@
+crypto,wallet,multisig,bitcoin,ethereum,2fa,self custody,security,btc,eth,web3,defi,authenticator

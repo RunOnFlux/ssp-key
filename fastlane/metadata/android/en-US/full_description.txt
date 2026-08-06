@@ -1,0 +1,42 @@
+SSP Key – Secure. Simple. Powerful.
+The second key to your SSP Wallet: true two-factor, 2-of-2 multisignature self-custody.
+
+SSP Key turns your phone into the second factor of a genuine two-of-two multisig wallet. The SSP Wallet browser extension holds one private key, and SSP Key holds the other. Every transaction must be signed by both devices — so a stolen laptop, a phished password, or a compromised browser is never enough to move your funds. There is no single seed phrase that can be stolen from one device.
+
+🔒 How it works
+
+• A transaction is created and signed in SSP Wallet on your computer.
+• The request instantly appears on your phone in SSP Key.
+• You review the details and approve — SSP Key adds the second signature.
+• Keys are generated on your devices and never leave them. No seed, private key, or extended private key is ever shared between devices.
+
+✅ Approve with confidence
+
+See exactly what you are signing before you sign it: recipient, amount, fee, and chain, with decoded contract calls for dApp interactions. Approvals are protected by your fingerprint, face unlock, or PIN.
+
+🔍 Open source and audited
+
+The entire codebase is public — anyone can review, audit, and contribute. SSP Wallet, SSP Key, and the SSP smart contracts have been independently audited by Halborn. SSP Key also integrates LavaMoat runtime protection to defend against supply-chain attacks.
+
+🌐 Multi-chain, one key
+
+One SSP Key secures all your chains: Bitcoin (Native SegWit), Ethereum, and major EVM networks — Polygon, Base, BNB Smart Chain, Avalanche — plus Litecoin, Bitcoin Cash, Dogecoin, Zcash, Ravencoin, and Flux, with custom token support on EVM chains. On Ethereum and EVM chains, SSP is the first wallet with true Schnorr multi-signature Account Abstraction (ERC-4337).
+
+⚡ Web3 ready
+
+Connect SSP Wallet to thousands of dApps through WalletConnect v2 (Reown). Every dApp transaction and signature still requires approval on your SSP Key — multi-signature security for all of Web3.
+
+📴 Works offline too
+
+Sign transactions entirely offline using QR-code synchronization between your devices — self-custody that works even in restricted or air-gapped environments.
+
+🚀 Getting started
+
+1. Install SSP Wallet in your browser (Chrome or Firefox).
+2. Install SSP Key (this app) on your phone.
+3. Scan the sync QR code — your 2-of-2 wallet is ready in minutes.
+4. Approve transactions with a single slide, secured by biometrics.
+
+Guides and documentation: docs.sspwallet.io
+
+SSP Key is built for people who value security, transparency, and real self-custody — whether you are new to crypto or protecting serious holdings.
