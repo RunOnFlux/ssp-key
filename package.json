@@ -49,7 +49,7 @@
     "@runonflux/flux-sdk": "1.1.0",
     "@runonflux/react-native-step-indicator": "1.0.0",
     "@runonflux/solana-multisig": "0.11.0",
-    "@runonflux/utxo-lib": "1.0.4",
+    "@runonflux/utxo-lib": "1.0.5",
     "@scure/bip32": "2.2.0",
     "@scure/bip39": "2.2.0",
     "@solana/web3.js": "1.98.4",
