@@ -21,11 +21,11 @@
   "receive": "Terima",
   "reject": "Tolak",
   "approve": "Setujui",
-  "warning": "Warning",
-  "show_password": "Show password",
-  "hide_password": "Hide password",
-  "use_biometrics": "Authenticate with biometrics",
-  "reset": "Reset",
-  "show": "Show",
-  "hide": "Hide"
+  "warning": "Peringatan",
+  "show_password": "Tampilkan kata sandi",
+  "hide_password": "Sembunyikan kata sandi",
+  "use_biometrics": "Lakukan otentikasi dengan biometrik",
+  "reset": "Atur ulang",
+  "show": "Tampilkan",
+  "hide": "Sembunyikan"
 }
