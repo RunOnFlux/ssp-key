@@ -20,5 +20,12 @@
   "wallet": "Dompet",
   "receive": "Terima",
   "reject": "Tolak",
-  "approve": "Setujui"
+  "approve": "Setujui",
+  "warning": "Peringatan",
+  "show_password": "Tampilkan kata sandi",
+  "hide_password": "Sembunyikan kata sandi",
+  "use_biometrics": "Lakukan otentikasi dengan biometrik",
+  "reset": "Atur ulang",
+  "show": "Tampilkan",
+  "hide": "Sembunyikan"
 }

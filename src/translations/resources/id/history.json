@@ -1,0 +1,20 @@
+{
+  "title": "Riwayat Penandatanganan",
+  "local_only_notice": "Log ini disimpan hanya di perangkat ini, dalam keadaan terenkripsi dan tidak pernah dikirim ke mana pun.",
+  "empty": "Belum ada tindakan yang ditandatangani. Tindakan yang Anda tandatangani bersama akan muncul di sini.",
+  "ref": "Ref",
+  "privacy_hide": "Sembunyikan identitas dan referensi dompet",
+  "privacy_show": "Tampilkan identitas dan referensi dompet",
+  "clear_title": "Bersihkan riwayat",
+  "clear_confirm": "Tindakan ini menghapus riwayat penandatanganan lokal di perangkat ini secara permanen. Tindakan ini tidak dapat dibatalkan.",
+  "clear_action": "Bersihkan",
+  "type_transaction": "Transaksi ditandatangani",
+  "type_evm_message": "Pesan EVM telah ditandatangani",
+  "type_wk_message": "Identitas pesan telah ditandatangani",
+  "type_vault_transaction": "Transaksi brankas telah ditandatangani",
+  "type_vault_xpub": "Kunci brankas telah dibagikan",
+  "type_public_nonces": "Nonce publik yang dibagikan",
+  "type_recovery": "Respons pemulihan",
+  "type_key_nonce_sync": "Sinkronisasi nonce kunci",
+  "type_unknown": "Tindakan yang ditandatangani"
+}
