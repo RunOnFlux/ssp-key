@@ -1,5 +1,7 @@
 # SSP Key v2.0.0
 
+_Release date: 11 August 2026_
+
 A complete redesign of SSP Key on the new SSP design system, with the approval
 moment rebuilt from the ground up. Same keys, same 2-of-2 self-custody, zero
 migration: updating in place keeps your Key, pairing, and history exactly as
