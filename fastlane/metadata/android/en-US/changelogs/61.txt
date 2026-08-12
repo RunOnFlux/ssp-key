@@ -1,0 +1,8 @@
+SSP Key 2.0 — a complete redesign. Same keys, same 2-of-2 self-custody, zero migration.
+• Slide to approve
+• Clearer approvals, decoded on your device
+• Batch chain sync — approve once for multiple chains
+• Pairing verification words
+• Encrypted, biometric-gated signing history
+• Privacy mode
+Independently audited — nothing changed in how transactions are signed or your seed is stored.

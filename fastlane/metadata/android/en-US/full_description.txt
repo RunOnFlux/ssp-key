@@ -1,5 +1,5 @@
 SSP Key – Secure. Simple. Powerful.
-The second key to your SSP Wallet: true two-factor, 2-of-2 multisignature self-custody.
+Your 2FA for SSP Wallet: the second key in true 2-of-2 multisignature self-custody.
 
 SSP Key turns your phone into the second factor of a genuine two-of-two multisig wallet. The SSP Wallet browser extension holds one private key, and SSP Key holds the other. Every transaction must be signed by both devices — so a stolen laptop, a phished password, or a compromised browser is never enough to move your funds. There is no single seed phrase that can be stolen from one device.
 
@@ -20,7 +20,7 @@ The entire codebase is public — anyone can review, audit, and contribute. SSP 
 
 🌐 Multi-chain, one key
 
-One SSP Key secures all your chains: Bitcoin (Native SegWit), Ethereum, and major EVM networks — Polygon, Base, BNB Smart Chain, Avalanche — plus Litecoin, Bitcoin Cash, Dogecoin, Zcash, Ravencoin, and Flux, with custom token support on EVM chains. On Ethereum and EVM chains, SSP is the first wallet with true Schnorr multi-signature Account Abstraction (ERC-4337).
+One SSP Key secures all your chains: Bitcoin (BTC, Native SegWit), Ethereum (ETH), and major EVM networks — Polygon (POL), Base (ETH), BNB Smart Chain (BNB), Avalanche C-Chain (AVAX) — plus Litecoin (LTC), Bitcoin Cash (BCH), Dogecoin (DOGE), Zcash (ZEC), Ravencoin (RVN), and Flux (FLUX), with custom token support on EVM chains. On Ethereum and EVM chains, SSP is the first wallet with true Schnorr multi-signature Account Abstraction (ERC-4337).
 
 ⚡ Web3 ready
 

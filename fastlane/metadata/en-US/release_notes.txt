@@ -1,0 +1,16 @@
+SSP Key 2.0 — the biggest update ever. A complete redesign, with the approval moment rebuilt from the ground up. Same keys, same 2-of-2 self-custody, zero migration.
+
+NEW
+• Slide to approve — every signature is a deliberate gesture
+• Clearer approvals — plain-language summaries decoded on your device, with loud warnings for unlimited token allowances
+• Batch chain sync — approve once to activate multiple chains
+• Pairing verification — both devices show the same 6 words, proving your pairing wasn't tampered with
+• Real backup verification — a quick word challenge when creating a new key
+• Signing history — a local, encrypted, biometric-gated log of everything this Key has co-signed
+• Privacy mode — mask identities in your history at a tap
+
+IMPROVED
+• The new SSP look across every screen, light and dark
+• Smaller app, smoother animations, reduce-motion support
+
+Nothing changed in how transactions are signed or how your seed is stored — verified by independent audit. Works with SSP Wallet v1 and v2; update in any order.
