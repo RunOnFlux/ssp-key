@@ -153,12 +153,46 @@ describe('parseChainSyncRequest', () => {
     expect(result).toEqual({ status: 'invalid', reason: 'too_many_chains' });
   });
 
-  it('rejects unknown chains', () => {
+  it('rejects a batch whose chains are ALL unknown', () => {
     const result = parseChainSyncRequest(
       payload({ chains: [{ chain: 'dogechain', xpubWallet: VALID_XPUB }] }),
       IDENTITY_CHAIN,
     );
     expect(result).toEqual({ status: 'invalid', reason: 'unknown_chain' });
+  });
+
+  // Forward compatibility: chains land in the browser extension before the
+  // store-reviewed mobile release, so a newer wallet WILL batch chain ids this
+  // build has never heard of. Skipping them keeps the rest of the batch
+  // working; rejecting outright would drop the user to per-chain QR for every
+  // chain and surface an error for what is only version skew.
+  it('skips unknown chains and syncs the known ones', () => {
+    const result = parseChainSyncRequest(
+      payload({
+        chains: [
+          { chain: 'eth', xpubWallet: VALID_XPUB },
+          { chain: 'chainFromTheFuture', xpubWallet: VALID_XPUB },
+          { chain: 'ltc', xpubWallet: VALID_XPUB },
+        ],
+      }),
+      IDENTITY_CHAIN,
+    );
+    expect(result.status).toEqual('ok');
+    if (result.status !== 'ok') return;
+    expect(result.request.chains.map((c) => c.chain)).toEqual(['eth', 'ltc']);
+  });
+
+  it('still validates entries that follow an unknown chain', () => {
+    const result = parseChainSyncRequest(
+      payload({
+        chains: [
+          { chain: 'chainFromTheFuture', xpubWallet: VALID_XPUB },
+          { chain: 'eth', xpubWallet: 'not-an-xpub' },
+        ],
+      }),
+      IDENTITY_CHAIN,
+    );
+    expect(result).toEqual({ status: 'invalid', reason: 'bad_xpub' });
   });
 
   it('never allows the identity chain — identity pairing is QR-only', () => {

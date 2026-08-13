@@ -125,8 +125,18 @@ export function parseChainSyncRequest(
     const entry = item as Record<string, unknown>;
     const chain = entry.chain;
     const xpubWallet = entry.xpubWallet;
-    if (typeof chain !== 'string' || !(chain in blockchains)) {
+    if (typeof chain !== 'string') {
       return { status: 'invalid', reason: 'unknown_chain' };
+    }
+    if (!(chain in blockchains)) {
+      // FORWARD COMPATIBILITY: a newer wallet may batch a chain this key build
+      // does not know yet — chains reach the extension before the store-
+      // reviewed mobile release, so version skew is normal during a rollout.
+      // Skip the unknown chain and sync the rest. Rejecting the whole batch
+      // would drop the user to per-chain QR for EVERY chain and show an error
+      // for what is only a skew; the wallet times out the missing chain alone
+      // and offers QR for just that one.
+      continue;
     }
     if (chain === identityChain) {
       return { status: 'invalid', reason: 'identity_chain_not_allowed' };
@@ -158,6 +168,11 @@ export function parseChainSyncRequest(
       chain: chain as keyof cryptos,
       xpubWallet,
     });
+  }
+  if (entries.length === 0) {
+    // Every entry was for a chain this build doesn't know. There is nothing to
+    // approve, so tell the wallet rather than showing an empty approval sheet.
+    return { status: 'invalid', reason: 'unknown_chain' };
   }
   return { status: 'ok', request: { version, chains: entries } };
 }

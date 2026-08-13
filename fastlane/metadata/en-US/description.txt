@@ -20,7 +20,7 @@ The entire codebase is public — anyone can review, audit, and contribute. SSP 
 
 MULTI-CHAIN, ONE KEY
 
-One SSP Key secures all your chains: Bitcoin (BTC, Native SegWit), Ethereum (ETH), and major EVM networks — Polygon (POL), Base (ETH), BNB Smart Chain (BNB), Avalanche C-Chain (AVAX) — plus Litecoin (LTC), Bitcoin Cash (BCH), Dogecoin (DOGE), Zcash (ZEC), Ravencoin (RVN), and Flux (FLUX), with custom token support on EVM chains. On Ethereum and EVM chains, SSP is the first wallet with true Schnorr multi-signature Account Abstraction (ERC-4337).
+One SSP Key secures all your chains: Bitcoin (BTC, Native SegWit), Ethereum (ETH), and major EVM networks — Polygon (POL), Base (ETH), BNB Smart Chain (BNB), Avalanche C-Chain (AVAX) — plus Solana (SOL) and Litecoin (LTC), Bitcoin Cash (BCH), Dogecoin (DOGE), Zcash (ZEC), Ravencoin (RVN), and Flux (FLUX), with custom token support on EVM and Solana chains. On Ethereum and EVM chains, SSP is the first wallet with true Schnorr multi-signature Account Abstraction (ERC-4337).
 
 WEB3 READY
 

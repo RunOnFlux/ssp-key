@@ -439,6 +439,7 @@ export interface cryptos {
   avax: number;
   bsc: number;
   solDevnet: number;
+  solMainnet: number;
 }
 
 export interface externalIdentity {
