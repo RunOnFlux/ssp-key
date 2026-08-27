@@ -116,49 +116,41 @@ export const checkAndReplenishEnterpriseNonces = async (
       existingNonces = [];
     }
 
-    if (forceReplace) {
-      // Force replace: purge ALL server nonces and clear local nonces
+    // Reconcile: tell server which nonces we actually have locally.
+    // This purges server-side 'available' nonces that we don't have
+    // (e.g. local storage cleared, app reinstalled) while leaving
+    // reserved/used ones untouched.
+    //
+    // NOTE: forceReplace no longer purges the whole server pool first. That
+    // emptied the pool before the refill (a failed refill left it at zero)
+    // and wiped local private halves still reserved by pending proposals,
+    // making them permanently unsignable. Reconciling against the real local
+    // list fixes the same desyncs without either failure mode.
+    if (existingNonces.length > 0 || serverAvailable > 0) {
       try {
-        await axios.post(`https://${sspConfig().relay}/v1/nonces/reconcile`, {
-          wkIdentity: sspWalletKeyInternalIdentity,
-          source: 'key',
-          localNonces: [], // empty = purge all server nonces
-        });
-      } catch {
-        // Best-effort purge
-      }
-      existingNonces = [];
-      serverAvailable = 0;
-    } else {
-      // Reconcile: tell server which nonces we actually have locally.
-      // This purges server-side 'available' nonces that we don't have
-      // (e.g. local storage cleared, app reinstalled).
-      if (existingNonces.length > 0 || serverAvailable > 0) {
-        try {
-          const localPublicKeys = existingNonces.map((n) => ({
-            kPublic: n.kPublic,
-            kTwoPublic: n.kTwoPublic,
-          }));
-          const reconcileRes = await axios.post(
-            `https://${sspConfig().relay}/v1/nonces/reconcile`,
-            {
-              wkIdentity: sspWalletKeyInternalIdentity,
-              source: 'key',
-              localNonces: localPublicKeys,
-            },
+        const localPublicKeys = existingNonces.map((n) => ({
+          kPublic: n.kPublic,
+          kTwoPublic: n.kTwoPublic,
+        }));
+        const reconcileRes = await axios.post(
+          `https://${sspConfig().relay}/v1/nonces/reconcile`,
+          {
+            wkIdentity: sspWalletKeyInternalIdentity,
+            source: 'key',
+            localNonces: localPublicKeys,
+          },
+        );
+        const purged =
+          (reconcileRes.data as { data?: { purged?: number } } | undefined)
+            ?.data?.purged ?? 0;
+        if (purged > 0) {
+          console.log(
+            `[Enterprise Nonces] Key: Purged ${purged} orphaned server nonces`,
           );
-          const purged =
-            (reconcileRes.data as { data?: { purged?: number } } | undefined)
-              ?.data?.purged ?? 0;
-          if (purged > 0) {
-            console.log(
-              `[Enterprise Nonces] Key: Purged ${purged} orphaned server nonces`,
-            );
-            serverAvailable = Math.max(serverAvailable - purged, 0);
-          }
-        } catch {
-          // Reconcile is best-effort — don't block replenishment
+          serverAvailable = Math.max(serverAvailable - purged, 0);
         }
+      } catch {
+        // Reconcile is best-effort — don't block replenishment
       }
     }
 

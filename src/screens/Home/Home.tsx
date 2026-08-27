@@ -1184,9 +1184,10 @@ function Home({ navigation }: Props) {
       // The replenish reports its outcome instead of throwing (it must not be
       // able to break the fire-and-forget refresh path), so check the result:
       // without this the user and the wallet were told the sync succeeded even
-      // when nothing was submitted to the relay.
+      // when nothing was submitted to the relay. ok with generated 0 is a
+      // SUCCESS — the pool was reconciled and verified full, nothing needed.
       const result = await checkAndReplenishEnterpriseNonces(true);
-      if (!result.ok || result.generated === 0) {
+      if (!result.ok) {
         console.log(
           '[Enterprise Nonces] Key nonce sync did not submit nonces:',
           result.reason,
