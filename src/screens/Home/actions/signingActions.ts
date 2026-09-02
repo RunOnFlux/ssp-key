@@ -269,13 +269,21 @@ export const approveTransaction = async (
     setRawTx('');
     setTxPath('');
     setTxUtxos([]);
-    await postAction(
-      'txid',
-      ttxid,
-      chain,
-      derivationPath,
-      sspWalletKeyInternalIdentity,
-    );
+    try {
+      await postAction(
+        'txid',
+        ttxid,
+        chain,
+        derivationPath,
+        sspWalletKeyInternalIdentity,
+      );
+    } catch (error) {
+      // The transaction is already broadcast at this point — a failed relay
+      // notification must never make a successful transfer look failed.
+      // SSP Wallet picks the transaction up from the chain on its own sync.
+      console.log(error);
+      displayMessage('info', t('home:warn_tx_sent_notify_failed'), 6000);
+    }
     setTxid(ttxid);
   } catch (error) {
     const txErrMsg =

@@ -688,33 +688,57 @@ function Home({ navigation }: Props) {
     path: string,
     wkIdentity: string,
   ) => {
-    const data: Record<string, unknown> = {
-      action,
-      payload,
-      chain,
-      path,
-      wkIdentity,
+    const attempt = async () => {
+      const data: Record<string, unknown> = {
+        action,
+        payload,
+        chain,
+        path,
+        wkIdentity,
+      };
+
+      // Add authentication if available (includes hash of request body)
+      try {
+        const auth = await createWkIdentityAuth('action', wkIdentity, data);
+        if (auth) {
+          Object.assign(data, auth);
+        } else {
+          console.warn(
+            '[postAction] Auth not available, sending without signature',
+          );
+        }
+      } catch (error) {
+        console.error('[postAction] Error creating auth:', error);
+        // Continue without auth for backward compatibility
+      }
+
+      return axios.post(`https://${sspConfig().relay}/v1/action`, data, {
+        timeout: RELAY_REQUEST_TIMEOUT_MS,
+      });
     };
 
-    // Add authentication if available (includes hash of request body)
+    let result;
     try {
-      const auth = await createWkIdentityAuth('action', wkIdentity, data);
-      if (auth) {
-        Object.assign(data, auth);
-      } else {
-        console.warn(
-          '[postAction] Auth not available, sending without signature',
-        );
-      }
+      result = await attempt();
     } catch (error) {
-      console.error('[postAction] Error creating auth:', error);
-      // Continue without auth for backward compatibility
+      // One retry, re-signed with a FRESH nonce + timestamp. A flaky mobile
+      // link can deliver the request while its response is lost; the
+      // transport layer then resends the same signed body and the relay
+      // refuses the spent nonce with a 401. Re-signing sidesteps that, and
+      // the same retry covers plain network drops and transient 5xx.
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
+      const retryable =
+        axios.isAxiosError(error) &&
+        (!error.response || status === 401 || (status ?? 0) >= 500);
+      if (!retryable) {
+        throw error;
+      }
+      console.warn('[postAction] Retrying with fresh auth after:', error);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      result = await attempt();
     }
-
-    const result = await axios.post(
-      `https://${sspConfig().relay}/v1/action`,
-      data,
-    );
     console.log('[postAction] response:', result.data);
     // Local, encrypted, biometric-gated signed-action History (Phase 3,
     // invariant 4). Additive and fire-and-forget: recordSignAction internally
