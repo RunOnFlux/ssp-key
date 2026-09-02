@@ -70,6 +70,14 @@ import * as nonceActions from './actions/nonceActions';
 import * as vaultActions from './actions/vaultActions';
 import { MainScreenProps } from '../../../@types/navigation';
 
+/**
+ * Upper bound for relay HTTP calls on the Home screen. Generous enough for a
+ * multi-hundred-KB pending action over a slow mobile link, small enough that
+ * a black-holed connection returns control to the user instead of pinning
+ * the pulsing logo with the refresh button hidden.
+ */
+const RELAY_REQUEST_TIMEOUT_MS = 30000;
+
 type Props = MainScreenProps<'Home'>;
 
 // Stable fallback for a chain key with no registered store slice. Module
@@ -1081,10 +1089,16 @@ function Home({ navigation }: Props) {
       if (sspWalletKeyInternalIdentity) {
         // get some pending request on W-K identity
         console.log(sspWalletKeyInternalIdentity);
+        // Bounded wait: axios defaults to no timeout, so a stalled connection
+        // (large payloads on a broken-MTU / throttled network are the usual
+        // case — a Flux tx with hundreds of UTXOs is several hundred KB) used
+        // to leave isRefreshing true forever, hiding the refresh button behind
+        // a pulsing logo with no way out.
         const result = await axios.get(
           `https://${
             sspConfig().relay
           }/v1/action/${sspWalletKeyInternalIdentity}`,
+          { timeout: RELAY_REQUEST_TIMEOUT_MS },
         );
         console.log('result', result.data);
         // Single dispatch table shared with the socket transport's action
@@ -1130,6 +1144,7 @@ function Home({ navigation }: Props) {
       // ALSO the normal branch. Without splitting them a device that cannot
       // reach the relay looks exactly like "nothing to approve" and the user
       // never learns to fall back to the QR path.
+      // A timeout also arrives with no response — same user guidance applies.
       if (axios.isAxiosError(error) && !error.response) {
         displayMessage('error', t('home:err_relay_unreachable'), 6000);
       } else if (axios.isAxiosError(error) && error.response?.status === 404) {
