@@ -378,6 +378,11 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     // EVM vault signing: use enterprise nonce for Schnorr partial signature
     const isEvmChain = blockchainConfig.chainType === 'evm';
     let usedEnterpriseNonce: publicPrivateNonce | null = null;
+    // Removes the reserved nonce from the local store. Deliberately deferred
+    // until the trustless binding check has passed: burning it up front turned
+    // every rejected request into a permanently lost nonce, so the next attempt
+    // failed with "nonce not found / out of sync" instead of the real error.
+    let consumeReservedNonce: (() => void) | null = null;
 
     // Wallet-only mode: Key's nonce is empty placeholder — skip nonce lookup
     const keyNonceIsPlaceholder =
@@ -457,13 +462,17 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       }
       usedEnterpriseNonce = enterpriseNonces[matchIdx];
 
-      // Delete used nonce from local store immediately (never reuse)
-      enterpriseNonces.splice(matchIdx, 1);
-      const encryptedNonces = CryptoJS.AES.encrypt(
-        JSON.stringify(enterpriseNonces),
-        pwForEncryption,
-      ).toString();
-      dispatch(setSspKeyEnterprisePublicNonces(encryptedNonces));
+      // Delete used nonce from local store before it is ever used (never reuse)
+      const usedNonceIdx = matchIdx;
+      const noncePassword = pwForEncryption;
+      consumeReservedNonce = () => {
+        enterpriseNonces.splice(usedNonceIdx, 1);
+        const encryptedNonces = CryptoJS.AES.encrypt(
+          JSON.stringify(enterpriseNonces),
+          noncePassword,
+        ).toString();
+        dispatch(setSspKeyEnterprisePublicNonces(encryptedNonces));
+      };
     }
 
     // Parse M-of-N signing arrays (sent as JSON strings from wallet)
@@ -545,6 +554,10 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         // would sign. Fail closed rather than blind-sign.
         throw new Error(t('home:err_vault_sign_unverifiable'));
       }
+      // Binding verified — burn the reserved nonce now, before any partial
+      // signature is produced with it.
+      consumeReservedNonce?.();
+
       // Derive keypair at the transaction's source address index
       const evmAddressIndex = parsedInputDetails[0]?.addressIndex ?? 0;
       const signingKeypair = generateAddressKeypair(
