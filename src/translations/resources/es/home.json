@@ -53,6 +53,7 @@
   "err_relay_unreachable": "Could not reach SSP Relay. Check your connection, or use Scan Code instead.",
   "err_refresh_failed": "Could not check for pending requests. Try again.",
   "err_tx_failed": "Transacción fallida. Inténtelo de nuevo más tarde.",
+  "warn_tx_sent_notify_failed": "Transaction sent to the network, but SSP Wallet could not be notified. It will detect the transaction on its own shortly.",
   "err_sync_with_ssp_needed": "Se necesita sincronización con la Cartera SSP.",
   "err_invalid_manual_input": "Entrada manual no válida.",
   "err_invalid_scanned_data": "Datos Escaneados no válidos.",

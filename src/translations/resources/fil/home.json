@@ -53,6 +53,7 @@
   "err_relay_unreachable": "Could not reach SSP Relay. Check your connection, or use Scan Code instead.",
   "err_refresh_failed": "Could not check for pending requests. Try again.",
   "err_tx_failed": "Nabigo ang transaksyon. Subukang muli mamaya.",
+  "warn_tx_sent_notify_failed": "Transaction sent to the network, but SSP Wallet could not be notified. It will detect the transaction on its own shortly.",
   "err_sync_with_ssp_needed": "Kailangan ang pag-synchronize sa SSP Wallet.",
   "err_invalid_manual_input": "Di-wastong manual input.",
   "err_invalid_scanned_data": "Di-wastong Na-scan na Data.",
