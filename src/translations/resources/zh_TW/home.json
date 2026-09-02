@@ -53,6 +53,7 @@
   "err_relay_unreachable": "Could not reach SSP Relay. Check your connection, or use Scan Code instead.",
   "err_refresh_failed": "Could not check for pending requests. Try again.",
   "err_tx_failed": "交易失敗.請稍後再試.",
+  "warn_tx_sent_notify_failed": "Transaction sent to the network, but SSP Wallet could not be notified. It will detect the transaction on its own shortly.",
   "err_sync_with_ssp_needed": "需要與 SSP 錢包同步.",
   "err_invalid_manual_input": "手動輸入無效.",
   "err_invalid_scanned_data": "掃描數據無效.",
