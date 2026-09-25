@@ -16,7 +16,11 @@ import {
   signAndBroadcastEVM,
   selectPublicNonce,
   cosignAndBroadcastSOLTransaction,
+  cosignAndBroadcastKASTransaction,
+  KasMaybeBroadcastError,
 } from '../../../lib/constructTx';
+import { kasVaultSpend } from '../../../lib/kaspa';
+import { kasSignedAmountLedger } from '../../../lib/kaspaLedger';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
 import { signMessage } from '../../../lib/relayAuth';
 import { setSspKeyPublicNonces } from '../../../store/ssp';
@@ -185,9 +189,11 @@ export const approveTransaction = async (
       xpubKeyWalletDecrypted,
       xpubKeyDecrypted,
     );
+    const isKas = blockchains[chain].chainType === 'kas';
     let utxos = suggestedUtxos;
-    // if utxos are not provided, fetch them
-    if (!(suggestedUtxos && suggestedUtxos.length > 0)) {
+    // if utxos are not provided, fetch them. Kaspa never uses these: its
+    // co-sign path always does its own lookup (see below).
+    if (!isKas && !(suggestedUtxos && suggestedUtxos.length > 0)) {
       utxos = await fetchUtxos(addressDetails.address, chain, 2); // in ssp key, we want to fetch both confirmed and unconfirmed utxos
     }
 
@@ -228,6 +234,37 @@ export const approveTransaction = async (
         keyPair.privKey as `0x${string}`,
         publicNonceKey,
       );
+    } else if (isKas) {
+      // Kaspa: the payload is the wallet's half-signed SigningBundle JSON.
+      // The relay-supplied `utxos` are IGNORED — the co-sign opens the bundle
+      // against this device's own UTXO lookup of the vault address derived
+      // from the stored xpubs + path (KASPA_SSP_CONTRACT.md §4.1). The key
+      // stays the broadcaster, then posts `txid` like the UTXO chains.
+      const vaultSpend = kasVaultSpend(
+        xpubKeyWalletDecrypted,
+        xpubKeyDecrypted,
+        typeIndex,
+        addressIndex,
+        chain,
+      );
+      try {
+        ttxid = await cosignAndBroadcastKASTransaction({
+          chain,
+          bundleJson: rawTransaction,
+          vaultSpend,
+          keyPrivKeyHex: keyPair.privKey,
+          ledger: kasSignedAmountLedger,
+        });
+      } catch (error) {
+        if (error instanceof KasMaybeBroadcastError) {
+          throw new Error(
+            t('home:err_kas_maybe_broadcast', { txid: error.txid }),
+          );
+        }
+        throw error;
+      } finally {
+        keyPair.privKey = '';
+      }
     } else if (blockchains[chain].chainType === 'sol') {
       // Wallet pre-signed the outer tx with its leaf. Key adds its own
       // leaf sig + broadcasts directly. The tx may include a permissionless

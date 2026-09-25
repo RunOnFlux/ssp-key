@@ -50,6 +50,9 @@ declare module '@storage/blockchains' {
     tokens: Token[];
     // sol
     programId?: string; // on-chain Solana program for chainType='sol'
+    // kas: chainType 'kas'; libid is the address prefix ('kaspa'); fee
+    // fields are sompi per gram of mass; maxTxSize is the mass cap.
+    maxFee?: number;
   }
   type blockchains = Record<string, Blockchain>;
   let blockchains: blockchains;

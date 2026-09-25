@@ -186,6 +186,7 @@ function Home({ navigation }: Props) {
     vaultSigningData,
     decodedVaultTx,
     solDecodeState,
+    kasDecodeState,
     fluxNodeStartData,
     setFluxNodeStartData,
     keyNonceSyncDialogOpen,
@@ -821,6 +822,7 @@ function Home({ navigation }: Props) {
     setVaultXpubData,
     vaultSigningData,
     solDecodeState,
+    kasDecodeState,
     clearVaultSigningState,
     setSubmittingTransaction,
     setTxid,
@@ -1633,6 +1635,7 @@ function Home({ navigation }: Props) {
           <HomeRequests
             submittingTransaction={submittingTransaction}
             rawTx={rawTx}
+            txPath={txPath}
             xpubWallet={xpubWallet}
             xpubKey={xpubKey}
             activeChain={activeChain}
@@ -1671,6 +1674,7 @@ function Home({ navigation }: Props) {
             vaultSigningData={vaultSigningData}
             decodedVaultTx={decodedVaultTx}
             solDecodeState={solDecodeState}
+            kasDecodeState={kasDecodeState}
             handleVaultSigningRequestAction={handleVaultSigningRequestAction}
             fluxNodeStartData={fluxNodeStartData}
             handleFluxNodeStartAction={handleFluxNodeStartAction}

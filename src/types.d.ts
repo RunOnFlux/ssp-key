@@ -440,6 +440,7 @@ export interface cryptos {
   bsc: number;
   solDevnet: number;
   solMainnet: number;
+  kas: number;
 }
 
 export interface externalIdentity {

@@ -1,5 +1,9 @@
 import { cryptos } from '../types';
 
+// Same literal as lib/kaspa.ts KAS_BUNDLE_FORMAT; kept local so this pure
+// parsing module does not pull in the Kaspa library and chain registry.
+const KAS_BUNDLE_FORMAT = 'kaspa-core-signing-bundle';
+
 // Pure helpers for classifying and splitting scanned / manually entered
 // SSP input. Relocated verbatim from src/screens/Home/Home.tsx.
 
@@ -44,6 +48,21 @@ export function splitSSPInput(
   input: string,
   defaultChain: keyof cryptos,
 ): { chain: keyof cryptos; wallet: string; dataToProcess: string } {
+  // A bare Kaspa SigningBundle (JSON, full of colons) carries no chain
+  // prefix of its own: route it to `kas` at the default vault path. The
+  // relay is the primary transport for Kaspa; `kas:0-1:{…}` keeps working
+  // through the normal split below.
+  const trimmed = input.trim();
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed) as { format?: unknown };
+      if (parsed && parsed.format === KAS_BUNDLE_FORMAT) {
+        return { chain: 'kas', wallet: '0-0', dataToProcess: trimmed };
+      }
+    } catch {
+      // not JSON — fall through
+    }
+  }
   const splittedInput = input.split(':');
   let chain: keyof cryptos = defaultChain;
   let wallet = '0-0';

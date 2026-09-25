@@ -67,6 +67,13 @@ interface VaultSignRequestProps {
   // True while the async sol byte-decode has not produced a verdict yet —
   // approval stays disabled (fail closed) until the decode resolves.
   solDecodePending?: boolean;
+  // Kaspa (see lib/kaspaVault): approval is blocked unless this device opened
+  // the bundle against its own UTXO lookup AND it matched the relay payload.
+  // Blocked while pending too (fail closed).
+  kasDecodeBlocked?: boolean;
+  kasDecodePending?: boolean;
+  kasDecodeReasons?: string[];
+  kasWarnings?: string[];
   // WalletConnect Phase 2 — vault MESSAGE signing (personal_sign). When set, this
   // is a message signature (not a transaction): show the message text + dApp
   // instead of recipients/amounts. Signing math is identical (signs the digest).
@@ -90,6 +97,10 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   solDecodeKind,
   solMismatchReasons,
   solDecodePending,
+  kasDecodeBlocked,
+  kasDecodePending,
+  kasDecodeReasons,
+  kasWarnings,
   signMessage,
   dappOrigin,
 }) => {
@@ -125,6 +136,8 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   // Fail closed on ANY decode error, matching TransactionRequest: nothing this
   // device cannot read is approvable. Reject stays reachable.
   const decodeBlocked = !!decodedTx?.error;
+  const kasBlocked = kasDecodeBlocked === true;
+  const kasFailed = kasBlocked && kasDecodePending !== true;
 
   const approve = () => {
     actionStatus(true);
@@ -283,8 +296,60 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </Card>
         )}
 
+        {/* Kaspa: own-lookup decode failed or contradicts the proposal */}
+        {kasFailed && (
+          <Card style={[styles.card, { borderColor: Colors.error }]}>
+            <Text
+              style={[
+                Fonts.textTiny,
+                Fonts.textBold,
+                { color: Colors.error, textAlign: 'center' },
+              ]}
+            >
+              {t('home:vault_sign_kas_decode_failed')}
+            </Text>
+            {(kasDecodeReasons ?? []).map((reason, index) => (
+              <Text
+                key={index}
+                style={[
+                  Fonts.textTiny,
+                  { color: Colors.error, textAlign: 'center', marginTop: 4 },
+                ]}
+              >
+                {reason}
+              </Text>
+            ))}
+          </Card>
+        )}
+        {kasWarnings && kasWarnings.length > 0 && !kasFailed ? (
+          <Card style={[styles.card, { borderColor: Colors.warning }]}>
+            <Text
+              style={[
+                Fonts.textTiny,
+                Fonts.textBold,
+                { color: Colors.warning, textAlign: 'center' },
+              ]}
+            >
+              {t('home:kas_tx_warnings_title')}
+            </Text>
+            {kasWarnings.map((w) => (
+              <Text
+                key={w}
+                style={[
+                  Fonts.textTiny,
+                  { color: Colors.warning, textAlign: 'center', marginTop: 4 },
+                ]}
+              >
+                {t(`home:kas_warning_${w.replace(/-/g, '_')}`, {
+                  defaultValue: w,
+                })}
+              </Text>
+            ))}
+          </Card>
+        ) : null}
+
         {/* Decode error warning */}
-        {decodedTx?.error && (
+        {decodedTx?.error && !kasFailed && (
           <Card style={[styles.card, { borderColor: Colors.error }]}>
             <Text
               style={[
@@ -471,14 +536,17 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           style={[
             Gutters.regularBMargin,
             Gutters.smallTMargin,
-            solBlocked || solPending || decodeBlocked ? { opacity: 0.4 } : {},
+            solBlocked || solPending || decodeBlocked || kasBlocked
+              ? { opacity: 0.4 }
+              : {},
           ]}
           disabled={
             authenticationOpen ||
             activityStatus ||
             solBlocked ||
             solPending ||
-            decodeBlocked
+            decodeBlocked ||
+            kasBlocked
           }
           loading={authenticationOpen || activityStatus}
           onComplete={() => openAuthentication()}

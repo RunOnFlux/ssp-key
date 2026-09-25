@@ -17,6 +17,8 @@ import {
 } from '../../../lib/userOpVerify';
 import { signMessage } from '../../../lib/relayAuth';
 import { setSspKeyEnterprisePublicNonces } from '../../../store/ssp';
+import { signKasVaultBundle } from '../../../lib/kaspaVault';
+import { kasSignedAmountLedger } from '../../../lib/kaspaLedger';
 import { cryptos, publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
 
@@ -185,6 +187,7 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
   const {
     vaultSigningData,
     solDecodeState,
+    kasDecodeState,
     seedPhrase,
     enterprisePublicNonces,
     dispatch,
@@ -215,6 +218,18 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       displayMessage('error', t('home:vault_sign_sol_decode_mismatch'), 8000);
       return;
     }
+  }
+  // Same sign-time recheck for Kaspa: only an 'ok' verdict of this device's
+  // own-lookup decode may proceed (pending and failed both refuse). The
+  // signing path below re-verifies from scratch regardless.
+  if (
+    blockchains[vaultSigningData.chain as keyof cryptos]?.chainType === 'kas' &&
+    kasDecodeState?.status !== 'ok'
+  ) {
+    if (kasDecodeState) {
+      displayMessage('error', t('home:vault_sign_kas_decode_failed'), 8000);
+    }
+    return;
   }
 
   // Hoist sensitive vars outside try so they can be cleared in catch/finally
@@ -371,6 +386,39 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         sspWalletKeyInternalIdentity,
       );
 
+      displayMessage('success', t('home:vault_sign_success'));
+      return;
+    }
+
+    // Kaspa enterprise: co-sign the SigningBundle. wallet_only falls through
+    // to the generic pass-through below (the key signs nothing there).
+    if (
+      blockchainConfig.chainType === 'kas' &&
+      vaultSigningData.signingMode !== 'wallet_only'
+    ) {
+      // Re-opens the bundle against this device's own UTXO lookup, re-checks
+      // recipients + fee against the payload, confirms this key's leaf
+      // m/48'/111111'/org'/0'/vaultIndex/addressIndex is in every input's
+      // script, and signs only those scripts through the persistent ledger.
+      const kasResult = await signKasVaultBundle({
+        data: vaultSigningData,
+        vaultXpriv,
+        vaultIndex: vaultSigningData.vaultIndex,
+        ledger: kasSignedAmountLedger,
+      });
+      vaultXpriv = '';
+      pwForEncryption = '';
+      await postAction(
+        'enterprisevaultsigned',
+        JSON.stringify({
+          signedHex: kasResult.signedHex,
+          keyPubKey: kasResult.keyPubKey,
+          requestId: vaultSigningData.requestId,
+        }),
+        vaultSigningData.chain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
       displayMessage('success', t('home:vault_sign_success'));
       return;
     }

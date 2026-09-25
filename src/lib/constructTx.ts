@@ -18,6 +18,15 @@ import {
 import { backends } from '@storage/backends';
 import { blockchains } from '@storage/blockchains';
 import { getLibId } from './wallet';
+import type { KaspaRestClient } from '@runonflux/kaspa-core/rest';
+import {
+  fetchKasUtxos,
+  kasRestClient,
+  kasSpendAddress,
+  kaspaCore,
+  openKasBundle,
+  type KasSpend,
+} from './kaspa';
 
 export async function fetchUtxos(
   address: string,
@@ -455,4 +464,121 @@ export async function cosignAndBroadcastSOLTransaction(opts: {
     );
   }
   return json.data.signature;
+}
+
+// ============================================================================
+// Kaspa
+// ============================================================================
+
+/**
+ * The submission ended without a definite answer and every identical
+ * re-submission did too: the transaction MAY be on the network. Callers must
+ * tell the user to check the explorer — never rebuild from other UTXOs
+ * (KASPA_SSP_CONTRACT.md §4.6).
+ */
+export class KasMaybeBroadcastError extends Error {
+  readonly txid: string;
+  constructor(txid: string) {
+    super(`Kaspa transaction ${txid} may have been broadcast`);
+    this.name = 'KasMaybeBroadcastError';
+    this.txid = txid;
+  }
+}
+
+const KAS_SUBMIT_ATTEMPTS = 3;
+
+/**
+ * Submit a finalised Kaspa transaction. A `SubmitOutcomeUnknownError`
+ * (timeout / lost connection after sending) is retried with the IDENTICAL
+ * transaction — same ID, idempotent on the node; a node that answers that
+ * it already has it means the first attempt landed.
+ */
+export async function submitKasTransaction(
+  rest: KaspaRestClient,
+  signed: kaspaCore.Transaction,
+): Promise<string> {
+  const txid = kaspaCore.bytesToHex(kaspaCore.transactionId(signed));
+  let unknown = false;
+  for (let attempt = 0; attempt < KAS_SUBMIT_ATTEMPTS; attempt += 1) {
+    try {
+      return await rest.submit(signed);
+    } catch (error) {
+      if (error instanceof kaspaCore.SubmitOutcomeUnknownError) {
+        unknown = true;
+        continue;
+      }
+      if (
+        unknown &&
+        error instanceof kaspaCore.RestError &&
+        /already/i.test(error.message)
+      ) {
+        return txid;
+      }
+      if (unknown) {
+        // A definite rejection after an unknown outcome still cannot prove
+        // the first submission did not land.
+        throw new KasMaybeBroadcastError(txid);
+      }
+      throw error;
+    }
+  }
+  throw new KasMaybeBroadcastError(txid);
+}
+
+/**
+ * Consumer 2-of-2 co-sign + broadcast on the Key device (contract §5).
+ *
+ * The wallet planned the send, signed its half and shipped the bundle JSON
+ * as the `tx` payload. This device:
+ *  1. looks up the vault's UTXOs ITSELF (never the relay's `utxos` or the
+ *     amounts the bundle claims) and opens the bundle against them;
+ *  2. signs only inputs of this vault's script, through the persistent
+ *     signed-amount ledger;
+ *  3. finalises with its own partials first, submits over REST and returns
+ *     the transaction ID. The signer is destroyed on every path.
+ */
+export async function cosignAndBroadcastKASTransaction(opts: {
+  chain: keyof cryptos;
+  bundleJson: string;
+  vaultSpend: KasSpend;
+  keyPrivKeyHex: string;
+  ledger: kaspaCore.SignedAmountLedger;
+  rest?: KaspaRestClient;
+}): Promise<string> {
+  const rest = opts.rest ?? kasRestClient(opts.chain);
+  const vaultScript = kaspaCore.spendScriptPublicKey(opts.vaultSpend);
+  const { address } = kasSpendAddress(opts.vaultSpend, opts.chain);
+  const trusted = await fetchKasUtxos([address], opts.chain, rest);
+  const opened = openKasBundle(opts.bundleJson, trusted);
+
+  const key = kaspaCore.hexToBytes(opts.keyPrivKeyHex);
+  const signer = kaspaCore.localSigner(key);
+  key.fill(0);
+  try {
+    if (
+      !kaspaCore
+        .spendSigningKeys(opts.vaultSpend)
+        .some((k) => kaspaCore.equalBytes(k, signer.xOnlyPublicKey))
+    ) {
+      throw new Error('SSP Key does not belong to this Kaspa vault');
+    }
+    const keyPartials = await kaspaCore.signTransaction(
+      opened.tx,
+      opened.inputs,
+      [signer],
+      { onlyScripts: [vaultScript], signedAmounts: opts.ledger },
+    );
+    if (keyPartials.length === 0) {
+      throw new Error('SSP Key did not sign any Kaspa input');
+    }
+    const signed = kaspaCore.finalizeTransaction(
+      opened.tx,
+      opened.inputs,
+      // local first: a remote duplicate can never displace our signature
+      kaspaCore.mergePartialSignatures(keyPartials, opened.partials),
+    );
+    return await submitKasTransaction(rest, signed);
+  } finally {
+    signer.destroy();
+  }
 }
