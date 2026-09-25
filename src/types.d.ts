@@ -438,6 +438,7 @@ export interface cryptos {
   base: number;
   avax: number;
   bsc: number;
+  xdc: number;
   solDevnet: number;
   solMainnet: number;
 }

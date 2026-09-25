@@ -36,6 +36,7 @@ const chains = {
   base: chainSliceBase('base'),
   avax: chainSliceBase('avax'),
   bsc: chainSliceBase('bsc'),
+  xdc: chainSliceBase('xdc'),
   solDevnet: chainSliceBase('solDevnet'),
   solMainnet: chainSliceBase('solMainnet'),
 };

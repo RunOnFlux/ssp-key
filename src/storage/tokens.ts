@@ -915,6 +915,19 @@ function bsc() {
   return tokens;
 }
 
+function xdc() {
+  const tokens = [
+    {
+      contract: '', // first is always the native 'no contract' token 0x0000000000000000000000000000000000000000
+      name: 'XDC Network',
+      symbol: 'XDC',
+      decimals: 18,
+      logo: require('../assets/xdc.svg'),
+    },
+  ];
+  return tokens;
+}
+
 function solDevnet() {
   const tokens = [
     {
@@ -981,6 +994,7 @@ export const tokens = {
   base,
   avax,
   bsc,
+  xdc,
   solDevnet,
   solMainnet,
 };
