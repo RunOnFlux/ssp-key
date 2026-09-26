@@ -27,6 +27,7 @@ import {
 import { type VaultDecodedTx } from '../../../lib/transactions';
 import { type VaultSolDecodeState } from '../../../lib/vaultSolanaDecode';
 import { type KasVaultDecodeState } from '../../../lib/kaspaVault';
+import { type KasApprovedSummary } from '../../../lib/kaspa';
 import { parseProposalSimulation } from '../../../lib/vaultSimulation';
 import { type ParsedChainSyncRequest } from '../../../lib/chainSyncRequest';
 import { type RecoveryRequestPayload } from '../../../lib/recoveryHandler';
@@ -53,7 +54,10 @@ const HomeRequests = (props: {
   activeChain: keyof cryptos;
   txUtxos: utxo[];
   activityStatus: boolean;
-  handleTransactionRequestAction: (status: boolean) => Promise<void>;
+  handleTransactionRequestAction: (
+    status: boolean,
+    kasApproved?: KasApprovedSummary,
+  ) => Promise<void>;
   syncReq: string;
   handleSynchronisationRequestAction: (status: boolean) => void;
   chainSyncData: ParsedChainSyncRequest | null;

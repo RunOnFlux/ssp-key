@@ -7,14 +7,18 @@ import { toCashAddress } from 'bchaddrjs';
 import { getTokenMetadata } from './tokens';
 import { getLibId } from './wallet';
 import {
-  KAS_BLOCKING_WARNINGS,
+  assertNoKasBlockingWarnings,
   describeKasOpened,
   fetchKasUtxos,
+  kasApprovedSummary,
+  kasScriptKey,
   kasSompiToDecimal,
   kasSpendAddress,
   kasVaultSpend,
   kaspaCore,
   openKasBundle,
+  parseKasBundle,
+  type KasApprovedSummary,
   type KaspaUtxo,
 } from './kaspa';
 import { cryptos, utxo } from '../types';
@@ -438,6 +442,10 @@ interface tokenInfo {
   // Kaspa only: kaspa-core describeTransaction warnings (e.g.
   // 'fee-above-threshold'), surfaced on the approval screen.
   warnings?: string[];
+  // Kaspa only: exactly what this screen shows (txid, fee, external
+  // outputs). Handed back on approval; the signing path signs only if its
+  // own re-description is identical (constructTx.ts).
+  kasApproved?: KasApprovedSummary;
   // Set on a failed decode when the cause is known ('kas_utxo_fetch': this
   // device could not load the vault's UTXOs), so the UI can say why.
   errorReason?: string;
@@ -450,6 +458,17 @@ export class KasUtxoFetchError extends Error {
       `Kaspa UTXO lookup failed: ${cause instanceof Error ? cause.message : String(cause)}`,
     );
     this.name = 'KasUtxoFetchError';
+  }
+}
+
+/**
+ * The bundle spends from a different address than the vault at the request
+ * path (e.g. a bare bundle entered manually, which defaults to path 0-0).
+ */
+export class KasWrongVaultError extends Error {
+  constructor(path: string) {
+    super(`Kaspa transaction does not spend the vault at path ${path}`);
+    this.name = 'KasWrongVaultError';
   }
 }
 
@@ -506,6 +525,24 @@ export async function decodeKASTransactionForApproval(
     chain,
   );
   const { address } = kasSpendAddress(spend, chain);
+  // Every input must CLAIM this vault's script before anything is looked
+  // up, so a bundle for another path gets a clear error rather than a
+  // generic "input missing from the lookup". (The claim is only routing:
+  // the entries are still replaced by this device's own lookup below.)
+  const vaultScriptKey = kasScriptKey(kaspaCore.spendScriptPublicKey(spend));
+  const claimed = parseKasBundle(rawTx).inputs;
+  if (
+    !Array.isArray(claimed) ||
+    claimed.length === 0 ||
+    claimed.some(
+      (i) =>
+        kasScriptKey(
+          kaspaCore.spendScriptPublicKey(kaspaCore.inputPlanFromJson(i).spend),
+        ) !== vaultScriptKey,
+    )
+  ) {
+    throw new KasWrongVaultError(kas.path);
+  }
   let trusted: KaspaUtxo[];
   try {
     trusted = kas.fetchUtxos
@@ -518,9 +555,7 @@ export async function decodeKASTransactionForApproval(
   const d = describeKasOpened(opened, chain, [
     kaspaCore.spendScriptPublicKey(spend),
   ]);
-  if (d.warnings.some((w) => KAS_BLOCKING_WARNINGS.includes(w))) {
-    throw new Error(`Kaspa transaction not approvable: ${d.warnings.join()}`);
-  }
+  assertNoKasBlockingWarnings(d);
   const external = d.outputs.filter((o) => !o.isOwn);
   if (d.outputs.some((o) => !o.address)) {
     throw new Error('Kaspa output without a displayable address');
@@ -536,6 +571,7 @@ export async function decodeKASTransactionForApproval(
     tokenSymbol: blockchains[chain].symbol,
     recipientCount: external.length,
     warnings: d.warnings,
+    kasApproved: kasApprovedSummary(d),
   };
 }
 
@@ -711,9 +747,13 @@ export async function decodeTransactionForApproval(
     return txInfo;
   } catch (error) {
     console.log(error);
-    return error instanceof KasUtxoFetchError
-      ? { ...DECODING_ERROR_INFO, errorReason: 'kas_utxo_fetch' }
-      : { ...DECODING_ERROR_INFO };
+    if (error instanceof KasUtxoFetchError) {
+      return { ...DECODING_ERROR_INFO, errorReason: 'kas_utxo_fetch' };
+    }
+    if (error instanceof KasWrongVaultError) {
+      return { ...DECODING_ERROR_INFO, errorReason: 'kas_wrong_vault' };
+    }
+    return { ...DECODING_ERROR_INFO };
   }
 }
 

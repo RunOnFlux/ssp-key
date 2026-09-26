@@ -18,7 +18,10 @@ import {
 import { signMessage } from '../../../lib/relayAuth';
 import { setSspKeyEnterprisePublicNonces } from '../../../store/ssp';
 import { signKasVaultBundle } from '../../../lib/kaspaVault';
-import { kasSignedAmountLedger } from '../../../lib/kaspaLedger';
+import { openKasLedger } from '../../../lib/kaspaLedger';
+import { kasMaxFeeForUsdRate } from '../../../lib/kaspa';
+import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
+import { getCryptoUsdRate } from '../../../lib/rates';
 import { cryptos, publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
 
@@ -396,15 +399,19 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       blockchainConfig.chainType === 'kas' &&
       vaultSigningData.signingMode !== 'wallet_only'
     ) {
-      // Re-opens the bundle against this device's own UTXO lookup, re-checks
-      // recipients + fee against the payload, confirms this key's leaf
-      // m/48'/111111'/org'/0'/vaultIndex/addressIndex is in every input's
-      // script, and signs only those scripts through the persistent ledger.
+      // Re-opens the bundle against this device's own UTXO lookup of the
+      // proposal's ONE vault script (contract §4.7), re-checks recipients +
+      // fee against the payload, confirms this key's leaf
+      // m/48'/111111'/org'/0'/vaultIndex/addressIndex is in that script, and
+      // signs only that script through the ledger (flushed before posting).
       const kasResult = await signKasVaultBundle({
         data: vaultSigningData,
         vaultXpriv,
         vaultIndex: vaultSigningData.vaultIndex,
-        ledger: kasSignedAmountLedger,
+        ledger: openKasLedger(),
+        maxFee: kasMaxFeeForUsdRate(
+          await getCryptoUsdRate(vaultSigningData.chain),
+        ),
       });
       vaultXpriv = '';
       pwForEncryption = '';
@@ -866,6 +873,10 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     mnemonicPhrase = '';
     const errMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Vault Signing] Error:', errMsg);
+    // Kaspa ledger unreadable / full: refused, with the guarded reset offer.
+    if (handleKasLedgerError(error, t, displayMessage)) {
+      return;
+    }
     displayMessage(
       'error',
       `${t('home:err_vault_sign_failed')}: ${errMsg}`,
@@ -916,6 +927,26 @@ export const handleFluxNodeStart = async (
           error: 'Missing required parameters',
         }),
         nodeChain || identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+      return;
+    }
+
+    // Flux node start signs a Flux collateral (fluxnode start tx) — it exists
+    // only on Flux (mainnet and testnet). Refuse anything else (e.g. a kas/btc
+    // vault key must never sign a Flux node start) before any key material is
+    // touched.
+    if (nodeChain !== 'flux' && nodeChain !== 'fluxTestnet') {
+      console.error('[Enterprise Flux Node] Refused non-flux chain');
+      displayMessage('error', t('home:err_flux_node_flux_only'));
+      await postAction(
+        'enterprisefluxnodestarted',
+        JSON.stringify({
+          requestId,
+          error: 'Flux node start is only available for Flux vaults',
+        }),
+        nodeChain,
         '',
         sspWalletKeyInternalIdentity,
       );

@@ -4,16 +4,14 @@ import {
   generateMultisigAddress,
 } from '../../src/lib/wallet';
 import {
+  KAS_MAX_FEE_SOMPI,
   generateVaultMultisigAddressKAS,
+  kasApprovedSummaryMismatch,
+  kasMaxFeeForUsdRate,
   isKasBundlePayload,
   isValidKasAddress,
   kasBundleTxid,
 } from '../../src/lib/kaspa';
-import {
-  KAS_LEDGER_STORAGE_KEY,
-  kasSignedAmountLedger,
-} from '../../src/lib/kaspaLedger';
-import { storage } from '../../src/store/index';
 import { blockchains } from '../../src/storage/blockchains';
 import { backends } from '../../src/storage/backends';
 import {
@@ -205,28 +203,35 @@ describe('bundle helpers', () => {
   });
 });
 
-describe('persistent signed-amount ledger', () => {
-  const outpoint = `${'ab'.repeat(32)}:3`;
-
-  it('persists to MMKV and reads back as bigint', () => {
-    expect(kasSignedAmountLedger.get(outpoint)).toBeUndefined();
-    kasSignedAmountLedger.set(outpoint, 123456789n);
-    expect(kasSignedAmountLedger.get(outpoint)).toBe(123456789n);
-    // stored durably under its own MMKV key, not in memory
-    const raw = JSON.parse(
-      storage.getString(KAS_LEDGER_STORAGE_KEY) as string,
-    ) as Record<string, string>;
-    expect(raw[outpoint]).toBe('123456789');
+describe('kasMaxFeeForUsdRate (contract §4.9)', () => {
+  it('is the $100 equivalent when that is below 5 KAS', () => {
+    expect(kasMaxFeeForUsdRate(100)).toBe(100000000n); // $100/KAS → 1 KAS
+    expect(kasMaxFeeForUsdRate(50)).toBe(200000000n);
   });
 
-  it('refuses a corrupt ledger instead of treating it as empty', () => {
-    const saved = storage.getString(KAS_LEDGER_STORAGE_KEY) as string;
-    storage.set(KAS_LEDGER_STORAGE_KEY, '[1,2]');
-    expect(() => kasSignedAmountLedger.get(outpoint)).toThrow('corrupt');
-    storage.set(KAS_LEDGER_STORAGE_KEY, saved);
+  it('is 5 KAS when $100 buys more, or without a usable rate', () => {
+    expect(KAS_MAX_FEE_SOMPI).toBe(500000000n);
+    expect(kasMaxFeeForUsdRate(20)).toBe(500000000n); // exactly 5 KAS
+    expect(kasMaxFeeForUsdRate(0.1)).toBe(500000000n);
+    for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(kasMaxFeeForUsdRate(bad)).toBe(500000000n);
+    }
   });
+});
 
-  it('refuses malformed outpoints', () => {
-    expect(() => kasSignedAmountLedger.set('nope', 1n)).toThrow();
+describe('kasApprovedSummaryMismatch', () => {
+  const a = { txid: 't', fee: '1', outputs: ['x|1', 'y|2'] };
+  it('accepts an identical summary and names each difference', () => {
+    expect(kasApprovedSummaryMismatch(a, { ...a })).toBeNull();
+    expect(kasApprovedSummaryMismatch(a, { ...a, txid: 'u' })).toMatch(
+      /transaction/,
+    );
+    expect(kasApprovedSummaryMismatch(a, { ...a, fee: '2' })).toMatch(/fee/);
+    expect(kasApprovedSummaryMismatch(a, { ...a, outputs: ['x|1'] })).toMatch(
+      /recipients/,
+    );
+    expect(
+      kasApprovedSummaryMismatch(a, { ...a, outputs: ['x|1', 'y|3'] }),
+    ).toMatch(/recipients/);
   });
 });

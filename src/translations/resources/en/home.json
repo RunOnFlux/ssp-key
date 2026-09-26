@@ -304,5 +304,14 @@
   "kas_warning_covenant_output": "An output carries a covenant.",
   "err_kas_utxo_fetch": "Could not load this vault's Kaspa balance to verify the transaction. Check your connection and try again.",
   "err_kas_maybe_broadcast": "The Kaspa network did not confirm receipt. Transaction {{txid}} may have been broadcast: check the explorer before trying again.",
-  "vault_sign_kas_decode_failed": "This device could not verify the Kaspa transaction against its own view of the vault. Approval is blocked."
+  "vault_sign_kas_decode_failed": "This device could not verify the Kaspa transaction against its own view of the vault. Approval is blocked.",
+  "err_kas_not_displayed": "This Kaspa transaction was not verified on this device. Review it again before approving.",
+  "err_kas_ledger_corrupt": "The Kaspa signing record on this device is unreadable. Kaspa signing is blocked until you reset it.",
+  "kas_ledger_corrupt_title": "Reset Kaspa signing record?",
+  "kas_ledger_corrupt_message": "The record of Kaspa amounts this device has signed is unreadable, so Kaspa signing is blocked. Resetting keeps the damaged record aside and starts a new, empty one. This removes the protection against earlier signatures being reused with different amounts. Only reset if you have not recently approved Kaspa requests you did not expect.",
+  "kas_ledger_reset": "Reset record",
+  "kas_ledger_reset_done": "Kaspa signing record reset. You can approve the request again.",
+  "err_kas_ledger_full": "This device has signed too many recent Kaspa inputs to keep a safe record. Kaspa signing is paused until older entries expire (30 days).",
+  "err_flux_node_flux_only": "Flux node start is only available for Flux vaults.",
+  "err_kas_wrong_vault": "This Kaspa transaction spends from a different vault address than the one requested. Approval is blocked. For manual input of a vault other than the first, use kas:<type>-<index>:<bundle>."
 }

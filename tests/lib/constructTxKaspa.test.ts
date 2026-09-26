@@ -5,7 +5,14 @@ import {
   cosignAndBroadcastKASTransaction,
 } from '../../src/lib/constructTx';
 import { decodeTransactionForApproval } from '../../src/lib/transactions';
-import { kasRestClient, kasVaultSpend } from '../../src/lib/kaspa';
+import {
+  describeKasOpened,
+  kasApprovedSummary,
+  kasRestClient,
+  kasVaultSpend,
+  openKasBundle,
+  type KasApprovedSummary,
+} from '../../src/lib/kaspa';
 import {
   KAS,
   MNEMONIC_KK,
@@ -117,6 +124,14 @@ function acceptWithId(txid: string) {
 
 const keyPriv = () => generateAddressKeypair(keyXpriv, 0, 0, KAS).privKey;
 
+/** What the approval screen would have shown for `json` over `utxos`. */
+const approvedFor = (json: string, utxos: Utxo[]): KasApprovedSummary =>
+  kasApprovedSummary(
+    describeKasOpened(openKasBundle(json, utxos), KAS, [
+      K.spendScriptPublicKey(spend),
+    ]),
+  );
+
 describe('cosignAndBroadcastKASTransaction', () => {
   it('opens with its own lookup, co-signs, finalises and submits', async () => {
     const utxos = [fakeUtxo(spend, 500000000n), fakeUtxo(spend, 300000000n)];
@@ -129,9 +144,11 @@ describe('cosignAndBroadcastKASTransaction', () => {
       vaultSpend: spend,
       keyPrivKeyHex: keyPriv(),
       ledger,
+      approved: approvedFor(json, utxos),
       rest: kasRestClient(KAS, node.fetch),
     });
     expect(result).toBe(txid);
+    expect(ledger.flush).toHaveBeenCalledTimes(1);
     expect(node.utxoCalls).toHaveLength(1);
     expect(node.utxoCalls[0]).toContain(
       `https://api-kaspa.sspwallet.io/addresses/${encodeURIComponent(vaultAddress)}/utxos`,
@@ -161,6 +178,7 @@ describe('cosignAndBroadcastKASTransaction', () => {
         vaultSpend: spend,
         keyPrivKeyHex: keyPriv(),
         ledger: memoryLedger(),
+        approved: approvedFor(json, [lie]),
         rest: kasRestClient(KAS, node.fetch),
       }),
     ).rejects.toThrow(/amount differs/);
@@ -178,6 +196,7 @@ describe('cosignAndBroadcastKASTransaction', () => {
         vaultSpend: spend,
         keyPrivKeyHex: keyPriv(),
         ledger: memoryLedger(),
+        approved: approvedFor(json, [utxo]),
         rest: kasRestClient(KAS, node.fetch),
       }),
     ).rejects.toThrow(/own UTXO lookup/);
@@ -199,6 +218,7 @@ describe('cosignAndBroadcastKASTransaction', () => {
         vaultSpend: spend,
         keyPrivKeyHex: keyPriv(),
         ledger,
+        approved: approvedFor(json, [utxo]),
         rest: kasRestClient(KAS, node.fetch),
       }),
     ).rejects.toThrow(/different amount/);
@@ -216,6 +236,7 @@ describe('cosignAndBroadcastKASTransaction', () => {
         vaultSpend: spend,
         keyPrivKeyHex: generateAddressKeypair(keyXpriv, 0, 1, KAS).privKey,
         ledger: memoryLedger(),
+        approved: approvedFor(json, [utxo]),
         rest: kasRestClient(KAS, node.fetch),
       }),
     ).rejects.toThrow(/does not belong/);
@@ -239,6 +260,7 @@ describe('cosignAndBroadcastKASTransaction', () => {
       vaultSpend: spend,
       keyPrivKeyHex: keyPriv(),
       ledger: memoryLedger(),
+      approved: approvedFor(json, [utxo]),
       rest: kasRestClient(KAS, node.fetch),
     });
     expect(result).toBe(txid);
@@ -256,11 +278,169 @@ describe('cosignAndBroadcastKASTransaction', () => {
       vaultSpend: spend,
       keyPrivKeyHex: keyPriv(),
       ledger: memoryLedger(),
+      approved: approvedFor(json, [utxo]),
       rest: kasRestClient(KAS, node.fetch),
     });
     await expect(p).rejects.toBeInstanceOf(KasMaybeBroadcastError);
     await expect(p).rejects.toMatchObject({ txid });
     expect(new Set(node.submitted).size).toBe(1);
+  });
+});
+
+describe('cosignAndBroadcastKASTransaction: display ↔ sign binding (L1)', () => {
+  const run = (
+    json: string,
+    utxos: Utxo[],
+    approved: KasApprovedSummary,
+    extra: { maxFee?: bigint } = {},
+  ) => {
+    const node = mockNode(utxos);
+    const ledger = memoryLedger();
+    return {
+      node,
+      ledger,
+      p: cosignAndBroadcastKASTransaction({
+        chain: KAS,
+        bundleJson: json,
+        vaultSpend: spend,
+        keyPrivKeyHex: keyPriv(),
+        ledger,
+        approved,
+        rest: kasRestClient(KAS, node.fetch),
+        ...extra,
+      }),
+    };
+  };
+
+  it('refuses when the fee differs from what was displayed', async () => {
+    const utxos = [fakeUtxo(spend, 500000000n)];
+    const { json } = await walletBundle(utxos, 150000000n, 20000n);
+    const { p, node, ledger } = run(json, utxos, {
+      ...approvedFor(json, utxos),
+      fee: '1',
+    });
+    await expect(p).rejects.toThrow(/changed since it was displayed.*fee/);
+    expect(node.submitted).toHaveLength(0);
+    expect(ledger.map.size).toBe(0);
+  });
+
+  it('refuses when the external outputs differ from what was displayed', async () => {
+    const utxos = [fakeUtxo(spend, 500000000n)];
+    const { json } = await walletBundle(utxos, 150000000n, 20000n);
+    const { p, node } = run(json, utxos, {
+      ...approvedFor(json, utxos),
+      outputs: [`${recipientAddress(8)}|150000000`],
+    });
+    await expect(p).rejects.toThrow(/recipients differ/);
+    expect(node.submitted).toHaveLength(0);
+  });
+
+  it('refuses a different transaction than the displayed one', async () => {
+    const utxos = [fakeUtxo(spend, 500000000n)];
+    const shown = await walletBundle(utxos, 150000000n, 20000n);
+    const other = await walletBundle(utxos, 150000000n, 30000n);
+    const { p } = run(other.json, utxos, approvedFor(shown.json, utxos));
+    await expect(p).rejects.toThrow(/transaction differs/);
+  });
+
+  it('enforces an explicit maxFee (min($100-equivalent, 5 KAS))', async () => {
+    const utxos = [fakeUtxo(spend, 500000000n)];
+    const { json } = await walletBundle(utxos, 100000000n, 200000000n); // 2 KAS
+    const { p, node } = run(json, utxos, approvedFor(json, utxos), {
+      maxFee: 100000000n, // 1 KAS ceiling: $100 at $100/KAS
+    });
+    await expect(p).rejects.toThrow(/exceeds the ceiling/);
+    expect(node.submitted).toHaveLength(0);
+  });
+
+  it('flushes the ledger before submitting', async () => {
+    const utxos = [fakeUtxo(spend, 500000000n)];
+    const { json, txid } = await walletBundle(utxos, 150000000n, 20000n);
+    const order: string[] = [];
+    const node = mockNode(utxos, () => {
+      order.push('submit');
+      return acceptWithId(txid)();
+    });
+    const ledger = memoryLedger();
+    ledger.flush.mockImplementation(() => order.push('flush'));
+    await cosignAndBroadcastKASTransaction({
+      chain: KAS,
+      bundleJson: json,
+      vaultSpend: spend,
+      keyPrivKeyHex: keyPriv(),
+      ledger,
+      approved: approvedFor(json, utxos),
+      rest: kasRestClient(KAS, node.fetch),
+    });
+    expect(order).toEqual(['flush', 'submit']);
+  });
+
+  it('never submits when the ledger flush fails', async () => {
+    const utxos = [fakeUtxo(spend, 500000000n)];
+    const { json } = await walletBundle(utxos, 150000000n, 20000n);
+    const node = mockNode(utxos);
+    const ledger = memoryLedger();
+    ledger.flush.mockImplementation(() => {
+      throw new Error('disk full');
+    });
+    await expect(
+      cosignAndBroadcastKASTransaction({
+        chain: KAS,
+        bundleJson: json,
+        vaultSpend: spend,
+        keyPrivKeyHex: keyPriv(),
+        ledger,
+        approved: approvedFor(json, utxos),
+        rest: kasRestClient(KAS, node.fetch),
+      }),
+    ).rejects.toThrow('disk full');
+    expect(node.submitted).toHaveLength(0);
+  });
+});
+
+describe('submit: already-known is success on any attempt (L5)', () => {
+  const reject = (message: string) => () =>
+    Promise.resolve({ ok: false, status: 500, body: { detail: message } });
+
+  it.each([
+    'Rejected transaction abc: transaction abc is already in the mempool',
+    'transaction abc was already accepted by the consensus',
+  ])('first-attempt "%s" returns the txid', async (message) => {
+    const utxos = [fakeUtxo(spend, 500000000n)];
+    const { json, txid } = await walletBundle(utxos, 150000000n, 20000n);
+    const node = mockNode(utxos, reject(message));
+    await expect(
+      cosignAndBroadcastKASTransaction({
+        chain: KAS,
+        bundleJson: json,
+        vaultSpend: spend,
+        keyPrivKeyHex: keyPriv(),
+        ledger: memoryLedger(),
+        approved: approvedFor(json, utxos),
+        rest: kasRestClient(KAS, node.fetch),
+      }),
+    ).resolves.toBe(txid);
+    expect(node.submitted).toHaveLength(1);
+  });
+
+  it('a double-spend ("already spent") is NOT success', async () => {
+    const utxos = [fakeUtxo(spend, 500000000n)];
+    const { json } = await walletBundle(utxos, 150000000n, 20000n);
+    const node = mockNode(
+      utxos,
+      reject('output abc:0 already spent by transaction def in the mempool'),
+    );
+    await expect(
+      cosignAndBroadcastKASTransaction({
+        chain: KAS,
+        bundleJson: json,
+        vaultSpend: spend,
+        keyPrivKeyHex: keyPriv(),
+        ledger: memoryLedger(),
+        approved: approvedFor(json, utxos),
+        rest: kasRestClient(KAS, node.fetch),
+      }),
+    ).rejects.toThrow(/already spent/);
   });
 });
 
@@ -286,6 +466,17 @@ describe('decodeTransactionForApproval (kas)', () => {
       tokenSymbol: 'KAS',
       recipientCount: 1,
       warnings: [],
+      kasApproved: approvedFor(json, utxos),
+    });
+    // the summary is exactly what is shown: txid, fee, external outputs
+    expect(info.kasApproved).toEqual({
+      txid: K.bytesToHex(
+        K.transactionId(
+          K.transactionFromJson((JSON.parse(json) as K.SigningBundle).tx),
+        ),
+      ),
+      fee: '20000',
+      outputs: [`${to}|150000000`],
     });
   });
 
@@ -361,6 +552,26 @@ describe('decodeTransactionForApproval (kas)', () => {
         })
       ).amount,
     ).toBe('decodingError');
+  });
+
+  it('a bundle for another vault path fails closed with a clear reason (L4)', async () => {
+    // A bare bundle entered manually is routed to path 0-0; one that spends
+    // the vault at 0-1 must be refused with the wrong-vault reason.
+    const spend01 = kasVaultSpend(walletXpub, keyXpub, 0, 1, KAS);
+    const utxos = [fakeUtxo(spend01, 500000000n)];
+    const tx = buildTx(utxos, to, 150000000n, 20000n, spend01);
+    const json = JSON.stringify(K.createSigningBundle(tx, utxos, []));
+    const c = ctx(utxos);
+    const info = await decodeTransactionForApproval(json, KAS, [], c);
+    expect(info.amount).toBe('decodingError');
+    expect(info.errorReason).toBe('kas_wrong_vault');
+    expect(c.fetchUtxos).not.toHaveBeenCalled();
+    // …and the same bundle decodes at its real path
+    const ok = await decodeTransactionForApproval(json, KAS, [], {
+      ...c,
+      path: '0-1',
+    });
+    expect(ok.amount).toBe('1.5');
   });
 
   it('never treats a kas payload as a utxolib hex transaction', async () => {

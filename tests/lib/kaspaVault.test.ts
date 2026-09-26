@@ -172,10 +172,89 @@ describe('Kaspa vault decode', () => {
   });
 });
 
+describe('Kaspa vault consolidation (recipient is the vault itself)', () => {
+  async function consolidation(claimed: Utxo[], pay: bigint, fee = 30000n) {
+    const vaultAddress = claimed[0].address;
+    const tx = buildTx(claimed, vaultAddress, pay, fee, claimed[0].spend);
+    const signer = leafSigner(xprivs.W, VAULT, 0);
+    const partials = await K.signTransaction(tx, claimed, [signer]);
+    signer.destroy();
+    return {
+      vaultAddress,
+      data: {
+        chain: KAS,
+        rawUnsignedTx: JSON.stringify(K.createSigningBundle(tx, claimed, [])),
+        walletSignedHex: JSON.stringify(
+          K.createSigningBundle(tx, claimed, partials),
+        ),
+        inputDetails: JSON.stringify(
+          claimed.map((u, index) => ({
+            index,
+            addressIndex: 0,
+            redeemScript: redeemHex(u.spend),
+            amount: u.entry.amount.toString(),
+          })),
+        ),
+        recipients: [{ address: vaultAddress, amount: pay.toString() }],
+        fee: fee.toString(),
+      },
+    };
+  }
+
+  it('accepts a recipient that is the vault and shows the vault as recipient', async () => {
+    const utxos = [fakeUtxo(spend0, 500000000n), fakeUtxo(spend0, 200000000n)];
+    const { data, vaultAddress } = await consolidation(utxos, 400000000n);
+    const { state, decoded } = await decodeVaultKasTransaction(
+      data,
+      lookup(utxos),
+    );
+    expect(state.status).toBe('ok');
+    expect(decoded.recipients.map((r) => r.address)).toEqual([
+      vaultAddress,
+      vaultAddress,
+    ]);
+    const result = await signKasVaultBundle({
+      data,
+      vaultXpriv: xprivs.Kk,
+      vaultIndex: VAULT,
+      ledger: memoryLedger(),
+      fetchUtxos: lookup(utxos),
+    });
+    expect(JSON.parse(result.signedHex).partials).toHaveLength(4);
+  });
+
+  it('refuses a self recipient whose amount matches no own output', async () => {
+    const utxos = [fakeUtxo(spend0, 500000000n)];
+    const { data, vaultAddress } = await consolidation(utxos, 400000000n);
+    const { state } = await decodeVaultKasTransaction(
+      {
+        ...data,
+        recipients: [{ address: vaultAddress, amount: '400000001' }],
+      },
+      lookup(utxos),
+    );
+    expect(state.status).toBe('failed');
+    expect(state.reasons).toContain('recipients differ from the proposal');
+  });
+
+  it('a self recipient cannot hide an external payment', async () => {
+    const utxos = [fakeUtxo(spend0, 500000000n)];
+    const { data } = await proposal(utxos, [0]);
+    const { state } = await decodeVaultKasTransaction(
+      {
+        ...data,
+        recipients: [{ address: utxos[0].address, amount: '300000000' }],
+      },
+      lookup(utxos),
+    );
+    expect(state.status).toBe('failed');
+  });
+});
+
 describe('Kaspa vault co-sign', () => {
   it('signs every input with the right leaf and returns a finalisable bundle', async () => {
-    const utxos = [fakeUtxo(spend0, 500000000n), fakeUtxo(spend1, 200000000n)];
-    const { data, tx } = await proposal(utxos, [0, 1], 600000000n);
+    const utxos = [fakeUtxo(spend0, 500000000n), fakeUtxo(spend0, 200000000n)];
+    const { data, tx } = await proposal(utxos, [0, 0], 600000000n);
     const ledger = memoryLedger();
     const result = await signKasVaultBundle({
       data,
@@ -195,6 +274,34 @@ describe('Kaspa vault co-sign', () => {
       K.finalizeTransaction(opened.tx, opened.inputs, opened.partials),
     ).not.toThrow();
     expect(ledger.map.size).toBe(2);
+    expect(ledger.flush).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a proposal spending two addresses of the same vault (§4.7)', async () => {
+    const utxos = [fakeUtxo(spend0, 500000000n), fakeUtxo(spend1, 200000000n)];
+    const { data } = await proposal(utxos, [0, 1], 600000000n);
+    const ledger = memoryLedger();
+    await expect(
+      signKasVaultBundle({
+        data,
+        vaultXpriv: xprivs.Kk,
+        vaultIndex: VAULT,
+        ledger,
+        fetchUtxos: lookup(utxos),
+      }),
+    ).rejects.toThrow(/more than one vault script/);
+    expect(ledger.map.size).toBe(0);
+  });
+
+  it('refuses a dual-mode proposal whose script cannot be a dual vault', async () => {
+    const utxos = [fakeUtxo(spend0, 500000000n)]; // 2-of-3: n is odd
+    const { data } = await proposal(utxos, [0]);
+    const { state } = await decodeVaultKasTransaction(
+      { ...data, signingMode: 'dual' },
+      lookup(utxos),
+    );
+    expect(state.status).toBe('failed');
+    expect(state.reasons[0]).toMatch(/dual-signing/);
   });
 
   it('signs a first-signer rawUnsignedTx (no walletSignedHex)', async () => {
@@ -279,5 +386,126 @@ describe('Kaspa vault co-sign', () => {
     const v = await verifyKasVaultBundle(data, lookup(utxos));
     expect(v.description.fee).toBe(30000n);
     expect(v.mismatches).toEqual([]);
+  });
+});
+
+/**
+ * C1 regression (contract §4.7): an attacker who knows the signer xpubs
+ * builds S_att = 1-of-2 {keyLeaf, attackerKey}, funds it with 0.2 KAS and
+ * proposes inputs [vault 1000 KAS, S_att 0.2 KAS] → outputs [R 1 KAS (the
+ * relay recipients), S_att ~999 KAS]. Before the fix the S_att output was
+ * hidden as "own" change and the key signed both inputs — draining the vault.
+ */
+describe('Kaspa vault: mixed-script drain (C1)', () => {
+  const R = recipientAddress(3);
+  const attacker = K.localSigner(new Uint8Array(32).fill(0x42));
+  const sAtt = K.multisigSpend(
+    [leafKey(xprivs.Kk, 0), attacker.xOnlyPublicKey],
+    1,
+  );
+
+  function attack(detailRedeems: (vault: string, att: string) => string[]) {
+    const vaultUtxo = fakeUtxo(spend0, 100000000000n); // 1000 KAS
+    const attUtxo = fakeUtxo(sAtt, 20000000n); // 0.2 KAS
+    const utxos = [vaultUtxo, attUtxo];
+    const fee = 30000n;
+    const pay = 100000000n; // 1 KAS to R, matches the relay recipients
+    const tx = K.createTransaction({
+      inputs: utxos,
+      outputs: [
+        { value: pay, scriptPublicKey: K.addressToScriptPublicKey(R, 'kaspa') },
+        {
+          value: 100000000000n + 20000000n - pay - fee,
+          scriptPublicKey: K.spendScriptPublicKey(sAtt),
+        },
+      ],
+    });
+    const unsigned = JSON.stringify(K.createSigningBundle(tx, utxos, []));
+    const redeems = detailRedeems(redeemHex(spend0), redeemHex(sAtt));
+    const data = {
+      chain: KAS,
+      rawUnsignedTx: unsigned,
+      inputDetails: utxos.map((u, index) => ({
+        index,
+        addressIndex: 0,
+        redeemScript: redeems[index],
+        amount: u.entry.amount.toString(),
+      })),
+      recipients: [{ address: R, amount: pay.toString() }],
+      fee: fee.toString(),
+    };
+    return { data, utxos };
+  }
+
+  const variants: Array<
+    [string, (vault: string, att: string) => string[], RegExp]
+  > = [
+    [
+      'each input with its own redeem script',
+      (vault, att) => [vault, att],
+      /more than one vault script/,
+    ],
+    [
+      'both details claiming the vault redeem script',
+      (vault) => [vault, vault],
+      /own UTXO lookup|does not spend the proposal's vault script/,
+    ],
+    [
+      'both details claiming the attacker redeem script',
+      (_vault, att) => [att, att],
+      /own UTXO lookup|does not spend the proposal's vault script/,
+    ],
+  ];
+
+  it.each(variants)(
+    'decode fails and signing refuses: %s',
+    async (_label, redeems, reason) => {
+      const { data, utxos } = attack(redeems);
+      // the lookup is honest: it serves both scripts' real UTXOs
+      const fetch = lookup(utxos);
+      const { state, decoded } = await decodeVaultKasTransaction(data, fetch);
+      expect(state.status).toBe('failed');
+      expect(state.reasons.join(' ')).toMatch(reason);
+      expect(decoded.error).toBeTruthy();
+      const ledger = memoryLedger();
+      await expect(
+        signKasVaultBundle({
+          data,
+          vaultXpriv: xprivs.Kk,
+          vaultIndex: VAULT,
+          ledger,
+          fetchUtxos: fetch,
+        }),
+      ).rejects.toThrow(reason);
+      expect(ledger.map.size).toBe(0); // nothing was signed
+      expect(ledger.flush).not.toHaveBeenCalled();
+    },
+  );
+
+  it('only ever looks up the single vault address', async () => {
+    const { data, utxos } = attack((vault) => [vault, vault]);
+    const fetch = lookup(utxos);
+    await decodeVaultKasTransaction(data, fetch);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith([utxos[0].address]);
+  });
+
+  it('refuses a proposal whose single script does not contain the key leaf', async () => {
+    // all inputs spend S_att-like script without the key: sign must refuse
+    const foreign = K.multisigSpend(
+      [leafKey(xprivs.W, 0), attacker.xOnlyPublicKey],
+      1,
+    );
+    const utxos = [fakeUtxo(foreign, 500000000n)];
+    const { data } = await proposal(utxos, [0]);
+    await expect(
+      signKasVaultBundle({
+        data: { ...data, walletSignedHex: undefined },
+        vaultXpriv: xprivs.Kk,
+        vaultIndex: VAULT,
+        ledger: memoryLedger(),
+        fetchUtxos: lookup(utxos),
+      }),
+    ).rejects.toThrow(/not a signer/);
   });
 });

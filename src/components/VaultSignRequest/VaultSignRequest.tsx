@@ -16,6 +16,7 @@ import type { cryptos } from '../../types';
 import type { VaultDecodedTx } from '../../lib/transactions';
 import type { ProposalSimulation } from '../../lib/vaultSimulation';
 import VaultRiskStrip from './VaultRiskStrip';
+import { KAS_BLOCKING_WARNINGS } from '../../lib/kaspa';
 
 import { Card } from '../ui';
 import { SlideToApprove } from '../request';
@@ -136,10 +137,22 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   // Fail closed on ANY decode error, matching TransactionRequest: nothing this
   // device cannot read is approvable. Reject stays reachable.
   const decodeBlocked = !!decodedTx?.error;
-  const kasBlocked = kasDecodeBlocked === true;
+  // Belt and braces: a blocking kaspa-core warning blocks even if the
+  // verdict (which already fails on them) were somehow 'ok'.
+  const kasBlockingWarning = (kasWarnings ?? []).some((w) =>
+    (KAS_BLOCKING_WARNINGS as readonly string[]).includes(w),
+  );
+  const kasBlocked = kasDecodeBlocked === true || kasBlockingWarning;
   const kasFailed = kasBlocked && kasDecodePending !== true;
+  const approvalBlocked =
+    solBlocked || solPending || decodeBlocked || kasBlocked;
 
   const approve = () => {
+    // Single choke point for the Authentication callback too: a verdict that
+    // turned blocking while authentication was open never approves.
+    if (approvalBlocked) {
+      return;
+    }
     actionStatus(true);
   };
 
@@ -321,7 +334,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             ))}
           </Card>
         )}
-        {kasWarnings && kasWarnings.length > 0 && !kasFailed ? (
+        {kasWarnings && kasWarnings.length > 0 ? (
           <Card style={[styles.card, { borderColor: Colors.warning }]}>
             <Text
               style={[
@@ -536,18 +549,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           style={[
             Gutters.regularBMargin,
             Gutters.smallTMargin,
-            solBlocked || solPending || decodeBlocked || kasBlocked
-              ? { opacity: 0.4 }
-              : {},
+            approvalBlocked ? { opacity: 0.4 } : {},
           ]}
-          disabled={
-            authenticationOpen ||
-            activityStatus ||
-            solBlocked ||
-            solPending ||
-            decodeBlocked ||
-            kasBlocked
-          }
+          disabled={authenticationOpen || activityStatus || approvalBlocked}
           loading={authenticationOpen || activityStatus}
           onComplete={() => openAuthentication()}
         />

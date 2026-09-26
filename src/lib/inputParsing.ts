@@ -49,9 +49,14 @@ export function splitSSPInput(
   defaultChain: keyof cryptos,
 ): { chain: keyof cryptos; wallet: string; dataToProcess: string } {
   // A bare Kaspa SigningBundle (JSON, full of colons) carries no chain
-  // prefix of its own: route it to `kas` at the default vault path. The
-  // relay is the primary transport for Kaspa; `kas:0-1:{…}` keeps working
-  // through the normal split below.
+  // prefix of its own: route it to `kas` at the DEFAULT vault path 0-0. The
+  // path is never guessed from the bundle (the vault must be derived from
+  // this device's xpubs + a path the user/wallet named, contract §4.1). A
+  // bare bundle that spends another vault address therefore fails CLOSED in
+  // the approval decode with a clear "different vault address" error
+  // (transactions.ts KasWrongVaultError → home:err_kas_wrong_vault). The
+  // relay is the primary transport for Kaspa; `kas:0-1:{…}` selects any
+  // other path through the normal split below.
   const trimmed = input.trim();
   if (trimmed.startsWith('{')) {
     try {

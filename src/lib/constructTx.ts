@@ -20,13 +20,20 @@ import { blockchains } from '@storage/blockchains';
 import { getLibId } from './wallet';
 import type { KaspaRestClient } from '@runonflux/kaspa-core/rest';
 import {
+  KAS_MAX_FEE_SOMPI,
+  assertNoKasBlockingWarnings,
+  describeKasOpened,
   fetchKasUtxos,
+  kasApprovedSummary,
+  kasApprovedSummaryMismatch,
   kasRestClient,
   kasSpendAddress,
   kaspaCore,
   openKasBundle,
+  type KasApprovedSummary,
   type KasSpend,
 } from './kaspa';
+import type { KasLedger } from './kaspaLedger';
 
 export async function fetchUtxos(
   address: string,
@@ -488,10 +495,20 @@ export class KasMaybeBroadcastError extends Error {
 const KAS_SUBMIT_ATTEMPTS = 3;
 
 /**
+ * A node answer meaning "I already have exactly this transaction" (rusty-kaspa
+ * mempool RuleError::RejectDuplicate "... is already in the mempool" and
+ * "... was already accepted by the consensus"). Deliberately NOT "already
+ * spent", which is a double-spend rejection.
+ */
+const KAS_ALREADY_KNOWN_RE =
+  /already in (the )?mempool|already accepted|already exists in the mempool/i;
+
+/**
  * Submit a finalised Kaspa transaction. A `SubmitOutcomeUnknownError`
  * (timeout / lost connection after sending) is retried with the IDENTICAL
- * transaction — same ID, idempotent on the node; a node that answers that
- * it already has it means the first attempt landed.
+ * transaction — same ID, idempotent on the node. A node that answers it
+ * already has this transaction is success on ANY attempt (including the
+ * first: e.g. SSP Wallet or an earlier attempt already relayed it).
  */
 export async function submitKasTransaction(
   rest: KaspaRestClient,
@@ -508,9 +525,8 @@ export async function submitKasTransaction(
         continue;
       }
       if (
-        unknown &&
         error instanceof kaspaCore.RestError &&
-        /already/i.test(error.message)
+        KAS_ALREADY_KNOWN_RE.test(error.message)
       ) {
         return txid;
       }
@@ -531,10 +547,15 @@ export async function submitKasTransaction(
  * The wallet planned the send, signed its half and shipped the bundle JSON
  * as the `tx` payload. This device:
  *  1. looks up the vault's UTXOs ITSELF (never the relay's `utxos` or the
- *     amounts the bundle claims) and opens the bundle against them;
- *  2. signs only inputs of this vault's script, through the persistent
- *     signed-amount ledger;
- *  3. finalises with its own partials first, submits over REST and returns
+ *     amounts the bundle claims) and opens the bundle against them, under
+ *     `maxFee` (contract §4.9: min($100-equivalent, 5 KAS));
+ *  2. re-describes it and requires it to be exactly what the approval screen
+ *     showed (`approved`: txid, fee, every external output) with no blocking
+ *     warning — a lookup that changed since display, or a swapped payload, is
+ *     refused rather than signed unseen;
+ *  3. signs only inputs of this vault's script, through the signed-amount
+ *     ledger, and FLUSHES the ledger before anything leaves the device;
+ *  4. finalises with its own partials first, submits over REST and returns
  *     the transaction ID. The signer is destroyed on every path.
  */
 export async function cosignAndBroadcastKASTransaction(opts: {
@@ -542,14 +563,29 @@ export async function cosignAndBroadcastKASTransaction(opts: {
   bundleJson: string;
   vaultSpend: KasSpend;
   keyPrivKeyHex: string;
-  ledger: kaspaCore.SignedAmountLedger;
+  ledger: KasLedger;
+  /** What the approval screen displayed — required. */
+  approved: KasApprovedSummary;
+  maxFee?: bigint;
   rest?: KaspaRestClient;
 }): Promise<string> {
   const rest = opts.rest ?? kasRestClient(opts.chain);
+  const maxFee = opts.maxFee ?? KAS_MAX_FEE_SOMPI;
   const vaultScript = kaspaCore.spendScriptPublicKey(opts.vaultSpend);
   const { address } = kasSpendAddress(opts.vaultSpend, opts.chain);
   const trusted = await fetchKasUtxos([address], opts.chain, rest);
-  const opened = openKasBundle(opts.bundleJson, trusted);
+  const opened = openKasBundle(opts.bundleJson, trusted, maxFee);
+  const description = describeKasOpened(opened, opts.chain, [vaultScript]);
+  assertNoKasBlockingWarnings(description);
+  const mismatch = kasApprovedSummaryMismatch(
+    opts.approved,
+    kasApprovedSummary(description),
+  );
+  if (mismatch) {
+    throw new Error(
+      `Kaspa transaction changed since it was displayed (${mismatch}); review it again`,
+    );
+  }
 
   const key = kaspaCore.hexToBytes(opts.keyPrivKeyHex);
   const signer = kaspaCore.localSigner(key);
@@ -566,11 +602,13 @@ export async function cosignAndBroadcastKASTransaction(opts: {
       opened.tx,
       opened.inputs,
       [signer],
-      { onlyScripts: [vaultScript], signedAmounts: opts.ledger },
+      { onlyScripts: [vaultScript], signedAmounts: opts.ledger, maxFee },
     );
     if (keyPartials.length === 0) {
       throw new Error('SSP Key did not sign any Kaspa input');
     }
+    // Persist the ledger BEFORE the signatures can leave this device.
+    opts.ledger.flush();
     const signed = kaspaCore.finalizeTransaction(
       opened.tx,
       opened.inputs,

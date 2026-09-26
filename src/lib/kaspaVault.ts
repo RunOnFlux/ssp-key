@@ -3,17 +3,31 @@
 //
 // The payload's bundle (walletSignedHex, or rawUnsignedTx when no wallet
 // signed first — KASPA_SSP_CONTRACT.md §3) is opened ONLY against this
-// device's own UTXO lookup of the vault addresses being spent, described with
+// device's own UTXO lookup of the vault address being spent, described with
 // kaspa-core, and compared with the relay-supplied recipients and fee. Any
 // failure or disagreement fails closed: VaultSignRequest blocks approval and
 // the signing path re-runs the same verification before touching a key.
+//
+// ONE VAULT SCRIPT PER PROPOSAL (contract §4.7). The key cannot know the
+// vault's full key set, so the payload is never allowed to name several
+// scripts: every inputDetails entry must carry the same addressIndex and
+// redeemScript, that redeem script is the ONLY script looked up, every input
+// must spend it, and it is the single entry of both `ownScripts` (describe)
+// and `onlyScripts` (sign). Everything else is an external output that is
+// shown and must match the relay's recipients. At sign time the script must
+// also be a multisig containing this key's own leaf at
+// org'/vaultIndex/addressIndex. (Otherwise an attacker who knows the xpubs
+// builds a 1-of-2 {keyLeaf, attackerKey} script, mixes a UTXO of it into the
+// proposal and hides a drain to it as "own" change.)
 // ============================================================
 
 import { blockchains } from '@storage/blockchains';
 import type { cryptos } from '../types';
 import type { VaultDecodedTx } from './transactions';
+import type { KasLedger } from './kaspaLedger';
 import {
   KAS_BLOCKING_WARNINGS,
+  KAS_MAX_FEE_SOMPI,
   assertKasPartialsValid,
   describeKasOpened,
   fetchKasUtxos,
@@ -38,6 +52,7 @@ export interface VaultKasSigningPayload {
   inputDetails?: unknown;
   recipients?: Array<{ address: string; amount: string; label?: string }>;
   fee?: string;
+  signingMode?: string;
 }
 
 export interface KasVaultInputDetail {
@@ -58,8 +73,12 @@ export interface KasVaultVerified {
   opened: KasOpenedBundle;
   description: K.TransactionDescription;
   details: KasVaultInputDetail[];
-  /** Locking script of each input, in input order (verified). */
-  inputScripts: K.ScriptPublicKey[];
+  /** The single vault address index every input spends. */
+  addressIndex: number;
+  /** The single vault spend (P2SH multisig) every input spends. */
+  vaultSpend: Extract<K.Spend, { kind: 'p2sh-multisig' }>;
+  /** Its locking script: the only own script and the only signable one. */
+  vaultScript: K.ScriptPublicKey;
   decoded: VaultDecodedTx;
   mismatches: string[];
 }
@@ -132,6 +151,7 @@ function parseAmount(v: unknown): bigint | null {
 export async function verifyKasVaultBundle(
   data: VaultKasSigningPayload,
   fetchUtxos?: KasUtxoFetcher,
+  maxFee: bigint = KAS_MAX_FEE_SOMPI,
 ): Promise<KasVaultVerified> {
   const chain = data.chain as keyof cryptos;
   if (blockchains[chain]?.chainType !== 'kas') {
@@ -147,43 +167,63 @@ export async function verifyKasVaultBundle(
   ) {
     throw new Error('Kaspa input details do not match the transaction inputs');
   }
-  // Addresses to look up: from the scripts the bundle CLAIMS it spends. Only
-  // used to know where to look — the lookup is ours and openSigningBundle
-  // verifies every claimed spend against the entry we fetched.
-  const claimed = bundle.inputs.map((i) => K.inputPlanFromJson(i));
-  const addresses = [
-    ...new Set(
-      claimed.map((p) => {
-        const a = K.scriptPublicKeyToAddress(
-          K.spendScriptPublicKey(p.spend),
-          prefix,
-        );
-        if (!a) throw new Error('Kaspa input with a non-address script');
-        return a;
-      }),
-    ),
-  ];
+  // §4.7: exactly one vault script, named identically by every detail.
+  const addressIndex = details[0].addressIndex;
+  const redeemHex = details[0].redeemScript;
+  if (!redeemHex || !/^[0-9a-f]+$/.test(redeemHex)) {
+    throw new Error('Kaspa input details carry no vault redeem script');
+  }
+  if (
+    details.some(
+      (d) => d.addressIndex !== addressIndex || d.redeemScript !== redeemHex,
+    )
+  ) {
+    throw new Error(
+      'Kaspa proposal spends more than one vault script (one vault address per proposal)',
+    );
+  }
+  const redeem = K.hexToBytes(redeemHex);
+  const parsed = K.parseMultisigRedeemScript(redeem);
+  if (!parsed || parsed.ecdsa) {
+    throw new Error('Kaspa vault redeem script is not a Schnorr multisig');
+  }
+  // Threshold sanity against the signing mode: a dual vault holds a wallet
+  // AND a key per signer, m = 2 × requiredSigners.
+  if (
+    data.signingMode === 'dual' &&
+    (parsed.m % 2 !== 0 || parsed.pubkeys.length % 2 !== 0)
+  ) {
+    throw new Error('Kaspa vault script does not fit a dual-signing vault');
+  }
+  const vaultSpend = {
+    kind: 'p2sh-multisig' as const,
+    redeem,
+    pubkeys: parsed.pubkeys,
+    m: parsed.m,
+  };
+  const vaultScript = K.spendScriptPublicKey(vaultSpend);
+  const vaultAddress = K.scriptPublicKeyToAddress(vaultScript, prefix);
+  if (!vaultAddress) throw new Error('Kaspa vault address encoding failed');
+  // Our own lookup of THAT address only — never of addresses the bundle
+  // claims. Any input of another script is then absent from the lookup and
+  // openSigningBundle refuses it.
   const trusted = fetchUtxos
-    ? await fetchUtxos(addresses)
-    : await fetchKasUtxos(addresses, chain);
-  const opened = openKasBundle(payload, trusted);
-
-  const inputScripts = opened.inputs.map((p, i) => {
-    if (p.spend.kind !== 'p2sh-multisig') {
-      throw new Error(`Kaspa input ${String(i)} is not a vault multisig`);
-    }
-    const detail = details[i];
+    ? await fetchUtxos([vaultAddress])
+    : await fetchKasUtxos([vaultAddress], chain);
+  const opened = openKasBundle(payload, trusted, maxFee);
+  const vaultKey = kasScriptKey(vaultScript);
+  opened.inputs.forEach((p, i) => {
     if (
-      detail.redeemScript !== undefined &&
-      detail.redeemScript !== K.bytesToHex(p.spend.redeem)
+      p.spend.kind !== 'p2sh-multisig' ||
+      !K.equalBytes(p.spend.redeem, redeem) ||
+      kasScriptKey(p.entry.scriptPublicKey) !== vaultKey
     ) {
       throw new Error(
-        `Kaspa input ${String(i)} redeem script differs from input details`,
+        `Kaspa input ${String(i)} does not spend the proposal's vault script`,
       );
     }
-    return p.entry.scriptPublicKey;
   });
-  const description = describeKasOpened(opened, chain, inputScripts);
+  const description = describeKasOpened(opened, chain, [vaultScript]);
 
   const mismatches: string[] = [];
   const blocking = description.warnings.filter((w) =>
@@ -193,6 +233,10 @@ export async function verifyKasVaultBundle(
     mismatches.push(`unsupported transaction: ${blocking.join(', ')}`);
   }
   const external = description.outputs.filter((o) => !o.isOwn);
+  // Outputs to the vault itself (change, or a consolidation's only output).
+  const ownKeys = description.outputs
+    .filter((o) => o.isOwn)
+    .map((o) => recipientKey(vaultAddress, o.value, prefix));
   if (external.some((o) => !o.address)) {
     mismatches.push('output without a displayable address');
   }
@@ -208,6 +252,14 @@ export async function verifyKasVaultBundle(
         const amount = parseAmount(r.amount);
         if (amount === null) throw new Error('bad amount');
         return recipientKey(r.address, amount, prefix);
+      })
+      // A recipient that IS the vault (a consolidation) pays our own script:
+      // it must match a distinct own output and is not an external payment.
+      .filter((k) => {
+        const i = ownKeys.indexOf(k);
+        if (i < 0) return true;
+        ownKeys.splice(i, 1);
+        return false;
       })
       .sort();
   } catch {
@@ -227,9 +279,13 @@ export async function verifyKasVaultBundle(
   }
 
   const decoded: VaultDecodedTx = {
-    sender: description.inputs[0]?.address ?? '',
-    recipients: external.map((o) => ({
-      address: o.address ?? '',
+    sender: vaultAddress,
+    // A pure consolidation has no external output: show the vault itself.
+    recipients: (external.length > 0
+      ? external
+      : description.outputs.filter((o) => o.isOwn)
+    ).map((o) => ({
+      address: o.isOwn ? vaultAddress : (o.address ?? ''),
       amount: o.value.toString(),
     })),
     fee: description.fee.toString(),
@@ -239,7 +295,9 @@ export async function verifyKasVaultBundle(
     opened,
     description,
     details,
-    inputScripts,
+    addressIndex,
+    vaultSpend,
+    vaultScript,
     decoded,
     mismatches,
   };
@@ -291,76 +349,66 @@ export async function applyVaultKasDecode(
 }
 
 /**
- * Co-sign a vault proposal (contract §5): re-verify from scratch, confirm
- * this key's leaf (m/48'/111111'/org'/0'/vaultIndex/addressIndex) belongs to
- * every input's script, sign only those scripts through the ledger and return
+ * Co-sign a vault proposal (contract §5, §4.7): re-verify from scratch
+ * (single vault script, own lookup, relay recipients + fee, no blocking
+ * warning, fee ≤ maxFee), confirm this key's leaf
+ * m/48'/111111'/org'/0'/vaultIndex/addressIndex is one of the vault script's
+ * keys, sign ONLY that script through the ledger, flush the ledger and return
  * the merged bundle JSON for `enterprisevaultsigned`.
  */
 export async function signKasVaultBundle(opts: {
   data: VaultKasSigningPayload;
   vaultXpriv: string;
   vaultIndex: number;
-  ledger: K.SignedAmountLedger;
+  ledger: KasLedger;
+  maxFee?: bigint;
   fetchUtxos?: KasUtxoFetcher;
 }): Promise<{ signedHex: string; keyPubKey: string; txid: string }> {
   const chain = opts.data.chain as keyof cryptos;
-  const v = await verifyKasVaultBundle(opts.data, opts.fetchUtxos);
+  const maxFee = opts.maxFee ?? KAS_MAX_FEE_SOMPI;
+  const v = await verifyKasVaultBundle(opts.data, opts.fetchUtxos, maxFee);
   if (v.mismatches.length > 0) {
     throw new Error(`Kaspa proposal mismatch: ${v.mismatches.join('; ')}`);
   }
   assertKasPartialsValid(v.opened);
 
-  const signers = new Map<number, K.LocalSigner>();
-  let keyPubKey = '';
+  const kp = generateAddressKeypairKAS(
+    opts.vaultXpriv,
+    opts.vaultIndex,
+    v.addressIndex,
+    chain,
+  );
+  const key = K.hexToBytes(kp.privKey);
+  kp.privKey = '';
+  const signer = K.localSigner(key);
+  key.fill(0);
   try {
-    v.details.forEach((detail, i) => {
-      let signer = signers.get(detail.addressIndex);
-      if (!signer) {
-        const kp = generateAddressKeypairKAS(
-          opts.vaultXpriv,
-          opts.vaultIndex,
-          detail.addressIndex,
-          chain,
-        );
-        const key = K.hexToBytes(kp.privKey);
-        kp.privKey = '';
-        signer = K.localSigner(key);
-        key.fill(0);
-        signers.set(detail.addressIndex, signer);
-      }
-      if (!keyPubKey) keyPubKey = K.bytesToHex(signer.xOnlyPublicKey);
-      const own = signer.xOnlyPublicKey;
-      if (
-        !K.spendSigningKeys(v.opened.inputs[i].spend).some((k) =>
-          K.equalBytes(k, own),
-        )
-      ) {
-        throw new Error(
-          `SSP Key is not a signer of Kaspa input ${String(i)} (vault ${String(opts.vaultIndex)}, address ${String(detail.addressIndex)})`,
-        );
-      }
-    });
-    const onlyScripts = [
-      ...new Map(v.inputScripts.map((s) => [kasScriptKey(s), s])).values(),
-    ];
+    const own = signer.xOnlyPublicKey;
+    if (!v.vaultSpend.pubkeys.some((k) => K.equalBytes(k, own))) {
+      throw new Error(
+        `SSP Key is not a signer of this Kaspa vault (vault ${String(opts.vaultIndex)}, address ${String(v.addressIndex)})`,
+      );
+    }
     const keyPartials = await K.signTransaction(
       v.opened.tx,
       v.opened.inputs,
-      [...signers.values()],
-      { onlyScripts, signedAmounts: opts.ledger },
+      [signer],
+      { onlyScripts: [v.vaultScript], signedAmounts: opts.ledger, maxFee },
     );
     const signedInputs = new Set(keyPartials.map((p) => p.inputIndex));
     if (signedInputs.size !== v.opened.inputs.length) {
       throw new Error('SSP Key could not sign every Kaspa input');
     }
+    // Persist the ledger BEFORE the signatures can leave this device.
+    opts.ledger.flush();
     const merged = K.mergePartialSignatures(keyPartials, v.opened.partials);
     const bundle = K.createSigningBundle(v.opened.tx, v.opened.inputs, merged);
     return {
       signedHex: JSON.stringify(bundle),
-      keyPubKey,
+      keyPubKey: K.bytesToHex(own),
       txid: v.description.id,
     };
   } finally {
-    for (const s of signers.values()) s.destroy();
+    signer.destroy();
   }
 }

@@ -107,9 +107,10 @@ export function restUtxoJson(
   }));
 }
 
-/** In-memory SignedAmountLedger. */
+/** In-memory ledger with the KasLedger `flush` (counts flushes). */
 export function memoryLedger(): K.SignedAmountLedger & {
   map: Map<string, bigint>;
+  flush: jest.Mock;
 } {
   const map = new Map<string, bigint>();
   return {
@@ -118,6 +119,7 @@ export function memoryLedger(): K.SignedAmountLedger & {
     set: (o, a) => {
       map.set(o, a);
     },
+    flush: jest.fn(),
   };
 }
 

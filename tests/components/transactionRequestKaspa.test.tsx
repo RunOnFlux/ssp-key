@@ -1,6 +1,6 @@
 import React from 'react';
 import * as CryptoJS from 'crypto-js';
-import { act, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import TransactionRequest from '../../src/components/TransactionRequest/TransactionRequest';
 import { decodeTransactionForApproval } from '../../src/lib/transactions';
 
@@ -115,19 +115,28 @@ const decodeMock = decodeTransactionForApproval as jest.MockedFunction<
 const encrypt = (v: string) =>
   CryptoJS.AES.encrypt(v, PW_FOR_ENCRYPTION).toString();
 
-const renderKas = () =>
+const renderKas = (
+  actionStatus: jest.Mock = jest.fn(),
+  xpubWallet = encrypt('XPUB_WALLET'),
+) =>
   render(
     <TransactionRequest
       rawTx='{"format":"kaspa-core-signing-bundle"}'
       chain="kas"
       utxos={[]}
       path="0-2"
-      xpubWallet={encrypt('XPUB_WALLET')}
+      xpubWallet={xpubWallet}
       xpubKey={encrypt('XPUB_KEY')}
       activityStatus={false}
-      actionStatus={jest.fn()}
+      actionStatus={actionStatus}
     />,
   );
+
+const APPROVED = {
+  txid: 'ab'.repeat(32),
+  fee: '200000000',
+  outputs: ['kaspa:qrecipient|150000000'],
+};
 
 const settle = async () => {
   await act(async () => {
@@ -181,6 +190,81 @@ describe('TransactionRequest (kas)', () => {
     expect(screen.queryByTestId('slider')).toBeNull();
     expect(screen.getByTestId('risk')).toHaveTextContent(
       'home:tx_decode_failed_title',
+    );
+  });
+
+  it('hands the displayed summary back on approval', async () => {
+    decodeMock.mockResolvedValue({
+      sender: 'kaspa:pvault',
+      receiver: 'kaspa:qrecipient',
+      amount: '1.5',
+      fee: '2',
+      tokenSymbol: 'KAS',
+      recipientCount: 1,
+      warnings: [],
+      kasApproved: APPROVED,
+    });
+    const actionStatus = jest.fn();
+    renderKas(actionStatus);
+    await settle();
+    fireEvent.press(screen.getByTestId('slider'));
+    fireEvent.press(screen.getByTestId('authentication'));
+    expect(actionStatus).toHaveBeenCalledWith(true, APPROVED);
+  });
+
+  it('never approves a kas payload whose decode carried no summary', async () => {
+    decodeMock.mockResolvedValue({
+      sender: 'kaspa:pvault',
+      receiver: 'kaspa:qrecipient',
+      amount: '1.5',
+      fee: '2',
+      tokenSymbol: 'KAS',
+      recipientCount: 1,
+      warnings: [],
+    });
+    const actionStatus = jest.fn();
+    renderKas(actionStatus);
+    await settle();
+    fireEvent.press(screen.getByTestId('slider'));
+    fireEvent.press(screen.getByTestId('authentication'));
+    expect(actionStatus).not.toHaveBeenCalledWith(true, expect.anything());
+    expect(actionStatus).not.toHaveBeenCalledWith(true);
+  });
+
+  it('re-decodes when the paired xpubs change (effect deps)', async () => {
+    decodeMock.mockResolvedValue({
+      sender: 'kaspa:pvault',
+      receiver: 'kaspa:qrecipient',
+      amount: '1.5',
+      fee: '2',
+      tokenSymbol: 'KAS',
+      recipientCount: 1,
+      warnings: [],
+      kasApproved: APPROVED,
+    });
+    const actionStatus = jest.fn();
+    const view = renderKas(actionStatus);
+    await settle();
+    expect(decodeMock).toHaveBeenCalledTimes(1);
+    view.rerender(
+      <TransactionRequest
+        rawTx='{"format":"kaspa-core-signing-bundle"}'
+        chain="kas"
+        utxos={[]}
+        path="0-2"
+        xpubWallet={encrypt('XPUB_WALLET_2')}
+        xpubKey={encrypt('XPUB_KEY')}
+        activityStatus={false}
+        actionStatus={actionStatus}
+      />,
+    );
+    await settle();
+    expect(decodeMock).toHaveBeenCalledTimes(2);
+    expect(decodeMock).toHaveBeenLastCalledWith(
+      '{"format":"kaspa-core-signing-bundle"}',
+      'kas',
+      [],
+      { xpubWallet: 'XPUB_WALLET_2', xpubKey: 'XPUB_KEY', path: '0-2' },
     );
   });
 });

@@ -236,8 +236,12 @@ export function isKasBundlePayload(payload: string): boolean {
 export function openKasBundle(
   payload: string,
   trustedUtxos: readonly KaspaUtxo[],
+  maxFee: bigint = KAS_MAX_FEE_SOMPI,
 ): KasOpenedBundle {
-  return K.openSigningBundle(parseKasBundle(payload), { trustedUtxos });
+  return K.openSigningBundle(parseKasBundle(payload), {
+    trustedUtxos,
+    policy: { maxFee },
+  });
 }
 
 /** Transaction ID (hex) of a bundle's transaction; excludes signature scripts. */
@@ -285,6 +289,84 @@ export const KAS_BLOCKING_WARNINGS: readonly K.DescribeWarning[] = [
   'lock-time',
   'non-zero-sequence',
 ];
+
+// ---------------------------------------------------------------------------
+// Fee ceiling (KASPA_SSP_CONTRACT.md §4.9: min($100-equivalent, 5 KAS))
+// ---------------------------------------------------------------------------
+
+/** The absolute ceiling: 5 KAS (kaspa-core DEFAULT_MAX_FEE). */
+export const KAS_MAX_FEE_SOMPI: bigint = K.DEFAULT_MAX_FEE;
+export const KAS_MAX_FEE_USD = 100;
+
+/**
+ * `maxFee` for a signing call: the $100 equivalent at `usdPerKas`, capped at
+ * 5 KAS. Without a usable rate (0, negative, NaN — the rates endpoint failed)
+ * the 5 KAS ceiling applies alone. A lying rate source can only LOWER the
+ * ceiling below 5 KAS (a refused signature), never raise it.
+ */
+export function kasMaxFeeForUsdRate(usdPerKas: number): bigint {
+  if (!Number.isFinite(usdPerKas) || usdPerKas <= 0) return KAS_MAX_FEE_SOMPI;
+  const sompi = Math.floor((KAS_MAX_FEE_USD / usdPerKas) * 1e8);
+  if (!Number.isFinite(sompi) || sompi <= 0) return KAS_MAX_FEE_SOMPI;
+  const usdCap = BigInt(sompi);
+  return usdCap < KAS_MAX_FEE_SOMPI ? usdCap : KAS_MAX_FEE_SOMPI;
+}
+
+// ---------------------------------------------------------------------------
+// What the user approved (display ↔ sign binding)
+// ---------------------------------------------------------------------------
+
+/**
+ * The parts of a described transaction the approval screen showed: the
+ * transaction ID, the fee and every external (non-vault) output. The signing
+ * path re-describes the transaction from ITS OWN lookup and signs only if
+ * this summary is identical (so a lookup that changed between display and
+ * signing, or a swapped payload, can never be signed unseen).
+ */
+export interface KasApprovedSummary {
+  txid: string;
+  /** sompi, decimal string */
+  fee: string;
+  /** sorted `address|sompi` of every output not paying back to the vault */
+  outputs: string[];
+}
+
+export function kasApprovedSummary(
+  d: K.TransactionDescription,
+): KasApprovedSummary {
+  return {
+    txid: d.id,
+    fee: d.fee.toString(),
+    outputs: d.outputs
+      .filter((o) => !o.isOwn)
+      .map((o) => `${o.address ?? '?'}|${o.value.toString()}`)
+      .sort(),
+  };
+}
+
+/** Why `signing` differs from what was `approved`, or null when identical. */
+export function kasApprovedSummaryMismatch(
+  approved: KasApprovedSummary,
+  signing: KasApprovedSummary,
+): string | null {
+  if (approved.txid !== signing.txid) return 'transaction differs';
+  if (approved.fee !== signing.fee) return 'fee differs';
+  if (
+    approved.outputs.length !== signing.outputs.length ||
+    approved.outputs.some((o, i) => o !== signing.outputs[i])
+  ) {
+    return 'recipients differ';
+  }
+  return null;
+}
+
+/** Throw if a description carries a warning SSP never signs through. */
+export function assertNoKasBlockingWarnings(d: K.TransactionDescription): void {
+  const blocking = d.warnings.filter((w) => KAS_BLOCKING_WARNINGS.includes(w));
+  if (blocking.length > 0) {
+    throw new Error(`Kaspa transaction not approvable: ${blocking.join(', ')}`);
+  }
+}
 
 export function kasSompiToDecimal(sompi: bigint): string {
   return K.sompiToKaspa(sompi);

@@ -21,6 +21,7 @@ import {
 } from '../../lib/transactions';
 import { decodeErc20Calldata } from '../../lib/calldataDecode';
 import { truncateAddress } from '../../lib/addressDisplay';
+import type { KasApprovedSummary } from '../../lib/kaspa';
 import { getCryptoUsdRate, formatUsdAmount } from '../../lib/rates';
 import { cryptos, utxo } from '../../types';
 
@@ -98,7 +99,9 @@ const TransactionRequest = (props: {
   xpubWallet?: string;
   xpubKey?: string;
   activityStatus: boolean;
-  actionStatus: (status: boolean) => void;
+  // Kaspa approvals hand back exactly what was displayed; the signing path
+  // refuses unless its own re-description is identical.
+  actionStatus: (status: boolean, kasApproved?: KasApprovedSummary) => void;
 }) => {
   // Monotonic decode token. Every decode run captures its value; a run whose
   // token is no longer current has been superseded by a newer payload and
@@ -125,6 +128,11 @@ const TransactionRequest = (props: {
   const [multiRecipient, setMultiRecipient] = useState(false);
   // kaspa-core describeTransaction warnings for the current payload
   const [txWarnings, setTxWarnings] = useState<string[]>([]);
+  // Kaspa: the displayed summary of the CURRENT payload (undefined until its
+  // decode resolves). Approval of a kas payload without one never signs.
+  const [kasApproved, setKasApproved] = useState<
+    KasApprovedSummary | undefined
+  >(undefined);
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
 
@@ -133,6 +141,13 @@ const TransactionRequest = (props: {
     if (decoding || decodeFailed) {
       // Single choke point for BOTH approve paths (slider and a completed
       // Authentication): what was not decoded and displayed is never signed.
+      return;
+    }
+    if (blockchainConfig.chainType === 'kas') {
+      if (!kasApproved) {
+        return; // nothing displayed for this payload — never sign it
+      }
+      props.actionStatus(true, kasApproved);
       return;
     }
     props.actionStatus(true);
@@ -179,6 +194,7 @@ const TransactionRequest = (props: {
     setSenderAddress('');
     setMultiRecipient(false);
     setTxWarnings([]);
+    setKasApproved(undefined);
     setToken('');
     setTokenSymbol('');
     setTxData('');
@@ -221,6 +237,7 @@ const TransactionRequest = (props: {
         setTokenSymbol(txInfo.tokenSymbol);
         setTxData(txInfo.data || '');
         setTxWarnings(txInfo.warnings ?? []);
+        setKasApproved(txInfo.kasApproved);
         if (
           (props.utxos && props.utxos.length) ||
           blockchains[props.chain].chainType === 'evm' ||
@@ -256,7 +273,9 @@ const TransactionRequest = (props: {
             'error',
             txInfo.errorReason === 'kas_utxo_fetch'
               ? t('home:err_kas_utxo_fetch')
-              : t('home:err_tx_decode'),
+              : txInfo.errorReason === 'kas_wrong_vault'
+                ? t('home:err_kas_wrong_vault')
+                : t('home:err_tx_decode'),
           );
           setDecodeFailed(true);
         }
@@ -278,7 +297,9 @@ const TransactionRequest = (props: {
       // run still has in flight (including its USD rate fetch).
       decodeSeqRef.current += 1;
     };
-  }, [props.rawTx, props.chain, props.path]);
+    // The xpubs select the vault the Kaspa decode derives: a change of pair
+    // must re-decode, never keep a verdict computed for another vault.
+  }, [props.rawTx, props.chain, props.path, props.xpubWallet, props.xpubKey]);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
       type,
