@@ -51,3 +51,16 @@ describe('addressDisplay', () => {
     });
   });
 });
+
+describe('addressDisplay (prefixed addresses)', () => {
+  const KAS_ADDRESS =
+    'kaspa:prfu8rp4ek453lkhcewmn7w9acdqms9q2pegav5vhx6zscu73xh4ux2mdv2wp';
+
+  it('emphasizes 6 characters after the network prefix', () => {
+    const parts = splitAddressForDisplay(KAS_ADDRESS);
+    expect(parts.start).toBe('kaspa:prfu8r');
+    expect(parts.end).toBe('mdv2wp');
+    expect(parts.start + parts.middle + parts.end).toBe(KAS_ADDRESS);
+    expect(truncateAddress(KAS_ADDRESS)).toBe('kaspa:prfu8r…mdv2wp');
+  });
+});

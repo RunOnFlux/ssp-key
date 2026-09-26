@@ -231,3 +231,34 @@ describe('inputParsing', () => {
     });
   });
 });
+
+describe('splitSSPInput (Kaspa signing bundles)', () => {
+  const bundle = JSON.stringify({
+    format: 'kaspa-core-signing-bundle',
+    version: 1,
+    tx: { inputs: [{ previousOutpoint: { transactionId: 'ab', index: 0 } }] },
+    inputs: [],
+    partials: [],
+  });
+
+  it('routes a bare bundle (JSON full of colons) to kas at 0-0', () => {
+    expect(splitSSPInput(bundle, CHAIN)).toEqual({
+      chain: 'kas',
+      wallet: '0-0',
+      dataToProcess: bundle,
+    });
+    expect(looksLikeXpub(bundle)).toBe(false);
+  });
+
+  it('keeps the JSON tail whole behind a kas:path prefix', () => {
+    expect(splitSSPInput(`kas:1-4:${bundle}`, CHAIN)).toEqual({
+      chain: 'kas',
+      wallet: '1-4',
+      dataToProcess: bundle,
+    });
+  });
+
+  it('leaves other JSON payloads to the normal split', () => {
+    expect(splitSSPInput('{"a":1}', CHAIN).chain).toBe('{"a"');
+  });
+});

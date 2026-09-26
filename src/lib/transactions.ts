@@ -6,6 +6,21 @@ import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
 import { getTokenMetadata } from './tokens';
 import { getLibId } from './wallet';
+import {
+  assertNoKasBlockingWarnings,
+  describeKasOpened,
+  fetchKasUtxos,
+  kasApprovedSummary,
+  kasScriptKey,
+  kasSompiToDecimal,
+  kasSpendAddress,
+  kasVaultSpend,
+  kaspaCore,
+  openKasBundle,
+  parseKasBundle,
+  type KasApprovedSummary,
+  type KaspaUtxo,
+} from './kaspa';
 import { cryptos, utxo } from '../types';
 
 import { blockchains, Token } from '@storage/blockchains';
@@ -424,14 +439,157 @@ interface tokenInfo {
   // UTXO only: number of non-change destinations. >1 means `amount` is their
   // sum and `receiver` is the first — the approval UI warns on this.
   recipientCount?: number;
+  // Kaspa only: kaspa-core describeTransaction warnings (e.g.
+  // 'fee-above-threshold'), surfaced on the approval screen.
+  warnings?: string[];
+  // Kaspa only: exactly what this screen shows (txid, fee, external
+  // outputs). Handed back on approval; the signing path signs only if its
+  // own re-description is identical (constructTx.ts).
+  kasApproved?: KasApprovedSummary;
+  // Set on a failed decode when the cause is known ('kas_utxo_fetch': this
+  // device could not load the vault's UTXOs), so the UI can say why.
+  errorReason?: string;
+}
+
+/** This device's own Kaspa UTXO lookup failed (network / backend). */
+export class KasUtxoFetchError extends Error {
+  constructor(cause: unknown) {
+    super(
+      `Kaspa UTXO lookup failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+    this.name = 'KasUtxoFetchError';
+  }
+}
+
+/**
+ * The bundle spends from a different address than the vault at the request
+ * path (e.g. a bare bundle entered manually, which defaults to path 0-0).
+ */
+export class KasWrongVaultError extends Error {
+  constructor(path: string) {
+    super(`Kaspa transaction does not spend the vault at path ${path}`);
+    this.name = 'KasWrongVaultError';
+  }
+}
+
+/**
+ * What the Kaspa approval decode needs beyond the payload: the pair's
+ * decrypted account xpubs and the `typeIndex-addressIndex` path, so the
+ * vault is derived HERE (never taken from the payload), plus an optional
+ * UTXO source override for tests.
+ */
+export interface KasApprovalContext {
+  xpubWallet: string;
+  xpubKey: string;
+  path: string;
+  fetchUtxos?: (addresses: string[]) => Promise<KaspaUtxo[]>;
+}
+
+const DECODING_ERROR_INFO: tokenInfo = {
+  sender: 'decodingError',
+  receiver: 'decodingError',
+  amount: 'decodingError',
+  fee: 'decodingError',
+  tokenSymbol: 'decodingError',
+};
+
+/**
+ * Consumer Kaspa approval decode (contract §4.1 + §4.4). Derives the vault
+ * from the stored xpubs + path, fetches the vault's UTXOs itself, opens the
+ * wallet's bundle against them and describes it. Every failure — unreadable
+ * payload, an input this device cannot see, an amount the bundle lies about,
+ * an output that cannot be shown — throws, and the caller fails closed.
+ */
+export async function decodeKASTransactionForApproval(
+  rawTx: string,
+  chain: keyof cryptos,
+  kas: KasApprovalContext,
+): Promise<tokenInfo> {
+  const parts = kas.path.split('-');
+  const typeIndex = Number(parts[0]);
+  const addressIndex = Number(parts[1]);
+  if (
+    parts.length !== 2 ||
+    !Number.isInteger(typeIndex) ||
+    !Number.isInteger(addressIndex) ||
+    typeIndex < 0 ||
+    addressIndex < 0
+  ) {
+    throw new Error('Invalid Kaspa derivation path');
+  }
+  const spend = kasVaultSpend(
+    kas.xpubWallet,
+    kas.xpubKey,
+    typeIndex,
+    addressIndex,
+    chain,
+  );
+  const { address } = kasSpendAddress(spend, chain);
+  // Every input must CLAIM this vault's script before anything is looked
+  // up, so a bundle for another path gets a clear error rather than a
+  // generic "input missing from the lookup". (The claim is only routing:
+  // the entries are still replaced by this device's own lookup below.)
+  const vaultScriptKey = kasScriptKey(kaspaCore.spendScriptPublicKey(spend));
+  const claimed = parseKasBundle(rawTx).inputs;
+  if (
+    !Array.isArray(claimed) ||
+    claimed.length === 0 ||
+    claimed.some(
+      (i) =>
+        kasScriptKey(
+          kaspaCore.spendScriptPublicKey(kaspaCore.inputPlanFromJson(i).spend),
+        ) !== vaultScriptKey,
+    )
+  ) {
+    throw new KasWrongVaultError(kas.path);
+  }
+  let trusted: KaspaUtxo[];
+  try {
+    trusted = kas.fetchUtxos
+      ? await kas.fetchUtxos([address])
+      : await fetchKasUtxos([address], chain);
+  } catch (error) {
+    throw new KasUtxoFetchError(error);
+  }
+  const opened = openKasBundle(rawTx, trusted);
+  const d = describeKasOpened(opened, chain, [
+    kaspaCore.spendScriptPublicKey(spend),
+  ]);
+  assertNoKasBlockingWarnings(d);
+  const external = d.outputs.filter((o) => !o.isOwn);
+  if (d.outputs.some((o) => !o.address)) {
+    throw new Error('Kaspa output without a displayable address');
+  }
+  // A send to self (every output back to the vault) shows the first output.
+  const shown = external.length > 0 ? external : d.outputs.slice(0, 1);
+  const amount = shown.reduce((a, o) => a + o.value, 0n);
+  return {
+    sender: address,
+    receiver: shown[0]?.address ?? 'decodingError',
+    amount: kasSompiToDecimal(amount),
+    fee: kasSompiToDecimal(d.fee),
+    tokenSymbol: blockchains[chain].symbol,
+    recipientCount: external.length,
+    warnings: d.warnings,
+    kasApproved: kasApprovedSummary(d),
+  };
 }
 
 export async function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
   utxos?: utxo[],
+  kas?: KasApprovalContext,
 ): Promise<tokenInfo> {
   try {
+    if (blockchains[chain].chainType === 'kas') {
+      // Never falls through to utxolib. Without the pair's xpubs the vault
+      // cannot be derived, so there is nothing trustworthy to show.
+      if (!kas) {
+        throw new Error('Kaspa approval needs the paired xpubs and path');
+      }
+      return await decodeKASTransactionForApproval(rawTx, chain, kas);
+    }
     if (blockchains[chain].chainType === 'evm') {
       const decodedTx = await decodeEVMTransactionForApproval(rawTx, chain);
       return decodedTx;
@@ -589,14 +747,13 @@ export async function decodeTransactionForApproval(
     return txInfo;
   } catch (error) {
     console.log(error);
-    const txInfo = {
-      sender: 'decodingError',
-      receiver: 'decodingError',
-      amount: 'decodingError',
-      fee: 'decodingError',
-      tokenSymbol: 'decodingError',
-    };
-    return txInfo;
+    if (error instanceof KasUtxoFetchError) {
+      return { ...DECODING_ERROR_INFO, errorReason: 'kas_utxo_fetch' };
+    }
+    if (error instanceof KasWrongVaultError) {
+      return { ...DECODING_ERROR_INFO, errorReason: 'kas_wrong_vault' };
+    }
+    return { ...DECODING_ERROR_INFO };
   }
 }
 

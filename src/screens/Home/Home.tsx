@@ -62,6 +62,7 @@ import {
   type ParsedChainSyncRequest,
 } from '../../lib/chainSyncRequest';
 import { looksLikeXpub, splitSSPInput } from '../../lib/inputParsing';
+import type { KasApprovedSummary } from '../../lib/kaspa';
 import type { HomeActionContext } from './actions/types';
 import * as syncActions from './actions/syncActions';
 import * as signingActions from './actions/signingActions';
@@ -186,6 +187,7 @@ function Home({ navigation }: Props) {
     vaultSigningData,
     decodedVaultTx,
     solDecodeState,
+    kasDecodeState,
     fluxNodeStartData,
     setFluxNodeStartData,
     keyNonceSyncDialogOpen,
@@ -821,6 +823,7 @@ function Home({ navigation }: Props) {
     setVaultXpubData,
     vaultSigningData,
     solDecodeState,
+    kasDecodeState,
     clearVaultSigningState,
     setSubmittingTransaction,
     setTxid,
@@ -920,6 +923,7 @@ function Home({ navigation }: Props) {
     chain: keyof cryptos,
     derivationPath: string,
     suggestedUtxos: utxo[],
+    kasApproved?: KasApprovedSummary,
   ) =>
     signingActions.approveTransaction(
       actionCtx,
@@ -927,6 +931,7 @@ function Home({ navigation }: Props) {
       chain,
       derivationPath,
       suggestedUtxos,
+      kasApproved,
     );
   const handleManualInput = (inputValue: string) => {
     try {
@@ -1261,7 +1266,10 @@ function Home({ navigation }: Props) {
     }
   };
 
-  const handleTransactionRequestAction = async (status: boolean) => {
+  const handleTransactionRequestAction = async (
+    status: boolean,
+    kasApproved?: KasApprovedSummary,
+  ) => {
     try {
       setActivityStatus(true);
       if (status === true) {
@@ -1269,7 +1277,7 @@ function Home({ navigation }: Props) {
         const rchain = activeChain;
         const rpath = txPath;
         const rUtxos = txUtxos;
-        await approveTransaction(rtx, rchain, rpath, rUtxos);
+        await approveTransaction(rtx, rchain, rpath, rUtxos, kasApproved);
       } else {
         // reject
         const rtx = rawTx;
@@ -1633,6 +1641,7 @@ function Home({ navigation }: Props) {
           <HomeRequests
             submittingTransaction={submittingTransaction}
             rawTx={rawTx}
+            txPath={txPath}
             xpubWallet={xpubWallet}
             xpubKey={xpubKey}
             activeChain={activeChain}
@@ -1671,6 +1680,7 @@ function Home({ navigation }: Props) {
             vaultSigningData={vaultSigningData}
             decodedVaultTx={decodedVaultTx}
             solDecodeState={solDecodeState}
+            kasDecodeState={kasDecodeState}
             handleVaultSigningRequestAction={handleVaultSigningRequestAction}
             fluxNodeStartData={fluxNodeStartData}
             handleFluxNodeStartAction={handleFluxNodeStartAction}

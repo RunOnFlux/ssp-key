@@ -16,7 +16,17 @@ import {
   signAndBroadcastEVM,
   selectPublicNonce,
   cosignAndBroadcastSOLTransaction,
+  cosignAndBroadcastKASTransaction,
+  KasMaybeBroadcastError,
 } from '../../../lib/constructTx';
+import {
+  kasMaxFeeForUsdRate,
+  kasVaultSpend,
+  type KasApprovedSummary,
+} from '../../../lib/kaspa';
+import { openKasLedger } from '../../../lib/kaspaLedger';
+import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
+import { getCryptoUsdRate } from '../../../lib/rates';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
 import { signMessage } from '../../../lib/relayAuth';
 import { setSspKeyPublicNonces } from '../../../store/ssp';
@@ -134,6 +144,9 @@ export const approveTransaction = async (
   chain: keyof cryptos,
   derivationPath: string,
   suggestedUtxos: utxo[],
+  // Kaspa: what the approval screen displayed (TransactionRequest). Required
+  // for kas — the co-sign refuses unless its own re-description matches.
+  kasApproved?: KasApprovedSummary,
 ) => {
   const {
     xpubKey,
@@ -185,9 +198,11 @@ export const approveTransaction = async (
       xpubKeyWalletDecrypted,
       xpubKeyDecrypted,
     );
+    const isKas = blockchains[chain].chainType === 'kas';
     let utxos = suggestedUtxos;
-    // if utxos are not provided, fetch them
-    if (!(suggestedUtxos && suggestedUtxos.length > 0)) {
+    // if utxos are not provided, fetch them. Kaspa never uses these: its
+    // co-sign path always does its own lookup (see below).
+    if (!isKas && !(suggestedUtxos && suggestedUtxos.length > 0)) {
       utxos = await fetchUtxos(addressDetails.address, chain, 2); // in ssp key, we want to fetch both confirmed and unconfirmed utxos
     }
 
@@ -205,6 +220,8 @@ export const approveTransaction = async (
       chain,
     );
     let ttxid = '';
+    // Kaspa: set when the submission MAY have landed (never definite).
+    let kasMaybeBroadcast = false;
     if (blockchains[chain].chainType === 'evm') {
       const pNs = CryptoJS.AES.decrypt(publicNonces, pwForEncryption);
       const pNsDecrypted = pNs.toString(CryptoJS.enc.Utf8);
@@ -228,6 +245,47 @@ export const approveTransaction = async (
         keyPair.privKey as `0x${string}`,
         publicNonceKey,
       );
+    } else if (isKas) {
+      // Kaspa: the payload is the wallet's half-signed SigningBundle JSON.
+      // The relay-supplied `utxos` are IGNORED — the co-sign opens the bundle
+      // against this device's own UTXO lookup of the vault address derived
+      // from the stored xpubs + path (KASPA_SSP_CONTRACT.md §4.1). The key
+      // stays the broadcaster, then posts `txid` like the UTXO chains.
+      if (!kasApproved) {
+        keyPair.privKey = '';
+        throw new Error(t('home:err_kas_not_displayed'));
+      }
+      const vaultSpend = kasVaultSpend(
+        xpubKeyWalletDecrypted,
+        xpubKeyDecrypted,
+        typeIndex,
+        addressIndex,
+        chain,
+      );
+      try {
+        // min($100-equivalent, 5 KAS) — 5 KAS alone when no rate is known
+        const maxFee = kasMaxFeeForUsdRate(await getCryptoUsdRate(chain));
+        ttxid = await cosignAndBroadcastKASTransaction({
+          chain,
+          bundleJson: rawTransaction,
+          vaultSpend,
+          keyPrivKeyHex: keyPair.privKey,
+          ledger: openKasLedger(),
+          approved: kasApproved,
+          maxFee,
+        });
+      } catch (error) {
+        if (!(error instanceof KasMaybeBroadcastError)) {
+          throw error;
+        }
+        // The transaction ID is known and it may be on the network: tell
+        // the wallet about it (it tracks it like any sent txid) and tell the
+        // user to check the explorer — never re-sign something else.
+        ttxid = error.txid;
+        kasMaybeBroadcast = true;
+      } finally {
+        keyPair.privKey = '';
+      }
     } else if (blockchains[chain].chainType === 'sol') {
       // Wallet pre-signed the outer tx with its leaf. Key adds its own
       // leaf sig + broadcasts directly. The tx may include a permissionless
@@ -284,8 +342,22 @@ export const approveTransaction = async (
       console.log(error);
       displayMessage('info', t('home:warn_tx_sent_notify_failed'), 6000);
     }
+    if (kasMaybeBroadcast) {
+      displayMessage(
+        'error',
+        t('home:err_kas_maybe_broadcast', { txid: ttxid }),
+        10000,
+      );
+      return;
+    }
     setTxid(ttxid);
   } catch (error) {
+    // Kaspa ledger unreadable / full: fail closed; a corrupt ledger also
+    // offers the explicit (warned) reset.
+    if (handleKasLedgerError(error, t, displayMessage)) {
+      console.log(error);
+      return;
+    }
     const txErrMsg =
       error instanceof Error ? error.message : t('home:err_tx_failed');
     displayMessage('error', txErrMsg);
