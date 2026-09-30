@@ -89,7 +89,10 @@ const HomeRequests = (props: {
   solDecodeState: VaultSolDecodeState | null;
   kasDecodeState: KasVaultDecodeState | null;
   tronDecodeState: TronVaultDecodeState | null;
-  handleVaultSigningRequestAction: (status: boolean) => Promise<void>;
+  handleVaultSigningRequestAction: (
+    status: boolean,
+    tronApprovedDigest?: string,
+  ) => Promise<void>;
   fluxNodeStartData: Record<string, unknown> | null;
   handleFluxNodeStartAction: (status: boolean) => Promise<void>;
   txid: string;
@@ -286,6 +289,7 @@ const HomeRequests = (props: {
           }
           tronDecodeReasons={tronDecodeState?.reasons}
           tronView={tronDecodeState?.view}
+          tronDigest={tronDecodeState?.digest}
           signMessage={vaultSigningData.signMessage}
           dappOrigin={vaultSigningData.dappOrigin}
         />

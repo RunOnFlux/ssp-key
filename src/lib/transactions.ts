@@ -661,8 +661,9 @@ export async function decodeTRONTransactionForApproval(
     receiver: first ? first.to : view.vault,
     amount: first ? first.amount : '0',
     fee: view.fee.kind === 'none' ? '0' : view.fee.amount,
-    tokenSymbol:
-      first && first.symbol !== null ? first.symbol : blockchains[chain].symbol,
+    // An unknown TRC-20 / a TRC-10 has no symbol on this device: never fall
+    // back to the native one (its raw units would read as TRX).
+    tokenSymbol: first ? (first.symbol ?? '') : blockchains[chain].symbol,
     token: isToken ? first.token : undefined,
     recipientCount: view.calls.length,
     tron: view,

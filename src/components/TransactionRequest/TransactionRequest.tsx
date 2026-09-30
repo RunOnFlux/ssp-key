@@ -824,11 +824,16 @@ const TransactionRequest = (props: {
             accessibilityLabel={
               decoding
                 ? t('home:tx_decoding')
-                : t('home:a11y_approve_send', {
-                    amount: sendingAmount,
-                    symbol: displaySymbol,
-                    recipient: recipientAddress,
-                  })
+                : tronView
+                  ? // TRON: the headline summarizes the WHOLE Op (every
+                    // call, raw units for unknown tokens) — never the first
+                    // call's amount with the native symbol.
+                    t('home:a11y_approve_action', { action: actionText })
+                  : t('home:a11y_approve_send', {
+                      amount: sendingAmount,
+                      symbol: displaySymbol,
+                      recipient: recipientAddress,
+                    })
             }
             style={[Gutters.regularBMargin, Gutters.smallTMargin]}
             disabled={decoding || authenticationOpen || props.activityStatus}

@@ -105,11 +105,16 @@ jest.mock('../../src/components/request', () => {
       ReactLib.createElement(ReactLib.Fragment, null, props.children),
     TronOpDetails: (props: { view: { calls: { amount: string }[] } }) =>
       leaf('tron-details', props.view.calls.map((c) => c.amount).join(',')),
-    SlideToApprove: (props: { disabled?: boolean; onComplete: () => void }) =>
+    SlideToApprove: (props: {
+      disabled?: boolean;
+      accessibilityLabel?: string;
+      onComplete: () => void;
+    }) =>
       ReactLib.createElement(
         Text,
         {
           testID: 'slider',
+          accessibilityLabel: props.accessibilityLabel,
           accessibilityState: { disabled: !!props.disabled },
           onPress: () => props.onComplete(),
         },
@@ -227,6 +232,34 @@ describe('TransactionRequest (tron)', () => {
     expect(screen.queryByTestId('fee')).toBeNull();
     expect(screen.getByTestId('slider').props.accessibilityState.disabled).toBe(
       false,
+    );
+  });
+
+  it('announces the whole Op to screen readers, never "amount + native symbol"', async () => {
+    // an unknown TRC-20 would otherwise be read out as "sending 5000000 TRX"
+    decodeMock.mockResolvedValue(
+      decoded({
+        amount: '5000000',
+        tokenSymbol: '',
+        token: 'TWr4qR84ARRVT2s2ccExEzhy1AbvUg5JUo',
+        tron: view({
+          calls: [
+            {
+              ...view().calls[0],
+              amount: '5000000',
+              symbol: null,
+              decimals: null,
+              token: 'TWr4qR84ARRVT2s2ccExEzhy1AbvUg5JUo',
+              unknownToken: true,
+            },
+          ],
+        }),
+      }),
+    );
+    renderTron();
+    await settle();
+    expect(screen.getByTestId('slider').props.accessibilityLabel).toBe(
+      'home:a11y_approve_action',
     );
   });
 

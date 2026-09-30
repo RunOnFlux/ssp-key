@@ -627,6 +627,11 @@ export interface TronCallView {
   unlimited?: boolean;
   /** selfCall action name (invalidateNonces, freezeBalanceV2, …). */
   action?: string;
+  /**
+   * selfCall: its decoded arguments (receiver / amount / resource / votes /
+   * nonce word + mask), so nothing that matters is only in raw calldata.
+   */
+  detail?: string;
   /** Raw calldata (approve / unknown / selfCall), shown as-is. */
   data?: string;
 }
@@ -666,6 +671,31 @@ export interface TronOpView {
   isCancellation: boolean;
   warnings: string[];
   selfPayAccount?: TronSelfPayAccount;
+}
+
+/** Human text of a vault self-call's arguments (see TronCallView.detail). */
+function selfCallDetail(
+  c: Extract<T.DisplayCall, { kind: 'selfCall' }>,
+  nativeSymbol: string,
+): string {
+  const trx = (amount: bigint) =>
+    `${formatTronUnits(amount, TRX_DECIMALS)} ${nativeSymbol}`;
+  switch (c.action) {
+    case 'invalidateNonces':
+      return `word ${c.word.toString()}, mask 0x${c.mask.toString(16)}`;
+    case 'freezeBalanceV2':
+    case 'unfreezeBalanceV2':
+      return `${trx(c.amount)}, ${c.resource}`;
+    case 'delegateResource':
+    case 'undelegateResource':
+      return `${c.receiver}: ${trx(c.amount)}, ${c.resource}`;
+    case 'voteWitnesses':
+      return c.votes
+        .map((v) => `${v.witness}: ${v.count.toString()}`)
+        .join(', ');
+    default:
+      return '';
+  }
 }
 
 function callView(
@@ -751,6 +781,7 @@ function callView(
         unknownToken: false,
         toVault: true,
         action: c.action,
+        detail: selfCallDetail(c, nativeSymbol),
         data: T.to0x(T.encodeSelfCall(c)),
       };
     default:
@@ -855,6 +886,34 @@ export function tronErrorReason(error: unknown): string {
 // Network (full-node HTTP through the ssp-backends-proxy Worker)
 // ---------------------------------------------------------------------------
 
+/** Whole node exchange (headers and body): a stalled node must not leave an approval spinning. */
+export const TRON_NODE_TIMEOUT_MS = 30000;
+
+/**
+ * `fetchImpl` bounded by `timeoutMs`. The body is read inside the timeout too,
+ * so a node that sends headers and then stalls fails as well.
+ */
+export function timedTronFetch(
+  fetchImpl: typeof fetch,
+  timeoutMs: number = TRON_NODE_TIMEOUT_MS,
+): FetchLike {
+  return async (url, init) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetchImpl(url, { ...init, signal: controller.signal });
+      const text = await res.text();
+      return {
+        ok: res.ok,
+        status: res.status,
+        text: () => Promise.resolve(text),
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+}
+
 export function tronHttpClient(
   chain: string,
   fetchImpl?: FetchLike,
@@ -863,7 +922,7 @@ export function tronHttpClient(
     `https://${backends()[chain].node}`,
     // Pass fetch explicitly: the lockdown runtime may not expose it on the
     // global the library looks at.
-    fetchImpl ?? ((url, init) => fetch(url, init)),
+    fetchImpl ?? timedTronFetch((url, init) => fetch(url, init)),
   );
 }
 

@@ -11,10 +11,15 @@
 //    network, and (at sign time) its OWN leaf
 //    m/48'/195'/org'/0'/vaultIndex/addressIndex to be one of the signers;
 //  - decodes the Op under the ENTERPRISE policy: approve / unknown calls /
-//    vault self-calls only when the request's org policy flags explicitly
-//    allow them (absent = refused), fee to the pinned collector in TRX or
-//    USDT under the ceiling (or 0), deadline ≤ 30 days;
-//  - signs the digest with its leaf and returns a 65-byte signature.
+//    Stake 2.0 vault self-calls only when the request's org policy flags
+//    explicitly allow them (absent = refused; the on-chain nonce
+//    invalidation is allowed unless explicitly off), fee to the pinned
+//    collector in TRX or USDT under the ceiling (or 0), deadline ≤ 30 days;
+//  - only for an enterprise account (orgIndex 100…99999): never the consumer
+//    account 0' or the reserved 99', whose leaves must not co-sign here;
+//  - signs the digest with its leaf and returns a 65-byte signature, and
+//    ONLY when that digest is the one the approval screen displayed (a
+//    request swapped in while the user was approving is refused).
 // Display and signing run the SAME verification; the UI fails closed on a
 // pending or failed verdict and the signing path re-verifies from scratch.
 // ============================================================
@@ -42,12 +47,20 @@ import {
 /** Minimal shape of the relay vault-signing payload the TRON path needs. */
 export interface VaultTronSigningPayload {
   chain: string;
+  /** The org account m/48'/195'/orgIndex'/0' the vault keys live under. */
+  orgIndex?: unknown;
   rawUnsignedTx?: string;
   tronOp?: unknown;
   tronPolicy?: unknown;
   sourceAddress?: string;
   inputDetails?: unknown;
+  /** Message signing (WalletConnect) — never valid for TRON (contract §7). */
+  signMessage?: unknown;
 }
+
+/** Enterprise organisation indices (BIP-48 account', CLAUDE.md conventions). */
+export const TRON_ENTERPRISE_ORG_INDEX_MIN = 100;
+export const TRON_ENTERPRISE_ORG_INDEX_MAX = 99999;
 
 export interface TronOpEnvelope {
   network: string;
@@ -60,7 +73,10 @@ export interface TronOpEnvelope {
 export interface TronPolicyFlags {
   allowApprove: boolean;
   allowUnknown: boolean;
+  /** Vault self-calls at all (the on-chain nonce invalidation). */
   allowSelfCalls: boolean;
+  /** Stake 2.0 self-calls (freeze, delegate, vote, …): explicit opt-in only. */
+  allowStakingSelfCalls: boolean;
 }
 
 export interface TronVaultDecodeState {
@@ -68,6 +84,11 @@ export interface TronVaultDecodeState {
   status: 'ok' | 'failed';
   reasons: string[];
   view?: TronOpView;
+  /**
+   * 'ok' only: the Op digest (0x…) the approval screen displays. Approval
+   * hands it back and signing refuses any other digest.
+   */
+  digest?: string;
 }
 
 export interface TronVaultVerified {
@@ -136,10 +157,12 @@ export function parseTronOpEnvelope(raw: unknown): TronOpEnvelope {
 /**
  * The org policy flags carried by the request. `approve` and unknown contract
  * calls need an explicit boolean `true`; anything absent or malformed is
- * `false`. Vault self-calls (cancel nonces, Stake 2.0) are allowed unless the
- * request explicitly says `allowSelfCalls: false`: they only touch the vault
- * itself, every one is decoded and shown, and the on-chain cancel of a fully
- * signed proposal depends on them.
+ * `false`. Of the vault self-calls, only the nonce invalidation (it can only
+ * burn nonces — the on-chain cancel of a fully signed proposal) is allowed
+ * unless the request explicitly says `allowSelfCalls: false`. The Stake 2.0
+ * self-calls (freeze / unfreeze TRX, delegate resources to another account,
+ * vote) change what the vault's TRX can do, so like approve they need an
+ * explicit `allowSelfCalls: true` (contract §5.3).
  */
 export function tronPolicyFlags(raw: unknown): TronPolicyFlags {
   let obj: unknown = raw;
@@ -155,9 +178,11 @@ export function tronPolicyFlags(raw: unknown): TronPolicyFlags {
     allowApprove: p.allowApprove === true,
     allowUnknown: p.allowUnknown === true,
     allowSelfCalls: p.allowSelfCalls !== false,
+    allowStakingSelfCalls: p.allowSelfCalls === true,
   };
 }
 
+/** Normalised 0x-lowercase form of a 32-byte hex digest, or null. */
 function normalizeDigestHex(v: unknown): string | null {
   if (typeof v !== 'string') return null;
   const hex = v.startsWith('0x') || v.startsWith('0X') ? v.slice(2) : v;
@@ -195,6 +220,28 @@ export function verifyTronVaultRequest(
   /** USD per TRX from the relay (0 = unknown: the 300 TRX cap alone). */
   trxUsdRate = 0,
 ): TronVaultVerified {
+  const { orgIndex } = data;
+  if (
+    typeof orgIndex !== 'number' ||
+    !Number.isInteger(orgIndex) ||
+    orgIndex < TRON_ENTERPRISE_ORG_INDEX_MIN ||
+    orgIndex > TRON_ENTERPRISE_ORG_INDEX_MAX
+  ) {
+    // 0' is the consumer account (its leaves are consumer vault signers) and
+    // 99' is reserved: an enterprise request never signs with either.
+    throw new TronVerifyError(
+      'bad_payload',
+      `Invalid TRON organisation index ${String(orgIndex)}`,
+    );
+  }
+  if (data.signMessage) {
+    // The screen would show a "message" beside the Op; TRON message signing
+    // is out of scope (contract §7), so the combination is refused outright.
+    throw new TronVerifyError(
+      'bad_payload',
+      'TRON message signing is not supported',
+    );
+  }
   requireTronLive(network);
   const envelope = parseTronOpEnvelope(data.tronOp);
   if (!tronNetworkMatches(envelope.network, network)) {
@@ -256,6 +303,18 @@ export function verifyTronVaultRequest(
     allowUnknown: flags.allowUnknown,
     allowSelfCalls: flags.allowSelfCalls,
   });
+  if (!flags.allowStakingSelfCalls) {
+    const staking = display.calls.find(
+      (c) => c.kind === 'selfCall' && c.action !== 'invalidateNonces',
+    );
+    if (staking && staking.kind === 'selfCall') {
+      throw new T.PolicyError(
+        'CALL_KIND_NOT_ALLOWED',
+        `call ${staking.index} (${staking.action}) needs the org policy to allow vault self-calls`,
+        staking.index,
+      );
+    }
+  }
   return {
     network,
     envelope,
@@ -292,7 +351,12 @@ export function decodeTronVaultRequest(
       trxUsdRate,
     );
     return {
-      state: { status: 'ok', reasons: [], view: verified.view },
+      state: {
+        status: 'ok',
+        reasons: [],
+        view: verified.view,
+        digest: T.to0x(verified.digest),
+      },
       decoded: { sender: verified.vault.address, recipients: [], fee: '0' },
     };
   } catch (error) {
@@ -344,9 +408,11 @@ export async function applyVaultTronDecode(
 }
 
 /**
- * Co-sign a TRON enterprise proposal: re-verify from scratch, require this
- * key's leaf m/48'/195'/org'/0'/vaultIndex/addressIndex (from `vaultXpriv`
- * = the org account xpriv) to be a signer, sign the recomputed digest.
+ * Co-sign a TRON enterprise proposal: re-verify from scratch, require the
+ * recomputed digest to be the one the approval screen displayed
+ * (`approvedDigest`), require this key's leaf
+ * m/48'/195'/org'/0'/vaultIndex/addressIndex (from `vaultXpriv` = the org
+ * account xpriv) to be a signer, sign the recomputed digest.
  *
  * `wallet_only` vaults have no key leaves: the proposal is still verified,
  * but nothing is signed (`keySignature: null`) — SSP Wallet expects a reply
@@ -361,6 +427,12 @@ export function signTronVaultRequest(opts: {
   now?: bigint;
   /** USD per TRX from the relay (0 = unknown: the 300 TRX cap alone). */
   trxUsdRate?: number;
+  /**
+   * The digest (0x…) of the proposal the approval screen displayed when the
+   * user approved. Anything else — e.g. a request the relay swapped in while
+   * Authentication was open — is refused.
+   */
+  approvedDigest: string;
 }): { keySignature: string | null; keyPubKey: string } {
   if (!Number.isInteger(opts.vaultIndex) || opts.vaultIndex < 0) {
     throw new TronVerifyError('bad_payload', 'Invalid TRON vault index');
@@ -371,6 +443,12 @@ export function signTronVaultRequest(opts: {
     opts.now ?? tronNowSeconds(),
     opts.trxUsdRate ?? 0,
   );
+  if (normalizeDigestHex(opts.approvedDigest) !== T.to0x(verified.digest)) {
+    throw new TronVerifyError(
+      'digest_mismatch',
+      'TRON proposal changed since it was displayed; review it again',
+    );
+  }
   const node = HDKey.fromExtendedKey(
     opts.vaultXpriv,
     blockchains[opts.data.chain].bip32,

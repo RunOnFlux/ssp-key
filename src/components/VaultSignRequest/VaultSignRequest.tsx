@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
@@ -50,7 +50,9 @@ interface VaultSignRequestProps {
   chain: string;
   vaultName?: string;
   orgName?: string;
-  actionStatus: (status: boolean) => void;
+  // TRON: an approval carries the digest that was on screen when the user
+  // approved (see tronDigest); every other chain passes only the status.
+  actionStatus: (status: boolean, tronApprovedDigest?: string) => void;
   // ERC-20 token metadata (EVM only, omit for native currency)
   tokenContract?: string;
   tokenSymbol?: string;
@@ -83,6 +85,10 @@ interface VaultSignRequestProps {
   tronDecodeReasons?: string[];
   // The on-device decode of the Op: every call, the fee and the deadline.
   tronView?: TronOpView;
+  // The Op digest (0x…) of that decode. Approval hands back the digest that
+  // was displayed when the user started approving; a proposal swapped in
+  // meanwhile closes Authentication and is never approved unseen.
+  tronDigest?: string;
   // WalletConnect Phase 2 — vault MESSAGE signing (personal_sign). When set, this
   // is a message signature (not a transaction): show the message text + dApp
   // instead of recipients/amounts. Signing math is identical (signs the digest).
@@ -113,6 +119,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   tronDecodeBlocked,
   tronDecodeReasons,
   tronView,
+  tronDigest,
   signMessage,
   dappOrigin,
 }) => {
@@ -155,12 +162,29 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   );
   const kasBlocked = kasDecodeBlocked === true || kasBlockingWarning;
   const kasFailed = kasBlocked && kasDecodePending !== true;
-  // TRON: only an 'ok' verdict with a decoded view is approvable.
+  // TRON: only an 'ok' verdict with a decoded view AND its digest is
+  // approvable.
   const isTron = isTronChain(chain);
-  const tronBlocked = isTron && (tronDecodeBlocked === true || !tronView);
+  const tronBlocked =
+    isTron && (tronDecodeBlocked === true || !tronView || !tronDigest);
   const tronFailed = isTron && (tronDecodeReasons ?? []).length > 0;
   const approvalBlocked =
     solBlocked || solPending || decodeBlocked || kasBlocked || tronBlocked;
+  // TRON: the digest on screen when the user started approving.
+  const tronApprovingDigest = useRef<string | undefined>(undefined);
+
+  // A different TRON proposal (the relay replaced the request, or its
+  // verdict changed) while Authentication is open: close it. The user has
+  // not seen this one yet and must review and approve it again.
+  useEffect(() => {
+    if (
+      tronApprovingDigest.current !== undefined &&
+      tronApprovingDigest.current !== tronDigest
+    ) {
+      tronApprovingDigest.current = undefined;
+      setAuthenticationOpen(false);
+    }
+  }, [tronDigest]);
 
   const approve = () => {
     // Single choke point for the Authentication callback too: a verdict that
@@ -168,10 +192,23 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
     if (approvalBlocked) {
       return;
     }
+    if (isTron) {
+      const approving = tronApprovingDigest.current;
+      tronApprovingDigest.current = undefined;
+      if (!approving || approving !== tronDigest) {
+        return; // not what the user was looking at when approving
+      }
+      actionStatus(true, approving);
+      return;
+    }
     actionStatus(true);
   };
 
   const openAuthentication = () => {
+    if (isTron) {
+      if (approvalBlocked || !tronDigest) return;
+      tronApprovingDigest.current = tronDigest;
+    }
     setAuthenticationOpen(true);
   };
 
@@ -183,6 +220,8 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
     setAuthenticationOpen(false);
     if (status === true) {
       approve();
+    } else {
+      tronApprovingDigest.current = undefined;
     }
   };
 

@@ -681,8 +681,9 @@ interface vaultSigningRequest {
   // {network, vault, signers, threshold, op}. JSON string or object.
   tronOp?: string | Record<string, unknown>;
   // TRON enterprise org policy flags for decodeOpForDisplay. Absent (or any
-  // flag absent) means NOT allowed: approve / unknown calls / vault
-  // self-calls are refused unless the org explicitly allows them.
+  // flag absent) means NOT allowed: approve / unknown calls / Stake 2.0 vault
+  // self-calls are refused unless the org explicitly allows them (the
+  // nonce-invalidation self-call is allowed unless allowSelfCalls is false).
   tronPolicy?:
     | string
     | {

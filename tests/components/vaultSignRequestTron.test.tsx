@@ -110,6 +110,12 @@ const VIEW: TronOpView = {
 };
 
 const decodedTx = { sender: VIEW.vault, recipients: [], fee: '0' };
+const DIGEST_A = '0x' + 'aa'.repeat(32);
+const DIGEST_B = '0x' + 'bb'.repeat(32);
+const VIEW_B: TronOpView = {
+  ...VIEW,
+  calls: [{ ...VIEW.calls[0], amount: '5000', amountBaseUnits: '5000000000' }],
+};
 
 const renderTron = (
   props: Partial<React.ComponentProps<typeof VaultSignRequest>> = {},
@@ -137,6 +143,7 @@ describe('VaultSignRequest (tron)', () => {
     const { actionStatus } = renderTron({
       tronDecodeBlocked: false,
       tronView: VIEW,
+      tronDigest: DIGEST_A,
     });
     expect(screen.getByTestId('tron-details')).toHaveTextContent('1 USDT');
     // the generic recipient / fee cards are not rendered for TRON
@@ -145,7 +152,51 @@ describe('VaultSignRequest (tron)', () => {
     expect(sliderDisabled()).toBe(false);
     fireEvent.press(screen.getByTestId('slider'));
     fireEvent.press(screen.getByTestId('authentication'));
-    expect(actionStatus).toHaveBeenCalledWith(true);
+    // the approval carries the digest that was on screen
+    expect(actionStatus).toHaveBeenCalledWith(true, DIGEST_A);
+  });
+
+  it('blocks an ok verdict without the displayed digest (fail closed)', () => {
+    const { actionStatus } = renderTron({
+      tronDecodeBlocked: false,
+      tronView: VIEW,
+    });
+    expect(sliderDisabled()).toBe(true);
+    fireEvent.press(screen.getByTestId('slider'));
+    expect(actionStatus).not.toHaveBeenCalled();
+  });
+
+  it('a proposal swapped while Authentication is open is never approved', () => {
+    const { actionStatus, rerender } = renderTron({
+      tronDecodeBlocked: false,
+      tronView: VIEW,
+      tronDigest: DIGEST_A,
+    });
+    fireEvent.press(screen.getByTestId('slider')); // user approved A
+    expect(screen.getByTestId('authentication')).toBeTruthy();
+    // the relay replaces the request with B, which verifies fine
+    act(() => {
+      rerender(
+        <VaultSignRequest
+          activityStatus={false}
+          recipients={[]}
+          fee="0"
+          chain="tron"
+          actionStatus={actionStatus}
+          decodedTx={decodedTx}
+          tronDecodeBlocked={false}
+          tronView={VIEW_B}
+          tronDigest={DIGEST_B}
+        />,
+      );
+    });
+    // Authentication for A is gone: B must be reviewed and approved anew
+    expect(screen.queryByTestId('authentication')).toBeNull();
+    expect(actionStatus).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('slider'));
+    fireEvent.press(screen.getByTestId('authentication'));
+    expect(actionStatus).toHaveBeenCalledWith(true, DIGEST_B);
+    expect(actionStatus).not.toHaveBeenCalledWith(true, DIGEST_A);
   });
 
   it('blocks while the verdict is pending (no failure banner)', () => {
@@ -175,6 +226,7 @@ describe('VaultSignRequest (tron)', () => {
     const { actionStatus, rerender } = renderTron({
       tronDecodeBlocked: false,
       tronView: VIEW,
+      tronDigest: DIGEST_A,
     });
     fireEvent.press(screen.getByTestId('slider')); // opens Authentication
     act(() => {
@@ -188,6 +240,7 @@ describe('VaultSignRequest (tron)', () => {
           decodedTx={decodedTx}
           tronDecodeBlocked={true}
           tronView={VIEW}
+          tronDigest={DIGEST_A}
         />,
       );
     });

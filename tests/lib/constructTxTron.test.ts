@@ -232,6 +232,35 @@ describe('decodeTransactionForApproval (tron)', () => {
   });
 });
 
+describe('decodeTransactionForApproval (tron): never labels a token as TRX', () => {
+  it.each([
+    [
+      'an unknown TRC-20',
+      [
+        T.trc20TransferCall(
+          'TWr4qR84ARRVT2s2ccExEzhy1AbvUg5JUo',
+          VECTOR_RECIPIENT,
+          5000000n,
+        ),
+      ],
+    ],
+    [
+      'a TRC-10 token',
+      [T.trc10TransferCall(VECTOR_RECIPIENT, 1002000n, 5000000n)],
+    ],
+  ])('%s keeps no symbol (raw units, not "TRX")', async (_n, calls) => {
+    const info = await decodeTRONTransactionForApproval(
+      consumerPayload(opWith({ calls })),
+      TRON,
+      DECODE_CTX,
+    );
+    expect(info.amount).toBe('5000000');
+    expect(info.tokenSymbol).not.toBe('TRX');
+    expect(info.tokenSymbol).toBe('');
+    expect(info.tron?.calls[0].symbol).toBeNull();
+  });
+});
+
 describe('cosignAndBroadcastTRON (sponsored)', () => {
   it('signs the displayed digest and posts exactly the contract body', async () => {
     const fetchImpl = relayReply({ status: 'success', data: { txid: TXID } });

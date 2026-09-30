@@ -188,7 +188,12 @@ export const handleVaultXpubAction = async (ctx: HomeActionContext) => {
     clearVaultXpubRequest?.();
   }
 };
-export const handleVaultSignAction = async (ctx: HomeActionContext) => {
+export const handleVaultSignAction = async (
+  ctx: HomeActionContext,
+  // TRON: the Op digest the approval screen displayed when the user
+  // approved. Required for tron — signing refuses any other digest.
+  tronApprovedDigest?: string,
+) => {
   const {
     vaultSigningData,
     solDecodeState,
@@ -239,11 +244,15 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
   }
   // Same sign-time recheck for TRON: only an 'ok' verdict (digest recomputed
   // from tronOp, vault re-derived, enterprise policy) may proceed; pending
-  // and failed both refuse. The signing path re-verifies from scratch.
+  // and failed both refuse. It must also be the proposal the user approved:
+  // a request swapped in after approval has a different digest and is
+  // refused. The signing path re-verifies from scratch and re-checks it.
   if (
     blockchains[vaultSigningData.chain as keyof cryptos]?.chainType ===
       'tron' &&
-    tronDecodeState?.status !== 'ok'
+    (tronDecodeState?.status !== 'ok' ||
+      !tronApprovedDigest ||
+      tronDecodeState.digest !== tronApprovedDigest)
   ) {
     if (tronDecodeState) {
       displayMessage('error', t('home:vault_sign_tron_decode_failed'), 8000);
@@ -451,8 +460,9 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     // from `tronOp` and requires it to equal rawUnsignedTx, requires the
     // vault to be predict(signers, threshold) and this key's leaf
     // m/48'/195'/org'/0'/vaultIndex/addressIndex to be a signer, decodes the
-    // Op under the enterprise policy (org flags, absent = refused), then
-    // signs the digest. walletSignedHex is never used for TRON.
+    // Op under the enterprise policy (org flags, absent = refused), requires
+    // the digest the user approved, then signs it. walletSignedHex is never
+    // used for TRON.
     if (blockchainConfig.chainType === 'tron') {
       const tronResult = signTronVaultRequest({
         data: vaultSigningData,
@@ -462,6 +472,8 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         network: tronNetwork(vaultChain),
         // the enterprise fee cap: min($100 of TRX, 300 TRX) / $100 of USDT
         trxUsdRate: await getCryptoUsdRate(vaultSigningData.chain),
+        // checked above: the digest the approval screen displayed
+        approvedDigest: tronApprovedDigest ?? '',
       });
       vaultXpriv = '';
       pwForEncryption = '';

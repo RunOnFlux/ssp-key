@@ -1468,11 +1468,15 @@ function Home({ navigation }: Props) {
   const handleVaultXpubAction = async () =>
     vaultActions.handleVaultXpubAction(actionCtx);
 
-  const handleVaultSigningRequestAction = async (status: boolean) => {
+  const handleVaultSigningRequestAction = async (
+    status: boolean,
+    // TRON: the Op digest VaultSignRequest displayed when the user approved
+    tronApprovedDigest?: string,
+  ) => {
     try {
       setActivityStatus(true);
       if (status === true) {
-        await handleVaultSignAction();
+        await handleVaultSignAction(tronApprovedDigest);
       } else {
         // reject
         clearVaultSigningState(); // also discards any in-flight sol decode
@@ -1492,8 +1496,8 @@ function Home({ navigation }: Props) {
     }
   };
 
-  const handleVaultSignAction = async () =>
-    vaultActions.handleVaultSignAction(actionCtx);
+  const handleVaultSignAction = async (tronApprovedDigest?: string) =>
+    vaultActions.handleVaultSignAction(actionCtx, tronApprovedDigest);
 
   const handlePublicNoncesSharedModalAction = () => {
     console.log('public nonces modal close.');

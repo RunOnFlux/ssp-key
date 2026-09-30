@@ -117,6 +117,14 @@ const TronOpDetails = ({ view }: { view: TronOpView }) => {
               {callTitle(c, t)}
               {amount ? `: ${amount}` : ''}
             </Text>
+            {c.detail ? (
+              <Text
+                style={[Fonts.textTiny, styles.mono, styles.row]}
+                selectable={true}
+              >
+                {c.detail}
+              </Text>
+            ) : null}
             <Text style={label}>
               {c.kind === 'approve'
                 ? t('home:spender')

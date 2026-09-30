@@ -283,7 +283,7 @@ describe('handleVaultSignAction (tron)', () => {
     reservedNonce: { kPublic: 'aa', kTwoPublic: 'bb' },
     ...extra,
   });
-  const ok = { status: 'ok' as const, reasons: [] };
+  const ok = { status: 'ok' as const, reasons: [], digest };
 
   it.each([
     ['pending (null)', null, false],
@@ -309,7 +309,7 @@ describe('handleVaultSignAction (tron)', () => {
       vaultSigningData: vaultData() as never,
       tronDecodeState: ok,
     });
-    await handleVaultSignAction(ctx);
+    await handleVaultSignAction(ctx, digest);
     expect(ctx.postAction).toHaveBeenCalledTimes(1);
     const [action, payload, chain] = ctx.postAction.mock.calls[0] as [
       string,
@@ -349,7 +349,7 @@ describe('handleVaultSignAction (tron)', () => {
       vaultSigningData: vaultData({ signingMode: 'wallet_only' }) as never,
       tronDecodeState: ok,
     });
-    await handleVaultSignAction(ctx);
+    await handleVaultSignAction(ctx, digest);
     const reply = JSON.parse(
       (ctx.postAction.mock.calls[0] as [string, string])[1],
     ) as Record<string, string>;
@@ -363,11 +363,52 @@ describe('handleVaultSignAction (tron)', () => {
       }) as never,
       tronDecodeState: ok, // a stale / forged verdict must not be enough
     });
-    await handleVaultSignAction(ctx);
+    await handleVaultSignAction(ctx, digest);
     expect(ctx.postAction).not.toHaveBeenCalled();
     expect(ctx.displayMessage).toHaveBeenCalledWith(
       'error',
       expect.stringMatching(/digest does not match/),
+      8000,
+    );
+  });
+
+  it('never signs without the digest the approval screen displayed', async () => {
+    const ctx = baseCtx({
+      vaultSigningData: vaultData() as never,
+      tronDecodeState: ok,
+    });
+    await handleVaultSignAction(ctx);
+    expect(ctx.postAction).not.toHaveBeenCalled();
+  });
+
+  it('refuses a proposal swapped in after the user approved another one', async () => {
+    // The user approved A; the relay replaced the request with B (valid,
+    // same vault) and its verdict is already ok. B was never approved.
+    const opB = T.buildOp({
+      calls: [T.trxTransferCall(VECTOR_RECIPIENT, 900000000n)],
+      nonce: 2n,
+      deadline: VECTOR_NOW + 86400n,
+      fee: T.trxFee(9000000n, VECTOR_FEE_COLLECTOR),
+    });
+    const digestB = T.to0x(T.opDigest(VECTOR_NETWORK.chainId, E.address, opB));
+    const ctx = baseCtx({
+      vaultSigningData: vaultData({
+        rawUnsignedTx: digestB,
+        tronOp: {
+          network: 'ssp-vectors',
+          vault: E.address,
+          signers: E.signers,
+          threshold: E.threshold,
+          op: T.opToJson(opB),
+        },
+      }) as never,
+      tronDecodeState: { status: 'ok' as const, reasons: [], digest: digestB },
+    });
+    await handleVaultSignAction(ctx, digest);
+    expect(ctx.postAction).not.toHaveBeenCalled();
+    expect(ctx.displayMessage).toHaveBeenCalledWith(
+      'error',
+      'home:vault_sign_tron_decode_failed',
       8000,
     );
   });
