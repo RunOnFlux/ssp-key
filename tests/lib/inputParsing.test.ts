@@ -262,3 +262,46 @@ describe('splitSSPInput (Kaspa signing bundles)', () => {
     expect(splitSSPInput('{"a":1}', CHAIN).chain).toBe('{"a"');
   });
 });
+
+describe('splitSSPInput (TRON ssp-tron-op payloads)', () => {
+  const tronPayload = (network: string) =>
+    JSON.stringify({
+      format: 'ssp-tron-op',
+      version: 1,
+      network,
+      vault: 'TWq9eJbomJDmkME7ahC4renGL2BXacL2vd',
+      op: { calls: [], nonce: '1', deadline: '2', fee: {} },
+    });
+
+  it('routes a bare payload to the chain its network names, at 0-0', () => {
+    for (const [network, chain] of [
+      ['mainnet', 'tron'],
+      ['nile', 'tronNile'],
+    ]) {
+      const p = tronPayload(network);
+      expect(splitSSPInput(p, CHAIN)).toEqual({
+        chain,
+        wallet: '0-0',
+        dataToProcess: p,
+      });
+      expect(looksLikeXpub(p)).toBe(false);
+    }
+  });
+
+  it('keeps the JSON tail whole behind a tron:path prefix', () => {
+    const p = tronPayload('mainnet');
+    expect(splitSSPInput(`tron:0-4:${p}`, CHAIN)).toEqual({
+      chain: 'tron',
+      wallet: '0-4',
+      dataToProcess: p,
+    });
+  });
+
+  it('leaves an ssp-tron-op with an unknown network to the normal split', () => {
+    expect(splitSSPInput(tronPayload('shasta'), CHAIN).chain).not.toBe('tron');
+    expect(splitSSPInput(tronPayload('tron'), CHAIN).chain).not.toBe('tron');
+    expect(splitSSPInput(tronPayload('__proto__'), CHAIN).chain).not.toBe(
+      'tron',
+    );
+  });
+});

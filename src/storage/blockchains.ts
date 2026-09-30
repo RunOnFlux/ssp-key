@@ -580,6 +580,58 @@ const kas = {
   tokens: [],
 };
 
+// TRON: every vault is an SSPVault contract clone (CREATE2) whose address is
+// fixed by the sorted signer addresses + threshold, built and verified with
+// @runonflux/tron-multisig (not utxolib — chainType 'tron' routes every
+// chain branch; never 'evm'). Keys come from the normal BIP-48 derivation
+// m/48'/195'/0'/0' (secp256k1 xpubs work unchanged); a signer is the TRON
+// address of the leaf key. Every field that affects the path or the xpub
+// string (slip, scriptType, bip32) must match SSP Wallet. See
+// TRON_SSP_CONTRACT.md §1. Decimals are 6 (1 TRX = 1,000,000 sun).
+const tron = {
+  id: 'tron',
+  libid: 'tron',
+  name: 'TRON',
+  symbol: 'TRX',
+  logo: require('../assets/trx.svg'),
+  slip: 195,
+  decimals: 6,
+  node: backends().tron.node,
+  api: backends().tron.api,
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  scriptType: 'p2sh', // index 0 of the BIP-48 path; there is no script
+  chainType: 'tron',
+  backend: 'trongrid',
+  // SDK network (getNetwork): factory / implementation / sponsor / fee
+  // collector come ONLY from the SDK's pinned table, never from here.
+  tronNetwork: 'mainnet',
+  tokens: tokens.tron(),
+};
+
+const tronNile = {
+  id: 'tronNile',
+  libid: 'tronNile',
+  name: 'TRON Nile',
+  symbol: 'TEST-TRX',
+  logo: require('../assets/trx.svg'),
+  slip: 1, // SSP testnet convention (isTestnetChain keys off slip === 1)
+  decimals: 6,
+  node: backends().tronNile.node,
+  api: backends().tronNile.api,
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  scriptType: 'p2sh',
+  chainType: 'tron',
+  backend: 'trongrid',
+  tronNetwork: 'nile',
+  tokens: tokens.tronNile(),
+};
+
 export const blockchains = {
   btc,
   flux,
@@ -601,4 +653,6 @@ export const blockchains = {
   solMainnet,
   solDevnet,
   kas,
+  tron,
+  tronNile,
 };

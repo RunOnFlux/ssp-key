@@ -3,6 +3,13 @@ import { cryptos } from '../types';
 // Same literal as lib/kaspa.ts KAS_BUNDLE_FORMAT; kept local so this pure
 // parsing module does not pull in the Kaspa library and chain registry.
 const KAS_BUNDLE_FORMAT = 'kaspa-core-signing-bundle';
+// Same literal as lib/tron.ts TRON_OP_FORMAT (kept local for the same reason).
+const TRON_OP_FORMAT = 'ssp-tron-op';
+// The payload's `network` (the SDK network name) → chain.
+const TRON_PAYLOAD_CHAINS: Record<string, keyof cryptos> = {
+  mainnet: 'tron',
+  nile: 'tronNile',
+};
 
 // Pure helpers for classifying and splitting scanned / manually entered
 // SSP input. Relocated verbatim from src/screens/Home/Home.tsx.
@@ -57,12 +64,36 @@ export function splitSSPInput(
   // (transactions.ts KasWrongVaultError → home:err_kas_wrong_vault). The
   // relay is the primary transport for Kaspa; `kas:0-1:{…}` selects any
   // other path through the normal split below.
+  //
+  // A bare TRON `ssp-tron-op` payload is routed the same way: to the chain
+  // its `network` names, at the default path 0-0. Routing only — the TRON
+  // decode re-derives the vault from this device's xpubs at that path and
+  // fails CLOSED ("not this device's vault") for a payload of another path;
+  // `tron:0-4:{…}` selects any other path through the normal split below.
   const trimmed = input.trim();
   if (trimmed.startsWith('{')) {
     try {
-      const parsed = JSON.parse(trimmed) as { format?: unknown };
+      const parsed = JSON.parse(trimmed) as {
+        format?: unknown;
+        network?: unknown;
+      };
       if (parsed && parsed.format === KAS_BUNDLE_FORMAT) {
         return { chain: 'kas', wallet: '0-0', dataToProcess: trimmed };
+      }
+      if (
+        parsed &&
+        parsed.format === TRON_OP_FORMAT &&
+        typeof parsed.network === 'string' &&
+        Object.prototype.hasOwnProperty.call(
+          TRON_PAYLOAD_CHAINS,
+          parsed.network,
+        )
+      ) {
+        return {
+          chain: TRON_PAYLOAD_CHAINS[parsed.network],
+          wallet: '0-0',
+          dataToProcess: trimmed,
+        };
       }
     } catch {
       // not JSON — fall through

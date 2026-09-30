@@ -312,3 +312,52 @@ describe('parseChainSyncRequest (kas)', () => {
     );
   });
 });
+
+describe('parseChainSyncRequest (tron)', () => {
+  it('accepts both TRON chains with standard account xpubs', () => {
+    const result = parseChainSyncRequest(
+      payload({
+        chains: [
+          { chain: 'tron', xpubWallet: VALID_XPUB },
+          { chain: 'tronNile', xpubWallet: VALID_XPUB_2 },
+        ],
+      }),
+      IDENTITY_CHAIN,
+    );
+    expect(result).toEqual({
+      status: 'ok',
+      request: {
+        version: 1,
+        chains: [
+          { chain: 'tron', xpubWallet: VALID_XPUB },
+          { chain: 'tronNile', xpubWallet: VALID_XPUB_2 },
+        ],
+      },
+    });
+  });
+
+  it('rejects TRON carrying a Solana-style pubkey array', () => {
+    const result = parseChainSyncRequest(
+      payload({ chains: [{ chain: 'tron', xpubWallet: solPubkeyArray() }] }),
+      IDENTITY_CHAIN,
+    );
+    expect(result).toEqual({ status: 'invalid', reason: 'bad_xpub' });
+  });
+
+  it('allows 24 chains per batch (raised from 20 for TRON)', () => {
+    expect(CHAIN_SYNC_MAX_CHAINS).toBe(24);
+    const chains = Array.from({ length: 24 }, (_, i) => ({
+      chain: `unknown-${String(i)}`,
+      xpubWallet: VALID_XPUB,
+    }));
+    chains[0] = { chain: 'tron', xpubWallet: VALID_XPUB };
+    const result = parseChainSyncRequest(payload({ chains }), IDENTITY_CHAIN);
+    expect(result.status).toBe('ok');
+  });
+
+  it('lists TRX / TEST-TRX in the approval copy', () => {
+    expect(
+      chainSyncSymbols(['btc', 'tron', 'tronNile'] as (keyof cryptos)[]),
+    ).toBe('BTC, TRX, TEST-TRX');
+  });
+});

@@ -18,7 +18,18 @@ import {
   cosignAndBroadcastSOLTransaction,
   cosignAndBroadcastKASTransaction,
   KasMaybeBroadcastError,
+  cosignAndBroadcastTRON,
+  TronBroadcastUnknownError,
+  TronRelayRefusedError,
+  TronSelfPayBalanceError,
 } from '../../../lib/constructTx';
+import {
+  TRON_SELF_PAY_MIN_BALANCE_SUN,
+  TRX_DECIMALS,
+  formatTronUnits,
+  tronNetwork,
+  type TronApprovedSummary,
+} from '../../../lib/tron';
 import {
   kasMaxFeeForUsdRate,
   kasVaultSpend,
@@ -147,6 +158,9 @@ export const approveTransaction = async (
   // Kaspa: what the approval screen displayed (TransactionRequest). Required
   // for kas — the co-sign refuses unless its own re-description matches.
   kasApproved?: KasApprovedSummary,
+  // TRON: the chain / vault / Op digest the approval screen displayed.
+  // Required for tron — the co-sign re-verifies and refuses on any change.
+  tronApproved?: TronApprovedSummary,
 ) => {
   const {
     xpubKey,
@@ -192,17 +206,26 @@ export const approveTransaction = async (
     const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
     const xpubKeyWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
 
-    const addressDetails = generateAddressDetailsForSending(
-      chain,
-      derivationPath,
-      xpubKeyWalletDecrypted,
-      xpubKeyDecrypted,
-    );
     const isKas = blockchains[chain].chainType === 'kas';
+    // TRON never touches utxolib or the relay's `utxos`: its co-sign derives
+    // and verifies the vault itself (lib/tron.ts).
+    const isTron = blockchains[chain].chainType === 'tron';
+    const addressDetails = isTron
+      ? null
+      : generateAddressDetailsForSending(
+          chain,
+          derivationPath,
+          xpubKeyWalletDecrypted,
+          xpubKeyDecrypted,
+        );
     let utxos = suggestedUtxos;
     // if utxos are not provided, fetch them. Kaspa never uses these: its
     // co-sign path always does its own lookup (see below).
-    if (!isKas && !(suggestedUtxos && suggestedUtxos.length > 0)) {
+    if (
+      addressDetails &&
+      !isKas &&
+      !(suggestedUtxos && suggestedUtxos.length > 0)
+    ) {
       utxos = await fetchUtxos(addressDetails.address, chain, 2); // in ssp key, we want to fetch both confirmed and unconfirmed utxos
     }
 
@@ -286,6 +309,70 @@ export const approveTransaction = async (
       } finally {
         keyPair.privKey = '';
       }
+    } else if (isTron) {
+      // TRON (TRON_SSP_CONTRACT.md §6): the payload is the wallet's signed
+      // `ssp-tron-op`. The co-sign re-runs every §5 check against the vault
+      // derived from the stored xpubs + path, signs only the digest that was
+      // displayed, then either hands both signatures to the relay sponsor
+      // (fee > 0) or submits from this device's own leaf account (self-pay).
+      if (!tronApproved) {
+        keyPair.privKey = '';
+        throw new Error(t('home:err_tron_not_displayed'));
+      }
+      try {
+        ttxid = await cosignAndBroadcastTRON({
+          chain,
+          rawTx: rawTransaction,
+          approved: tronApproved,
+          xpubWallet: xpubKeyWalletDecrypted,
+          xpubKey: xpubKeyDecrypted,
+          path: derivationPath,
+          keyPrivKeyHex: keyPair.privKey,
+          network: tronNetwork(chain),
+          relayHost: sspConfig().relay,
+        });
+      } catch (error) {
+        if (error instanceof TronRelayRefusedError) {
+          // A definite refusal: nothing was broadcast. Tell SSP Wallet so it
+          // stops waiting, and show the relay's reason.
+          setRawTx('');
+          setTxPath('');
+          setTxUtxos([]);
+          await postAction(
+            'txrejected',
+            rawTransaction,
+            chain,
+            derivationPath,
+            sspWalletKeyInternalIdentity,
+          ).catch((postError: unknown) => console.log(postError));
+          throw new Error(
+            t('home:err_tron_relay_refused', { message: error.message }),
+          );
+        }
+        if (error instanceof TronBroadcastUnknownError) {
+          // It may still land: keep the request (a retry of the same signed
+          // Op is deduplicated) and never report it as rejected.
+          throw new Error(
+            t('home:err_tron_broadcast_unknown', {
+              message: error.relayMessage || error.message,
+            }),
+          );
+        }
+        if (error instanceof TronSelfPayBalanceError) {
+          throw new Error(
+            t('home:err_tron_self_pay_balance', {
+              address: error.address,
+              minimum: formatTronUnits(
+                TRON_SELF_PAY_MIN_BALANCE_SUN,
+                TRX_DECIMALS,
+              ),
+            }),
+          );
+        }
+        throw error;
+      } finally {
+        keyPair.privKey = '';
+      }
     } else if (blockchains[chain].chainType === 'sol') {
       // Wallet pre-signed the outer tx with its leaf. Key adds its own
       // leaf sig + broadcasts directly. The tx may include a permissionless
@@ -313,6 +400,9 @@ export const approveTransaction = async (
         relayHost: sspConfig().relay,
       });
     } else {
+      if (!addressDetails) {
+        throw new Error('Missing vault address details');
+      }
       const signedTx = signTransaction(
         rawTransaction,
         chain,

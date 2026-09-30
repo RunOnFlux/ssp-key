@@ -34,6 +34,7 @@ import {
 } from '../../../lib/pairingVerification';
 import { signRecoveryXpub } from '../../../lib/recoveryPublish';
 import { CHAIN_SYNC_POST_SPACING_MS } from '../../../lib/chainSyncRequest';
+import { TronNotLiveError } from '../../../lib/tron';
 import { cryptos, syncSSPRelay, publicNonce } from '../../../types';
 import type { HomeActionContext } from './types';
 
@@ -275,7 +276,14 @@ export const generateAddressesForActiveChain = (
       setActiveChain(identityChain);
       console.log(error);
       setTimeout(() => {
-        displayMessage('error', t('home:err_sync_failed'));
+        // A TRON vault address cannot be derived until the SDK pins the
+        // network's factory: say so instead of a generic sync failure.
+        displayMessage(
+          'error',
+          error instanceof TronNotLiveError
+            ? t('home:err_tron_not_live')
+            : t('home:err_sync_failed'),
+        );
       }, 200);
     });
 };
@@ -465,6 +473,8 @@ export const processChainSyncBatch = async (ctx: HomeActionContext) => {
     const pwForEncryption = idData.password + passwordDecrypted;
     const total = request.chains.length;
     let failedChains = 0;
+    // chains refused only because TRON is not live yet (see below)
+    let tronNotLiveChains = 0;
     const verifyEntries: {
       chain: string;
       walletXpub: string;
@@ -536,8 +546,16 @@ export const processChainSyncBatch = async (ctx: HomeActionContext) => {
         );
         verifyEntries.push(synced);
       } catch (error) {
-        failedChains += 1;
-        console.log('[Chain Sync] Failed for chain', entry.chain, error);
+        if (error instanceof TronNotLiveError) {
+          // Not a failure: TRON vault addresses can't be derived until the
+          // contracts are deployed and pinned in the SDK. Skip it quietly so a
+          // batch that includes TRON still reports the other chains' success.
+          tronNotLiveChains += 1;
+          console.log('[Chain Sync] Skipped (TRON not live yet)', entry.chain);
+        } else {
+          failedChains += 1;
+          console.log('[Chain Sync] Failed for chain', entry.chain, error);
+        }
       }
       if (i < total - 1) {
         // spacing so the wallet's 1s sync poll catches every chain
@@ -549,6 +567,9 @@ export const processChainSyncBatch = async (ctx: HomeActionContext) => {
     }
     if (failedChains > 0) {
       displayMessage('error', t('home:err_sync_failed'));
+    } else if (tronNotLiveChains === total) {
+      // the batch contained nothing but TRON
+      displayMessage('info', t('home:err_tron_not_live'));
     } else {
       displayMessage('success', t('home:chainsync_success'));
     }

@@ -18,10 +18,18 @@ import { useTheme } from '../../hooks';
 import {
   decodeTransactionForApproval,
   type KasApprovalContext,
+  type TronApprovalContext,
 } from '../../lib/transactions';
 import { decodeErc20Calldata } from '../../lib/calldataDecode';
 import { truncateAddress } from '../../lib/addressDisplay';
 import type { KasApprovedSummary } from '../../lib/kaspa';
+import {
+  fetchTronBalance,
+  tronHttpClient,
+  tronNetwork,
+  type TronApprovedSummary,
+  type TronOpView,
+} from '../../lib/tron';
 import { getCryptoUsdRate, formatUsdAmount } from '../../lib/rates';
 import { cryptos, utxo } from '../../types';
 
@@ -35,7 +43,68 @@ import {
   RiskBanner,
   AdvancedSection,
   SlideToApprove,
+  TronOpDetails,
 } from '../request';
+
+/** The pair's decrypted account xpubs (both empty-checked). */
+async function decryptPairXpubs(
+  encryptedXpubWallet: string,
+  encryptedXpubKey: string,
+  notSyncedMessage: string,
+): Promise<{ xpubWallet: string; xpubKey: string }> {
+  const encryptionKey = await Keychain.getGenericPassword({
+    service: 'enc_key',
+  });
+  const passwordData = await Keychain.getGenericPassword({
+    service: 'sspkey_pw',
+  });
+  if (!passwordData || !encryptionKey) {
+    throw new Error('Unable to decrypt stored data');
+  }
+  const password = CryptoJS.AES.decrypt(
+    passwordData.password,
+    encryptionKey.password,
+  ).toString(CryptoJS.enc.Utf8);
+  const pwForEncryption = encryptionKey.password + password;
+  const xpubWallet = CryptoJS.AES.decrypt(
+    encryptedXpubWallet,
+    pwForEncryption,
+  ).toString(CryptoJS.enc.Utf8);
+  const xpubKey = CryptoJS.AES.decrypt(
+    encryptedXpubKey,
+    pwForEncryption,
+  ).toString(CryptoJS.enc.Utf8);
+  if (!xpubWallet || !xpubKey) {
+    throw new Error(notSyncedMessage);
+  }
+  return { xpubWallet, xpubKey };
+}
+
+/**
+ * TRON decode context: signers / threshold / vault are derived on this device
+ * from the pair's stored (encrypted) xpubs + the request path — never from
+ * the payload — against the SDK's pinned network.
+ */
+async function tronApprovalContext(
+  encryptedXpubWallet: string,
+  encryptedXpubKey: string,
+  path: string,
+  chain: keyof cryptos,
+): Promise<TronApprovalContext> {
+  const { xpubWallet, xpubKey } = await decryptPairXpubs(
+    encryptedXpubWallet,
+    encryptedXpubKey,
+    'TRON is not synced with SSP Wallet',
+  );
+  return {
+    xpubWallet,
+    xpubKey,
+    path,
+    network: tronNetwork(chain),
+    getBalance: (address: string) =>
+      fetchTronBalance(tronHttpClient(chain), address),
+  };
+}
 
 /**
  * Kaspa decode context: the vault is derived on this device from the pair's
@@ -99,9 +168,13 @@ const TransactionRequest = (props: {
   xpubWallet?: string;
   xpubKey?: string;
   activityStatus: boolean;
-  // Kaspa approvals hand back exactly what was displayed; the signing path
-  // refuses unless its own re-description is identical.
-  actionStatus: (status: boolean, kasApproved?: KasApprovedSummary) => void;
+  // Kaspa / TRON approvals hand back exactly what was displayed; the signing
+  // path refuses unless its own re-verification is identical.
+  actionStatus: (
+    status: boolean,
+    kasApproved?: KasApprovedSummary,
+    tronApproved?: TronApprovedSummary,
+  ) => void;
 }) => {
   // Monotonic decode token. Every decode run captures its value; a run whose
   // token is no longer current has been superseded by a newer payload and
@@ -133,8 +206,38 @@ const TransactionRequest = (props: {
   const [kasApproved, setKasApproved] = useState<
     KasApprovedSummary | undefined
   >(undefined);
+  // TRON: the decoded Op view and the digest summary of the CURRENT payload
+  // (undefined until its decode resolves). Approval of a tron payload
+  // without one never signs.
+  const [tronView, setTronView] = useState<TronOpView | undefined>(undefined);
+  const [tronApproved, setTronApproved] = useState<
+    TronApprovedSummary | undefined
+  >(undefined);
+  // Why the decode failed, when this device knows (shown in the banner).
+  const [decodeFailReason, setDecodeFailReason] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
+  // Why a TRON payload was refused, as shown to the user.
+  const tronRefusalMessage = (detail: string | undefined): string => {
+    if (detail === 'not_live') return t('home:err_tron_not_live');
+    if (
+      detail === 'wrong_vault' ||
+      detail === 'wrong_network' ||
+      detail === 'bad_path'
+    ) {
+      return t('home:err_tron_wrong_vault');
+    }
+    if (detail === 'bad_wallet_signature') {
+      return t('home:err_tron_wallet_signature');
+    }
+    if (detail?.startsWith('policy:')) {
+      const reason = detail.slice('policy:'.length);
+      return `${t('home:err_tron_policy')} ${t(`home:tron_policy_${reason}`, {
+        defaultValue: '',
+      })}`.trim();
+    }
+    return t('home:err_tx_decode');
+  };
 
   const approve = () => {
     console.log('Approve');
@@ -148,6 +251,17 @@ const TransactionRequest = (props: {
         return; // nothing displayed for this payload — never sign it
       }
       props.actionStatus(true, kasApproved);
+      return;
+    }
+    if (blockchainConfig.chainType === 'tron') {
+      if (!tronApproved || !tronView) {
+        return; // nothing displayed for this payload — never sign it
+      }
+      // Self-pay: an unfunded account is shown (TronOpDetails banner) but
+      // not blocked here — the user may fund it while this screen is open.
+      // The signing path re-reads the balance and refuses before anything
+      // is broadcast (constructTx.selfSubmitTronOp).
+      props.actionStatus(true, undefined, tronApproved);
       return;
     }
     props.actionStatus(true);
@@ -195,6 +309,9 @@ const TransactionRequest = (props: {
     setMultiRecipient(false);
     setTxWarnings([]);
     setKasApproved(undefined);
+    setTronView(undefined);
+    setTronApproved(undefined);
+    setDecodeFailReason('');
     setToken('');
     setTokenSymbol('');
     setTxData('');
@@ -203,6 +320,7 @@ const TransactionRequest = (props: {
     void (async function () {
       try {
         const isKas = blockchains[props.chain].chainType === 'kas';
+        const isTron = blockchains[props.chain].chainType === 'tron';
         const kasContext = isKas
           ? await kasApprovalContext(
               props.xpubWallet ?? '',
@@ -210,21 +328,37 @@ const TransactionRequest = (props: {
               props.path ?? '',
             )
           : undefined;
+        const tronContext = isTron
+          ? await tronApprovalContext(
+              props.xpubWallet ?? '',
+              props.xpubKey ?? '',
+              props.path ?? '',
+              props.chain,
+            )
+          : undefined;
         if (!isCurrentDecode()) {
           return;
         }
-        const txInfo = kasContext
+        const txInfo = tronContext
           ? await decodeTransactionForApproval(
               props.rawTx,
               props.chain,
               props.utxos,
-              kasContext,
+              undefined,
+              tronContext,
             )
-          : await decodeTransactionForApproval(
-              props.rawTx,
-              props.chain,
-              props.utxos,
-            );
+          : kasContext
+            ? await decodeTransactionForApproval(
+                props.rawTx,
+                props.chain,
+                props.utxos,
+                kasContext,
+              )
+            : await decodeTransactionForApproval(
+                props.rawTx,
+                props.chain,
+                props.utxos,
+              );
         if (!isCurrentDecode()) {
           return; // a newer payload arrived — these values are not on screen
         }
@@ -238,6 +372,8 @@ const TransactionRequest = (props: {
         setTxData(txInfo.data || '');
         setTxWarnings(txInfo.warnings ?? []);
         setKasApproved(txInfo.kasApproved);
+        setTronView(txInfo.tron);
+        setTronApproved(txInfo.tronApproved);
         if (
           (props.utxos && props.utxos.length) ||
           blockchains[props.chain].chainType === 'evm' ||
@@ -269,14 +405,18 @@ const TransactionRequest = (props: {
         ) {
           // Fail closed with a VISIBLE error state — approval is impossible,
           // reject stays reachable. Previously this silently auto-rejected.
-          displayMessage(
-            'error',
+          const failMessage =
             txInfo.errorReason === 'kas_utxo_fetch'
               ? t('home:err_kas_utxo_fetch')
               : txInfo.errorReason === 'kas_wrong_vault'
                 ? t('home:err_kas_wrong_vault')
-                : t('home:err_tx_decode'),
-          );
+                : txInfo.errorReason === 'tron'
+                  ? tronRefusalMessage(txInfo.errorDetail)
+                  : t('home:err_tx_decode');
+          displayMessage('error', failMessage);
+          if (txInfo.errorReason === 'tron') {
+            setDecodeFailReason(failMessage);
+          }
           setDecodeFailed(true);
         }
       } catch (error) {
@@ -318,8 +458,20 @@ const TransactionRequest = (props: {
       : null;
 
   // Native amount fiat (never for tokens); fee fiat (fees are always native).
+  // TRON: a fiat estimate only for a single plain TRX transfer (never for a
+  // token, a batch or a cancellation).
+  const tronSingleTrx =
+    !!tronView &&
+    tronView.calls.length === 1 &&
+    tronView.calls[0].kind === 'trxTransfer';
   const amountUsd = (() => {
-    if (token || !sendingAmount || decodeFailed || usdRate <= 0) {
+    if (
+      token ||
+      !sendingAmount ||
+      decodeFailed ||
+      usdRate <= 0 ||
+      (tronView && !tronSingleTrx)
+    ) {
       return '';
     }
     const usd = new BigNumber(sendingAmount).multipliedBy(usdRate);
@@ -414,6 +566,26 @@ const TransactionRequest = (props: {
     // Unrecognized contract execution — generic action, raw hex in Advanced.
     actionText = t('home:action_contract_interaction');
   }
+  if (tronView) {
+    // TRON: the headline summarizes the WHOLE Op; every call is listed below.
+    const only = tronView.calls.length === 1 ? tronView.calls[0] : null;
+    if (tronView.isCancellation) {
+      actionText = t('home:tron_cancellation', { nonce: tronView.nonce });
+    } else if (only && only.symbol !== null && only.kind !== 'trc10Transfer') {
+      actionText = t('home:action_send_amount', {
+        amount: only.amount,
+        symbol: only.symbol,
+      });
+    } else if (only) {
+      actionText = t('home:action_send_raw_units', {
+        amount: only.amountBaseUnits,
+      });
+    } else {
+      actionText = t('home:tron_action_multi', {
+        count: tronView.calls.length,
+      });
+    }
+  }
 
   const hasAdvancedContent =
     !!senderAddress || (!!txData && txData !== '0x') || !!token;
@@ -438,7 +610,11 @@ const TransactionRequest = (props: {
           <RiskBanner
             severity="critical"
             title={t('home:tx_decode_failed_title')}
-            messages={[t('home:tx_decode_failed_desc')]}
+            messages={
+              decodeFailReason
+                ? [decodeFailReason, t('home:tx_decode_failed_desc')]
+                : [t('home:tx_decode_failed_desc')]
+            }
           />
         ) : decoding ? (
           // Nothing has been decoded from the CURRENT payload yet, so there is
@@ -522,13 +698,14 @@ const TransactionRequest = (props: {
               }
               decodedOnDevice={true}
             />
-            {recipientAddress ? (
+            {tronView ? <TronOpDetails view={tronView} /> : null}
+            {!tronView && recipientAddress ? (
               <RecipientCard
                 label={recipientLabel}
                 address={recipientAddress}
               />
             ) : null}
-            {multiRecipient ? (
+            {!tronView && multiRecipient ? (
               <Text
                 style={[
                   Fonts.textSmall,
@@ -538,7 +715,7 @@ const TransactionRequest = (props: {
                 {t('home:warn_multi_recipient')}
               </Text>
             ) : null}
-            {fee ? (
+            {!tronView && fee ? (
               <FeeRow
                 label={t('home:network_fee')}
                 fee={fee}

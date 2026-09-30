@@ -17,9 +17,10 @@ import type { VaultDecodedTx } from '../../lib/transactions';
 import type { ProposalSimulation } from '../../lib/vaultSimulation';
 import VaultRiskStrip from './VaultRiskStrip';
 import { KAS_BLOCKING_WARNINGS } from '../../lib/kaspa';
+import { isTronChain, type TronOpView } from '../../lib/tron';
 
 import { Card } from '../ui';
-import { SlideToApprove } from '../request';
+import { SlideToApprove, TronOpDetails } from '../request';
 /**
  * Format a base-unit amount (satoshis/wei) to human-readable using chain decimals.
  */
@@ -75,6 +76,13 @@ interface VaultSignRequestProps {
   kasDecodePending?: boolean;
   kasDecodeReasons?: string[];
   kasWarnings?: string[];
+  // TRON (see lib/tronVault): approval is blocked unless this device
+  // recomputed the digest from tronOp, re-derived the vault and decoded the
+  // Op under the enterprise policy. Blocked while pending too (fail closed).
+  tronDecodeBlocked?: boolean;
+  tronDecodeReasons?: string[];
+  // The on-device decode of the Op: every call, the fee and the deadline.
+  tronView?: TronOpView;
   // WalletConnect Phase 2 — vault MESSAGE signing (personal_sign). When set, this
   // is a message signature (not a transaction): show the message text + dApp
   // instead of recipients/amounts. Signing math is identical (signs the digest).
@@ -102,6 +110,9 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   kasDecodePending,
   kasDecodeReasons,
   kasWarnings,
+  tronDecodeBlocked,
+  tronDecodeReasons,
+  tronView,
   signMessage,
   dappOrigin,
 }) => {
@@ -144,8 +155,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   );
   const kasBlocked = kasDecodeBlocked === true || kasBlockingWarning;
   const kasFailed = kasBlocked && kasDecodePending !== true;
+  // TRON: only an 'ok' verdict with a decoded view is approvable.
+  const isTron = isTronChain(chain);
+  const tronBlocked = isTron && (tronDecodeBlocked === true || !tronView);
+  const tronFailed = isTron && (tronDecodeReasons ?? []).length > 0;
   const approvalBlocked =
-    solBlocked || solPending || decodeBlocked || kasBlocked;
+    solBlocked || solPending || decodeBlocked || kasBlocked || tronBlocked;
 
   const approve = () => {
     // Single choke point for the Authentication callback too: a verdict that
@@ -361,8 +376,34 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </Card>
         ) : null}
 
+        {/* TRON: digest / vault / policy verification failed */}
+        {tronFailed && (
+          <Card style={[styles.card, { borderColor: Colors.error }]}>
+            <Text
+              style={[
+                Fonts.textTiny,
+                Fonts.textBold,
+                { color: Colors.error, textAlign: 'center' },
+              ]}
+            >
+              {t('home:vault_sign_tron_decode_failed')}
+            </Text>
+            {(tronDecodeReasons ?? []).map((reason, index) => (
+              <Text
+                key={index}
+                style={[
+                  Fonts.textTiny,
+                  { color: Colors.error, textAlign: 'center', marginTop: 4 },
+                ]}
+              >
+                {reason}
+              </Text>
+            ))}
+          </Card>
+        )}
+
         {/* Decode error warning */}
-        {decodedTx?.error && !kasFailed && (
+        {decodedTx?.error && !kasFailed && !tronFailed && (
           <Card style={[styles.card, { borderColor: Colors.error }]}>
             <Text
               style={[
@@ -432,8 +473,13 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </Card>
         ) : null}
 
+        {/* TRON: every call, the fee and the deadline of the on-device
+            decode of tronOp (replaces the generic recipients / fee cards). */}
+        {isTron && tronView ? <TronOpDetails view={tronView} /> : null}
+
         {/* Recipients — decoded from raw transaction */}
         {!isMessageSign &&
+          !isTron &&
           (displayRecipients.length > 0 ? (
             displayRecipients.map((recipient, index) => (
               <Card key={index} style={styles.card}>
@@ -497,7 +543,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           ))}
 
         {/* Fee Card — decoded from raw transaction (omitted for message signing) */}
-        {!isMessageSign && (
+        {!isMessageSign && !isTron && (
           <Card style={styles.card}>
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_fee')}

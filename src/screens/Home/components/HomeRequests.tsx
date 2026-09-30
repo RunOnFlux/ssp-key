@@ -28,6 +28,8 @@ import { type VaultDecodedTx } from '../../../lib/transactions';
 import { type VaultSolDecodeState } from '../../../lib/vaultSolanaDecode';
 import { type KasVaultDecodeState } from '../../../lib/kaspaVault';
 import { type KasApprovedSummary } from '../../../lib/kaspa';
+import { type TronVaultDecodeState } from '../../../lib/tronVault';
+import { type TronApprovedSummary } from '../../../lib/tron';
 import { parseProposalSimulation } from '../../../lib/vaultSimulation';
 import { type ParsedChainSyncRequest } from '../../../lib/chainSyncRequest';
 import { type RecoveryRequestPayload } from '../../../lib/recoveryHandler';
@@ -57,6 +59,7 @@ const HomeRequests = (props: {
   handleTransactionRequestAction: (
     status: boolean,
     kasApproved?: KasApprovedSummary,
+    tronApproved?: TronApprovedSummary,
   ) => Promise<void>;
   syncReq: string;
   handleSynchronisationRequestAction: (status: boolean) => void;
@@ -85,6 +88,7 @@ const HomeRequests = (props: {
   decodedVaultTx: VaultDecodedTx | null;
   solDecodeState: VaultSolDecodeState | null;
   kasDecodeState: KasVaultDecodeState | null;
+  tronDecodeState: TronVaultDecodeState | null;
   handleVaultSigningRequestAction: (status: boolean) => Promise<void>;
   fluxNodeStartData: Record<string, unknown> | null;
   handleFluxNodeStartAction: (status: boolean) => Promise<void>;
@@ -132,6 +136,7 @@ const HomeRequests = (props: {
     decodedVaultTx,
     solDecodeState,
     kasDecodeState,
+    tronDecodeState,
     handleVaultSigningRequestAction,
     fluxNodeStartData,
     handleFluxNodeStartAction,
@@ -274,6 +279,13 @@ const HomeRequests = (props: {
           }
           kasDecodeReasons={kasDecodeState?.reasons}
           kasWarnings={kasDecodeState?.warnings}
+          // TRON fails closed on BOTH a pending (null) and a failed verdict.
+          tronDecodeBlocked={
+            blockchains[vaultSigningData.chain as keyof cryptos]?.chainType ===
+              'tron' && tronDecodeState?.status !== 'ok'
+          }
+          tronDecodeReasons={tronDecodeState?.reasons}
+          tronView={tronDecodeState?.view}
           signMessage={vaultSigningData.signMessage}
           dappOrigin={vaultSigningData.dappOrigin}
         />

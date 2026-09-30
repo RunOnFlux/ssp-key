@@ -63,6 +63,7 @@ import {
 } from '../../lib/chainSyncRequest';
 import { looksLikeXpub, splitSSPInput } from '../../lib/inputParsing';
 import type { KasApprovedSummary } from '../../lib/kaspa';
+import type { TronApprovedSummary } from '../../lib/tron';
 import type { HomeActionContext } from './actions/types';
 import * as syncActions from './actions/syncActions';
 import * as signingActions from './actions/signingActions';
@@ -188,6 +189,7 @@ function Home({ navigation }: Props) {
     decodedVaultTx,
     solDecodeState,
     kasDecodeState,
+    tronDecodeState,
     fluxNodeStartData,
     setFluxNodeStartData,
     keyNonceSyncDialogOpen,
@@ -824,6 +826,7 @@ function Home({ navigation }: Props) {
     vaultSigningData,
     solDecodeState,
     kasDecodeState,
+    tronDecodeState,
     clearVaultSigningState,
     setSubmittingTransaction,
     setTxid,
@@ -924,6 +927,7 @@ function Home({ navigation }: Props) {
     derivationPath: string,
     suggestedUtxos: utxo[],
     kasApproved?: KasApprovedSummary,
+    tronApproved?: TronApprovedSummary,
   ) =>
     signingActions.approveTransaction(
       actionCtx,
@@ -932,6 +936,7 @@ function Home({ navigation }: Props) {
       derivationPath,
       suggestedUtxos,
       kasApproved,
+      tronApproved,
     );
   const handleManualInput = (inputValue: string) => {
     try {
@@ -1269,6 +1274,7 @@ function Home({ navigation }: Props) {
   const handleTransactionRequestAction = async (
     status: boolean,
     kasApproved?: KasApprovedSummary,
+    tronApproved?: TronApprovedSummary,
   ) => {
     try {
       setActivityStatus(true);
@@ -1277,7 +1283,14 @@ function Home({ navigation }: Props) {
         const rchain = activeChain;
         const rpath = txPath;
         const rUtxos = txUtxos;
-        await approveTransaction(rtx, rchain, rpath, rUtxos, kasApproved);
+        await approveTransaction(
+          rtx,
+          rchain,
+          rpath,
+          rUtxos,
+          kasApproved,
+          tronApproved,
+        );
       } else {
         // reject
         const rtx = rawTx;
@@ -1681,6 +1694,7 @@ function Home({ navigation }: Props) {
             decodedVaultTx={decodedVaultTx}
             solDecodeState={solDecodeState}
             kasDecodeState={kasDecodeState}
+            tronDecodeState={tronDecodeState}
             handleVaultSigningRequestAction={handleVaultSigningRequestAction}
             fluxNodeStartData={fluxNodeStartData}
             handleFluxNodeStartAction={handleFluxNodeStartAction}

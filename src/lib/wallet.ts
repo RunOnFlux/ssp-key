@@ -22,6 +22,10 @@ import {
 } from '../types';
 import { blockchains } from '@storage/blockchains';
 import { generateMultisigAddressKAS, generateAddressKeypairKAS } from './kaspa';
+import {
+  generateMultisigAddressTRON,
+  generateAddressKeypairTRON,
+} from './tron';
 
 function getSolanaProgramId(chain: keyof cryptos): PublicKey {
   const id = blockchains[chain].programId;
@@ -172,6 +176,18 @@ export function generateMultisigAddress(
     // Kaspa: P2SH 2-of-2 over the sorted x-only Schnorr leaf keys
     // (KASPA_SSP_CONTRACT.md §2). No witness script.
     return generateMultisigAddressKAS(
+      xpub1,
+      xpub2,
+      typeIndex,
+      addressIndex,
+      chain,
+    );
+  }
+  if (blockchains[chain].chainType === 'tron') {
+    // TRON: the SSPVault clone address of the sorted {wallet leaf, key leaf}
+    // signers, threshold 2 (TRON_SSP_CONTRACT.md §2). No script. Throws
+    // TronNotLiveError until the SDK pins the network's factory.
+    return generateMultisigAddressTRON(
       xpub1,
       xpub2,
       typeIndex,
@@ -484,6 +500,10 @@ export function generateAddressKeypair(
   if (chainType === 'kas') {
     // privKey: raw 32-byte key (hex); pubKey: x-only Schnorr key (hex)
     return generateAddressKeypairKAS(xpriv, typeIndex, addressIndex, chain);
+  }
+  if (chainType === 'tron') {
+    // privKey: raw 32-byte key (hex); pubKey: compressed secp256k1 key (hex)
+    return generateAddressKeypairTRON(xpriv, typeIndex, addressIndex, chain);
   }
   const libID = getLibId(chain);
   const bipParams = blockchains[chain].bip32;

@@ -34,6 +34,24 @@ import {
   type KasSpend,
 } from './kaspa';
 import type { KasLedger } from './kaspaLedger';
+import {
+  TRON_SELF_PAY_FEE_LIMIT_SUN,
+  TRON_SELF_PAY_MIN_BALANCE_SUN,
+  TRX_DECIMALS,
+  TronHttpClient,
+  fetchTronBalance,
+  formatTronUnits,
+  tronApprovedSummaryMismatch,
+  tronHttpClient,
+  tronNowSeconds,
+  tronSdk,
+  tronSignerFromPrivHex,
+  verifyTronConsumerRequest,
+  type TronApprovedSummary,
+  type TronConsumerVerified,
+  type TronLocalSigner,
+  type TronNetworkConfig,
+} from './tron';
 
 export async function fetchUtxos(
   address: string,
@@ -616,6 +634,417 @@ export async function cosignAndBroadcastKASTransaction(opts: {
       kaspaCore.mergePartialSignatures(keyPartials, opened.partials),
     );
     return await submitKasTransaction(rest, signed);
+  } finally {
+    signer.destroy();
+  }
+}
+
+// ============================================================================
+// TRON
+// ============================================================================
+
+/**
+ * The relay sponsor refused the operation (error envelope with name
+ * `TronSponsorRefusal`, code '400'): it validated and declined BEFORE
+ * broadcasting. The caller shows the relay's message and posts `txrejected`.
+ */
+export class TronRelayRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TronRelayRefusedError';
+  }
+}
+
+/**
+ * The broadcast ended without a definite refusal (network failure, timeout,
+ * unreadable reply, or a relay error other than `TronSponsorRefusal` — e.g.
+ * "broadcast outcome unknown" after the relayer sent it): the operation MAY
+ * be on its way. Re-submitting the same signed Op is safe (the relay dedupes
+ * by digest and returns the existing txid; the vault burns the nonce once),
+ * so the request stays on screen instead of being rejected.
+ */
+export class TronBroadcastUnknownError extends Error {
+  /** The relay's own message, when it sent one. */
+  readonly relayMessage: string;
+  constructor(message: string, relayMessage = '') {
+    super(message);
+    this.name = 'TronBroadcastUnknownError';
+    this.relayMessage = relayMessage;
+  }
+}
+
+/** The relay's name for a validated refusal (ssp-relay tronSponsorService). */
+export const TRON_SPONSOR_REFUSAL = 'TronSponsorRefusal';
+
+/** The key's own TRON account cannot pay a self-submitted operation. */
+export class TronSelfPayBalanceError extends Error {
+  readonly address: string;
+  constructor(address: string, balance: bigint) {
+    super(
+      `SSP Key TRON account ${address} holds ${formatTronUnits(balance, TRX_DECIMALS)} TRX; at least ${formatTronUnits(TRON_SELF_PAY_MIN_BALANCE_SUN, TRX_DECIMALS)} TRX is needed to pay the network fee`,
+    );
+    this.name = 'TronSelfPayBalanceError';
+    this.address = address;
+  }
+}
+
+/** The relay's `POST /v1/tron/broadcast` body (TRON_WIRING_BRIEF.md). */
+export interface TronBroadcastBody {
+  chain: string;
+  signers: string[];
+  threshold: number;
+  op: ReturnType<typeof tronSdk.opToJson>;
+  /** 65-byte `0x` hex each, [wallet, key] (any order is accepted). */
+  signatures: string[];
+}
+
+const TRON_BROADCAST_TIMEOUT_MS = 120000;
+const TXID_RE = /^[0-9a-fA-F]{64}$/;
+
+export async function postTronBroadcast(
+  relayHost: string,
+  body: TronBroadcastBody,
+  fetchImpl: typeof fetch = (url, init) => fetch(url, init),
+  timeoutMs: number = TRON_BROADCAST_TIMEOUT_MS,
+): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let resp: Response;
+  try {
+    resp = await fetchImpl(`https://${relayHost}/v1/tron/broadcast`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    throw new TronBroadcastUnknownError(
+      `TRON broadcast did not complete: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+  type RelayReply = {
+    status?: string;
+    data?: { txid?: unknown; message?: unknown; name?: unknown };
+  };
+  let json: RelayReply | null;
+  try {
+    json = (await resp.json()) as RelayReply | null;
+  } catch {
+    json = null;
+  }
+  if (json && json.status === 'error') {
+    const message =
+      typeof json.data?.message === 'string' && json.data.message
+        ? json.data.message
+        : 'TRON broadcast refused';
+    if (json.data?.name === TRON_SPONSOR_REFUSAL) {
+      throw new TronRelayRefusedError(message);
+    }
+    // Any other relay error may have happened after the relayer sent the
+    // transaction: never reported as a rejection.
+    throw new TronBroadcastUnknownError(
+      `TRON broadcast did not complete: ${message}`,
+      message,
+    );
+  }
+  if (!resp.ok) {
+    throw new TronBroadcastUnknownError(
+      `TRON broadcast failed: HTTP ${resp.status}`,
+    );
+  }
+  const txid = json?.status === 'success' ? json.data?.txid : undefined;
+  if (typeof txid !== 'string' || !TXID_RE.test(txid)) {
+    throw new TronBroadcastUnknownError('TRON broadcast reply has no txid');
+  }
+  return txid.toLowerCase();
+}
+
+/**
+ * Strictly re-decode a transaction this device built for a self-submitted
+ * operation and require it to be EXACTLY one of the two allowed shapes
+ * (contract §5 rule 7): a TriggerSmartContract from our own leaf account to
+ * `factory.deploy(configHash)` or to `vault.execute(<this op>)`, no TRX / TRC-10
+ * attached, fee_limit within the cap. Returns the decoded raw transaction —
+ * the only thing that is ever signed.
+ */
+export function assertTronSelfPayTransaction(
+  raw: tronSdk.RawTransaction,
+  expected:
+    | {
+        kind: 'deploy';
+        owner: string;
+        factory: string;
+        configHash: Uint8Array;
+      }
+    | {
+        kind: 'execute';
+        owner: string;
+        vault: string;
+        config: tronSdk.VaultConfig;
+        digest: Uint8Array;
+        chainId: bigint;
+      },
+): tronSdk.RawTransaction {
+  const decoded = tronSdk.decodeRawTransactionHex(
+    tronSdk.encodeRawTransaction(raw),
+  ).raw;
+  if (decoded.contract.type !== 'TriggerSmartContract') {
+    throw new Error('Refusing to sign: not a TriggerSmartContract');
+  }
+  const p = decoded.contract.parameter;
+  if (
+    p.ownerAddress !== expected.owner ||
+    tronSdk.transactionOwner(decoded) !== expected.owner ||
+    p.callValue !== 0n ||
+    p.callTokenValue !== 0n ||
+    p.tokenId !== 0n ||
+    decoded.feeLimit <= 0n ||
+    decoded.feeLimit > TRON_SELF_PAY_FEE_LIMIT_SUN
+  ) {
+    throw new Error('Refusing to sign: unexpected TRON transaction fields');
+  }
+  if (expected.kind === 'deploy') {
+    if (
+      p.contractAddress !== expected.factory ||
+      !tronSdk.equalBytes(p.data, tronSdk.encodeDeploy(expected.configHash))
+    ) {
+      throw new Error('Refusing to sign: not the vault deployment');
+    }
+    return decoded;
+  }
+  const args = tronSdk.decodeExecuteTransaction(decoded);
+  if (
+    p.contractAddress !== expected.vault ||
+    args === null ||
+    args.threshold !== expected.config.threshold ||
+    !tronSdk.equalBytes(
+      args.signersPacked,
+      tronSdk.packSigners(expected.config.signers),
+    ) ||
+    !tronSdk.equalBytes(
+      tronSdk.opDigest(expected.chainId, expected.vault, args.op),
+      expected.digest,
+    )
+  ) {
+    throw new Error('Refusing to sign: not this vault operation');
+  }
+  return decoded;
+}
+
+async function signSubmitAndWait(
+  client: TronHttpClient,
+  raw: tronSdk.RawTransaction,
+  signer: TronLocalSigner,
+  sleep: (ms: number) => Promise<void>,
+): Promise<{ txid: string; result: string }> {
+  const signed = await tronSdk.signTransaction(raw, signer);
+  const hex = tronSdk.serializeTransaction(signed);
+  // Final self-check on the exact bytes that leave the device.
+  const check = tronSdk.decodeTransaction(hex);
+  if (check.txid !== tronSdk.txidHex(raw)) {
+    throw new Error('Refusing to broadcast: serialized transaction differs');
+  }
+  const { txid } = await client.broadcastHex(hex);
+  const info = await client.waitForTransaction(txid, {
+    sleep,
+    intervalMs: 3000,
+    attempts: 40,
+  });
+  return { txid, result: info.result };
+}
+
+/**
+ * Self-pay (fee.amount == 0): this device submits the fully signed Op from
+ * its OWN leaf account and pays the energy itself — deploying the vault first
+ * when it has no code. Only the two transaction shapes of
+ * assertTronSelfPayTransaction are ever signed; the execute is simulated
+ * first and never broadcast when it would revert.
+ */
+export async function selfSubmitTronOp(opts: {
+  verified: TronConsumerVerified;
+  walletSignature: Uint8Array;
+  keySignature: Uint8Array;
+  signer: TronLocalSigner;
+  client: TronHttpClient;
+  sleep?: (ms: number) => Promise<void>;
+  nowMs?: () => bigint;
+}): Promise<string> {
+  const { verified, signer, client } = opts;
+  const sleep =
+    opts.sleep ??
+    ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const nowMs = opts.nowMs ?? (() => BigInt(Date.now()));
+  const { factory } = tronSdk.requireDeployment(verified.network);
+  const owner = signer.address;
+  if (owner !== verified.keySigner) {
+    throw new Error('SSP Key TRON account does not match its vault leaf');
+  }
+  const balance = await fetchTronBalance(client, owner);
+  if (balance < TRON_SELF_PAY_MIN_BALANCE_SUN) {
+    throw new TronSelfPayBalanceError(owner, balance);
+  }
+  const vault = verified.vault.address;
+  const signaturesPacked = tronSdk.assembleSignatures(
+    verified.digest,
+    verified.config,
+    [opts.walletSignature, opts.keySignature],
+  );
+
+  if (!(await client.hasCode(vault))) {
+    const block = await client.getNowBlock();
+    const timestamp = nowMs();
+    const deployRaw = assertTronSelfPayTransaction(
+      tronSdk.buildDeployTransaction({
+        owner,
+        factory,
+        configHash: verified.vault.configHash,
+        feeLimit: TRON_SELF_PAY_FEE_LIMIT_SUN,
+        ref: block.ref,
+        timestamp,
+        expiration: timestamp + tronSdk.DEFAULT_EXPIRATION_MS,
+      }),
+      {
+        kind: 'deploy',
+        owner,
+        factory,
+        configHash: verified.vault.configHash,
+      },
+    );
+    const deployed = await signSubmitAndWait(client, deployRaw, signer, sleep);
+    if (deployed.result !== 'SUCCESS') {
+      throw new Error(
+        `TRON vault deployment ${deployed.txid} failed: ${deployed.result}`,
+      );
+    }
+  }
+
+  const calldata = tronSdk.encodeExecute({
+    signersPacked: tronSdk.packSigners(verified.config.signers),
+    threshold: verified.config.threshold,
+    op: verified.payload.op,
+    signaturesPacked,
+  });
+  const simulation = await client.triggerConstant({
+    owner,
+    contract: vault,
+    data: calldata,
+  });
+  if (!simulation.ok) {
+    throw new Error(
+      `TRON operation would fail: ${simulation.message ?? JSON.stringify(simulation.revert)}`,
+    );
+  }
+  const block = await client.getNowBlock();
+  const timestamp = nowMs();
+  const executeRaw = assertTronSelfPayTransaction(
+    tronSdk.buildExecuteTransaction({
+      owner,
+      target: vault,
+      config: verified.config,
+      op: verified.payload.op,
+      signaturesPacked,
+      feeLimit: TRON_SELF_PAY_FEE_LIMIT_SUN,
+      ref: block.ref,
+      timestamp,
+      expiration: timestamp + tronSdk.DEFAULT_EXPIRATION_MS,
+    }),
+    {
+      kind: 'execute',
+      owner,
+      vault,
+      config: verified.config,
+      digest: verified.digest,
+      chainId: verified.network.chainId,
+    },
+  );
+  const executed = await signSubmitAndWait(client, executeRaw, signer, sleep);
+  if (executed.result !== 'SUCCESS') {
+    throw new Error(
+      `TRON operation ${executed.txid} failed on-chain: ${executed.result}`,
+    );
+  }
+  return executed.txid;
+}
+
+/**
+ * Consumer 2-of-2 co-sign + submit on the Key device (TRON_SSP_CONTRACT.md
+ * §6). The wallet built and signed the Op and shipped the `ssp-tron-op`
+ * payload. This device:
+ *  1. re-runs the full §5 verification from scratch (own-derived vault,
+ *     consumer policy, pinned collector + ceilings, deadline, recomputed
+ *     digest, wallet signature) and requires the digest the approval screen
+ *     displayed (`approved`);
+ *  2. signs the digest with its leaf (m/48'/195'/0'/0'/0/i) — the signer is
+ *     destroyed on every path;
+ *  3. sponsored (fee > 0): POST /v1/tron/broadcast {chain, signers,
+ *     threshold, op, signatures:[wallet, key]} → txid;
+ *     self-pay (fee == 0): submits from its own leaf account.
+ */
+export async function cosignAndBroadcastTRON(opts: {
+  chain: keyof cryptos;
+  rawTx: string;
+  approved: TronApprovedSummary;
+  xpubWallet: string;
+  xpubKey: string;
+  path: string;
+  keyPrivKeyHex: string;
+  network: TronNetworkConfig;
+  relayHost: string;
+  now?: bigint;
+  fetchImpl?: typeof fetch;
+  client?: TronHttpClient;
+  sleep?: (ms: number) => Promise<void>;
+  nowMs?: () => bigint;
+}): Promise<string> {
+  const verified = verifyTronConsumerRequest(opts.rawTx, opts.chain, {
+    xpubWallet: opts.xpubWallet,
+    xpubKey: opts.xpubKey,
+    path: opts.path,
+    network: opts.network,
+    now: opts.now ?? tronNowSeconds(),
+  });
+  const mismatch = tronApprovedSummaryMismatch(opts.approved, verified);
+  if (mismatch) {
+    throw new Error(
+      `TRON operation changed since it was displayed (${mismatch}); review it again`,
+    );
+  }
+  const signer = tronSignerFromPrivHex(opts.keyPrivKeyHex);
+  try {
+    if (
+      signer.address !== verified.keySigner ||
+      !verified.config.signers.includes(signer.address)
+    ) {
+      throw new Error('SSP Key does not belong to this TRON vault');
+    }
+    const keySignature = signer.signDigest(verified.digest);
+    if (verified.payload.op.fee.amount > 0n) {
+      return await postTronBroadcast(
+        opts.relayHost,
+        {
+          chain: opts.chain,
+          signers: [...verified.config.signers],
+          threshold: verified.config.threshold,
+          op: tronSdk.opToJson(verified.payload.op),
+          signatures: [
+            tronSdk.to0x(verified.payload.walletSignature),
+            tronSdk.to0x(keySignature),
+          ],
+        },
+        opts.fetchImpl,
+      );
+    }
+    return await selfSubmitTronOp({
+      verified,
+      walletSignature: verified.payload.walletSignature,
+      keySignature,
+      signer,
+      client: opts.client ?? tronHttpClient(opts.chain),
+      sleep: opts.sleep,
+      nowMs: opts.nowMs,
+    });
   } finally {
     signer.destroy();
   }

@@ -21,6 +21,19 @@ import {
   type KasApprovedSummary,
   type KaspaUtxo,
 } from './kaspa';
+import {
+  TronVerifyError,
+  TronNotLiveError,
+  tronApprovedSummary,
+  tronErrorReason,
+  tronOpView,
+  tronSdk,
+  tronSelfPayAccount,
+  verifyTronConsumerRequest,
+  type TronApprovedSummary,
+  type TronNetworkConfig,
+  type TronOpView,
+} from './tron';
 import { cryptos, utxo } from '../types';
 
 import { blockchains, Token } from '@storage/blockchains';
@@ -64,6 +77,11 @@ export function decodeVaultTransaction(
   try {
     if (blockchains[chain].chainType === 'evm') {
       return decodeVaultEvmTransaction(rawTx, chain);
+    }
+    if (blockchains[chain].chainType === 'tron') {
+      // TRON proposals carry a digest, not a transaction: they are decoded
+      // from `tronOp` by lib/tronVault.ts, never by utxolib.
+      throw new Error('TRON vault proposals are decoded from tronOp');
     }
     return decodeVaultUtxoTransaction(rawTx, chain, inputAmounts, inputScripts);
   } catch (error) {
@@ -446,9 +464,19 @@ interface tokenInfo {
   // outputs). Handed back on approval; the signing path signs only if its
   // own re-description is identical (constructTx.ts).
   kasApproved?: KasApprovedSummary;
+  // TRON only: the decoded, policy-checked Op (every call, the fee, the
+  // deadline, the self-pay account) exactly as the approval screen shows it.
+  tron?: TronOpView;
+  // TRON only: what this screen shows (chain, vault, Op digest). Handed back
+  // on approval; the signing path signs only if its own re-verification of
+  // the payload yields the identical digest (constructTx.ts).
+  tronApproved?: TronApprovedSummary;
   // Set on a failed decode when the cause is known ('kas_utxo_fetch': this
   // device could not load the vault's UTXOs), so the UI can say why.
   errorReason?: string;
+  // TRON: the stable refusal reason ('policy:FEE_ABOVE_CEILING', 'wrong_vault',
+  // 'not_live', …) behind errorReason 'tron'.
+  errorDetail?: string;
 }
 
 /** This device's own Kaspa UTXO lookup failed (network / backend). */
@@ -575,13 +603,89 @@ export async function decodeKASTransactionForApproval(
   };
 }
 
+/**
+ * What the TRON approval decode needs beyond the payload: the pair's decrypted
+ * account xpubs and the `0-{addressIndex}` path, so the vault, its signers and
+ * threshold are derived HERE (never taken from the payload); the pinned SDK
+ * network; and a balance source for the self-pay account (tests override).
+ */
+export interface TronApprovalContext {
+  xpubWallet: string;
+  xpubKey: string;
+  path: string;
+  network: TronNetworkConfig;
+  /** Unix seconds; defaults to the device clock. */
+  now?: bigint;
+  /** Balance (sun) of a TRON account; used only for a self-pay Op. */
+  getBalance: (address: string) => Promise<bigint>;
+}
+
+/**
+ * Consumer TRON approval decode (TRON_SSP_CONTRACT.md §5 rules 1–5):
+ *  - parse the `ssp-tron-op` v1 payload (SDK canonical Op decoder);
+ *  - re-derive signers / threshold / vault from THIS device's leaf and the
+ *    wallet xpub stored at pairing at the request path, and require the
+ *    payload to state exactly those;
+ *  - decodeOpForDisplay under the consumer policy (transfers only), the
+ *    pinned fee collector, TRX / USDT fee under 30 TRX / 8 USDT, deadline
+ *    ≤ now + 2 h;
+ *  - recompute the digest and require the wallet signature to recover to the
+ *    wallet leaf.
+ * Every failure throws; decodeTransactionForApproval fails closed on it.
+ */
+export async function decodeTRONTransactionForApproval(
+  rawTx: string,
+  chain: keyof cryptos,
+  tron: TronApprovalContext,
+): Promise<tokenInfo> {
+  const verified = verifyTronConsumerRequest(rawTx, chain, {
+    xpubWallet: tron.xpubWallet,
+    xpubKey: tron.xpubKey,
+    path: tron.path,
+    network: tron.network,
+    now: tron.now ?? BigInt(Math.floor(Date.now() / 1000)),
+  });
+  const view = tronOpView(verified.display, chain);
+  if (view.selfPay) {
+    // No sponsor: this device submits from its OWN leaf account, which
+    // must hold TRX first (shown with its address on the approval screen).
+    view.selfPayAccount = await tronSelfPayAccount(
+      verified.keySigner,
+      tron.getBalance,
+    );
+  }
+  const first = view.calls[0];
+  const isToken = first?.kind === 'trc20Transfer';
+  return {
+    sender: view.vault,
+    receiver: first ? first.to : view.vault,
+    amount: first ? first.amount : '0',
+    fee: view.fee.kind === 'none' ? '0' : view.fee.amount,
+    tokenSymbol:
+      first && first.symbol !== null ? first.symbol : blockchains[chain].symbol,
+    token: isToken ? first.token : undefined,
+    recipientCount: view.calls.length,
+    tron: view,
+    tronApproved: tronApprovedSummary(verified),
+  };
+}
+
 export async function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
   utxos?: utxo[],
   kas?: KasApprovalContext,
+  tron?: TronApprovalContext,
 ): Promise<tokenInfo> {
   try {
+    if (blockchains[chain].chainType === 'tron') {
+      // Never falls through to utxolib. Without the pair's xpubs the vault
+      // cannot be derived, so there is nothing trustworthy to show.
+      if (!tron) {
+        throw new Error('TRON approval needs the paired xpubs and path');
+      }
+      return await decodeTRONTransactionForApproval(rawTx, chain, tron);
+    }
     if (blockchains[chain].chainType === 'kas') {
       // Never falls through to utxolib. Without the pair's xpubs the vault
       // cannot be derived, so there is nothing trustworthy to show.
@@ -752,6 +856,17 @@ export async function decodeTransactionForApproval(
     }
     if (error instanceof KasWrongVaultError) {
       return { ...DECODING_ERROR_INFO, errorReason: 'kas_wrong_vault' };
+    }
+    if (
+      error instanceof TronVerifyError ||
+      error instanceof TronNotLiveError ||
+      error instanceof tronSdk.TronMultisigError
+    ) {
+      return {
+        ...DECODING_ERROR_INFO,
+        errorReason: 'tron',
+        errorDetail: tronErrorReason(error),
+      };
     }
     return { ...DECODING_ERROR_INFO };
   }

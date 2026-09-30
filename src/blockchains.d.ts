@@ -53,6 +53,9 @@ declare module '@storage/blockchains' {
     // kas: chainType 'kas'; libid is the address prefix ('kaspa'); fee
     // fields are sompi per gram of mass; maxTxSize is the mass cap.
     maxFee?: number;
+    // tron: chainType 'tron'; the @runonflux/tron-multisig network name.
+    // Deployment addresses come only from the SDK's pinned table.
+    tronNetwork?: 'mainnet' | 'nile';
   }
   type blockchains = Record<string, Blockchain>;
   let blockchains: blockchains;

@@ -360,3 +360,32 @@ describe('Kaspa (kas) routing', () => {
     expect(handlers.onTx).toHaveBeenCalledWith(bundle, 'kas', '0-3', []);
   });
 });
+
+describe('TRON (tron, tronNile) routing', () => {
+  it('registers a store slice for both TRON chains and accepts them', () => {
+    const state = store.getState() as unknown as Record<string, unknown>;
+    for (const chain of ['tron', 'tronNile']) {
+      expect(isSupportedChain(chain)).toBe(true);
+      expect(
+        (blockchains as Record<string, { chainType?: string }>)[chain]
+          .chainType,
+      ).toBe('tron');
+      expect(state[chain]).toEqual(
+        expect.objectContaining({ xpubWallet: '', xpubKey: '', xprivKey: '' }),
+      );
+    }
+  });
+
+  it('routes a tron tx whose payload is an ssp-tron-op JSON string', () => {
+    const handlers = makeHandlers();
+    const payload = JSON.stringify({ format: 'ssp-tron-op', version: 1 });
+    expect(
+      routeRelayAction(
+        { action: 'tx', payload, chain: 'tron', path: '0-2' },
+        handlers,
+      ),
+    ).toBe(true);
+    // passed through verbatim; the tron decode derives the vault itself
+    expect(handlers.onTx).toHaveBeenCalledWith(payload, 'tron', '0-2', []);
+  });
+});

@@ -18,6 +18,8 @@ import {
 import { signMessage } from '../../../lib/relayAuth';
 import { setSspKeyEnterprisePublicNonces } from '../../../store/ssp';
 import { signKasVaultBundle } from '../../../lib/kaspaVault';
+import { signTronVaultRequest } from '../../../lib/tronVault';
+import { tronNetwork } from '../../../lib/tron';
 import { openKasLedger } from '../../../lib/kaspaLedger';
 import { kasMaxFeeForUsdRate } from '../../../lib/kaspa';
 import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
@@ -191,6 +193,7 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     vaultSigningData,
     solDecodeState,
     kasDecodeState,
+    tronDecodeState,
     seedPhrase,
     enterprisePublicNonces,
     dispatch,
@@ -231,6 +234,19 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
   ) {
     if (kasDecodeState) {
       displayMessage('error', t('home:vault_sign_kas_decode_failed'), 8000);
+    }
+    return;
+  }
+  // Same sign-time recheck for TRON: only an 'ok' verdict (digest recomputed
+  // from tronOp, vault re-derived, enterprise policy) may proceed; pending
+  // and failed both refuse. The signing path re-verifies from scratch.
+  if (
+    blockchains[vaultSigningData.chain as keyof cryptos]?.chainType ===
+      'tron' &&
+    tronDecodeState?.status !== 'ok'
+  ) {
+    if (tronDecodeState) {
+      displayMessage('error', t('home:vault_sign_tron_decode_failed'), 8000);
     }
     return;
   }
@@ -420,6 +436,43 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         JSON.stringify({
           signedHex: kasResult.signedHex,
           keyPubKey: kasResult.keyPubKey,
+          requestId: vaultSigningData.requestId,
+        }),
+        vaultSigningData.chain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+      displayMessage('success', t('home:vault_sign_success'));
+      return;
+    }
+
+    // TRON enterprise: MUST come before the EVM / UTXO paths below (a TRON
+    // proposal would otherwise fall into utxolib). Recomputes the Op digest
+    // from `tronOp` and requires it to equal rawUnsignedTx, requires the
+    // vault to be predict(signers, threshold) and this key's leaf
+    // m/48'/195'/org'/0'/vaultIndex/addressIndex to be a signer, decodes the
+    // Op under the enterprise policy (org flags, absent = refused), then
+    // signs the digest. walletSignedHex is never used for TRON.
+    if (blockchainConfig.chainType === 'tron') {
+      const tronResult = signTronVaultRequest({
+        data: vaultSigningData,
+        vaultXpriv,
+        vaultIndex: vaultSigningData.vaultIndex,
+        signingMode: vaultSigningData.signingMode,
+        network: tronNetwork(vaultChain),
+        // the enterprise fee cap: min($100 of TRX, 300 TRX) / $100 of USDT
+        trxUsdRate: await getCryptoUsdRate(vaultSigningData.chain),
+      });
+      vaultXpriv = '';
+      pwForEncryption = '';
+      await postAction(
+        'enterprisevaultsigned',
+        JSON.stringify({
+          // wallet_only: verified, nothing signed — no keySignature field
+          ...(tronResult.keySignature
+            ? { keySignature: tronResult.keySignature }
+            : {}),
+          keyPubKey: tronResult.keyPubKey,
           requestId: vaultSigningData.requestId,
         }),
         vaultSigningData.chain,

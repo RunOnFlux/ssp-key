@@ -11,6 +11,7 @@ import type {
 } from '../../../types';
 import type { VaultSolDecodeState } from '../../../lib/vaultSolanaDecode';
 import type { KasVaultDecodeState } from '../../../lib/kaspaVault';
+import type { TronVaultDecodeState } from '../../../lib/tronVault';
 import type { VerifyEntry } from '../../../lib/pairingVerification';
 import type { ParsedChainSyncRequest } from '../../../lib/chainSyncRequest';
 import type { RecoveryRequestPayload } from '../../../lib/recoveryHandler';
@@ -104,6 +105,7 @@ export interface HomeActionContext {
   vaultSigningData: vaultSigningRequest | null;
   solDecodeState: VaultSolDecodeState | null;
   kasDecodeState: KasVaultDecodeState | null;
+  tronDecodeState: TronVaultDecodeState | null;
   clearVaultSigningState: () => void;
   // Home-local UI state setters
   setSubmittingTransaction: React.Dispatch<React.SetStateAction<boolean>>;

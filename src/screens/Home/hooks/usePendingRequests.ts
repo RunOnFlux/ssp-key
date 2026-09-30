@@ -22,6 +22,12 @@ import {
   applyVaultKasDecode,
   type KasVaultDecodeState,
 } from '../../../lib/kaspaVault';
+import {
+  applyVaultTronDecode,
+  type TronVaultDecodeState,
+} from '../../../lib/tronVault';
+import { isTronChainLive } from '../../../lib/tron';
+import { getCryptoUsdRate } from '../../../lib/rates';
 import { useSocket } from '../../../hooks/useSocket';
 import type { RecoveryRequestPayload } from '../../../lib/recoveryHandler';
 
@@ -285,6 +291,11 @@ export function usePendingRequests(
   // from { status: 'ok' } (null and 'failed' both block).
   const [kasDecodeState, setKasDecodeState] =
     useState<KasVaultDecodeState | null>(null);
+  // TRON vault verdict (digest recomputed from tronOp, vault re-derived,
+  // enterprise policy): null while not yet computed. Approval is allowed ONLY
+  // from { status: 'ok' }.
+  const [tronDecodeState, setTronDecodeState] =
+    useState<TronVaultDecodeState | null>(null);
   // Monotonic token guarding the async sol AND kas decodes — a decode started for an
   // older vault payload must never overwrite the verdict of a newer one
   // (bumped on every new request and on reject/completion cleanup).
@@ -351,6 +362,15 @@ export function usePendingRequests(
       rejectUnsupportedChain('tx', chain);
       return;
     }
+    if (blockchains[chain].chainType === 'tron' && !isTronChainLive(chain)) {
+      // The SDK has no pinned deployment for this network yet: nothing about
+      // a TRON vault can be verified, so the request is refused outright and
+      // SSP Wallet is told (txrejected) instead of waiting.
+      console.log('[Pending Requests] TRON not live, refusing tx:', chain);
+      displayMessage('error', t('home:err_tron_not_live'), 6000);
+      onUnsupportedChain?.('tx', chain);
+      return;
+    }
     setActiveChain(chain);
     if (utxos) {
       setTxUtxos(utxos);
@@ -373,7 +393,9 @@ export function usePendingRequests(
     if (
       !isSupportedChain(data.chain) ||
       // Kaspa message signing is out of scope (KASPA_SSP_CONTRACT.md §6)
-      blockchains[data.chain].chainType === 'kas'
+      blockchains[data.chain].chainType === 'kas' ||
+      // TRON message signing is out of scope (TRON_SSP_CONTRACT.md §7)
+      blockchains[data.chain].chainType === 'tron'
     ) {
       rejectUnsupportedChain('evmsigning', data.chain);
       return;
@@ -439,6 +461,7 @@ export function usePendingRequests(
     setDecodedVaultTx(null);
     setSolDecodeState(null);
     setKasDecodeState(null);
+    setTronDecodeState(null);
     // Decode raw transaction independently for trustless verification
     if (data.chain) {
       const chainConf = blockchains[data.chain as keyof cryptos];
@@ -501,6 +524,26 @@ export function usePendingRequests(
             }
           },
         );
+      } else if (chainConf?.chainType === 'tron') {
+        // TRON: rawUnsignedTx is the Op digest — recompute it from tronOp,
+        // re-derive the vault from its signers/threshold and decode the Op
+        // under the enterprise policy (lib/tronVault.ts). Never the utxolib
+        // path below. Offline except for the TRX/USD rate behind the fee
+        // cap; seq-guarded like the sol / kas decodes.
+        void applyVaultTronDecode(
+          data,
+          (tx) => {
+            if (solDecodeSeqRef.current === decodeSeq) {
+              setDecodedVaultTx(tx);
+            }
+          },
+          (state) => {
+            if (solDecodeSeqRef.current === decodeSeq) {
+              setTronDecodeState(state);
+            }
+          },
+          getCryptoUsdRate,
+        );
       } else if (data.rawUnsignedTx) {
         // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
         const inputs = Array.isArray(data.inputDetails)
@@ -532,6 +575,7 @@ export function usePendingRequests(
     setDecodedVaultTx(null);
     setSolDecodeState(null);
     setKasDecodeState(null);
+    setTronDecodeState(null);
   };
 
   useEffect(() => {
@@ -628,6 +672,7 @@ export function usePendingRequests(
     decodedVaultTx,
     solDecodeState,
     kasDecodeState,
+    tronDecodeState,
     fluxNodeStartData,
     setFluxNodeStartData,
     keyNonceSyncDialogOpen,

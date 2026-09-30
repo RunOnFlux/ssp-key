@@ -8,3 +8,4 @@ export { default as AdvancedSection } from './AdvancedSection';
 export { default as SlideToApprove } from './SlideToApprove';
 export type { RiskBannerSeverity } from './RiskBanner';
 export type { SlideToApproveProps } from './SlideToApprove';
+export { default as TronOpDetails, TronAddressText } from './TronOpDetails';
