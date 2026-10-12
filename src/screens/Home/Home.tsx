@@ -9,7 +9,7 @@ import PoweredByFlux, {
 } from '../../components/PoweredByFlux/PoweredByFlux';
 import Scanner from '../../components/Scanner/Scanner';
 import Navbar from '../../components/Navbar/Navbar';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';

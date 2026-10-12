@@ -15,7 +15,7 @@ import { blockchains } from '../../storage/blockchains';
 import { generateMultisigAddress } from '../../lib/wallet';
 import { decodeEvmSigningData } from '../../lib/transactions';
 import type { DecodedEvmSigningData } from '../../lib/transactions';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import CryptoJS from 'crypto-js';
 import { cryptos } from '../../types';
 import Authentication from '../Authentication/Authentication';

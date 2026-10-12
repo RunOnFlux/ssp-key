@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { MONOSPACE_FONT } from '../../lib/typography';
 import { SeedPhraseGrid } from '../SeedPhraseBackup/SeedPhraseBackup';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import { useAppSelector } from '../../hooks';
 import { cryptos } from '../../types';
 import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
