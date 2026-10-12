@@ -8,7 +8,7 @@
 
 import { useCallback } from 'react';
 import { useAppSelector } from '.';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../lib/keychain';
 import * as CryptoJS from 'crypto-js';
 import { blockchains } from '@storage/blockchains';
 import { generateAddressKeypair } from '../lib/wallet';

@@ -5,7 +5,7 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { MONOSPACE_FONT } from '../../lib/typography';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import {
   generateAddressKeypair,
   generateMultisigAddress,
