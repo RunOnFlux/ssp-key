@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { MONOSPACE_FONT } from '../../lib/typography';
-import type { TronCallView, TronOpView } from '../../lib/tron';
+import {
+  pruneTronCosignedOps,
+  tronHttpClient,
+  tronNonceUsedLookup,
+  tronOutstandingOpWarning,
+  type TronCallView,
+  type TronOpView,
+} from '../../lib/tron';
 import { Card } from '../ui';
 import RiskBanner from './RiskBanner';
 
@@ -75,6 +82,31 @@ function callAmount(
 }
 
 /**
+ * Calls whose kind is dangerous by itself: approve (lets another account
+ * spend), unknown contract code, and the Stake 2.0 self-calls (freeze,
+ * delegate, vote, …). SSP Key's policies refuse all of them today; if one
+ * ever reaches an approval screen it is shown under a critical banner.
+ */
+export function tronRiskyCalls(view: TronOpView): TronCallView[] {
+  return view.calls.filter(
+    (c) =>
+      c.kind === 'approve' ||
+      c.kind === 'unknown' ||
+      (c.kind === 'selfCall' && c.action !== 'invalidateNonces'),
+  );
+}
+
+function riskyCallText(
+  c: TronCallView,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  const index = String(c.index + 1);
+  if (c.kind === 'approve') return t('home:tron_risky_call_approve', { index });
+  if (c.kind === 'unknown') return t('home:tron_risky_call_unknown', { index });
+  return t('home:tron_risky_call_staking', { index, action: c.action ?? '' });
+}
+
+/**
  * Every call of a decoded TRON Op, its network fee, deadline and (self-pay)
  * the paying account — the values come ONLY from the on-device
  * decodeOpForDisplay result (lib/tron.ts), never from relay text.
@@ -84,8 +116,62 @@ const TronOpDetails = ({ view }: { view: TronOpView }) => {
   const { Colors, Fonts } = useTheme();
   const label = [Fonts.textTinyTiny, { color: Colors.textGray400 }];
   const warnings = [...new Set(view.warnings)];
+  const risky = tronRiskyCalls(view);
+  // CHN-9: an earlier payment of this vault this device co-signed may still
+  // execute under another nonce. The record is shown at once and re-checked
+  // against this device's TRON node (a confirmed payment drops it); signing
+  // re-checks it again and fails closed.
+  const [outstanding, setOutstanding] = useState(() =>
+    tronOutstandingOpWarning(view),
+  );
+  useEffect(() => {
+    let cancelled = false;
+    const initial = tronOutstandingOpWarning(view);
+    setOutstanding(initial);
+    if (initial?.kind !== 'pending') return undefined;
+    Promise.resolve()
+      .then(() =>
+        pruneTronCosignedOps({
+          chain: view.chain,
+          vault: view.vault,
+          exceptNonce: view.nonce,
+          isNonceUsed: tronNonceUsedLookup(tronHttpClient(view.chain)),
+        }),
+      )
+      .then(() => {
+        if (!cancelled) setOutstanding(tronOutstandingOpWarning(view));
+      })
+      .catch(() => {
+        // lookup failed: keep the warning (signing fails closed anyway)
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [view.chain, view.vault, view.nonce]);
   return (
     <>
+      {outstanding ? (
+        <RiskBanner
+          severity="critical"
+          title={t('home:tron_refused_pending_title')}
+          messages={[
+            outstanding.kind === 'pending'
+              ? t('home:tron_refused_pending_desc', {
+                  deadline: new Date(
+                    outstanding.deadline * 1000,
+                  ).toLocaleString(),
+                })
+              : t('home:tron_refused_unreadable_desc'),
+          ]}
+        />
+      ) : null}
+      {risky.length > 0 ? (
+        <RiskBanner
+          severity="critical"
+          title={t('home:tron_risky_calls_title')}
+          messages={risky.map((c) => riskyCallText(c, t))}
+        />
+      ) : null}
       {warnings.length > 0 ? (
         <RiskBanner
           severity="high"

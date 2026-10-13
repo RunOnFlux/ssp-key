@@ -2,15 +2,19 @@
  * TRON enterprise co-sign (TRON_SSP_CONTRACT.md §3, §5, §6): the digest is
  * recomputed from `tronOp` and must equal rawUnsignedTx, the vault must be
  * predict(signers, threshold), this key's leaf m/48'/195'/org'/0'/v/a must be
- * a signer, and the Op is decoded under the enterprise policy with the org
- * flags (absent = refused).
+ * a signer, and the Op is decoded under the device's FIXED enterprise policy
+ * (transfers + nonce invalidation only; a relay-supplied `tronPolicy` is
+ * ignored — CHN-6 / TRX-3).
  */
+import * as fs from 'fs';
+import * as path from 'path';
 import * as T from '@runonflux/tron-multisig';
+import type { vaultSigningRequest } from '../../src/types';
 import {
   decodeTronVaultRequest,
   parseTronOpEnvelope,
   signTronVaultRequest,
-  tronPolicyFlags,
+  TRON_KEY_ENTERPRISE_POLICY,
   verifyTronVaultRequest,
   type VaultTronSigningPayload,
 } from '../../src/lib/tronVault';
@@ -51,6 +55,9 @@ function request(
   op: T.Op = buildOp(),
   over: Partial<VaultTronSigningPayload> & {
     tronOpOver?: Record<string, unknown>;
+    /** Relay-supplied policy: must be ignored (CHN-6). */
+    tronPolicy?: unknown;
+    vaultIndex?: unknown;
   } = {},
 ): VaultTronSigningPayload {
   const { tronOpOver, ...rest } = over;
@@ -171,15 +178,10 @@ describe('TRON enterprise co-sign', () => {
     ).toThrow(/not a signer/);
   });
 
-  it('refuses approve / unknown / self-calls unless the org policy allows them', () => {
+  it('refuses approve / unknown / staking whatever policy the request carries (CHN-6)', () => {
     const approve = buildOp({
       calls: [T.approveCall(USDT, VECTOR_RECIPIENT, 5n)],
     });
-    expect(() => sign(request(approve))).toThrow(T.PolicyError);
-    expect(() =>
-      sign(request(approve, { tronPolicy: { allowApprove: true } })),
-    ).not.toThrow();
-
     const unknown = buildOp({
       calls: [
         {
@@ -191,10 +193,32 @@ describe('TRON enterprise co-sign', () => {
         },
       ],
     });
-    expect(() => sign(request(unknown))).toThrow(T.PolicyError);
-    expect(() =>
-      sign(request(unknown, { tronPolicy: '{"allowUnknown":true}' })),
-    ).not.toThrow();
+    const delegate = buildOp({
+      calls: [
+        T.selfCall(E.address, {
+          action: 'delegateResource',
+          receiver: VECTOR_RECIPIENT,
+          amount: 10n ** 12n,
+          resource: 'ENERGY',
+        }),
+      ],
+    });
+    // A relay that sets every opt-in it can think of changes nothing.
+    const relayPolicies: unknown[] = [
+      undefined,
+      { allowApprove: true, allowUnknown: true, allowSelfCalls: true },
+      '{"allowApprove":true,"allowUnknown":true,"allowSelfCalls":true}',
+      { allowStaking: true, allowNonceInvalidation: true },
+    ];
+    for (const op of [approve, unknown, delegate]) {
+      for (const tronPolicy of relayPolicies) {
+        const data = request(op, { tronPolicy });
+        expect(() => sign(data)).toThrow(T.PolicyError);
+        expect(
+          decodeTronVaultRequest(data, VECTOR_NETWORK, VECTOR_NOW).state,
+        ).toEqual(expect.objectContaining({ status: 'failed' }));
+      }
+    }
 
     const cancel = buildOp({
       calls: [
@@ -205,15 +229,65 @@ describe('TRON enterprise co-sign', () => {
         }),
       ],
     });
-    // vault self-calls (the on-chain cancel) are allowed unless the org
-    // policy explicitly turns them off
+    // the on-chain cancel only burns nonces: always signable, and a relay
+    // policy cannot switch it off either
     expect(() => sign(request(cancel))).not.toThrow();
     expect(() =>
-      sign(request(cancel, { tronPolicy: { allowSelfCalls: 'yes' } })),
-    ).not.toThrow();
-    expect(() =>
       sign(request(cancel, { tronPolicy: { allowSelfCalls: false } })),
-    ).toThrow(T.PolicyError);
+    ).not.toThrow();
+    expect(TRON_KEY_ENTERPRISE_POLICY).toEqual({
+      allowApprove: false,
+      allowUnknown: false,
+      allowNonceInvalidation: true,
+      allowStaking: false,
+    });
+  });
+
+  it('the request type has no tronPolicy field and no source reads one (CHN-6)', () => {
+    // Type level: re-adding the field to vaultSigningRequest fails type-check.
+    type HasTronPolicy = 'tronPolicy' extends keyof vaultSigningRequest
+      ? true
+      : false;
+    const hasTronPolicy: HasTronPolicy = false;
+    expect(hasTronPolicy).toBe(false);
+
+    // Source level: outside comments, nothing under src/ names it.
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(entry.name)) {
+          const code = fs
+            .readFileSync(full, 'utf8')
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/(^|[^:])\/\/.*$/gm, '$1');
+          if (/tronPolicy/.test(code)) offenders.push(full);
+        }
+      }
+    };
+    walk(path.join(__dirname, '../../src'));
+    expect(offenders).toEqual([]);
+  });
+
+  it('requires integer BIP-32 child indices below 2^31 for the vault and the address', () => {
+    for (const vaultIndex of [-1, 1.5, 2 ** 31, Number.NaN]) {
+      expect(() =>
+        signTronVaultRequest({
+          data: request(),
+          vaultXpriv: tronXpriv(MNEMONIC_KK, E.orgIndex),
+          vaultIndex,
+          network: VECTOR_NETWORK,
+          now: VECTOR_NOW,
+          approvedDigest: shown(request()),
+        }),
+      ).toThrow(/vault index/);
+    }
+    for (const addressIndex of [-1, 0.5, 2 ** 31, '0']) {
+      expect(() =>
+        sign(request(buildOp(), { inputDetails: [{ addressIndex }] })),
+      ).toThrow(/address index/);
+    }
   });
 
   it('refuses fees off the pinned collector, over the cap, or in other tokens', () => {
@@ -309,40 +383,11 @@ describe('TRON enterprise co-sign', () => {
     ).toThrow(TronNotLiveError);
   });
 
-  it('parses tronOp strictly and reads policy flags as explicit booleans only', () => {
+  it('parses tronOp strictly', () => {
     expect(() => parseTronOpEnvelope(undefined)).toThrow(/no tronOp/);
     expect(() =>
       parseTronOpEnvelope({ ...JSON.parse(request().tronOp as string), x: 1 }),
     ).toThrow(/Unexpected tronOp field/);
-    // nonce invalidation (the on-chain cancel) unless explicitly off;
-    // Stake 2.0 self-calls only when explicitly on
-    expect(tronPolicyFlags(undefined)).toEqual({
-      allowApprove: false,
-      allowUnknown: false,
-      allowSelfCalls: true,
-      allowStakingSelfCalls: false,
-    });
-    expect(tronPolicyFlags('not json')).toEqual({
-      allowApprove: false,
-      allowUnknown: false,
-      allowSelfCalls: true,
-      allowStakingSelfCalls: false,
-    });
-    expect(tronPolicyFlags({ allowSelfCalls: false })).toEqual({
-      allowApprove: false,
-      allowUnknown: false,
-      allowSelfCalls: false,
-      allowStakingSelfCalls: false,
-    });
-    expect(tronPolicyFlags({ allowApprove: 1, allowSelfCalls: true })).toEqual({
-      allowApprove: false,
-      allowUnknown: false,
-      allowSelfCalls: true,
-      allowStakingSelfCalls: true,
-    });
-    expect(tronPolicyFlags({ allowSelfCalls: 'yes' })).toEqual(
-      expect.objectContaining({ allowStakingSelfCalls: false }),
-    );
   });
 });
 
@@ -547,7 +592,7 @@ describe('TRON enterprise: adversarial review', () => {
     expect(() => sign(data)).toThrow(/message signing/);
   });
 
-  it('staking self-calls need the org policy; the on-chain cancel does not', () => {
+  it('staking self-calls are never signed; the on-chain cancel is (TRX-3)', () => {
     const staking: T.SelfCallAction[] = [
       { action: 'freezeBalanceV2', amount: 1000000n, resource: 'ENERGY' },
       {
@@ -561,16 +606,14 @@ describe('TRON enterprise: adversarial review', () => {
         votes: [{ witness: VECTOR_RECIPIENT, count: 1n }],
       },
       { action: 'unfreezeBalanceV2', amount: 1n, resource: 'BANDWIDTH' },
+      { action: 'withdrawReward' },
     ];
     for (const action of staking) {
       const op = buildOp({ calls: [T.selfCall(E.address, action)] });
       expect(() => sign(request(op))).toThrow(T.PolicyError);
-      expect(() => sign(request(op, { tronPolicy: {} }))).toThrow(
-        T.PolicyError,
-      );
       expect(() =>
         sign(request(op, { tronPolicy: { allowSelfCalls: true } })),
-      ).not.toThrow();
+      ).toThrow(T.PolicyError);
     }
     const cancel = buildOp({
       calls: [
@@ -588,23 +631,20 @@ describe('TRON enterprise: adversarial review', () => {
     const op = buildOp({
       calls: [
         T.selfCall(E.address, {
-          action: 'delegateResource',
-          receiver: VECTOR_RECIPIENT,
-          amount: 2500000n,
-          resource: 'ENERGY',
+          action: 'invalidateNonces',
+          word: 2n,
+          mask: 9n,
         }),
       ],
     });
     const { state } = decodeTronVaultRequest(
-      request(op, { tronPolicy: { allowSelfCalls: true } }),
+      request(op),
       VECTOR_NETWORK,
       VECTOR_NOW,
     );
     expect(state.status).toBe('ok');
     const call = state.view?.calls[0];
-    expect(call?.action).toBe('delegateResource');
-    expect(call?.detail).toContain(VECTOR_RECIPIENT);
-    expect(call?.detail).toContain('2.5 TRX');
-    expect(call?.detail).toContain('ENERGY');
+    expect(call?.action).toBe('invalidateNonces');
+    expect(call?.detail).toBe('word 2, mask 0x9');
   });
 });

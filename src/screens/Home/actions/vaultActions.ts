@@ -17,12 +17,16 @@ import {
 } from '../../../lib/userOpVerify';
 import { signMessage } from '../../../lib/relayAuth';
 import { setSspKeyEnterprisePublicNonces } from '../../../store/ssp';
-import { signKasVaultBundle } from '../../../lib/kaspaVault';
+import {
+  kasVaultIndicesError,
+  signKasVaultBundle,
+} from '../../../lib/kaspaVault';
 import { signTronVaultRequest } from '../../../lib/tronVault';
 import { tronNetwork } from '../../../lib/tron';
-import { openKasLedger } from '../../../lib/kaspaLedger';
+import { openKasLedger, withKasLedgerLock } from '../../../lib/kaspaLedger';
 import { kasMaxFeeForUsdRate } from '../../../lib/kaspa';
 import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
+import { handleKasLedgerConflict } from '../../../lib/kaspaLedgerConflict';
 import { getCryptoUsdRate } from '../../../lib/rates';
 import { cryptos, publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
@@ -242,6 +246,16 @@ export const handleVaultSignAction = async (
     }
     return;
   }
+  // KAS-1: a Kaspa enterprise request derives only under an org account
+  // (100…99999) with integer child indices — never the consumer 0' or the
+  // reserved 99'. Checked before any key is derived (and again at sign time).
+  if (
+    blockchains[vaultSigningData.chain as keyof cryptos]?.chainType === 'kas' &&
+    kasVaultIndicesError(vaultSigningData)
+  ) {
+    displayMessage('error', t('home:err_kas_vault_bad_index'), 8000);
+    return;
+  }
   // Same sign-time recheck for TRON: only an 'ok' verdict (digest recomputed
   // from tronOp, vault re-derived, enterprise policy) may proceed; pending
   // and failed both refuse. It must also be the proposal the user approved:
@@ -429,15 +443,20 @@ export const handleVaultSignAction = async (
       // fee against the payload, confirms this key's leaf
       // m/48'/111111'/org'/0'/vaultIndex/addressIndex is in that script, and
       // signs only that script through the ledger (flushed before posting).
-      const kasResult = await signKasVaultBundle({
-        data: vaultSigningData,
-        vaultXpriv,
-        vaultIndex: vaultSigningData.vaultIndex,
-        ledger: openKasLedger(),
-        maxFee: kasMaxFeeForUsdRate(
-          await getCryptoUsdRate(vaultSigningData.chain),
-        ),
-      });
+      const kasMaxFee = kasMaxFeeForUsdRate(
+        await getCryptoUsdRate(vaultSigningData.chain),
+      );
+      // One Kaspa signing session at a time (KAS-3); the ledger conflict
+      // reconcile (KAS-2) runs inside signKasVaultBundle before signing.
+      const kasResult = await withKasLedgerLock(() =>
+        signKasVaultBundle({
+          data: vaultSigningData,
+          vaultXpriv,
+          vaultIndex: vaultSigningData.vaultIndex,
+          ledger: openKasLedger(),
+          maxFee: kasMaxFee,
+        }),
+      );
       vaultXpriv = '';
       pwForEncryption = '';
       await postAction(
@@ -460,9 +479,10 @@ export const handleVaultSignAction = async (
     // from `tronOp` and requires it to equal rawUnsignedTx, requires the
     // vault to be predict(signers, threshold) and this key's leaf
     // m/48'/195'/org'/0'/vaultIndex/addressIndex to be a signer, decodes the
-    // Op under the enterprise policy (org flags, absent = refused), requires
-    // the digest the user approved, then signs it. walletSignedHex is never
-    // used for TRON.
+    // Op under SSP Key's fixed enterprise policy (no approve / unknown /
+    // staking calls; a relay-supplied policy is ignored), requires the
+    // digest the user approved, then signs it. walletSignedHex is never used
+    // for TRON.
     if (blockchainConfig.chainType === 'tron') {
       const tronResult = signTronVaultRequest({
         data: vaultSigningData,
@@ -940,6 +960,11 @@ export const handleVaultSignAction = async (
     console.error('[Vault Signing] Error:', errMsg);
     // Kaspa ledger unreadable / full: refused, with the guarded reset offer.
     if (handleKasLedgerError(error, t, displayMessage)) {
+      return;
+    }
+    // Kaspa signed-amount conflict (KAS-2): refused; an unprovable one
+    // offers the explicit per-outpoint reset.
+    if (handleKasLedgerConflict(error, t, displayMessage)) {
       return;
     }
     displayMessage(

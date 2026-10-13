@@ -27,6 +27,7 @@ import type {
 import { HDKey } from '@scure/bip32';
 import { blockchains } from '@storage/blockchains';
 import { backends } from '@storage/backends';
+import type { KasAmountProver, KasLedgerClaim } from './kaspaLedger';
 
 export type KasSpend = K.Spend;
 export type KasSigningBundle = K.SigningBundle;
@@ -193,6 +194,36 @@ export async function fetchKasUtxos(
   return rest.getUtxos(addresses);
 }
 
+/**
+ * The real amount (and script) of output `index` of transaction `txid`,
+ * PROVEN by the transaction's ID: kaspa-core's `getFundingTransaction`
+ * returns the transaction only if it hashes to `txid`, so no server can
+ * forge it (KAS-2). Throws when it cannot be proven (some wallets' sequence
+ * numbers are not in the REST view — fail closed, never mis-proven).
+ */
+export async function kasProveOutpointAmount(
+  rest: KaspaRestClient,
+  txid: string,
+  index: number,
+): Promise<{ amount: bigint; scriptPublicKey: K.ScriptPublicKey }> {
+  if (!Number.isSafeInteger(index) || index < 0) {
+    throw new Error('Invalid Kaspa output index');
+  }
+  const tx = await rest.getFundingTransaction(txid);
+  const out = tx.outputs[index];
+  if (!out) throw new Error('Kaspa funding transaction has no such output');
+  return { amount: out.value, scriptPublicKey: out.scriptPublicKey };
+}
+
+/** The ledger's amount prover over this chain's REST host. */
+export function kasLedgerProver(
+  chain: string,
+  rest: KaspaRestClient = kasRestClient(chain),
+): KasAmountProver {
+  return async (txid, index) =>
+    (await kasProveOutpointAmount(rest, txid, index)).amount;
+}
+
 // ---------------------------------------------------------------------------
 // Bundles
 // ---------------------------------------------------------------------------
@@ -215,6 +246,44 @@ export function parseKasBundle(payload: string): KasSigningBundle {
     throw new Error('Kaspa payload is not a signing bundle');
   }
   return b as KasSigningBundle;
+}
+
+/**
+ * The (outpoint, amount) a bundle claims for each input, for the ledger
+ * reconcile (KAS-2). Shape only: the amounts are untrusted — the reconcile
+ * only ever writes PROVEN amounts, and the co-sign opens the bundle against
+ * this device's own lookup, which must equal these claims. Malformed inputs
+ * are skipped (the bundle open refuses them anyway).
+ */
+export function kasBundleClaims(payload: string): KasLedgerClaim[] {
+  const bundle = parseKasBundle(payload);
+  const inputs: unknown = (bundle as { inputs?: unknown }).inputs;
+  if (!Array.isArray(inputs)) return [];
+  const claims: KasLedgerClaim[] = [];
+  for (const raw of inputs as unknown[]) {
+    const i = raw as {
+      outpoint?: { transactionId?: unknown; index?: unknown };
+      entry?: { amount?: unknown };
+    } | null;
+    const txid = i?.outpoint?.transactionId;
+    const index = i?.outpoint?.index;
+    const amount = i?.entry?.amount;
+    if (
+      typeof txid === 'string' &&
+      /^[0-9a-fA-F]{64}$/.test(txid) &&
+      typeof index === 'number' &&
+      Number.isSafeInteger(index) &&
+      index >= 0 &&
+      typeof amount === 'string' &&
+      /^\d{1,20}$/.test(amount)
+    ) {
+      claims.push({
+        outpoint: `${txid.toLowerCase()}:${String(index)}`,
+        amount: BigInt(amount),
+      });
+    }
+  }
+  return claims;
 }
 
 /** True if `payload` looks like a kaspa-core signing bundle (routing only). */

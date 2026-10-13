@@ -23,11 +23,14 @@ import {
   decodeTRONTransactionForApproval,
 } from '../../src/lib/transactions';
 import {
+  TRON_COSIGNED_OPS_STORAGE_KEY,
   TRON_SELF_PAY_FEE_LIMIT_SUN,
   generateAddressKeypairTRON,
+  outstandingTronCosignedOps,
   verifyTronConsumerRequest,
   type TronApprovedSummary,
 } from '../../src/lib/tron';
+import { storage } from '../../src/store/index';
 import {
   MNEMONIC_KK,
   TRON,
@@ -515,18 +518,50 @@ describe('self-pay (fee.amount == 0)', () => {
   });
 
   it('refuses without enough TRX on the key account (nothing broadcast)', async () => {
+    storage.set(TRON_COSIGNED_OPS_STORAGE_KEY, '[]');
     const { client, broadcasts } = fakeClient({ balance: 24999999n });
     await expect(run(client)).rejects.toThrow(TronSelfPayBalanceError);
     expect(broadcasts).toHaveLength(0);
+    // the signed Op never left the device: nothing to remember (CHN-9)
+    expect(
+      outstandingTronCosignedOps(TRON, verified.vault.address, VECTOR_NOW),
+    ).toEqual([]);
   });
 
   it('never broadcasts an execute whose simulation reverts', async () => {
+    storage.set(TRON_COSIGNED_OPS_STORAGE_KEY, '[]');
     const { client, broadcasts } = fakeClient({
       hasCode: true,
       simulationOk: false,
     });
     await expect(run(client)).rejects.toThrow(/would fail/);
     expect(broadcasts).toHaveLength(0);
+    // CHN-9: the simulation already showed the signed Op to the node, so it
+    // was recorded first and keeps its nonce reserved
+    expect(client.triggerConstant).toHaveBeenCalledTimes(1);
+    expect(
+      outstandingTronCosignedOps(TRON, verified.vault.address, VECTOR_NOW),
+    ).toEqual([
+      expect.objectContaining({
+        nonce: selfPayOp.nonce.toString(),
+        digest: T.to0x(verified.digest),
+      }),
+    ]);
+  });
+
+  it('records the co-signed Op before the simulation sees it (CHN-9)', async () => {
+    storage.set(TRON_COSIGNED_OPS_STORAGE_KEY, '[]');
+    const { client } = fakeClient({ hasCode: true });
+    let recordedFirst = false;
+    const simulate = client.triggerConstant.getMockImplementation()!;
+    client.triggerConstant.mockImplementation(() => {
+      recordedFirst =
+        outstandingTronCosignedOps(TRON, verified.vault.address, VECTOR_NOW)
+          .length === 1;
+      return simulate();
+    });
+    await run(client);
+    expect(recordedFirst).toBe(true);
   });
 
   it('reports an on-chain failure with its txid', async () => {

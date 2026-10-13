@@ -16,8 +16,14 @@ import * as T from '@runonflux/tron-multisig';
 import type { HomeActionContext } from '../../src/screens/Home/actions/types';
 import type { TronApprovedSummary } from '../../src/lib/tron';
 import {
+  TRON_COSIGNED_OPS_STORAGE_KEY,
+  outstandingTronCosignedOps,
+} from '../../src/lib/tron';
+import { storage } from '../../src/store/index';
+import {
   MNEMONIC_KK,
   TRON_VECTORS,
+  consumerPayload,
   VECTOR_FEE_COLLECTOR,
   VECTOR_NETWORK,
   VECTOR_NOW,
@@ -40,12 +46,20 @@ jest.mock('../../src/lib/rates', () => ({
 
 // The pinned SDK table has no deployment yet: the actions resolve the
 // network through tronNetwork(), which the tests pin to the vector network.
+// CHN-9: the on-chain nonce lookup behind the co-signed-Op gate.
+const mockTronClient = {
+  hasCode: jest.fn(() => Promise.resolve(true)),
+  isNonceUsed: jest.fn<Promise<boolean>, [string, bigint]>(() =>
+    Promise.resolve(false),
+  ),
+};
 jest.mock('../../src/lib/tron', () => {
   const actual = jest.requireActual('../../src/lib/tron');
   return {
     ...actual,
     // resolved lazily: the fixtures import this module themselves
     tronNetwork: () => require('./tronFixtures').VECTOR_NETWORK,
+    tronHttpClient: () => mockTronClient,
   };
 });
 
@@ -133,6 +147,9 @@ beforeEach(() => {
   );
   global.fetch = fetchMock;
   jest.spyOn(Date, 'now').mockReturnValue(Number(VECTOR_NOW) * 1000);
+  storage.set(TRON_COSIGNED_OPS_STORAGE_KEY, '[]');
+  mockTronClient.hasCode.mockImplementation(() => Promise.resolve(true));
+  mockTronClient.isNonceUsed.mockImplementation(() => Promise.resolve(false));
 });
 
 afterEach(() => {
@@ -216,6 +233,249 @@ describe('approveTransaction (tron)', () => {
       'error',
       'home:err_tron_relay_refused',
     );
+  });
+
+  it('CHN-9: after a refusal, a re-send under another nonce is refused until the first is burned or expired', async () => {
+    relayReplies({
+      status: 'error',
+      data: { code: '400', name: 'TronSponsorRefusal', message: 'no energy' },
+    });
+    await approveTransaction(
+      baseCtx(),
+      TRON_TX,
+      'tron',
+      '0-0',
+      [],
+      undefined,
+      APPROVED,
+    );
+    // the refused (co-signed) Op is remembered until its deadline
+    expect(
+      outstandingTronCosignedOps('tron', V.consumerOp.vault, VECTOR_NOW),
+    ).toEqual([
+      expect.objectContaining({
+        nonce: V.consumerOp.op.nonce,
+        deadline: Number(V.consumerOp.op.deadline),
+      }),
+    ]);
+    // a NEW payment under another nonce: refused before anything is signed
+    const op2 = T.opFromJson({ ...V.consumerOp.op, nonce: '8' });
+    const tx2 = consumerPayload(op2);
+    const approved2: TronApprovedSummary = {
+      chain: 'tron',
+      vault: V.consumerOp.vault,
+      digest: T.to0x(
+        T.opDigest(VECTOR_NETWORK.chainId, V.consumerOp.vault, op2),
+      ),
+    };
+    fetchMock.mockClear();
+    relayReplies({ status: 'success', data: { txid: TXID } });
+    const ctx = baseCtx();
+    await approveTransaction(ctx, tx2, 'tron', '0-0', [], undefined, approved2);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(ctx.postAction).not.toHaveBeenCalled();
+    expect(mockTronClient.isNonceUsed).toHaveBeenCalledWith(
+      V.consumerOp.vault,
+      7n,
+    );
+    expect(ctx.displayMessage).toHaveBeenCalledWith(
+      'error',
+      expect.stringMatching(/co-signed \(nonce 7\)/),
+    );
+    // re-sending under the refused nonce is fine (only one can execute)
+    const ok = baseCtx();
+    await approveTransaction(
+      ok,
+      TRON_TX,
+      'tron',
+      '0-0',
+      [],
+      undefined,
+      APPROVED,
+    );
+    expect(ok.setTxid).toHaveBeenCalledWith(TXID);
+    // once the refused nonce is used on-chain, the new payment goes through
+    mockTronClient.isNonceUsed.mockImplementation(() => Promise.resolve(true));
+    const later = baseCtx();
+    await approveTransaction(
+      later,
+      tx2,
+      'tron',
+      '0-0',
+      [],
+      undefined,
+      approved2,
+    );
+    expect(later.setTxid).toHaveBeenCalledWith(TXID);
+    // nonce 7 is dropped; the new payment's own record (nonce 8) stays until
+    // the node shows it used too
+    expect(
+      outstandingTronCosignedOps('tron', V.consumerOp.vault, VECTOR_NOW).map(
+        (e) => e.nonce,
+      ),
+    ).toEqual(['8']);
+  });
+
+  // CHN-9 (review D-1): the co-signed Op is recorded BEFORE it is posted, so
+  // every non-refusal outcome — a generic relay error, a 5xx, a timeout, or a
+  // "success" txid that never lands on-chain — keeps the nonce reserved.
+  const op2 = T.opFromJson({ ...V.consumerOp.op, nonce: '8' });
+  const tx2 = consumerPayload(op2);
+  const approved2: TronApprovedSummary = {
+    chain: 'tron',
+    vault: V.consumerOp.vault,
+    digest: T.to0x(T.opDigest(VECTOR_NETWORK.chainId, V.consumerOp.vault, op2)),
+  };
+  const outcomes: [string, () => Promise<unknown>][] = [
+    [
+      'a generic relay error',
+      () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              status: 'error',
+              data: { code: '500', name: 'Error', message: 'internal' },
+            }),
+        }),
+    ],
+    [
+      'an HTTP 5xx',
+      () =>
+        Promise.resolve({
+          ok: false,
+          status: 502,
+          json: () => Promise.reject(new Error('not json')),
+        }),
+    ],
+    [
+      'a timeout',
+      () =>
+        Promise.reject(
+          Object.assign(new Error('The operation was aborted'), {
+            name: 'AbortError',
+          }),
+        ),
+    ],
+    [
+      'a fake success txid that is not on-chain',
+      () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({ status: 'success', data: { txid: TXID } }),
+        }),
+    ],
+  ];
+  it.each(outcomes)(
+    'CHN-9: after %s, a second send under another nonce is refused until the first nonce is used on-chain',
+    async (_label, reply) => {
+      let recordedBeforePost = false;
+      fetchMock.mockImplementation(() => {
+        recordedBeforePost =
+          outstandingTronCosignedOps('tron', V.consumerOp.vault, VECTOR_NOW)
+            .length === 1;
+        return reply();
+      });
+      await approveTransaction(
+        baseCtx(),
+        TRON_TX,
+        'tron',
+        '0-0',
+        [],
+        undefined,
+        APPROVED,
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(recordedBeforePost).toBe(true);
+      expect(
+        outstandingTronCosignedOps('tron', V.consumerOp.vault, VECTOR_NOW),
+      ).toEqual([
+        expect.objectContaining({
+          nonce: V.consumerOp.op.nonce,
+          deadline: Number(V.consumerOp.op.deadline),
+          digest: V.consumerOp.digest,
+        }),
+      ]);
+
+      // a NEW payment under another nonce: refused, nothing signed or posted
+      fetchMock.mockClear();
+      relayReplies({ status: 'success', data: { txid: TXID } });
+      const second = baseCtx();
+      await approveTransaction(
+        second,
+        tx2,
+        'tron',
+        '0-0',
+        [],
+        undefined,
+        approved2,
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(second.postAction).not.toHaveBeenCalled();
+      expect(second.displayMessage).toHaveBeenCalledWith(
+        'error',
+        expect.stringMatching(/co-signed \(nonce 7\)/),
+      );
+
+      // the same payment re-sent under the outstanding nonce is fine
+      const again = baseCtx();
+      await approveTransaction(
+        again,
+        TRON_TX,
+        'tron',
+        '0-0',
+        [],
+        undefined,
+        APPROVED,
+      );
+      expect(again.setTxid).toHaveBeenCalledWith(TXID);
+
+      // once this device's node shows nonce 7 used, the new payment signs
+      mockTronClient.isNonceUsed.mockImplementation((_v: string, n: bigint) =>
+        Promise.resolve(n === 7n),
+      );
+      const later = baseCtx();
+      await approveTransaction(
+        later,
+        tx2,
+        'tron',
+        '0-0',
+        [],
+        undefined,
+        approved2,
+      );
+      expect(later.setTxid).toHaveBeenCalledWith(TXID);
+      expect(
+        outstandingTronCosignedOps('tron', V.consumerOp.vault, VECTOR_NOW).map(
+          (e) => e.nonce,
+        ),
+      ).toEqual(['8']);
+    },
+  );
+
+  it('CHN-9: an Op whose record cannot be saved is never posted', async () => {
+    relayReplies({ status: 'success', data: { txid: TXID } });
+    const setSpy = jest.spyOn(storage, 'set');
+    setSpy.mockImplementation(() => {
+      throw new Error('disk full');
+    });
+    const ctx = baseCtx();
+    await approveTransaction(
+      ctx,
+      TRON_TX,
+      'tron',
+      '0-0',
+      [],
+      undefined,
+      APPROVED,
+    );
+    setSpy.mockRestore();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(ctx.postAction).not.toHaveBeenCalled();
+    expect(ctx.displayMessage).toHaveBeenCalledWith('error', expect.anything());
   });
 
   it('an unknown outcome posts nothing and keeps the request for a retry', async () => {

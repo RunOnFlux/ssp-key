@@ -37,15 +37,26 @@ jest.mock('../../src/lib/constructTx', () => {
   };
 });
 
+const mockProve = jest.fn<Promise<bigint>, [string, number]>();
 jest.mock('../../src/lib/kaspa', () => {
   const actual = jest.requireActual('../../src/lib/kaspa');
-  return { ...actual, kasVaultSpend: jest.fn(() => ({ kind: 'mock' })) };
+  return {
+    ...actual,
+    kasVaultSpend: jest.fn(() => ({ kind: 'mock' })),
+    kasLedgerProver: jest.fn(
+      () => (txid: string, index: number) => mockProve(txid, index),
+    ),
+  };
 });
 
 const mockSignVault = jest.fn();
-jest.mock('../../src/lib/kaspaVault', () => ({
-  signKasVaultBundle: (opts: unknown) => mockSignVault(opts),
-}));
+jest.mock('../../src/lib/kaspaVault', () => {
+  const actual = jest.requireActual('../../src/lib/kaspaVault');
+  return {
+    ...actual,
+    signKasVaultBundle: (opts: unknown) => mockSignVault(opts),
+  };
+});
 
 jest.mock('../../src/lib/wallet', () => ({
   getMasterXpriv: jest.fn(() => 'vault-xpriv'),
@@ -235,6 +246,175 @@ describe('approveTransaction (kas)', () => {
   });
 });
 
+describe('approveTransaction (kas): signed-amount conflicts (KAS-2) and one session at a time (KAS-3)', () => {
+  const TXID_A = 'a1'.repeat(32);
+  const TXID_B = 'b2'.repeat(32);
+  const bundle = (amountA: string, amountB: string) =>
+    JSON.stringify({
+      format: 'kaspa-core-signing-bundle',
+      version: 1,
+      inputs: [
+        {
+          outpoint: { transactionId: TXID_A, index: 0 },
+          entry: { amount: amountA },
+        },
+        {
+          outpoint: { transactionId: TXID_B, index: 1 },
+          entry: { amount: amountB },
+        },
+      ],
+    });
+  const ledgerBlob = () =>
+    JSON.parse(storage.getString(KAS_LEDGER_STORAGE_KEY) as string) as Record<
+      string,
+      string
+    >;
+
+  it('an unprovable conflict refuses and offers a reset of only that outpoint', async () => {
+    storage.set(
+      KAS_LEDGER_STORAGE_KEY,
+      JSON.stringify({ [`${TXID_A}:0`]: '999@1', [`${TXID_B}:1`]: '5@1' }),
+    );
+    mockProve.mockRejectedValue(new Error('cannot prove'));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const ctx = baseCtx();
+    await approveTransaction(
+      ctx,
+      bundle('1000', '5'),
+      'kas',
+      '0-0',
+      [],
+      APPROVED,
+    );
+    expect(mockCosign).not.toHaveBeenCalled();
+    expect(mockProve).toHaveBeenCalledTimes(1); // only the conflicting one
+    expect(alert).toHaveBeenCalledTimes(1);
+    expect(ledgerBlob()[`${TXID_A}:0`]).toBe('999@1'); // nothing reset yet
+    const buttons = alert.mock.calls[0][2] as Array<{
+      style?: string;
+      onPress?: () => void;
+    }>;
+    buttons.find((b) => b.style === 'destructive')?.onPress?.();
+    expect(ledgerBlob()).toEqual({ [`${TXID_B}:1`]: '5@1' });
+    expect(ctx.displayMessage).toHaveBeenCalledWith(
+      'success',
+      'home:kas_ledger_conflict_reset_done',
+    );
+    alert.mockRestore();
+  });
+
+  it('an entry the chain proves right keeps refusing (no reset offered)', async () => {
+    storage.set(
+      KAS_LEDGER_STORAGE_KEY,
+      JSON.stringify({ [`${TXID_A}:0`]: '999@1' }),
+    );
+    mockProve.mockResolvedValue(999n);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const ctx = baseCtx();
+    await approveTransaction(
+      ctx,
+      bundle('1000', '5'),
+      'kas',
+      '0-0',
+      [],
+      APPROVED,
+    );
+    expect(mockCosign).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
+    expect(ctx.displayMessage).toHaveBeenCalledWith(
+      'error',
+      'home:err_kas_ledger_conflict_refused',
+      10000,
+    );
+    alert.mockRestore();
+  });
+
+  it('a poisoned entry the chain proves wrong is replaced before co-signing', async () => {
+    storage.set(
+      KAS_LEDGER_STORAGE_KEY,
+      JSON.stringify({ [`${TXID_A}:0`]: '999@1' }),
+    );
+    mockProve.mockResolvedValue(1000n);
+    mockCosign.mockImplementation(
+      (opts: { ledger: { get: (o: string) => unknown } }) => {
+        expect(opts.ledger.get(`${TXID_A}:0`)).toBe(1000n);
+        return Promise.resolve('cd'.repeat(32));
+      },
+    );
+    const ctx = baseCtx();
+    await approveTransaction(
+      ctx,
+      bundle('1000', '5'),
+      'kas',
+      '0-0',
+      [],
+      APPROVED,
+    );
+    expect(mockCosign).toHaveBeenCalledTimes(1);
+    expect(ctx.setTxid).toHaveBeenCalledWith('cd'.repeat(32));
+  });
+
+  it('two overlapping approvals run one after the other and keep both ledger entries', async () => {
+    const order: string[] = [];
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    mockCosign
+      .mockImplementationOnce(
+        async (opts: {
+          ledger: { set: (o: string, a: bigint) => void; flush: () => void };
+        }) => {
+          order.push('first:start');
+          await gate; // e.g. a slow UTXO lookup
+          opts.ledger.set(`${TXID_A}:0`, 1n);
+          opts.ledger.flush();
+          order.push('first:end');
+          return 'aa'.repeat(32);
+        },
+      )
+      .mockImplementationOnce(
+        (opts: {
+          ledger: { set: (o: string, a: bigint) => void; flush: () => void };
+        }) => {
+          order.push('second:start');
+          opts.ledger.set(`${TXID_B}:1`, 2n);
+          opts.ledger.flush();
+          order.push('second:end');
+          return Promise.resolve('bb'.repeat(32));
+        },
+      );
+    const first = approveTransaction(
+      baseCtx(),
+      KAS_TX,
+      'kas',
+      '0-0',
+      [],
+      APPROVED,
+    );
+    const second = approveTransaction(
+      baseCtx(),
+      KAS_TX,
+      'kas',
+      '0-1',
+      [],
+      APPROVED,
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    release();
+    await Promise.all([first, second]);
+    expect(order).toEqual([
+      'first:start',
+      'first:end',
+      'second:start',
+      'second:end',
+    ]);
+    expect(Object.keys(ledgerBlob()).sort()).toEqual(
+      [`${TXID_A}:0`, `${TXID_B}:1`].sort(),
+    );
+  });
+});
+
 describe('handleVaultSignAction (kas)', () => {
   const vaultData = (extra: Record<string, unknown> = {}) => ({
     chain: 'kas',
@@ -275,6 +455,30 @@ describe('handleVaultSignAction (kas)', () => {
       );
     }
   });
+
+  it.each([
+    ['orgIndex 0 (consumer account)', { orgIndex: 0 }],
+    ['orgIndex 99 (reserved)', { orgIndex: 99 }],
+    ['a string orgIndex', { orgIndex: '100' }],
+    ['a fractional vaultIndex', { vaultIndex: 1.5 }],
+  ])(
+    'KAS-1: refuses %s before deriving any key, even with an ok decode',
+    async (_l, over) => {
+      const ctx = baseCtx({
+        vaultSigningData: vaultData(over) as never,
+        kasDecodeState: ok,
+      });
+      await handleVaultSignAction(ctx);
+      expect(keychain).not.toHaveBeenCalled();
+      expect(mockSignVault).not.toHaveBeenCalled();
+      expect(ctx.postAction).not.toHaveBeenCalled();
+      expect(ctx.displayMessage).toHaveBeenCalledWith(
+        'error',
+        'home:err_kas_vault_bad_index',
+        8000,
+      );
+    },
+  );
 
   it('refuses wallet_only too while the decode is not ok', async () => {
     const ctx = baseCtx({

@@ -10,11 +10,14 @@
 //  - requires vault == predict(configHash(signers, threshold)) on the pinned
 //    network, and (at sign time) its OWN leaf
 //    m/48'/195'/org'/0'/vaultIndex/addressIndex to be one of the signers;
-//  - decodes the Op under the ENTERPRISE policy: approve / unknown calls /
-//    Stake 2.0 vault self-calls only when the request's org policy flags
-//    explicitly allow them (absent = refused; the on-chain nonce
-//    invalidation is allowed unless explicitly off), fee to the pinned
-//    collector in TRX or USDT under the ceiling (or 0), deadline ≤ 30 days;
+//  - decodes the Op under a FIXED enterprise policy that lives on this device
+//    (TRON_KEY_ENTERPRISE_POLICY): transfers and the on-chain nonce
+//    invalidation (it can only burn nonces) only — approve, unknown contract
+//    calls and Stake 2.0 vault self-calls are always refused. No flag of the
+//    request (e.g. a relay-supplied `tronPolicy`) is ever read: the relay is
+//    untrusted and no org-signed policy reaches this device (CHN-6 / TRX-3).
+//    Fee to the pinned collector in TRX or USDT under the ceiling (or 0),
+//    deadline ≤ 30 days;
 //  - only for an enterprise account (orgIndex 100…99999): never the consumer
 //    account 0' or the reserved 99', whose leaves must not co-sign here;
 //  - signs the digest with its leaf and returns a 65-byte signature, and
@@ -51,7 +54,8 @@ export interface VaultTronSigningPayload {
   orgIndex?: unknown;
   rawUnsignedTx?: string;
   tronOp?: unknown;
-  tronPolicy?: unknown;
+  // NOTE: no `tronPolicy`. A policy carried by the request is relay-supplied
+  // and never trusted; anything the relay adds is ignored.
   sourceAddress?: string;
   inputDetails?: unknown;
   /** Message signing (WalletConnect) — never valid for TRON (contract §7). */
@@ -70,13 +74,30 @@ export interface TronOpEnvelope {
   op: ReturnType<typeof T.opFromJson>;
 }
 
-export interface TronPolicyFlags {
-  allowApprove: boolean;
-  allowUnknown: boolean;
-  /** Vault self-calls at all (the on-chain nonce invalidation). */
-  allowSelfCalls: boolean;
-  /** Stake 2.0 self-calls (freeze, delegate, vote, …): explicit opt-in only. */
-  allowStakingSelfCalls: boolean;
+/** BIP-32 non-hardened child indices: integers in [0, 2^31). */
+export const TRON_MAX_CHILD_INDEX = 0x7fffffff;
+
+/**
+ * The enterprise policy SSP Key applies to every TRON proposal. Fixed on the
+ * device: approve, unknown contract calls and the Stake 2.0 self-calls
+ * (freeze / unfreeze TRX, delegate resources to another account, vote) are
+ * never signable here; the `invalidateNonces` self-call is (it can only burn
+ * nonces — the on-chain cancel of a fully signed proposal), as in SSP Wallet.
+ */
+export const TRON_KEY_ENTERPRISE_POLICY = Object.freeze({
+  allowApprove: false,
+  allowUnknown: false,
+  allowNonceInvalidation: true,
+  allowStaking: false,
+} as const);
+
+function isChildIndex(v: unknown): v is number {
+  return (
+    typeof v === 'number' &&
+    Number.isInteger(v) &&
+    v >= 0 &&
+    v <= TRON_MAX_CHILD_INDEX
+  );
 }
 
 export interface TronVaultDecodeState {
@@ -154,34 +175,6 @@ export function parseTronOpEnvelope(raw: unknown): TronOpEnvelope {
   return { network, vault, signers, threshold, op };
 }
 
-/**
- * The org policy flags carried by the request. `approve` and unknown contract
- * calls need an explicit boolean `true`; anything absent or malformed is
- * `false`. Of the vault self-calls, only the nonce invalidation (it can only
- * burn nonces — the on-chain cancel of a fully signed proposal) is allowed
- * unless the request explicitly says `allowSelfCalls: false`. The Stake 2.0
- * self-calls (freeze / unfreeze TRX, delegate resources to another account,
- * vote) change what the vault's TRX can do, so like approve they need an
- * explicit `allowSelfCalls: true` (contract §5.3).
- */
-export function tronPolicyFlags(raw: unknown): TronPolicyFlags {
-  let obj: unknown = raw;
-  if (typeof raw === 'string') {
-    try {
-      obj = JSON.parse(raw);
-    } catch {
-      obj = null;
-    }
-  }
-  const p = isPlainObject(obj) ? obj : {};
-  return {
-    allowApprove: p.allowApprove === true,
-    allowUnknown: p.allowUnknown === true,
-    allowSelfCalls: p.allowSelfCalls !== false,
-    allowStakingSelfCalls: p.allowSelfCalls === true,
-  };
-}
-
 /** Normalised 0x-lowercase form of a 32-byte hex digest, or null. */
 function normalizeDigestHex(v: unknown): string | null {
   if (typeof v !== 'string') return null;
@@ -203,7 +196,8 @@ export function tronVaultAddressIndex(inputDetails: unknown): number {
   if (first === undefined || first === null) return 0;
   const idx = isPlainObject(first) ? first.addressIndex : undefined;
   if (idx === undefined) return 0;
-  if (typeof idx !== 'number' || !Number.isInteger(idx) || idx < 0) {
+  // A non-hardened BIP-32 child: an integer in [0, 2^31).
+  if (!isChildIndex(idx)) {
     throw new TronVerifyError('bad_payload', 'Invalid TRON address index');
   }
   return idx;
@@ -289,8 +283,8 @@ export function verifyTronVaultRequest(
       'TRON proposal digest does not match its operation',
     );
   }
-  // Rules 3–5 under the enterprise policy and the org's explicit flags.
-  const flags = tronPolicyFlags(data.tronPolicy);
+  // Rules 3–5 under this device's fixed enterprise policy. Whatever policy
+  // the request may carry is relay-supplied and ignored (CHN-6 / TRX-3).
   const display = T.decodeOpForDisplay(envelope.op, {
     policy: 'enterprise',
     vault: vault.address,
@@ -299,19 +293,20 @@ export function verifyTronVaultRequest(
     feeCollector: network.feeCollector,
     feeCeilings: tronEnterpriseFeeCeilings(network, trxUsdRate),
     tokens: tronDisplayTokens(data.chain, network),
-    allowApprove: flags.allowApprove,
-    allowUnknown: flags.allowUnknown,
-    allowSelfCalls: flags.allowSelfCalls,
+    ...TRON_KEY_ENTERPRISE_POLICY,
   });
-  if (!flags.allowStakingSelfCalls) {
-    const staking = display.calls.find(
-      (c) => c.kind === 'selfCall' && c.action !== 'invalidateNonces',
-    );
-    if (staking && staking.kind === 'selfCall') {
+  // Belt and braces: never a call kind the device policy refuses, whatever
+  // the SDK's defaults become.
+  for (const c of display.calls) {
+    if (
+      c.kind === 'approve' ||
+      c.kind === 'unknown' ||
+      (c.kind === 'selfCall' && T.isStakingSelfCall(c.action))
+    ) {
       throw new T.PolicyError(
         'CALL_KIND_NOT_ALLOWED',
-        `call ${staking.index} (${staking.action}) needs the org policy to allow vault self-calls`,
-        staking.index,
+        `call ${c.index} (${c.kind === 'selfCall' ? c.action : c.kind}) is never signed by SSP Key`,
+        c.index,
       );
     }
   }
@@ -434,7 +429,8 @@ export function signTronVaultRequest(opts: {
    */
   approvedDigest: string;
 }): { keySignature: string | null; keyPubKey: string } {
-  if (!Number.isInteger(opts.vaultIndex) || opts.vaultIndex < 0) {
+  // A non-hardened BIP-32 child: an integer in [0, 2^31).
+  if (!isChildIndex(opts.vaultIndex)) {
     throw new TronVerifyError('bad_payload', 'Invalid TRON vault index');
   }
   const verified = verifyTronVaultRequest(

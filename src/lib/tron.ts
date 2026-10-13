@@ -33,6 +33,7 @@ import { TronHttpClient, type FetchLike } from '@runonflux/tron-multisig/rpc';
 import { HDKey } from '@scure/bip32';
 import { blockchains } from '@storage/blockchains';
 import { backends } from '@storage/backends';
+import { storage } from '../store/index';
 
 export { T as tronSdk, TronHttpClient };
 export type TronNetworkConfig = T.NetworkConfig;
@@ -958,4 +959,334 @@ export async function tronSelfPayAccount(
 
 export function tronNowSeconds(): bigint {
   return BigInt(Math.floor(Date.now() / 1000));
+}
+
+// ---------------------------------------------------------------------------
+// Co-signed Ops that may still execute (CHN-9)
+// ---------------------------------------------------------------------------
+//
+// Once this device co-signs a consumer Op, a fully signed Op exists and stays
+// executable until its deadline (up to 2 h), whatever the broadcast answers:
+// a sponsor refusal, any other relay error, a 5xx, a timeout or even a
+// "success" txid that never lands all leave it with the relay (and, on the
+// self-pay path, with the node that simulated or received it). If the user
+// then sends again under a NEW nonce, a malicious relay could execute both (a
+// double payment). So EVERY Op this device co-signs is recorded durably
+// BEFORE the signed Op leaves the device, and its record is cleared only when
+// this device's own TRON node shows the nonce used on-chain, or once its
+// deadline plus clock skew has passed. While a record is outstanding, a
+// consumer Op of the same vault must reuse its nonce (only one of them can
+// ever execute; SSP Wallet does so) — a different nonce is refused. The
+// records hold no secrets.
+
+/** Storage key (historical name: records of earlier builds stay in force). */
+export const TRON_COSIGNED_OPS_STORAGE_KEY = 'tronRefusedOps';
+/** Side key: when a corrupt record blob was first seen (ms). */
+export const TRON_COSIGNED_OPS_CORRUPT_SINCE_KEY =
+  'tronRefusedOps.corruptSince';
+/** Prefix of the key a corrupt blob is moved to once it is provably stale. */
+export const TRON_COSIGNED_OPS_QUARANTINE_PREFIX = 'tronRefusedOps.corrupt.';
+/**
+ * At most this many live records. Each expires ≤ 2 h after it was made and a
+ * vault holds one outstanding nonce at a time, so a full store means many
+ * unconfirmed payments: co-signing then pauses (fails closed) rather than
+ * forgetting one.
+ */
+export const TRON_COSIGNED_OPS_MAX = 128;
+/**
+ * Device ↔ chain clock skew allowed when deciding a deadline has passed. The
+ * single TRON skew constant of this app; SSP Wallet uses the same 120 s.
+ */
+export const TRON_CLOCK_SKEW_SECONDS = 120n;
+
+export interface TronCosignedOp {
+  chain: string;
+  vault: string;
+  /** decimal string */
+  nonce: string;
+  /** unix seconds */
+  deadline: number;
+  /** opDigest (`0x` + 64 hex) of the co-signed Op; absent in older records. */
+  digest?: string;
+  recordedAtMs: number;
+}
+
+/** The co-signed-Op records cannot be read: fail closed (see readCosignedOps). */
+export class TronCosignedOpsUnreadableError extends Error {
+  constructor() {
+    super('TRON co-signed payment records are unreadable');
+    this.name = 'TronCosignedOpsUnreadableError';
+  }
+}
+
+const DIGEST_RE = /^0x[0-9a-f]{64}$/;
+
+function isCosignedOp(v: unknown): v is TronCosignedOp {
+  if (!isPlainObject(v)) return false;
+  const keys = Object.keys(v).sort().join(',');
+  return (
+    (keys === 'chain,deadline,nonce,recordedAtMs,vault' ||
+      (keys === 'chain,deadline,digest,nonce,recordedAtMs,vault' &&
+        typeof v.digest === 'string' &&
+        DIGEST_RE.test(v.digest))) &&
+    typeof v.chain === 'string' &&
+    T.isValidAddress(v.vault) &&
+    typeof v.nonce === 'string' &&
+    /^(0|[1-9][0-9]{0,77})$/.test(v.nonce) &&
+    Number.isSafeInteger(v.deadline) &&
+    (v.deadline as number) >= 0 &&
+    Number.isSafeInteger(v.recordedAtMs)
+  );
+}
+
+function corruptSince(): number | null {
+  // '' = cleared (MMKV v4 has no portable delete across the mock and v4).
+  const raw = storage.getString(TRON_COSIGNED_OPS_CORRUPT_SINCE_KEY);
+  if (!raw || !/^\d{1,16}$/.test(raw)) return null;
+  return Number(raw);
+}
+
+/**
+ * Read every record. An unreadable blob fails CLOSED (throws) — never "no
+ * outstanding Ops". It can only hold Ops whose deadline is at most 2 h after
+ * they were recorded (the consumer deadline window), so once it has been seen
+ * unreadable for longer than that window (+ skew) it is moved aside and reset.
+ */
+function readCosignedOps(nowMs: number): TronCosignedOp[] {
+  const raw = storage.getString(TRON_COSIGNED_OPS_STORAGE_KEY);
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = null;
+  }
+  if (Array.isArray(parsed) && parsed.every(isCosignedOp)) {
+    return parsed;
+  }
+  const since = corruptSince();
+  const windowMs =
+    Number(TRON_CONSUMER_MAX_DEADLINE_SECONDS + TRON_CLOCK_SKEW_SECONDS) * 1000;
+  if (since === null) {
+    storage.set(TRON_COSIGNED_OPS_CORRUPT_SINCE_KEY, String(nowMs));
+  } else if (nowMs - since >= windowMs) {
+    storage.set(`${TRON_COSIGNED_OPS_QUARANTINE_PREFIX}${String(since)}`, raw);
+    storage.set(TRON_COSIGNED_OPS_STORAGE_KEY, '[]');
+    storage.set(TRON_COSIGNED_OPS_CORRUPT_SINCE_KEY, '');
+    return [];
+  }
+  throw new TronCosignedOpsUnreadableError();
+}
+
+function writeCosignedOps(list: TronCosignedOp[]): void {
+  storage.set(TRON_COSIGNED_OPS_STORAGE_KEY, JSON.stringify(list));
+}
+
+function isLive(e: TronCosignedOp, nowSec: bigint): boolean {
+  return BigInt(e.deadline) + TRON_CLOCK_SKEW_SECONDS >= nowSec;
+}
+
+function sameOp(
+  e: TronCosignedOp,
+  chain: string,
+  vault: string,
+  nonce: string,
+): boolean {
+  return e.chain === chain && e.vault === vault && e.nonce === nonce;
+}
+
+/**
+ * Durably record an Op this device co-signed, BEFORE the signed Op leaves the
+ * device (relay broadcast, or the self-pay simulation / transaction). Throws
+ * — and the caller then releases nothing — when the records are unreadable,
+ * the store is full of live records, or the write does not read back.
+ */
+export function recordTronCosignedOp(
+  op: {
+    chain: string;
+    vault: string;
+    nonce: bigint;
+    deadline: bigint;
+    digest: string;
+  },
+  nowMs: number = Date.now(),
+): void {
+  if (!T.isValidAddress(op.vault) || !DIGEST_RE.test(op.digest)) {
+    throw new TronVerifyError('bad_payload', 'Invalid TRON operation record');
+  }
+  // Unreadable: throws TronCosignedOpsUnreadableError (nothing is released).
+  const list = readCosignedOps(nowMs);
+  const nowSec = BigInt(Math.floor(nowMs / 1000));
+  const nonce = op.nonce.toString();
+  const deadline =
+    op.deadline > BigInt(Number.MAX_SAFE_INTEGER)
+      ? Number.MAX_SAFE_INTEGER
+      : Number(op.deadline);
+  const next = list.filter(
+    (e) => isLive(e, nowSec) && !sameOp(e, op.chain, op.vault, nonce),
+  );
+  if (next.length >= TRON_COSIGNED_OPS_MAX) {
+    throw new TronVerifyError(
+      'bad_policy',
+      'SSP Key holds too many TRON payments that are not confirmed on-chain yet; to avoid a double payment no TRON operation is signed until some of them are confirmed or expire (at most 2 hours)',
+    );
+  }
+  const prev = list.find((e) => sameOp(e, op.chain, op.vault, nonce));
+  next.push({
+    chain: op.chain,
+    vault: op.vault,
+    nonce,
+    // The same nonce co-signed twice: the later deadline governs.
+    deadline: prev ? Math.max(prev.deadline, deadline) : deadline,
+    digest: op.digest,
+    recordedAtMs: nowMs,
+  });
+  writeCosignedOps(next);
+  // Durable before release: the record must read back.
+  const back = readCosignedOps(nowMs);
+  if (
+    !back.some(
+      (e) =>
+        sameOp(e, op.chain, op.vault, nonce) &&
+        e.digest === op.digest &&
+        e.deadline >= deadline,
+    )
+  ) {
+    throw new TronVerifyError(
+      'bad_policy',
+      'SSP Key could not save its record of this TRON payment; nothing was signed',
+    );
+  }
+}
+
+/**
+ * Co-signed Ops of `vault` on `chain` that may still execute (by deadline;
+ * the chain is not asked). Throws TronCosignedOpsUnreadableError when the
+ * records cannot be read.
+ */
+export function outstandingTronCosignedOps(
+  chain: string,
+  vault: string,
+  nowSec: bigint = tronNowSeconds(),
+): TronCosignedOp[] {
+  return readCosignedOps(Number(nowSec) * 1000).filter(
+    (e) => e.chain === chain && e.vault === vault && isLive(e, nowSec),
+  );
+}
+
+/**
+ * Display-time verdict for the approval screen (never throws): an earlier
+ * co-signed Op of this vault under a DIFFERENT nonce that may still execute,
+ * or records that cannot be read. Synchronous (no chain lookup): pair it with
+ * pruneTronCosignedOps to drop records the chain already shows used.
+ */
+export function tronOutstandingOpWarning(
+  view: Pick<TronOpView, 'chain' | 'vault' | 'nonce'>,
+  nowSec: bigint = tronNowSeconds(),
+): { kind: 'pending'; deadline: number } | { kind: 'unreadable' } | null {
+  try {
+    const other = outstandingTronCosignedOps(view.chain, view.vault, nowSec)
+      .filter((e) => e.nonce !== view.nonce)
+      .sort((a, b) => b.deadline - a.deadline)[0];
+    return other ? { kind: 'pending', deadline: other.deadline } : null;
+  } catch {
+    return { kind: 'unreadable' };
+  }
+}
+
+/**
+ * The on-chain "is this nonce used?" lookup the records are cleared by, on
+ * this device's own TRON node. A vault without code has used no nonce.
+ */
+export function tronNonceUsedLookup(
+  client: Pick<TronHttpClient, 'hasCode' | 'isNonceUsed'>,
+): (vault: string, nonce: bigint) => Promise<boolean> {
+  return async (vault, nonce) =>
+    (await client.hasCode(vault)) ? client.isNonceUsed(vault, nonce) : false;
+}
+
+/**
+ * Drop every live record of `vault` (other than `exceptNonce`) whose nonce
+ * this device's node shows used on-chain, and every expired record. Returns
+ * the records of `vault` under another nonce that are still outstanding.
+ * Throws when the records are unreadable or a lookup fails (fail closed).
+ */
+export async function pruneTronCosignedOps(opts: {
+  chain: string;
+  vault: string;
+  exceptNonce?: string;
+  /** unix seconds */
+  now?: bigint;
+  isNonceUsed: (vault: string, nonce: bigint) => Promise<boolean>;
+}): Promise<TronCosignedOp[]> {
+  const nowSec = opts.now ?? tronNowSeconds();
+  const nowMs = Number(nowSec) * 1000;
+  const list = readCosignedOps(nowMs);
+  const live = list.filter((e) => isLive(e, nowSec));
+  const candidates = live.filter(
+    (e) =>
+      e.chain === opts.chain &&
+      e.vault === opts.vault &&
+      e.nonce !== opts.exceptNonce,
+  );
+  const used = new Set<TronCosignedOp>();
+  for (const e of candidates) {
+    // A failed lookup throws: fail closed.
+    if (await opts.isNonceUsed(e.vault, BigInt(e.nonce))) used.add(e);
+  }
+  const keep = live.filter((e) => !used.has(e));
+  if (keep.length !== list.length) {
+    // Re-read so a record written meanwhile is never lost.
+    const fresh = readCosignedOps(nowMs);
+    writeCosignedOps(
+      fresh.filter(
+        (e) =>
+          isLive(e, nowSec) &&
+          ![...used].some((u) => sameOp(e, u.chain, u.vault, u.nonce)),
+      ),
+    );
+  }
+  return candidates.filter((e) => !used.has(e));
+}
+
+/**
+ * Sign-time gate (fails CLOSED): refuses to co-sign a consumer Op of `vault`
+ * while an earlier Op this device co-signed can still execute under a
+ * different nonce — whatever its broadcast answered. A record whose nonce is
+ * already used on-chain is dropped (that Op, or something else, burned it).
+ * An Op that reuses the outstanding nonce is fine: only one can execute.
+ */
+export async function assertNoOutstandingTronOp(opts: {
+  chain: string;
+  vault: string;
+  nonce: bigint;
+  /** unix seconds */
+  now?: bigint;
+  isNonceUsed: (vault: string, nonce: bigint) => Promise<boolean>;
+}): Promise<void> {
+  let still: TronCosignedOp[];
+  try {
+    still = await pruneTronCosignedOps({
+      chain: opts.chain,
+      vault: opts.vault,
+      exceptNonce: opts.nonce.toString(),
+      now: opts.now,
+      isNonceUsed: opts.isNonceUsed,
+    });
+  } catch (error) {
+    if (error instanceof TronCosignedOpsUnreadableError) {
+      throw new TronVerifyError(
+        'bad_policy',
+        'SSP Key cannot read its record of co-signed TRON payments; to avoid a double payment no TRON operation is signed until it is readable again (at most 2 hours)',
+      );
+    }
+    throw error;
+  }
+  if (still.length > 0) {
+    const latest = still.reduce((a, b) => (b.deadline > a.deadline ? b : a));
+    throw new TronVerifyError(
+      'bad_policy',
+      `An earlier payment from this vault that SSP Key co-signed (nonce ${latest.nonce}) is not confirmed on-chain and can still be executed until ${new Date(latest.deadline * 1000).toISOString()}. Send it again from SSP Wallet (it reuses that nonce, so only one of the two can execute) or wait until it is confirmed or expires.`,
+    );
+  }
 }

@@ -26,17 +26,28 @@ import {
 import {
   TRON_SELF_PAY_MIN_BALANCE_SUN,
   TRX_DECIMALS,
+  assertNoOutstandingTronOp,
   formatTronUnits,
+  parseTronOpPayload,
+  tronHttpClient,
+  tronNonceUsedLookup,
   tronNetwork,
   type TronApprovedSummary,
 } from '../../../lib/tron';
 import {
+  kasBundleClaims,
+  kasLedgerProver,
   kasMaxFeeForUsdRate,
   kasVaultSpend,
   type KasApprovedSummary,
 } from '../../../lib/kaspa';
-import { openKasLedger } from '../../../lib/kaspaLedger';
+import {
+  openKasLedger,
+  reconcileKasLedgerClaims,
+  withKasLedgerLock,
+} from '../../../lib/kaspaLedger';
 import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
+import { handleKasLedgerConflict } from '../../../lib/kaspaLedgerConflict';
 import { getCryptoUsdRate } from '../../../lib/rates';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
 import { signMessage } from '../../../lib/relayAuth';
@@ -288,14 +299,26 @@ export const approveTransaction = async (
       try {
         // min($100-equivalent, 5 KAS) — 5 KAS alone when no rate is known
         const maxFee = kasMaxFeeForUsdRate(await getCryptoUsdRate(chain));
-        ttxid = await cosignAndBroadcastKASTransaction({
-          chain,
-          bundleJson: rawTransaction,
-          vaultSpend,
-          keyPrivKeyHex: keyPair.privKey,
-          ledger: openKasLedger(),
-          approved: kasApproved,
-          maxFee,
+        // One Kaspa signing session at a time (KAS-3): the ledger snapshot
+        // is taken inside the lock, after any earlier session flushed.
+        ttxid = await withKasLedgerLock(async () => {
+          const ledger = openKasLedger();
+          // KAS-2: an outpoint this device signed under another amount is
+          // proven (and the entry replaced) or refused before signing.
+          await reconcileKasLedgerClaims(
+            ledger,
+            kasBundleClaims(rawTransaction),
+            kasLedgerProver(chain),
+          );
+          return cosignAndBroadcastKASTransaction({
+            chain,
+            bundleJson: rawTransaction,
+            vaultSpend,
+            keyPrivKeyHex: keyPair.privKey,
+            ledger,
+            approved: kasApproved,
+            maxFee,
+          });
         });
       } catch (error) {
         if (!(error instanceof KasMaybeBroadcastError)) {
@@ -320,6 +343,20 @@ export const approveTransaction = async (
         throw new Error(t('home:err_tron_not_displayed'));
       }
       try {
+        // CHN-9: the vault and nonce this request would co-sign (strictly
+        // parsed again — and fully verified — by the co-sign). An earlier Op
+        // of this vault that this device co-signed may still execute,
+        // whatever its broadcast answered: refuse a second payment under
+        // another nonce until this device's node shows that nonce used
+        // on-chain or its deadline has passed. The co-sign itself records
+        // this Op before it leaves the device.
+        const tronPayload = parseTronOpPayload(rawTransaction);
+        await assertNoOutstandingTronOp({
+          chain,
+          vault: tronPayload.vault,
+          nonce: tronPayload.op.nonce,
+          isNonceUsed: tronNonceUsedLookup(tronHttpClient(chain)),
+        });
         ttxid = await cosignAndBroadcastTRON({
           chain,
           rawTx: rawTransaction,
@@ -333,8 +370,11 @@ export const approveTransaction = async (
         });
       } catch (error) {
         if (error instanceof TronRelayRefusedError) {
-          // A definite refusal: nothing was broadcast. Tell SSP Wallet so it
-          // stops waiting, and show the relay's reason.
+          // A definite refusal: nothing was broadcast. But this device DID
+          // co-sign the Op and the relay keeps it until its deadline; it was
+          // recorded before it left the device, so a re-send under a new
+          // nonce is refused (CHN-9). Tell SSP Wallet so it stops waiting,
+          // and show the relay's reason.
           setRawTx('');
           setTxPath('');
           setTxUtxos([]);
@@ -445,6 +485,12 @@ export const approveTransaction = async (
     // Kaspa ledger unreadable / full: fail closed; a corrupt ledger also
     // offers the explicit (warned) reset.
     if (handleKasLedgerError(error, t, displayMessage)) {
+      console.log(error);
+      return;
+    }
+    // Kaspa signed-amount conflict (KAS-2): refused; an unprovable one
+    // offers the explicit per-outpoint reset.
+    if (handleKasLedgerConflict(error, t, displayMessage)) {
       console.log(error);
       return;
     }

@@ -6,9 +6,21 @@
 import * as T from '@runonflux/tron-multisig';
 import { HDKey } from '@scure/bip32';
 import {
+  TRON_CLOCK_SKEW_SECONDS,
+  TRON_COSIGNED_OPS_CORRUPT_SINCE_KEY,
+  TRON_COSIGNED_OPS_MAX,
+  TRON_COSIGNED_OPS_QUARANTINE_PREFIX,
+  TRON_COSIGNED_OPS_STORAGE_KEY,
   TronNotLiveError,
+  TronCosignedOpsUnreadableError,
   TronVerifyError,
+  assertNoOutstandingTronOp,
   generateAddressKeypairTRON,
+  outstandingTronCosignedOps,
+  pruneTronCosignedOps,
+  recordTronCosignedOp,
+  tronNonceUsedLookup,
+  tronOutstandingOpWarning,
   generateMultisigAddressTRON,
   isTronChain,
   isTronLive,
@@ -39,6 +51,7 @@ import {
   tronXpub,
 } from './tronFixtures';
 import { blockchains } from '@storage/blockchains';
+import { storage } from '../../src/store/index';
 
 const V = TRON_VECTORS;
 const USDT = T.NETWORKS.mainnet.usdt as string;
@@ -543,5 +556,261 @@ describe('verifyTronConsumerRequest (contract §5 rules 1–5)', () => {
     expect(parsed.vault).toBe(V.consumerOp.vault);
     expect(parsed.signers).toEqual(V.consumer.leaves['0-0'].signers);
     expect(T.opsEqual(parsed.op, VECTOR_OP)).toBe(true);
+  });
+});
+
+/**
+ * CHN-9: once this device co-signs an Op, a fully signed Op exists until its
+ * deadline, whatever the broadcast answers (refusal, error, timeout, a txid
+ * that never lands). A re-send under a NEW nonce would let a malicious relay
+ * execute both (a double payment).
+ */
+describe('co-signed Ops that may still execute (CHN-9)', () => {
+  const VAULT = V.consumerOp.vault;
+  const OTHER = 'TGjtodRV2nm6tQd9hsxiecLNN9QmhhVbbD';
+  const NOW = 1_790_000_000n - 1800n;
+  const nowMs = Number(NOW) * 1000;
+  const digestOf = (nonce: bigint) =>
+    '0x' + nonce.toString(16).padStart(64, '0');
+  const cosigned = (
+    nonce: bigint,
+    deadline = NOW + 1800n,
+    vault: string = VAULT,
+  ) =>
+    recordTronCosignedOp(
+      { chain: 'tron', vault, nonce, deadline, digest: digestOf(nonce) },
+      nowMs,
+    );
+  const assertFor = (
+    nonce: bigint,
+    isNonceUsed: (v: string, n: bigint) => Promise<boolean> = () =>
+      Promise.resolve(false),
+    now = NOW,
+  ) =>
+    assertNoOutstandingTronOp({
+      chain: 'tron',
+      vault: VAULT,
+      nonce,
+      now,
+      isNonceUsed,
+    });
+
+  beforeEach(() => {
+    storage.set(TRON_COSIGNED_OPS_STORAGE_KEY, '');
+    storage.set(TRON_COSIGNED_OPS_CORRUPT_SINCE_KEY, '');
+  });
+
+  it('records chain, vault, nonce, deadline and digest durably', () => {
+    cosigned(7n);
+    expect(
+      JSON.parse(storage.getString(TRON_COSIGNED_OPS_STORAGE_KEY) as string),
+    ).toEqual([
+      {
+        chain: 'tron',
+        vault: VAULT,
+        nonce: '7',
+        deadline: Number(NOW + 1800n),
+        digest: digestOf(7n),
+        recordedAtMs: nowMs,
+      },
+    ]);
+    // a malformed record request is refused (nothing may be released)
+    expect(() =>
+      recordTronCosignedOp(
+        {
+          chain: 'tron',
+          vault: VAULT,
+          nonce: 1n,
+          deadline: NOW,
+          digest: 'nope',
+        },
+        nowMs,
+      ),
+    ).toThrow(TronVerifyError);
+  });
+
+  it('refuses a second Op of the vault under another nonce until the first is used on-chain or past its deadline', async () => {
+    cosigned(7n);
+    expect(outstandingTronCosignedOps('tron', VAULT, NOW)).toHaveLength(1);
+    const used = jest.fn(() => Promise.resolve(false));
+    await expect(assertFor(8n, used)).rejects.toThrow(TronVerifyError);
+    await expect(assertFor(8n, used)).rejects.toThrow(/reuses that nonce/);
+    await expect(assertFor(8n, used)).rejects.toThrow(/not confirmed on-chain/);
+    expect(used).toHaveBeenCalledWith(VAULT, 7n);
+    // reusing the outstanding nonce: only one of the two can ever execute
+    await expect(assertFor(7n)).resolves.toBeUndefined();
+    // other vaults / chains are not affected
+    await expect(
+      assertNoOutstandingTronOp({
+        chain: 'tron',
+        vault: OTHER,
+        nonce: 1n,
+        now: NOW,
+        isNonceUsed: used,
+      }),
+    ).resolves.toBeUndefined();
+    // past the deadline (+ the 120 s clock skew) it no longer blocks
+    expect(TRON_CLOCK_SKEW_SECONDS).toBe(120n);
+    await expect(assertFor(8n, used, NOW + 1800n + 120n)).rejects.toThrow(
+      TronVerifyError,
+    );
+    await expect(
+      assertFor(8n, used, NOW + 1800n + 121n),
+    ).resolves.toBeUndefined();
+    expect(
+      outstandingTronCosignedOps('tron', VAULT, NOW + 1800n + 121n),
+    ).toEqual([]);
+  });
+
+  it('drops a record whose nonce is already used on-chain', async () => {
+    cosigned(7n);
+    await expect(
+      assertFor(8n, () => Promise.resolve(true)),
+    ).resolves.toBeUndefined();
+    expect(outstandingTronCosignedOps('tron', VAULT, NOW)).toEqual([]);
+  });
+
+  it('pruneTronCosignedOps keeps what the chain does not show used', async () => {
+    cosigned(7n);
+    cosigned(9n);
+    cosigned(3n, NOW + 1800n, OTHER);
+    const used = jest.fn((_v: string, n: bigint) => Promise.resolve(n === 9n));
+    const still = await pruneTronCosignedOps({
+      chain: 'tron',
+      vault: VAULT,
+      exceptNonce: '11',
+      now: NOW,
+      isNonceUsed: used,
+    });
+    expect(still.map((e) => e.nonce)).toEqual(['7']);
+    expect(used).toHaveBeenCalledTimes(2);
+    expect(
+      outstandingTronCosignedOps('tron', VAULT, NOW).map((e) => e.nonce),
+    ).toEqual(['7']);
+    // another vault's record is untouched
+    expect(outstandingTronCosignedOps('tron', OTHER, NOW)).toHaveLength(1);
+  });
+
+  it('fails closed when the on-chain lookup fails', async () => {
+    cosigned(7n);
+    await expect(
+      assertFor(8n, () => Promise.reject(new Error('node down'))),
+    ).rejects.toThrow('node down');
+    expect(outstandingTronCosignedOps('tron', VAULT, NOW)).toHaveLength(1);
+  });
+
+  it('a nonce co-signed twice keeps the later deadline; a full store refuses to record', () => {
+    cosigned(7n, NOW + 100n);
+    cosigned(7n, NOW + 900n);
+    expect(outstandingTronCosignedOps('tron', VAULT, NOW)).toEqual([
+      expect.objectContaining({ nonce: '7', deadline: Number(NOW + 900n) }),
+    ]);
+    for (let i = 1; i < TRON_COSIGNED_OPS_MAX; i += 1) {
+      cosigned(BigInt(100 + i));
+    }
+    // never silently drops a live record: recording one more fails closed
+    expect(() => cosigned(5000n)).toThrow(/too many TRON payments/);
+    const all = JSON.parse(
+      storage.getString(TRON_COSIGNED_OPS_STORAGE_KEY) as string,
+    ) as unknown[];
+    expect(all).toHaveLength(TRON_COSIGNED_OPS_MAX);
+    // re-recording a nonce already held is still fine
+    expect(() => cosigned(7n)).not.toThrow();
+    // expired records make room again
+    expect(() =>
+      recordTronCosignedOp(
+        {
+          chain: 'tron',
+          vault: VAULT,
+          nonce: 5000n,
+          deadline: NOW + 9000n,
+          digest: digestOf(5000n),
+        },
+        Number(NOW + 1800n + 121n) * 1000,
+      ),
+    ).not.toThrow();
+  });
+
+  it('records written by earlier builds (no digest) stay in force', async () => {
+    storage.set(
+      TRON_COSIGNED_OPS_STORAGE_KEY,
+      JSON.stringify([
+        {
+          chain: 'tron',
+          vault: VAULT,
+          nonce: '7',
+          deadline: Number(NOW + 1800n),
+          recordedAtMs: nowMs,
+        },
+      ]),
+    );
+    await expect(assertFor(8n)).rejects.toThrow(/nonce 7/);
+  });
+
+  it('the approval-screen warning names the latest blocking deadline, never throws', () => {
+    expect(
+      tronOutstandingOpWarning(
+        { chain: 'tron', vault: VAULT, nonce: '8' },
+        NOW,
+      ),
+    ).toBeNull();
+    cosigned(7n);
+    expect(
+      tronOutstandingOpWarning(
+        { chain: 'tron', vault: VAULT, nonce: '8' },
+        NOW,
+      ),
+    ).toEqual({ kind: 'pending', deadline: Number(NOW + 1800n) });
+    expect(
+      tronOutstandingOpWarning(
+        { chain: 'tron', vault: VAULT, nonce: '7' },
+        NOW,
+      ),
+    ).toBeNull();
+    storage.set(TRON_COSIGNED_OPS_STORAGE_KEY, '{oops');
+    expect(
+      tronOutstandingOpWarning(
+        { chain: 'tron', vault: VAULT, nonce: '8' },
+        NOW,
+      ),
+    ).toEqual({ kind: 'unreadable' });
+  });
+
+  it('tronNonceUsedLookup: a vault without code has used no nonce', async () => {
+    const client = {
+      hasCode: jest.fn(() => Promise.resolve(false)),
+      isNonceUsed: jest.fn(() => Promise.resolve(true)),
+    };
+    await expect(tronNonceUsedLookup(client)(VAULT, 7n)).resolves.toBe(false);
+    expect(client.isNonceUsed).not.toHaveBeenCalled();
+    client.hasCode.mockImplementation(() => Promise.resolve(true));
+    await expect(tronNonceUsedLookup(client)(VAULT, 7n)).resolves.toBe(true);
+  });
+
+  it('an unreadable store fails closed for the whole consumer deadline window, then resets', async () => {
+    storage.set(TRON_COSIGNED_OPS_STORAGE_KEY, '[{"chain":"tron"}]');
+    expect(() => outstandingTronCosignedOps('tron', VAULT, NOW)).toThrow(
+      TronCosignedOpsUnreadableError,
+    );
+    await expect(assertFor(1n)).rejects.toThrow(/cannot read/);
+    // recording while unreadable throws: the co-signed Op is never released
+    expect(() => cosigned(9n)).toThrow(TronCosignedOpsUnreadableError);
+    expect(storage.getString(TRON_COSIGNED_OPS_STORAGE_KEY)).toBe(
+      '[{"chain":"tron"}]',
+    );
+    // still inside 2 h + skew of the first sighting: refused
+    await expect(assertFor(1n, undefined, NOW + 7200n)).rejects.toThrow(
+      /cannot read/,
+    );
+    // past it: moved aside and reset
+    await expect(
+      assertFor(1n, undefined, NOW + 7200n + 120n),
+    ).resolves.toBeUndefined();
+    expect(
+      storage.getString(
+        `${TRON_COSIGNED_OPS_QUARANTINE_PREFIX}${String(nowMs)}`,
+      ),
+    ).toBe('[{"chain":"tron"}]');
+    expect(storage.getString(TRON_COSIGNED_OPS_STORAGE_KEY)).toBe('[]');
   });
 });

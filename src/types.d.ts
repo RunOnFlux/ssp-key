@@ -680,15 +680,7 @@ interface vaultSigningRequest {
   // bytes) and this is the structured Op it must be recomputed from —
   // {network, vault, signers, threshold, op}. JSON string or object.
   tronOp?: string | Record<string, unknown>;
-  // TRON enterprise org policy flags for decodeOpForDisplay. Absent (or any
-  // flag absent) means NOT allowed: approve / unknown calls / Stake 2.0 vault
-  // self-calls are refused unless the org explicitly allows them (the
-  // nonce-invalidation self-call is allowed unless allowSelfCalls is false).
-  tronPolicy?:
-    | string
-    | {
-        allowApprove?: boolean;
-        allowUnknown?: boolean;
-        allowSelfCalls?: boolean;
-      };
+  // No TRON policy field: the Op is decoded under the Key's own fixed
+  // enterprise policy (lib/tronVault.ts TRON_KEY_ENTERPRISE_POLICY). A policy
+  // in the request would be relay-supplied and is never read (CHN-6 / TRX-3).
 }

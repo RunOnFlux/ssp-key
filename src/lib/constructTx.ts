@@ -41,6 +41,7 @@ import {
   TronHttpClient,
   fetchTronBalance,
   formatTronUnits,
+  recordTronCosignedOp,
   tronApprovedSummaryMismatch,
   tronHttpClient,
   tronNowSeconds,
@@ -868,6 +869,11 @@ export async function selfSubmitTronOp(opts: {
   keySignature: Uint8Array;
   signer: TronLocalSigner;
   client: TronHttpClient;
+  /**
+   * Called (and must succeed) before the fully signed Op first leaves this
+   * device — the execute simulation already carries it (CHN-9).
+   */
+  onRelease: () => void;
   sleep?: (ms: number) => Promise<void>;
   nowMs?: () => bigint;
 }): Promise<string> {
@@ -926,6 +932,9 @@ export async function selfSubmitTronOp(opts: {
     op: verified.payload.op,
     signaturesPacked,
   });
+  // From here on the signed Op is out of this device's hands (the node sees
+  // it in the simulation, then in the transaction): record it first.
+  opts.onRelease();
   const simulation = await client.triggerConstant({
     owner,
     contract: vault,
@@ -978,7 +987,11 @@ export async function selfSubmitTronOp(opts: {
  *     displayed (`approved`);
  *  2. signs the digest with its leaf (m/48'/195'/0'/0'/0/i) — the signer is
  *     destroyed on every path;
- *  3. sponsored (fee > 0): POST /v1/tron/broadcast {chain, signers,
+ *  3. records the co-signed Op durably (CHN-9) BEFORE it leaves the device —
+ *     whatever the broadcast then answers (refusal, error, timeout, a txid
+ *     that never lands), a later Op of the vault must reuse this nonce until
+ *     this device's node shows it used or its deadline has passed;
+ *  4. sponsored (fee > 0): POST /v1/tron/broadcast {chain, signers,
  *     threshold, op, signatures:[wallet, key]} → txid;
  *     self-pay (fee == 0): submits from its own leaf account.
  */
@@ -998,13 +1011,26 @@ export async function cosignAndBroadcastTRON(opts: {
   sleep?: (ms: number) => Promise<void>;
   nowMs?: () => bigint;
 }): Promise<string> {
+  const nowSec = opts.now ?? tronNowSeconds();
   const verified = verifyTronConsumerRequest(opts.rawTx, opts.chain, {
     xpubWallet: opts.xpubWallet,
     xpubKey: opts.xpubKey,
     path: opts.path,
     network: opts.network,
-    now: opts.now ?? tronNowSeconds(),
+    now: nowSec,
   });
+  // Throws (nothing is released) when the record cannot be made durable.
+  const recordCosigned = () =>
+    recordTronCosignedOp(
+      {
+        chain: opts.chain,
+        vault: verified.vault.address,
+        nonce: verified.payload.op.nonce,
+        deadline: verified.payload.op.deadline,
+        digest: tronSdk.to0x(verified.digest),
+      },
+      Number(nowSec) * 1000,
+    );
   const mismatch = tronApprovedSummaryMismatch(opts.approved, verified);
   if (mismatch) {
     throw new Error(
@@ -1021,6 +1047,7 @@ export async function cosignAndBroadcastTRON(opts: {
     }
     const keySignature = signer.signDigest(verified.digest);
     if (verified.payload.op.fee.amount > 0n) {
+      recordCosigned();
       return await postTronBroadcast(
         opts.relayHost,
         {
@@ -1042,6 +1069,7 @@ export async function cosignAndBroadcastTRON(opts: {
       keySignature,
       signer,
       client: opts.client ?? tronHttpClient(opts.chain),
+      onRelease: recordCosigned,
       sleep: opts.sleep,
       nowMs: opts.nowMs,
     });

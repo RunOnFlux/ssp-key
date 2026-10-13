@@ -24,7 +24,11 @@
 import { blockchains } from '@storage/blockchains';
 import type { cryptos } from '../types';
 import type { VaultDecodedTx } from './transactions';
-import type { KasLedger } from './kaspaLedger';
+import {
+  reconcileKasLedgerClaims,
+  type KasAmountProver,
+  type KasLedger,
+} from './kaspaLedger';
 import {
   KAS_BLOCKING_WARNINGS,
   KAS_MAX_FEE_SOMPI,
@@ -33,6 +37,7 @@ import {
   fetchKasUtxos,
   generateAddressKeypairKAS,
   kasBundleTxid,
+  kasLedgerProver,
   kasPrefix,
   kasScriptKey,
   kaspaCore as K,
@@ -47,12 +52,58 @@ export type KasUtxoFetcher = (addresses: string[]) => Promise<KaspaUtxo[]>;
 /** Minimal shape of the relay vault-signing payload the kas path needs. */
 export interface VaultKasSigningPayload {
   chain: string;
+  /** The org account m/48'/111111'/orgIndex'/0' (100…99999). */
+  orgIndex?: unknown;
+  /** The vault's child index under the org account ([0, 2^31)). */
+  vaultIndex?: unknown;
   rawUnsignedTx?: string;
   walletSignedHex?: string;
   inputDetails?: unknown;
   recipients?: Array<{ address: string; amount: string; label?: string }>;
   fee?: string;
   signingMode?: string;
+}
+
+/** Enterprise organisation indices (BIP-48 account', CLAUDE.md conventions). */
+export const KAS_ENTERPRISE_ORG_INDEX_MIN = 100;
+export const KAS_ENTERPRISE_ORG_INDEX_MAX = 99999;
+/** Non-hardened BIP-32 child indices: integers in [0, 2^31). */
+export const KAS_MAX_CHILD_INDEX = 0x7fffffff;
+
+function isChildIndex(v: unknown): v is number {
+  return (
+    typeof v === 'number' &&
+    Number.isInteger(v) &&
+    v >= 0 &&
+    v <= KAS_MAX_CHILD_INDEX
+  );
+}
+
+/**
+ * Why a vault request's indices are unusable, or null (KAS-1). orgIndex must
+ * be a NUMBER in 100…99999: 0' is the consumer account (its leaves are the
+ * consumer 2-of-2 signers — orgIndex 0 + vault 0 would sign consumer UTXOs
+ * under an "enterprise" label) and 99' the reserved recovery account; a
+ * string would also be interpolated into the derivation path. vaultIndex
+ * must be a non-hardened child index.
+ */
+export function kasVaultIndicesError(data: {
+  orgIndex?: unknown;
+  vaultIndex?: unknown;
+}): string | null {
+  const { orgIndex, vaultIndex } = data;
+  if (
+    typeof orgIndex !== 'number' ||
+    !Number.isInteger(orgIndex) ||
+    orgIndex < KAS_ENTERPRISE_ORG_INDEX_MIN ||
+    orgIndex > KAS_ENTERPRISE_ORG_INDEX_MAX
+  ) {
+    return `Invalid Kaspa organisation index ${String(orgIndex)}`;
+  }
+  if (!isChildIndex(vaultIndex)) {
+    return `Invalid Kaspa vault index ${String(vaultIndex)}`;
+  }
+  return null;
 }
 
 export interface KasVaultInputDetail {
@@ -113,9 +164,7 @@ export function parseKasInputDetails(raw: unknown): KasVaultInputDetail[] {
     const x = d as Partial<KasVaultInputDetail> | null;
     if (
       !x ||
-      typeof x.addressIndex !== 'number' ||
-      !Number.isInteger(x.addressIndex) ||
-      x.addressIndex < 0 ||
+      !isChildIndex(x.addressIndex) ||
       (x.index !== undefined && x.index !== i)
     ) {
       throw new Error(`Invalid Kaspa input detail ${String(i)}`);
@@ -157,6 +206,10 @@ export async function verifyKasVaultBundle(
   if (blockchains[chain]?.chainType !== 'kas') {
     throw new Error('Not a Kaspa vault request');
   }
+  // KAS-1: an enterprise request never reaches the consumer (0') or the
+  // reserved (99') account, at display time and again at sign time.
+  const indexError = kasVaultIndicesError(data);
+  if (indexError) throw new Error(indexError);
   const prefix = kasPrefix(chain);
   const payload = kasVaultBundlePayload(data);
   const details = parseKasInputDetails(data.inputDetails);
@@ -363,14 +416,33 @@ export async function signKasVaultBundle(opts: {
   ledger: KasLedger;
   maxFee?: bigint;
   fetchUtxos?: KasUtxoFetcher;
+  /** Proves an outpoint's amount on a ledger conflict (default: REST). */
+  prove?: KasAmountProver;
 }): Promise<{ signedHex: string; keyPubKey: string; txid: string }> {
   const chain = opts.data.chain as keyof cryptos;
   const maxFee = opts.maxFee ?? KAS_MAX_FEE_SOMPI;
+  // KAS-1 at sign time: the index the key derives with is the request's own.
+  if (
+    !isChildIndex(opts.vaultIndex) ||
+    opts.vaultIndex !== opts.data.vaultIndex
+  ) {
+    throw new Error(`Invalid Kaspa vault index ${String(opts.vaultIndex)}`);
+  }
   const v = await verifyKasVaultBundle(opts.data, opts.fetchUtxos, maxFee);
   if (v.mismatches.length > 0) {
     throw new Error(`Kaspa proposal mismatch: ${v.mismatches.join('; ')}`);
   }
   assertKasPartialsValid(v.opened);
+  // KAS-2: an earlier signature of these outpoints under another amount is
+  // resolved by a proof (or refused) BEFORE any key is derived.
+  await reconcileKasLedgerClaims(
+    opts.ledger,
+    v.opened.inputs.map((p) => ({
+      outpoint: `${K.bytesToHex(p.outpoint.transactionId)}:${String(p.outpoint.index)}`,
+      amount: p.entry.amount,
+    })),
+    opts.prove ?? kasLedgerProver(chain),
+  );
 
   const kp = generateAddressKeypairKAS(
     opts.vaultXpriv,
