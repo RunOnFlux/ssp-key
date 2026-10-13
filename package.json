@@ -13,7 +13,8 @@
     "test:report": "jest --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --coverage",
     "podinstall": "cd ios && RCT_NEW_ARCH_ENABLED=1 bundle exec pod install && cd ..",
     "bundleinstall": "cd ios && bundle install && cd ..",
-    "postinstall": "patch-package && node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process,http,https,url,net,tls,zlib,_stream_transform' --yarn --hack"
+    "setup": "allow-scripts",
+    "postinstall": "patch-package --error-on-fail && node_modules/.bin/rn-nodeify --install 'events,assert,util,buffer,stream,process,http,https,url,net,tls,zlib,_stream_transform' --yarn --hack"
   },
   "resolutions": {
     "viem": "2.52.2",
@@ -210,11 +211,13 @@
       "$root$": true,
       "@react-native-firebase/app>firebase>@firebase/firestore>@grpc/proto-loader>protobufjs": false,
       "@react-native-firebase/app>firebase>@firebase/util": false,
-      "@runonflux/aa-schnorr-multisig-sdk>secp256k1": true,
-      "@runonflux/utxo-lib>secp256k1": true,
+      "@runonflux/aa-schnorr-multisig-sdk>secp256k1": false,
+      "@runonflux/utxo-lib>secp256k1": false,
       "jest>@jest/core>jest-resolve>unrs-resolver": false,
-      "postinstall-postinstall": true,
-      "@runonflux/flux-sdk>secp256k1": false
+      "postinstall-postinstall": false,
+      "@runonflux/flux-sdk>secp256k1": false,
+      "viem>ws>bufferutil": false,
+      "viem>ws>utf-8-validate": false
     }
   }
 }

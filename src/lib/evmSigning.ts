@@ -2,12 +2,23 @@ import * as accountAbstraction from '@runonflux/aa-schnorr-multisig-sdk';
 import { ethers } from 'ethers';
 
 import { keyPair, publicPrivateNonce } from '../types';
+import { buildEip191Preimage, parseEip191Preimage } from './consumerGuards';
 
 interface publicNonces {
   kPublic: string;
   kTwoPublic: string;
 }
 
+/**
+ * Complete the consumer 2-of-2 Schnorr signature over a personal message.
+ *
+ * AA-2: `messageToSign` must be an EIP-191 personal-message preimage
+ * (`\x19Ethereum Signed Message:\n` + UTF-8 byte length + text). The SDK
+ * signs keccak256(utf8(messageToSign)); without this guard any string whose
+ * bytes are e.g. an EIP-712 `\x19\x01…` preimage would yield a signature an
+ * ERC-1271 protocol accepts as authorisation. Anything else throws before a
+ * nonce is touched.
+ */
 export function continueSigningSchnorrMultisig(
   messageToSign: string,
   keyKeypair: keyPair,
@@ -17,6 +28,10 @@ export function continueSigningSchnorrMultisig(
   sigOneHex: string,
   challenge: string,
 ): string {
+  const text = parseEip191Preimage(messageToSign);
+  if (buildEip191Preimage(text) !== messageToSign) {
+    throw new Error('Not an EIP-191 personal message');
+  }
   try {
     console.log('Signing formatted message:', {
       message: messageToSign,

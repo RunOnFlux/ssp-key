@@ -1,56 +1,86 @@
 name: android-build
 on:
+  # Branch pushes and PRs run the tests on GitHub-hosted runners (no
+  # secrets). Only v* tags reach the signing job.
   push:
-    # Pattern matched against refs/tags
+    branches:
+      - '**'
     tags:
-      - "**" # Push events to every tag including hierarchical tags like v1.0/beta
-  # Allows you to run this workflow manually from the Actions tab
+      - 'v*'
+  pull_request:
+  # Manual runs test only, unless started from a v* tag (the signing job is
+  # gated on the ref and on the android-release environment).
   workflow_dispatch:
+
+# Nothing by default; each job asks for what it needs.
+permissions: {}
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   install-and-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: 'zulu'
           java-version: '17'
+      # No dependency cache: yarn classic does not re-verify cached tarballs.
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-          cache: "yarn"
+      # .yarnrc has ignore-scripts; `yarn setup` runs only the allowlisted
+      # install scripts (package.json "lavamoat.allowScripts").
       - name: Install npm dependencies
-        run: |
-          yarn
+        run: yarn install --frozen-lockfile --ignore-scripts
+      - name: Run allowlisted install scripts
+        run: yarn setup
       - name: Run Test Suite
-        run: |
-          yarn test:report
+        run: yarn test:report
+
   build-android:
     needs: install-and-test
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    # Configure required reviewers on this environment; the signing secrets
+    # live in the environment, not in repository secrets.
+    environment: android-release
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: 'zulu'
           java-version: '17'
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-          cache: "yarn"
       - name: Install npm dependencies
-        run: |
-          yarn
+        run: yarn install --frozen-lockfile --ignore-scripts
+      - name: Run allowlisted install scripts
+        run: yarn setup
+      # Decoded in a plain run step: no third-party action ever sees the key.
       - name: Decode Keystore
-        id: decode_keystore
-        uses: timheuer/base64-to-file@v1
-        with:
-          fileName: "release.keystore"
-          fileDir: "/home/runner/work/ssp-key/ssp-key/android/app/"
-          encodedString: ${{ secrets.ANDROID_SIGNING_KEY }}
+        env:
+          ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$ANDROID_SIGNING_KEY" | base64 -d > android/app/release.keystore
       - name: Build Android APK Release
         run: |
           cd android && ./gradlew clean && ./gradlew generateCodegenArtifactsFromSchema --rerun-tasks && ./gradlew assembleRelease
@@ -58,20 +88,23 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
-      - name: Build Android ABB Release
+      - name: Build Android AAB Release
         run: |
           cd android && ./gradlew bundleRelease
         env:
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
+      - name: Remove Keystore
+        if: always()
+        run: rm -f android/app/release.keystore
       - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: app-release.apk
           path: android/app/build/outputs/apk/release/app-release.apk
       - name: Upload AAB Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: app-release.aab
           path: android/app/build/outputs/bundle/release/app-release.aab

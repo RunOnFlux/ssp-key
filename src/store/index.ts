@@ -1,4 +1,9 @@
-import { configureStore, combineReducers, Reducer } from '@reduxjs/toolkit';
+import {
+  configureStore,
+  combineReducers,
+  Reducer,
+  UnknownAction,
+} from '@reduxjs/toolkit';
 import { setupListeners } from '@reduxjs/toolkit/query';
 import {
   persistReducer,
@@ -43,6 +48,9 @@ const chains = {
 
 const chainKeys = Object.keys(chains) as (keyof cryptos)[];
 
+/** Every chain slice registered in the store. */
+export const registeredChainKeys: readonly (keyof cryptos)[] = chainKeys;
+
 import theme from './theme';
 import ssp from './ssp';
 
@@ -81,9 +89,55 @@ const persistConfig = {
   stateReconciler: autoMergeLevel2,
 };
 
-const persistedReducer = persistReducer<ReturnType<typeof reducers>>(
+/** redux-persist's MMKV key for the whole persisted root. */
+export const PERSIST_ROOT_KEY = `persist:${persistConfig.key}`;
+
+type CombinedState = ReturnType<typeof reducers>;
+
+/**
+ * Every AES ciphertext the app keeps in redux (all encrypted with
+ * enc_key + app password). Used to re-encrypt them all under a new key in ONE
+ * state transition (KEY-3 enc_key rotation): the persisted root is either
+ * entirely old-key or entirely new-key, never a mix.
+ */
+export interface EncryptedStateBlobs {
+  ssp: {
+    seedPhrase: string;
+    publicNonces: string;
+    enterprisePublicNonces: string;
+    xprivRecovery: string;
+    xpubRecovery: string;
+  };
+  chains: Partial<Record<keyof cryptos, chainStateKey>>;
+}
+
+const REPLACE_ENCRYPTED_BLOBS = 'ssp/replaceEncryptedBlobs';
+
+export const replaceEncryptedBlobs = (payload: EncryptedStateBlobs) => ({
+  type: REPLACE_ENCRYPTED_BLOBS,
+  payload,
+});
+
+const rootReducer: Reducer<CombinedState> = (state, action) => {
+  if (action.type === REPLACE_ENCRYPTED_BLOBS && state) {
+    const { ssp: sspBlobs, chains: chainBlobs } = (
+      action as UnknownAction & { payload: EncryptedStateBlobs }
+    ).payload;
+    const next = { ...state, ssp: { ...state.ssp, ...sspBlobs } };
+    for (const chain of chainKeys) {
+      const blobs = chainBlobs[chain];
+      if (blobs) {
+        next[chain] = { ...state[chain], ...blobs };
+      }
+    }
+    return next;
+  }
+  return reducers(state, action);
+};
+
+const persistedReducer = persistReducer<CombinedState>(
   persistConfig,
-  reducers,
+  rootReducer,
 );
 
 const store = configureStore({
@@ -104,6 +158,45 @@ const persistor = persistStore(store);
 setupListeners(store.dispatch);
 
 export { store, persistor };
+
+/**
+ * Write the current redux state to MMKV now (instead of on redux-persist's
+ * next tick) and resolve once it is stored. Callers that must know a state
+ * change is durable — e.g. before swapping the key its ciphertexts need —
+ * await this.
+ */
+export async function flushPersistedState(): Promise<void> {
+  await persistor.flush();
+}
+
+/**
+ * The persisted (MMKV) value of one top-level slice, parsed — what the app
+ * will rehydrate after a restart. Undefined when absent or unreadable.
+ */
+export function readPersistedSlice<T>(slice: string): T | undefined {
+  try {
+    const raw = storage.getString(PERSIST_ROOT_KEY);
+    if (!raw) return undefined;
+    const root = JSON.parse(raw) as Record<string, string>;
+    return root[slice] ? (JSON.parse(root[slice]) as T) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Compact the MMKV file (react-native-mmkv 4.x `trim()`: full write-back, then
+ * truncate). MMKV is append-only, so an overwritten value — e.g. the old-key
+ * `persist:root` copy after the KEY-3 enc_key rotation — stays in the file
+ * until compaction. Best effort: never throws.
+ */
+export function compactPersistedStorage(): void {
+  try {
+    storage.trim();
+  } catch (error) {
+    console.log('[storage] trim failed', error);
+  }
+}
 
 // Infer the `RootState` and `AppDispatch` types from the store itself
 export type RootState = ReturnType<typeof store.getState>;

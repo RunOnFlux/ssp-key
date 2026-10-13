@@ -19,6 +19,12 @@ import { useTheme } from '../../hooks';
 import ToastNotif from '../Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';
 import { PrimaryButton } from '../ui';
+import {
+  loadAttemptState,
+  recordFailedAttempt,
+  remainingLockoutMs,
+  resetAttempts,
+} from './passwordAttempts';
 
 /** Every request type this gate can be opened for. */
 export type AuthenticationType =
@@ -131,6 +137,12 @@ const Authentication = (props: {
   // cancel) firing after a cancel propagation already started, which
   // would otherwise call actionStatus(true) seconds after actionStatus(false).
   const propagated = useRef(false);
+  // KEY-6: epoch ms until which the password prompt is locked after repeated
+  // failures (persisted counter, see passwordAttempts), and a ticking clock to
+  // count the wait down on screen.
+  const [lockedUntil, setLockedUntil] = useState(0);
+  const [clock, setClock] = useState(() => Date.now());
+  const lockSecondsLeft = Math.max(0, Math.ceil((lockedUntil - clock) / 1000));
   // Defensive lookup: the prop is typed, so this only guards a caller that
   // reaches this component from untyped JS.
   const copy = AUTH_COPY[props.type] ?? AUTH_COPY.sensitive;
@@ -148,6 +160,30 @@ const Authentication = (props: {
       props.actionStatus(status);
     }, 300);
   };
+
+  useEffect(() => {
+    let active = true;
+    loadAttemptState()
+      .then((state) => {
+        const now = Date.now();
+        if (active) {
+          setClock(now);
+          setLockedUntil(now + remainingLockoutMs(state, now));
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (lockedUntil <= clock) {
+      return;
+    }
+    const timer = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [lockedUntil, clock]);
 
   useEffect(() => {
     if (!props.biomatricsAllowed) {
@@ -206,6 +242,7 @@ const Authentication = (props: {
           if (data && data.password) {
             setPassword('');
             setPasswordVisibility(false);
+            void resetAttempts();
             propagate(true);
           } else {
             // biometrics failed, were tempered with, disable biometrics option and only allow for password authentication
@@ -241,6 +278,21 @@ const Authentication = (props: {
   const grantAccess = async () => {
     try {
       console.log('Grant Access');
+      // KEY-6: refuse to even check the password while locked out.
+      const attemptState = await loadAttemptState();
+      const lockNow = Date.now();
+      const lockRemaining = remainingLockoutMs(attemptState, lockNow);
+      if (lockRemaining > 0) {
+        setClock(lockNow);
+        setLockedUntil(lockNow + lockRemaining);
+        displayMessage(
+          'error',
+          t('home:err_auth_locked', {
+            seconds: Math.ceil(lockRemaining / 1000),
+          }),
+        );
+        return;
+      }
       // get from keychain
       const passwordHash = await Keychain.getGenericPassword({
         service: 'sspkey_pw_hash',
@@ -264,9 +316,23 @@ const Authentication = (props: {
       );
       const pwHash = key256Bits1000Iterations.toString();
       if (passwordHash.password !== pwHash) {
-        displayMessage('error', t('home:err_auth_pw_incorrect'));
+        const failedAt = Date.now();
+        const next = await recordFailedAttempt(failedAt);
+        const wait = remainingLockoutMs(next, failedAt);
+        setPassword('');
+        if (wait > 0) {
+          setClock(failedAt);
+          setLockedUntil(failedAt + wait);
+          displayMessage(
+            'error',
+            t('home:err_auth_locked', { seconds: Math.ceil(wait / 1000) }),
+          );
+        } else {
+          displayMessage('error', t('home:err_auth_pw_incorrect'));
+        }
         return;
       }
+      await resetAttempts();
       let isBioSet = false;
       // check if we have it
       try {
@@ -439,6 +505,20 @@ const Authentication = (props: {
               </View>
             </View>
             <View style={[Layout.justifyContentEnd]}>
+              {lockSecondsLeft > 0 && (
+                <Text
+                  testID="auth-locked"
+                  accessibilityLiveRegion="polite"
+                  style={[
+                    Fonts.textSmall,
+                    Fonts.textCenter,
+                    Gutters.smallTMargin,
+                    { color: Colors.error },
+                  ]}
+                >
+                  {t('home:err_auth_locked', { seconds: lockSecondsLeft })}
+                </Text>
+              )}
               <PrimaryButton
                 label={
                   props.type === 'sensitive'
@@ -446,6 +526,7 @@ const Authentication = (props: {
                     : t('common:confirm')
                 }
                 style={[Gutters.regularBMargin, Gutters.smallTMargin]}
+                disabled={lockSecondsLeft > 0}
                 onPress={() => grantAccess()}
               />
               <TouchableOpacity

@@ -50,5 +50,8 @@
   "rooted_device": "Your device appears to be rooted! This significantly compromises the security of the SSP Key!",
   "jailbroken_device": "Your device appears to be jailbroken! This significantly compromises the security of the SSP Key!",
   "ssp_key_2fa": "SSP Key is the second signature for your SSP Wallet.",
-  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here."
+  "ssp_key_2fa_info": "Install SSP Wallet browser extension first, then complete this SSP Key setup. Need help? Tap here.",
+  "security_upgrade_title": "Finishing security upgrade",
+  "security_upgrade_info": "SSP Key is finishing an upgrade of how your keys are encrypted on this device. Keep the app open; it continues automatically whenever SSP Key is in the foreground. Your seed phrase is not affected.",
+  "security_upgrade_retry": "Try again"
 }

@@ -18,6 +18,17 @@ import {
 import { backends } from '@storage/backends';
 import { blockchains } from '@storage/blockchains';
 import { getLibId } from './wallet';
+import {
+  inspectConsumerUtxoTransaction,
+  verifyWalletPartialSignatures,
+} from './consumerUtxo';
+import type { VerifiedConsumerUtxoTx } from './consumerUtxo';
+import { decodeConsumerSolanaTransaction } from './consumerSolana';
+import type {
+  ConsumerSolanaLeaves,
+  ConsumerSolanaPayload,
+} from './consumerSolana';
+import type { VerifiedConsumerEvmRequest } from './consumerEvm';
 
 export async function fetchUtxos(
   address: string,
@@ -175,23 +186,59 @@ export function finaliseTransaction(
   }
 }
 
-function getValueHexBuffer(hex: string) {
-  const buf = Buffer.from(hex, 'hex').reverse();
-  return buf.toString('hex');
+/**
+ * Raw hex of a previous transaction from the key's own backend. Used to read
+ * input values locally (UTXO-5) — the caller verifies the bytes against the
+ * txid, so this function only transports.
+ */
+export async function fetchRawTransactionHex(
+  txid: string,
+  chain: keyof cryptos,
+): Promise<string> {
+  if (!/^[0-9a-f]{64}$/.test(txid)) {
+    throw new Error('Invalid txid');
+  }
+  const backendConfig = backends()[chain];
+  if (blockchains[chain].backend === 'blockbook') {
+    const url = `https://${backendConfig.node}/api/v2/tx/${txid}`;
+    const { data } = await axios.get<{ hex?: string }>(url, {
+      timeout: 15000,
+    });
+    if (!data || typeof data.hex !== 'string') {
+      throw new Error(`Previous transaction ${txid} unavailable`);
+    }
+    return data.hex;
+  }
+  const url = `https://${backendConfig.node}/api/rawtx/${txid}`;
+  const { data } = await axios.get<{ rawtx?: string }>(url, {
+    timeout: 15000,
+  });
+  if (!data || typeof data.rawtx !== 'string') {
+    throw new Error(`Previous transaction ${txid} unavailable`);
+  }
+  return data.rawtx;
 }
 
+/**
+ * Co-sign a consumer 2-of-2 UTXO transaction.
+ *
+ * `verified` must come from `verifyConsumerUtxoTransaction` on the same raw
+ * transaction: it carries the key's OWN derived 2-of-2 scripts and the
+ * key-verified input values. Signing re-checks that every input still spends
+ * from exactly that script (utxo-lib only enforces redeemScript consistency
+ * and skips the caller's witnessScript once an input is expanded, so the
+ * equality is checked here) and verifies the wallet's partial signature on
+ * every input before adding the key's own.
+ */
 export function signTransaction(
   rawTx: string,
   chain: keyof cryptos,
   privateKey: string,
-  redeemScript: string,
-  witnessScript: string,
-  utxos: utxo[], // same or bigger set than was used to construct the tx
+  verified: VerifiedConsumerUtxoTx,
 ): string {
   try {
     const libID = getLibId(chain);
     const network = utxolib.networks[libID];
-    const txhex = rawTx;
     let hashType = utxolib.Transaction.SIGHASH_ALL;
     if (blockchains[chain].hashType) {
       // only for BCH
@@ -199,34 +246,38 @@ export function signTransaction(
         utxolib.Transaction.SIGHASH_ALL |
         utxolib.Transaction.SIGHASH_BITCOINCASHBIP143;
     }
-    const keyPair = utxolib.ECPair.fromWIF(privateKey, network);
-    const txb = utxolib.TransactionBuilder.fromTransaction(
-      utxolib.Transaction.fromHex(txhex, network),
-      network,
+    const { scripts } = verified;
+    const { txb, inputs } = inspectConsumerUtxoTransaction(
+      rawTx,
+      chain,
+      scripts,
     );
+    if (inputs.length !== verified.inputs.length) {
+      throw new Error('Transaction inputs changed after verification');
+    }
+    const values = inputs.map((input, i) => {
+      const known = verified.inputs[i];
+      if (known.txid !== input.txid || known.vout !== input.vout) {
+        throw new Error('Transaction inputs changed after verification');
+      }
+      return new BigNumber(known.satoshis).toNumber();
+    });
+    verifyWalletPartialSignatures(txb, chain, scripts, values);
+    const keyPair = utxolib.ECPair.fromWIF(privateKey, network) as {
+      sign: (hash: Buffer) => Buffer;
+      getPublicKeyBuffer: () => Buffer;
+    };
+    if (!keyPair.getPublicKeyBuffer().equals(scripts.keyPubKey)) {
+      throw new Error('Signing key does not belong to this address');
+    }
     for (let i = 0; i < txb.inputs.length; i += 1) {
-      const hashHex = txb.tx.ins[i].hash.toString('hex');
-      const hash = getValueHexBuffer(hashHex);
-      const { index } = txb.tx.ins[i];
-      const utxoFound = utxos.find((x) => x.txid === hash && x.vout === index);
-      if (!utxoFound) {
-        throw new Error(`Could not find value for input ${hash}:${index}`);
-      }
-      let redeemScriptForSign;
-      let witnessScriptForSign;
-      if (redeemScript) {
-        redeemScriptForSign = Buffer.from(redeemScript, 'hex');
-      }
-      if (witnessScript) {
-        witnessScriptForSign = Buffer.from(witnessScript, 'hex');
-      }
       txb.sign(
         i,
         keyPair,
-        redeemScriptForSign,
+        scripts.redeemScript,
         hashType,
-        new BigNumber(utxoFound.satoshis).toNumber(),
-        witnessScriptForSign,
+        values[i],
+        scripts.witnessScript,
       );
     }
     const tx = txb.buildIncomplete();
@@ -301,6 +352,7 @@ export async function signAndBroadcastEVM(
   chain: keyof cryptos,
   privateKey: `0x${string}`, // ssp
   publicNonceKey: publicPrivateNonce, // ssp Key
+  expected: VerifiedConsumerEvmRequest, // from verifyConsumerEvmRequest
 ): Promise<string> {
   try {
     const blockchainConfig = blockchains[chain];
@@ -314,6 +366,32 @@ export async function signAndBroadcastEVM(
       accountAbstraction.userOperation.MultiSigUserOp.fromJson(
         multisigUserOpJSON,
       );
+
+    // EVM-8 / K5: sign only the hash the key recomputed from the displayed
+    // operation, with the signer set derived from the stored xpubs.
+    if (
+      typeof multiSigUserOp.opHash !== 'string' ||
+      multiSigUserOp.opHash.toLowerCase() !== expected.opHash.toLowerCase()
+    ) {
+      throw new Error('Operation hash does not match the verified operation');
+    }
+    const ownPubKey = schnorrSigner2.getPubKey().buffer.toString('hex');
+    const signerKeys = multiSigUserOp
+      ._getPublicKeys()
+      .map((k: { buffer: Buffer }) => k.buffer.toString('hex').toLowerCase())
+      .sort();
+    const expectedKeys = [
+      expected.walletPubKey.toLowerCase(),
+      expected.keyPubKey.toLowerCase(),
+    ].sort();
+    if (
+      ownPubKey.toLowerCase() !== expected.keyPubKey.toLowerCase() ||
+      signerKeys.length !== 2 ||
+      signerKeys[0] !== expectedKeys[0] ||
+      signerKeys[1] !== expectedKeys[1]
+    ) {
+      throw new Error('Operation signer keys are not this wallet and key');
+    }
 
     const kPrivate = new accountAbstraction.types.Key(
       Buffer.from(publicNonceKey.k, 'hex'),
@@ -406,24 +484,64 @@ export async function signAndBroadcastEVM(
  *
  * Returns the broadcast signature (used as txid for the existing TxSent UI).
  */
+/**
+ * The relay request could not be authenticated as this wallet's WK identity
+ * (no identity, no auth builder, or the builder returned nothing). Relay
+ * POST /v1/sol/* requires WK auth (RA-2): nothing is posted unsigned.
+ */
+export class RelayAuthUnavailableError extends Error {
+  constructor() {
+    super('Relay authentication unavailable');
+    this.name = 'RelayAuthUnavailableError';
+  }
+}
+
 export async function cosignAndBroadcastSOLTransaction(opts: {
   chain: keyof cryptos;
-  serializedTxBase64: string;
-  keyPubkeyBase58: string;
+  /** Unwrapped consumer request (bytes + wallet-supplied token hints). */
+  payload: ConsumerSolanaPayload;
+  /** Wallet + key leaves for the request path, from stored pubkey lists. */
+  leaves: ConsumerSolanaLeaves;
   keyPrivKeyHex: string;
   relayHost: string;
+  /** Native USD rate for the fee cap; 0/undefined = hard cap only. */
+  usdRate?: number;
+  /** RA-2: wkIdentity the broadcast is authenticated as. */
+  wkIdentity?: string;
+  /** RA-2: builds wkIdentity auth fields over the request body. */
+  createAuth?: (
+    body: Record<string, unknown>,
+  ) => Promise<Record<string, unknown> | null>;
 }): Promise<string> {
   const { Transaction, Keypair } = await import('@solana/web3.js');
+
+  // C-3 / CHN-1: re-run the approval screen's fail-closed decode on the
+  // exact bytes about to be signed, so what is signed is what was shown.
+  await decodeConsumerSolanaTransaction(
+    opts.chain,
+    opts.payload,
+    opts.leaves,
+    opts.usdRate,
+  );
+
+  // RA-2: POST /v1/sol/broadcast must carry WK auth. Without a way to build
+  // it, do not even sign — fail closed, nothing is posted unsigned.
+  const { wkIdentity, createAuth } = opts;
+  if (!wkIdentity || !createAuth) {
+    throw new RelayAuthUnavailableError();
+  }
 
   const keySecretKey = new Uint8Array(Buffer.from(opts.keyPrivKeyHex, 'hex'));
   let serializedTxBase64: string;
   try {
     const keyKeypair = Keypair.fromSecretKey(keySecretKey);
-    if (keyKeypair.publicKey.toBase58() !== opts.keyPubkeyBase58) {
+    if (keyKeypair.publicKey.toBase58() !== opts.leaves.keyLeaf) {
       throw new Error('Key privkey/pubkey mismatch');
     }
 
-    const tx = Transaction.from(Buffer.from(opts.serializedTxBase64, 'base64'));
+    const tx = Transaction.from(
+      Buffer.from(opts.payload.serializedTxBase64, 'base64'),
+    );
     tx.partialSign(keyKeypair);
 
     serializedTxBase64 = tx
@@ -436,11 +554,24 @@ export async function cosignAndBroadcastSOLTransaction(opts: {
     // zeroing, so an explicit wipe defends against heap inspection.
     keySecretKey.fill(0);
   }
+  const body: Record<string, unknown> = {
+    chain: opts.chain,
+    serializedTxBase64,
+    wkIdentity,
+  };
+  // Same convention as POST /v1/action ('action' auth): it binds a hash of
+  // {chain, serializedTxBase64, wkIdentity} and is merged next to them.
+  // No auth → no post (fail closed).
+  const auth = await createAuth({ ...body }).catch(() => null);
+  if (!auth) {
+    throw new RelayAuthUnavailableError();
+  }
+  Object.assign(body, auth);
   const url = `https://${opts.relayHost}/v1/sol/broadcast`;
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chain: opts.chain, serializedTxBase64 }),
+    body: JSON.stringify(body),
   });
   if (!resp.ok) {
     throw new Error(`Relay broadcast failed: ${resp.status}`);

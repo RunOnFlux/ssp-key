@@ -12,16 +12,68 @@ import {
   signTransaction,
   finaliseTransaction,
   broadcastTx,
-  fetchUtxos,
   signAndBroadcastEVM,
   selectPublicNonce,
   cosignAndBroadcastSOLTransaction,
+  RelayAuthUnavailableError,
 } from '../../../lib/constructTx';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
+import {
+  consumeEvmSigningApproval,
+  evmSigningRequestDigest,
+} from '../../../lib/evmSigningApproval';
 import { signMessage } from '../../../lib/relayAuth';
+import {
+  checkWkSigningRequest,
+  deriveIdentityPubKeyFromXpub,
+} from '../../../lib/wkMessage';
+import { getCryptoUsdRate } from '../../../lib/rates';
+import {
+  buildEip191Preimage,
+  parseConsumerDerivationPath,
+  parseEip191Preimage,
+} from '../../../lib/consumerGuards';
+import { verifyConsumerUtxoTransaction } from '../../../lib/consumerUtxo';
+import {
+  parseConsumerSolanaPayload,
+  resolveConsumerSolanaLeaves,
+} from '../../../lib/consumerSolana';
+import {
+  assertConsumerEvmFeeWithinCap,
+  verifyConsumerEvmRequest,
+} from '../../../lib/consumerEvm';
+import {
+  consumerUtxoDeps,
+  decodeEVMTransactionForApproval,
+} from '../../../lib/transactions';
 import { setSspKeyPublicNonces } from '../../../store/ssp';
+import { persistor } from '../../../store';
+import {
+  recordUsedNonce,
+  withoutTombstoned,
+} from '../../../lib/enterpriseNonceLedger';
 import { cryptos, utxo, publicNonce, publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
+
+/**
+ * K4: make a consumer Schnorr nonce burn durable BEFORE any partial signature
+ * is computed with it. MuSig2 leaks the key once one nonce pair signs three
+ * messages, so a burn that only lives in memory (lost on a crash or kill
+ * between signing and redux-persist's next write) is not a burn.
+ *
+ * Order: tombstone in the used-nonce ledger (synchronous, read-back
+ * verified), shrink the pool, then flush redux-persist to MMKV. Any failure
+ * throws, so the caller never signs or sends.
+ */
+async function burnConsumerNonce(
+  dispatch: HomeActionContext['dispatch'],
+  kPublic: string,
+  remainingPoolCiphertext: string,
+): Promise<void> {
+  recordUsedNonce(kPublic);
+  dispatch(setSspKeyPublicNonces(remainingPoolCiphertext));
+  await persistor.flush();
+}
 
 export const generateAddressDetailsForSending = (
   chain: keyof cryptos,
@@ -29,9 +81,8 @@ export const generateAddressDetailsForSending = (
   decryptedXpubWallet: string,
   decryptedXpubKey: string,
 ) => {
-  const splittedDerPath = path.split('-');
-  const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
-  const addressIndex = Number(splittedDerPath[1]);
+  // KEY-8: only the receive (0) / change (1) branches are consumer paths.
+  const { typeIndex, addressIndex } = parseConsumerDerivationPath(path);
   const addrInfo = generateMultisigAddress(
     decryptedXpubWallet,
     decryptedXpubKey,
@@ -142,6 +193,7 @@ export const approveTransaction = async (
     publicNonces,
     dispatch,
     postAction,
+    createWkAuth,
     displayMessage,
     t,
     sspWalletKeyInternalIdentity,
@@ -178,25 +230,27 @@ export const approveTransaction = async (
     const xpubKeyDecrypted = xpubk.toString(CryptoJS.enc.Utf8);
     const xpubw = CryptoJS.AES.decrypt(xpubWallet, pwForEncryption);
     const xpubKeyWalletDecrypted = xpubw.toString(CryptoJS.enc.Utf8);
-
-    const addressDetails = generateAddressDetailsForSending(
-      chain,
-      derivationPath,
-      xpubKeyWalletDecrypted,
-      xpubKeyDecrypted,
-    );
-    let utxos = suggestedUtxos;
-    // if utxos are not provided, fetch them
-    if (!(suggestedUtxos && suggestedUtxos.length > 0)) {
-      utxos = await fetchUtxos(addressDetails.address, chain, 2); // in ssp key, we want to fetch both confirmed and unconfirmed utxos
+    if (!xpubKeyDecrypted || !xpubKeyWalletDecrypted) {
+      throw new Error('Unable to decrypt stored data');
     }
+    // Everything below is bound to the key's OWN derivation for this path
+    // (wallet xpub stored at pairing + own xpub). The request's `utxos`,
+    // embedded scripts, public keys and hashes are never trusted.
+    const keyMaterial = {
+      path: derivationPath,
+      xpubWallet: xpubKeyWalletDecrypted,
+      xpubKey: xpubKeyDecrypted,
+    };
+    // Request-supplied UTXO values are deliberately unused (H-2 / UTXO-4):
+    // fee and signing values come from the key's own lookup.
+    void suggestedUtxos;
+
+    // KEY-8: refuses typeIndex other than 0 / 1 before any key is derived.
+    const { typeIndex, addressIndex } =
+      parseConsumerDerivationPath(derivationPath);
 
     const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
     const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-
-    const splittedDerPath = derivationPath.split('-');
-    const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
-    const addressIndex = Number(splittedDerPath[1]);
 
     const keyPair = generateAddressKeypair(
       xprivKeyDecrypted,
@@ -206,9 +260,36 @@ export const approveTransaction = async (
     );
     let ttxid = '';
     if (blockchains[chain].chainType === 'evm') {
+      // EVM-8 / K5: recompute the userOp hash from the displayed operation
+      // with this device's EntryPoint + chainId, and bind the signer set and
+      // sender to the stored xpubs — BEFORE a nonce is burned.
+      const verifiedEvm = verifyConsumerEvmRequest(
+        rawTransaction,
+        chain,
+        keyMaterial,
+      );
+      // Item 7: the same fee cap the approval screen applied, before a nonce
+      // is burned.
+      assertConsumerEvmFeeWithinCap(
+        rawTransaction,
+        chain,
+        await getCryptoUsdRate(chain).catch(() => 0),
+      );
+      // C-4: the same call-safety rules the approval screen applied.
+      const decodedEvm = await decodeEVMTransactionForApproval(
+        rawTransaction,
+        chain,
+      );
+      if (decodedEvm.amount === 'decodingError') {
+        throw new Error(decodedEvm.error ?? t('home:err_tx_decode'));
+      }
       const pNs = CryptoJS.AES.decrypt(publicNonces, pwForEncryption);
       const pNsDecrypted = pNs.toString(CryptoJS.enc.Utf8);
-      const pubNonces = JSON.parse(pNsDecrypted) as publicPrivateNonce[];
+      // Nonces already recorded as used never sign again, even if a stale
+      // pool write brought them back.
+      const pubNonces = withoutTombstoned(
+        JSON.parse(pNsDecrypted) as publicPrivateNonce[],
+      );
       const publicNonceKey = selectPublicNonce(rawTransaction, pubNonces);
       // crucial delete nonce from publicNonces
       const newPublicNonces = pubNonces.filter(
@@ -220,48 +301,60 @@ export const approveTransaction = async (
         stringifiedNonces,
         pwForEncryption,
       ).toString();
-      dispatch(setSspKeyPublicNonces(encryptedNonces));
+      // K4: the burn is on disk before any partial signature exists.
+      await burnConsumerNonce(
+        dispatch,
+        publicNonceKey.kPublic,
+        encryptedNonces,
+      );
       // sign and broadcast
       ttxid = await signAndBroadcastEVM(
         rawTransaction,
         chain,
         keyPair.privKey as `0x${string}`,
         publicNonceKey,
+        verifiedEvm,
       );
     } else if (blockchains[chain].chainType === 'sol') {
-      // Wallet pre-signed the outer tx with its leaf. Key adds its own
-      // leaf sig + broadcasts directly. The tx may include a permissionless
-      // initialize_multisig ix at the head for first-send-per-vault — Key
-      // doesn't need to know; it just signs and broadcasts.
-      // SPL sends arrive JSON-wrapped (`{ unsignedTxBase64, tokenMint, ...}`)
-      // so the approval screen can show the real token symbol; unwrap
-      // here so we sign the raw proposal bytes, not the JSON string.
-      let serializedTxBase64 = rawTransaction;
-      try {
-        const parsed = JSON.parse(rawTransaction) as {
-          unsignedTxBase64?: string;
-        };
-        if (parsed && typeof parsed.unsignedTxBase64 === 'string') {
-          serializedTxBase64 = parsed.unsignedTxBase64;
-        }
-      } catch {
-        // Not JSON — bare base64 from older wallet, use as-is.
-      }
+      // Wallet pre-signed the outer tx with its leaf. The key re-runs the
+      // fail-closed consumer decode on the exact bytes (bound to its own
+      // vault, both leaves derived from stored keys) inside
+      // cosignAndBroadcastSOLTransaction, then adds its leaf signature.
+      // SPL sends arrive JSON-wrapped (`{ unsignedTxBase64, tokenMint,
+      // splRecipientOwner, splMint, ...}`); bare base64 from older wallets.
+      const payload = parseConsumerSolanaPayload(rawTransaction);
+      const leaves = resolveConsumerSolanaLeaves(
+        xpubKeyWalletDecrypted,
+        xpubKeyDecrypted,
+        derivationPath,
+      );
+      const usdRate = await getCryptoUsdRate(chain);
       ttxid = await cosignAndBroadcastSOLTransaction({
         chain,
-        serializedTxBase64,
-        keyPubkeyBase58: keyPair.pubKey,
+        payload,
+        leaves,
         keyPrivKeyHex: keyPair.privKey,
         relayHost: sspConfig().relay,
+        usdRate,
+        wkIdentity: sspWalletKeyInternalIdentity,
+        createAuth: (body) =>
+          createWkAuth('action', sspWalletKeyInternalIdentity, body),
       });
     } else {
+      // C-2 / H-2 / UTXO-5 / UTXO-8: re-verify scripts, values, fee cap and
+      // the wallet's signatures against the key's own data, then sign with
+      // exactly those values.
+      const verifiedUtxo = await verifyConsumerUtxoTransaction(
+        rawTransaction,
+        chain,
+        keyMaterial,
+        consumerUtxoDeps,
+      );
       const signedTx = signTransaction(
         rawTransaction,
         chain,
         keyPair.privKey,
-        addressDetails.redeemScript ?? '',
-        addressDetails.witnessScript ?? '',
-        utxos,
+        verifiedUtxo,
       );
       const finalTx = finaliseTransaction(signedTx, chain);
       ttxid = await broadcastTx(finalTx, chain);
@@ -287,7 +380,11 @@ export const approveTransaction = async (
     setTxid(ttxid);
   } catch (error) {
     const txErrMsg =
-      error instanceof Error ? error.message : t('home:err_tx_failed');
+      error instanceof RelayAuthUnavailableError
+        ? t('home:err_relay_auth_unavailable')
+        : error instanceof Error
+          ? error.message
+          : t('home:err_tx_failed');
     displayMessage('error', txErrMsg);
     console.log(error);
   } finally {
@@ -309,6 +406,7 @@ export const handleSignWkAction = async (ctx: HomeActionContext) => {
   } = ctx;
   if (!wkSigningData) return;
 
+  let refused = false;
   try {
     // Get decryption keys from keychain
     const encryptionKey = await Keychain.getGenericPassword({
@@ -333,9 +431,34 @@ export const handleSignWkAction = async (ctx: HomeActionContext) => {
     const pwForEncryption = encryptionKey.password + passwordDecryptedString;
 
     // Get the identity chain state
-    const { xprivKey: idXprivKey } = identityChainState || {};
+    const { xprivKey: idXprivKey, xpubWallet: idXpubWallet } =
+      identityChainState || {};
     if (!idXprivKey) {
       throw new Error('xprivKey not available');
+    }
+
+    // H-7 / KEY-1: re-check right before signing — the message must classify
+    // as an SSP login / critical action / generic sign-in (never a vault-xpub,
+    // chain-sync or recovery attestation, never relay-auth JSON), and it must
+    // carry a valid signature by the PAIRED wallet's identity key, which this
+    // device derives itself from the wallet identity xpub stored at pairing.
+    const walletIdentityXpub = idXpubWallet
+      ? CryptoJS.AES.decrypt(idXpubWallet, pwForEncryption).toString(
+          CryptoJS.enc.Utf8,
+        )
+      : '';
+    const check = checkWkSigningRequest({
+      request: wkSigningData,
+      ownWkIdentity: sspWalletKeyInternalIdentity,
+      pairedWalletIdentityPubKey: deriveIdentityPubKeyFromXpub(
+        walletIdentityXpub,
+        blockchains[identityChain].bip32,
+      ),
+      messagePrefix: blockchains[identityChain].messagePrefix,
+    });
+    if (!check.ok) {
+      refused = true;
+      throw new Error(`WK signing request refused: ${check.reason}`);
     }
 
     // Decrypt xpriv for signing
@@ -380,7 +503,19 @@ export const handleSignWkAction = async (ctx: HomeActionContext) => {
     displayMessage('success', t('home:wk_signing_success'));
   } catch (error) {
     console.error('[WK Signing] Error:', error);
-    displayMessage('error', t('home:err_signing_failed'));
+    if (refused) {
+      displayMessage('error', t('home:err_wk_request_refused'));
+      // Tell the wallet right away instead of letting it wait out its timeout.
+      postAction(
+        'wksigningrejected',
+        '{}',
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      ).catch((postError) => console.log(postError));
+    } else {
+      displayMessage('error', t('home:err_signing_failed'));
+    }
   } finally {
     setWkSigningData(null);
     clearWkSigningRequest?.();
@@ -406,6 +541,14 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
   } = ctx;
   // Handle both socket-received and scanned/manual EVM signing requests requests
   if (!evmSigningData) return;
+
+  // Item 4: sign only the exact request the user approved on screen. A
+  // request swapped in while authentication was open has another digest and
+  // is refused here, before any nonce is touched; it stays open for review.
+  if (!consumeEvmSigningApproval(evmSigningRequestDigest(evmSigningData))) {
+    displayMessage('error', t('home:err_vault_request_changed'), 8000);
+    return;
+  }
 
   // Hoist sensitive vars so they can be cleared in catch/finally
   let pwForEncryption = '';
@@ -437,10 +580,29 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     );
     pwForEncryption = encryptionKey.password + passwordDecryptedString;
 
+    // KEY-8: consumer signing keys live on branch 0 / 1 only.
+    const { typeIndex, addressIndex } = parseConsumerDerivationPath(
+      evmSigningData.walletInUse,
+    );
+    if (
+      blockchains[evmSigningData.chain as keyof cryptos]?.chainType !== 'evm'
+    ) {
+      throw new Error('Not an EVM chain');
+    }
+    // AA-2: the only accepted payload is an EIP-191 personal message. The
+    // preimage is rebuilt from the text the approval screen displayed, and
+    // anything else (raw strings, typed-data JSON, `\x19\x01…` bytes) is
+    // refused BEFORE a nonce is burned — never a signature over a raw digest.
+    const messageText = parseEip191Preimage(evmSigningData.data);
+    const preimageToSign = buildEip191Preimage(messageText);
+
     // Use the same nonce management as normal transactions
     const pNs = CryptoJS.AES.decrypt(publicNonces, pwForEncryption);
     const pNsDecrypted = pNs.toString(CryptoJS.enc.Utf8);
-    const pubNonces = JSON.parse(pNsDecrypted) as publicPrivateNonce[];
+    // Nonces recorded as used never sign again (resurrection backstop).
+    const pubNonces = withoutTombstoned(
+      JSON.parse(pNsDecrypted) as publicPrivateNonce[],
+    );
 
     // const EVMSigningRequest = {
     //   sigOne: result.sigOne,
@@ -478,17 +640,11 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
       stringifiedNonces,
       pwForEncryption,
     ).toString();
-    dispatch(setSspKeyPublicNonces(encryptedNonces));
+    // K4: the burn is on disk before the partial signature is computed.
+    await burnConsumerNonce(dispatch, noncesToUse.kPublic, encryptedNonces);
 
     const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
     xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-
-    const splittedDerPath = evmSigningData.walletInUse.split('-');
-    if (!splittedDerPath) {
-      throw new Error('Invalid walletInUse');
-    }
-    const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
-    const addressIndex = Number(splittedDerPath[1]);
 
     const keyPair = generateAddressKeypair(
       xprivKeyDecrypted,
@@ -514,7 +670,7 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     ); // ssp wallet
 
     const result = continueSigningSchnorrMultisig(
-      evmSigningData.data || '',
+      preimageToSign,
       keyPair,
       publicKeyWallet,
       evmSigningData.pubNoncesOne || {

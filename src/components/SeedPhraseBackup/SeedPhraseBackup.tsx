@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import { useAppPrivacyCover } from '../../BlurOverlay';
 import { MONOSPACE_FONT } from '../../lib/typography';
 import RiskBanner from '../request/RiskBanner';
 import { Card, SecondaryButton } from '../ui';
@@ -11,6 +12,10 @@ import { Card, SecondaryButton } from '../ui';
  * until revealed. Words are deliberately not selectable (mirrors the
  * wallet's canvas seed display): the backup is meant to be written down,
  * not put on the clipboard.
+ *
+ * KEY-9: while the app is inactive / in the background the words are masked
+ * even when revealed, so they never reach an app-switcher snapshot (the
+ * privacy cover alone depends on the overlay committing in time).
  */
 export const SeedPhraseGrid = ({
   phrase,
@@ -22,6 +27,8 @@ export const SeedPhraseGrid = ({
   visible: boolean;
 }) => {
   const { Colors, Fonts } = useTheme();
+  const isCovered = useAppPrivacyCover();
+  const reveal = visible && !isCovered;
   const words = phrase.split(' ').filter((word) => word.length > 0);
   // masked placeholder chips until the phrase is available
   const displayWords = words.length > 0 ? words : Array<string>(12).fill('');
@@ -51,7 +58,7 @@ export const SeedPhraseGrid = ({
                 { color: Colors.textGray800 },
               ]}
             >
-              {visible && word ? word : '•••••'}
+              {reveal && word ? word : '•••••'}
             </Text>
           </View>
         ))}

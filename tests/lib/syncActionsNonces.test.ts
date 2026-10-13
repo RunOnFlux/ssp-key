@@ -34,6 +34,7 @@ jest.mock('@storage/ssp', () => ({
 
 // no 3s spacing between the per-chain posts in tests
 jest.mock('../../src/lib/chainSyncRequest', () => ({
+  ...jest.requireActual('../../src/lib/chainSyncRequest'),
   CHAIN_SYNC_POST_SPACING_MS: 0,
 }));
 
@@ -116,6 +117,17 @@ const buildContext = (
     setChainSyncData: jest.fn(),
     setBatchVerifyWords: jest.fn(),
     identityVerifyEntryRef: { current: null },
+    identityChain: 'btc',
+    identityChainState: {},
+    // RA-2: every /v1/sync post is signed
+    createWkAuth: jest.fn(() =>
+      Promise.resolve({
+        signature: 'sig',
+        message: 'msg',
+        publicKey: 'pub',
+        witnessScript: 'identity-script',
+      }),
+    ),
   }) as unknown as HomeActionContext;
 
 const postedSyncData = () =>

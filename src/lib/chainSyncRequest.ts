@@ -194,3 +194,42 @@ export function chainSyncSymbols(chains: (keyof cryptos)[]): string {
     .map((chain) => blockchains[chain]?.symbol ?? String(chain))
     .join(', ');
 }
+
+/**
+ * CS-1: the message SSP Key signs with its identity key (/10/0) for every
+ * non-identity chain it answers, attached to the sync payload as
+ * `keyXpubSignature`. SSP Wallet rebuilds this exact string from the sync
+ * document and verifies it against the Key identity pubkey it learned at the
+ * (verification-code gated) identity pairing — so a relay that swaps `keyXpub`
+ * cannot produce a valid attestation. `keyXpub` is the exact value posted
+ * (for Solana: the JSON array of 20 leaf pubkeys). Keep byte-identical with
+ * ssp-wallet's verifier.
+ */
+export function chainSyncAttestationMessage(
+  chain: string,
+  walletXpub: string,
+  keyXpub: string,
+): string {
+  return `SSP_CHAIN_SYNC:${chain}:${walletXpub}:${keyXpub}`;
+}
+
+/**
+ * CS-3: how a sync for `chain` relates to what this device already stores.
+ *   'new'     — the chain was never paired on this device
+ *   'same'    — the stored wallet xpub is the one being supplied (idempotent)
+ *   'replace' — a DIFFERENT wallet xpub (or one this device can no longer
+ *               read) is stored; overwriting it silently is refused, the user
+ *               must explicitly confirm the re-pair first.
+ *
+ * @param storedWalletXpub the decrypted stored value, `null` when nothing is
+ *   stored. An empty string means a stored blob that did not decrypt.
+ */
+export type PairingChange = 'new' | 'same' | 'replace';
+
+export function classifyPairingChange(
+  storedWalletXpub: string | null,
+  suppliedWalletXpub: string,
+): PairingChange {
+  if (storedWalletXpub === null) return 'new';
+  return storedWalletXpub === suppliedWalletXpub ? 'same' : 'replace';
+}
