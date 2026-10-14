@@ -331,3 +331,32 @@ describe('relay action parity between transports', () => {
     expect([...listened].sort()).toEqual([...KEY_RELAY_ACTIONS].sort());
   });
 });
+
+describe('Kaspa (kas) routing', () => {
+  it('registers a store slice for kas and accepts it as a relay chain', () => {
+    const state = store.getState() as unknown as Record<string, unknown>;
+    expect(isSupportedChain('kas')).toBe(true);
+    expect(state.kas).toEqual(
+      expect.objectContaining({ xpubWallet: '', xpubKey: '', xprivKey: '' }),
+    );
+  });
+
+  it('routes a kas tx whose payload is a signing-bundle JSON string', () => {
+    const handlers = makeHandlers();
+    const bundle = JSON.stringify({
+      format: 'kaspa-core-signing-bundle',
+      version: 1,
+      tx: {},
+      inputs: [],
+      partials: [],
+    });
+    expect(
+      routeRelayAction(
+        { action: 'tx', payload: bundle, chain: 'kas', path: '0-3' },
+        handlers,
+      ),
+    ).toBe(true);
+    // passed through verbatim; the kas decode derives the vault itself
+    expect(handlers.onTx).toHaveBeenCalledWith(bundle, 'kas', '0-3', []);
+  });
+});

@@ -26,6 +26,8 @@ import {
 } from '../../../types';
 import { type VaultDecodedTx } from '../../../lib/transactions';
 import { type VaultSolDecodeState } from '../../../lib/vaultSolanaDecode';
+import { type KasVaultDecodeState } from '../../../lib/kaspaVault';
+import { type KasApprovedSummary } from '../../../lib/kaspa';
 import { parseProposalSimulation } from '../../../lib/vaultSimulation';
 import { type ParsedChainSyncRequest } from '../../../lib/chainSyncRequest';
 import { type RecoveryRequestPayload } from '../../../lib/recoveryHandler';
@@ -46,12 +48,16 @@ import { type ChainSyncProgressState } from './HomeProgress';
 const HomeRequests = (props: {
   submittingTransaction: boolean;
   rawTx: string;
+  txPath: string;
   xpubWallet: string;
   xpubKey: string;
   activeChain: keyof cryptos;
   txUtxos: utxo[];
   activityStatus: boolean;
-  handleTransactionRequestAction: (status: boolean) => Promise<void>;
+  handleTransactionRequestAction: (
+    status: boolean,
+    kasApproved?: KasApprovedSummary,
+  ) => Promise<void>;
   syncReq: string;
   handleSynchronisationRequestAction: (status: boolean) => void;
   chainSyncData: ParsedChainSyncRequest | null;
@@ -78,6 +84,7 @@ const HomeRequests = (props: {
   vaultSigningData: vaultSigningRequest | null;
   decodedVaultTx: VaultDecodedTx | null;
   solDecodeState: VaultSolDecodeState | null;
+  kasDecodeState: KasVaultDecodeState | null;
   handleVaultSigningRequestAction: (status: boolean) => Promise<void>;
   fluxNodeStartData: Record<string, unknown> | null;
   handleFluxNodeStartAction: (status: boolean) => Promise<void>;
@@ -91,6 +98,7 @@ const HomeRequests = (props: {
   const {
     submittingTransaction,
     rawTx,
+    txPath,
     xpubWallet,
     xpubKey,
     activeChain,
@@ -123,6 +131,7 @@ const HomeRequests = (props: {
     vaultSigningData,
     decodedVaultTx,
     solDecodeState,
+    kasDecodeState,
     handleVaultSigningRequestAction,
     fluxNodeStartData,
     handleFluxNodeStartAction,
@@ -148,6 +157,9 @@ const HomeRequests = (props: {
           rawTx={rawTx}
           chain={activeChain}
           utxos={txUtxos}
+          path={txPath}
+          xpubWallet={xpubWallet}
+          xpubKey={xpubKey}
           activityStatus={activityStatus}
           actionStatus={handleTransactionRequestAction}
         />
@@ -251,6 +263,17 @@ const HomeRequests = (props: {
             blockchains[vaultSigningData.chain as keyof cryptos]?.chainType ===
               'sol' && solDecodeState === null
           }
+          // Kaspa fails closed on BOTH a pending (null) and a failed decode.
+          kasDecodeBlocked={
+            blockchains[vaultSigningData.chain as keyof cryptos]?.chainType ===
+              'kas' && kasDecodeState?.status !== 'ok'
+          }
+          kasDecodePending={
+            blockchains[vaultSigningData.chain as keyof cryptos]?.chainType ===
+              'kas' && kasDecodeState === null
+          }
+          kasDecodeReasons={kasDecodeState?.reasons}
+          kasWarnings={kasDecodeState?.warnings}
           signMessage={vaultSigningData.signMessage}
           dappOrigin={vaultSigningData.dappOrigin}
         />

@@ -18,6 +18,10 @@ import {
   applyVaultSolDecode,
   VaultSolDecodeState,
 } from '../../../lib/vaultSolanaDecode';
+import {
+  applyVaultKasDecode,
+  type KasVaultDecodeState,
+} from '../../../lib/kaspaVault';
 import { useSocket } from '../../../hooks/useSocket';
 import type { RecoveryRequestPayload } from '../../../lib/recoveryHandler';
 
@@ -277,7 +281,11 @@ export function usePendingRequests(
   );
   const [solDecodeState, setSolDecodeState] =
     useState<VaultSolDecodeState | null>(null);
-  // Monotonic token guarding the async sol decode — a decode started for an
+  // Kaspa vault decode verdict: null while pending. Approval is allowed ONLY
+  // from { status: 'ok' } (null and 'failed' both block).
+  const [kasDecodeState, setKasDecodeState] =
+    useState<KasVaultDecodeState | null>(null);
+  // Monotonic token guarding the async sol AND kas decodes — a decode started for an
   // older vault payload must never overwrite the verdict of a newer one
   // (bumped on every new request and on reject/completion cleanup).
   const solDecodeSeqRef = useRef(0);
@@ -362,7 +370,11 @@ export function usePendingRequests(
   const handleEvmSigningRequest = (data: evmSigningRequest) => {
     // never log the request body — it carries the wallet's partial signature
     console.log('[EVM Signing] request received:', data.chain);
-    if (!isSupportedChain(data.chain)) {
+    if (
+      !isSupportedChain(data.chain) ||
+      // Kaspa message signing is out of scope (KASPA_SSP_CONTRACT.md §6)
+      blockchains[data.chain].chainType === 'kas'
+    ) {
       rejectUnsupportedChain('evmsigning', data.chain);
       return;
     }
@@ -426,6 +438,7 @@ export function usePendingRequests(
     const decodeSeq = solDecodeSeqRef.current;
     setDecodedVaultTx(null);
     setSolDecodeState(null);
+    setKasDecodeState(null);
     // Decode raw transaction independently for trustless verification
     if (data.chain) {
       const chainConf = blockchains[data.chain as keyof cryptos];
@@ -470,6 +483,24 @@ export function usePendingRequests(
             }
           },
         );
+      } else if (chainConf?.chainType === 'kas') {
+        // Kaspa: open the bundle (walletSignedHex or rawUnsignedTx) against
+        // this device's own UTXO lookup of the vault addresses, describe it
+        // and compare with the relay's recipients and fee. Never the
+        // utxolib path below. Seq-guarded like the sol decode.
+        void applyVaultKasDecode(
+          data,
+          (tx) => {
+            if (solDecodeSeqRef.current === decodeSeq) {
+              setDecodedVaultTx(tx);
+            }
+          },
+          (state) => {
+            if (solDecodeSeqRef.current === decodeSeq) {
+              setKasDecodeState(state);
+            }
+          },
+        );
       } else if (data.rawUnsignedTx) {
         // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
         const inputs = Array.isArray(data.inputDetails)
@@ -496,10 +527,11 @@ export function usePendingRequests(
   // Clears the vault-signing pending state. Exact statement sequence the
   // reject path and the sign-completion finally block in Home used inline.
   const clearVaultSigningState = () => {
-    solDecodeSeqRef.current += 1; // discard any in-flight sol decode
+    solDecodeSeqRef.current += 1; // discard any in-flight sol/kas decode
     setVaultSigningData(null);
     setDecodedVaultTx(null);
     setSolDecodeState(null);
+    setKasDecodeState(null);
   };
 
   useEffect(() => {
@@ -595,6 +627,7 @@ export function usePendingRequests(
     vaultSigningData,
     decodedVaultTx,
     solDecodeState,
+    kasDecodeState,
     fluxNodeStartData,
     setFluxNodeStartData,
     keyNonceSyncDialogOpen,

@@ -21,6 +21,7 @@ import {
   publicPrivateNonce,
 } from '../types';
 import { blockchains } from '@storage/blockchains';
+import { generateMultisigAddressKAS, generateAddressKeypairKAS } from './kaspa';
 
 function getSolanaProgramId(chain: keyof cryptos): PublicKey {
   const id = blockchains[chain].programId;
@@ -164,6 +165,17 @@ export function generateMultisigAddress(
       walletPubkeys[idx],
       keyPubkeys[idx],
       0, // vaultIndex — SSP uses single vault per multisig
+      chain,
+    );
+  }
+  if (blockchains[chain].chainType === 'kas') {
+    // Kaspa: P2SH 2-of-2 over the sorted x-only Schnorr leaf keys
+    // (KASPA_SSP_CONTRACT.md §2). No witness script.
+    return generateMultisigAddressKAS(
+      xpub1,
+      xpub2,
+      typeIndex,
+      addressIndex,
       chain,
     );
   }
@@ -468,6 +480,10 @@ export function generateAddressKeypair(
   }
   if (chainType === 'sol') {
     return generateAddressKeypairSOL(xpriv, typeIndex, addressIndex, chain);
+  }
+  if (chainType === 'kas') {
+    // privKey: raw 32-byte key (hex); pubKey: x-only Schnorr key (hex)
+    return generateAddressKeypairKAS(xpriv, typeIndex, addressIndex, chain);
   }
   const libID = getLibId(chain);
   const bipParams = blockchains[chain].bip32;

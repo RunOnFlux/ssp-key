@@ -11,11 +11,17 @@ import {
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import BigNumber from 'bignumber.js';
+import * as CryptoJS from 'crypto-js';
+import * as Keychain from 'react-native-keychain';
 import Authentication from '../Authentication/Authentication';
 import { useTheme } from '../../hooks';
-import { decodeTransactionForApproval } from '../../lib/transactions';
+import {
+  decodeTransactionForApproval,
+  type KasApprovalContext,
+} from '../../lib/transactions';
 import { decodeErc20Calldata } from '../../lib/calldataDecode';
 import { truncateAddress } from '../../lib/addressDisplay';
+import type { KasApprovedSummary } from '../../lib/kaspa';
 import { getCryptoUsdRate, formatUsdAmount } from '../../lib/rates';
 import { cryptos, utxo } from '../../types';
 
@@ -30,6 +36,43 @@ import {
   AdvancedSection,
   SlideToApprove,
 } from '../request';
+
+/**
+ * Kaspa decode context: the vault is derived on this device from the pair's
+ * stored (encrypted) xpubs + the request path — never from the payload.
+ */
+async function kasApprovalContext(
+  encryptedXpubWallet: string,
+  encryptedXpubKey: string,
+  path: string,
+): Promise<KasApprovalContext> {
+  const encryptionKey = await Keychain.getGenericPassword({
+    service: 'enc_key',
+  });
+  const passwordData = await Keychain.getGenericPassword({
+    service: 'sspkey_pw',
+  });
+  if (!passwordData || !encryptionKey) {
+    throw new Error('Unable to decrypt stored data');
+  }
+  const password = CryptoJS.AES.decrypt(
+    passwordData.password,
+    encryptionKey.password,
+  ).toString(CryptoJS.enc.Utf8);
+  const pwForEncryption = encryptionKey.password + password;
+  const xpubWallet = CryptoJS.AES.decrypt(
+    encryptedXpubWallet,
+    pwForEncryption,
+  ).toString(CryptoJS.enc.Utf8);
+  const xpubKey = CryptoJS.AES.decrypt(
+    encryptedXpubKey,
+    pwForEncryption,
+  ).toString(CryptoJS.enc.Utf8);
+  if (!xpubWallet || !xpubKey) {
+    throw new Error('Kaspa is not synced with SSP Wallet');
+  }
+  return { xpubWallet, xpubKey, path };
+}
 
 /**
  * Consumer transaction approval — rebuilt on the shared request blocks.
@@ -50,8 +93,15 @@ const TransactionRequest = (props: {
   rawTx: string;
   chain: keyof cryptos;
   utxos: utxo[];
+  // `typeIndex-addressIndex` of the sending vault plus the pair's ENCRYPTED
+  // xpubs; used by chains whose decode derives the vault on-device (Kaspa).
+  path?: string;
+  xpubWallet?: string;
+  xpubKey?: string;
   activityStatus: boolean;
-  actionStatus: (status: boolean) => void;
+  // Kaspa approvals hand back exactly what was displayed; the signing path
+  // refuses unless its own re-description is identical.
+  actionStatus: (status: boolean, kasApproved?: KasApprovedSummary) => void;
 }) => {
   // Monotonic decode token. Every decode run captures its value; a run whose
   // token is no longer current has been superseded by a newer payload and
@@ -76,6 +126,13 @@ const TransactionRequest = (props: {
   const [decoding, setDecoding] = useState(true);
   const [decodeFailed, setDecodeFailed] = useState(false);
   const [multiRecipient, setMultiRecipient] = useState(false);
+  // kaspa-core describeTransaction warnings for the current payload
+  const [txWarnings, setTxWarnings] = useState<string[]>([]);
+  // Kaspa: the displayed summary of the CURRENT payload (undefined until its
+  // decode resolves). Approval of a kas payload without one never signs.
+  const [kasApproved, setKasApproved] = useState<
+    KasApprovedSummary | undefined
+  >(undefined);
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
 
@@ -84,6 +141,13 @@ const TransactionRequest = (props: {
     if (decoding || decodeFailed) {
       // Single choke point for BOTH approve paths (slider and a completed
       // Authentication): what was not decoded and displayed is never signed.
+      return;
+    }
+    if (blockchainConfig.chainType === 'kas') {
+      if (!kasApproved) {
+        return; // nothing displayed for this payload — never sign it
+      }
+      props.actionStatus(true, kasApproved);
       return;
     }
     props.actionStatus(true);
@@ -129,6 +193,8 @@ const TransactionRequest = (props: {
     setReceiverAddress('');
     setSenderAddress('');
     setMultiRecipient(false);
+    setTxWarnings([]);
+    setKasApproved(undefined);
     setToken('');
     setTokenSymbol('');
     setTxData('');
@@ -136,11 +202,29 @@ const TransactionRequest = (props: {
     setUsdRate(0); // never show a stale fiat value on a re-used component
     void (async function () {
       try {
-        const txInfo = await decodeTransactionForApproval(
-          props.rawTx,
-          props.chain,
-          props.utxos,
-        );
+        const isKas = blockchains[props.chain].chainType === 'kas';
+        const kasContext = isKas
+          ? await kasApprovalContext(
+              props.xpubWallet ?? '',
+              props.xpubKey ?? '',
+              props.path ?? '',
+            )
+          : undefined;
+        if (!isCurrentDecode()) {
+          return;
+        }
+        const txInfo = kasContext
+          ? await decodeTransactionForApproval(
+              props.rawTx,
+              props.chain,
+              props.utxos,
+              kasContext,
+            )
+          : await decodeTransactionForApproval(
+              props.rawTx,
+              props.chain,
+              props.utxos,
+            );
         if (!isCurrentDecode()) {
           return; // a newer payload arrived — these values are not on screen
         }
@@ -152,10 +236,14 @@ const TransactionRequest = (props: {
         setToken(txInfo.token || '');
         setTokenSymbol(txInfo.tokenSymbol);
         setTxData(txInfo.data || '');
+        setTxWarnings(txInfo.warnings ?? []);
+        setKasApproved(txInfo.kasApproved);
         if (
           (props.utxos && props.utxos.length) ||
           blockchains[props.chain].chainType === 'evm' ||
-          blockchains[props.chain].chainType === 'sol'
+          blockchains[props.chain].chainType === 'sol' ||
+          // Kaspa's fee comes from this device's own UTXO lookup
+          blockchains[props.chain].chainType === 'kas'
         ) {
           setFee(txInfo.fee);
         }
@@ -181,7 +269,14 @@ const TransactionRequest = (props: {
         ) {
           // Fail closed with a VISIBLE error state — approval is impossible,
           // reject stays reachable. Previously this silently auto-rejected.
-          displayMessage('error', t('home:err_tx_decode'));
+          displayMessage(
+            'error',
+            txInfo.errorReason === 'kas_utxo_fetch'
+              ? t('home:err_kas_utxo_fetch')
+              : txInfo.errorReason === 'kas_wrong_vault'
+                ? t('home:err_kas_wrong_vault')
+                : t('home:err_tx_decode'),
+          );
           setDecodeFailed(true);
         }
       } catch (error) {
@@ -202,7 +297,9 @@ const TransactionRequest = (props: {
       // run still has in flight (including its USD rate fetch).
       decodeSeqRef.current += 1;
     };
-  }, [props.rawTx, props.chain]);
+    // The xpubs select the vault the Kaspa decode derives: a change of pair
+    // must re-decode, never keep a verdict computed for another vault.
+  }, [props.rawTx, props.chain, props.path, props.xpubWallet, props.xpubKey]);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
       type,
@@ -397,6 +494,17 @@ const TransactionRequest = (props: {
                     operator: truncateAddress(humanCalldata.counterparty),
                   }),
                 ]}
+              />
+            ) : null}
+            {txWarnings.length > 0 ? (
+              <RiskBanner
+                severity="high"
+                title={t('home:kas_tx_warnings_title')}
+                messages={txWarnings.map((w) =>
+                  t(`home:kas_warning_${w.replace(/-/g, '_')}`, {
+                    defaultValue: w,
+                  }),
+                )}
               />
             ) : null}
             {!humanCalldata && token && txData && txData !== '0x' ? (
