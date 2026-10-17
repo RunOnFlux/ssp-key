@@ -637,7 +637,8 @@ describe('prevout fetches: deduplicated, bounded, reused at sign time', () => {
     expect(fetchRawTransaction).toHaveBeenCalledTimes(prevTxs.length);
     expect(maxInFlight).toBeGreaterThan(1);
     expect(maxInFlight).toBeLessThanOrEqual(PREVOUT_FETCH_CONCURRENCY);
-  });
+    // 60 inputs are signed and verified: CPU-bound, and slower under CI coverage.
+  }, 30_000);
 
   it('the signing pass reuses the display pass values (no second round of fetches)', async () => {
     const chain = 'doge';
