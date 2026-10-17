@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
+import { useAppPrivacyCover } from '../../BlurOverlay';
 import {
   generateWordChallenge,
   generateWordChallenges,
@@ -27,10 +28,14 @@ type Props = {
  * words of their just-generated phrase among BIP39 decoys before the key is
  * stored. Purely presentational over the in-memory phrase — no storage, no
  * decryption, no crypto. Challenge construction lives in lib/seedConfirmation.
+ *
+ * KEY-9: one option is a real seed word, so the options are masked while the
+ * app is inactive / in the background (app-switcher snapshots).
  */
 const ConfirmSeedWords = ({ phrase, isLoading, onVerified, onBack }: Props) => {
   const { t } = useTranslation(['cr', 'common']);
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
+  const isCovered = useAppPrivacyCover();
   const words = useMemo(() => phrase.split(' '), [phrase]);
   const [challenges, setChallenges] = useState<WordChallenge[]>(() =>
     generateWordChallenges(words),
@@ -41,7 +46,7 @@ const ConfirmSeedWords = ({ phrase, isLoading, onVerified, onBack }: Props) => {
   const challenge = challenges[step];
 
   const handleSelect = (option: string) => {
-    if (completed || isLoading) {
+    if (completed || isLoading || isCovered) {
       return;
     }
     if (isCorrectWord(words, challenge, option)) {
@@ -125,9 +130,10 @@ const ConfirmSeedWords = ({ phrase, isLoading, onVerified, onBack }: Props) => {
         })}
       </Text>
       <View style={[styles.optionsWrap, Gutters.smallTMargin]}>
-        {challenge.options.map((option) => (
+        {challenge.options.map((option, index) => (
           <TouchableOpacity
-            key={option}
+            key={isCovered ? index : option}
+            disabled={isCovered}
             style={[
               Common.button.outlineRounded,
               Common.button.secondaryButton,
@@ -135,7 +141,9 @@ const ConfirmSeedWords = ({ phrase, isLoading, onVerified, onBack }: Props) => {
             ]}
             onPress={() => handleSelect(option)}
           >
-            <Text style={[Fonts.textSmall, Fonts.textPrimary]}>{option}</Text>
+            <Text style={[Fonts.textSmall, Fonts.textPrimary]}>
+              {isCovered ? '•••••' : option}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>

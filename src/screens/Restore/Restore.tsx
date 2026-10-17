@@ -22,7 +22,7 @@ import * as Keychain from 'react-native-keychain';
 import { blockchains } from '@storage/blockchains';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 import ToastNotif from '../../components/Toast/Toast';
-import BlurOverlay from '../../BlurOverlay';
+import BlurOverlay, { useAppPrivacyCover } from '../../BlurOverlay';
 
 import * as CryptoJS from 'crypto-js';
 
@@ -77,6 +77,10 @@ function Restore({ navigation }: Props) {
     useTheme();
   const blockchainConfig = blockchains[identityChain];
   const keyboardVisible = useKeyboardVisible();
+  // KEY-9: the typed seed phrase must not be on screen for an app-switcher
+  // snapshot — swap the input for an empty placeholder while covered (the
+  // typed value stays in state and comes back on return).
+  const isCovered = useAppPrivacyCover();
   const [weakPasswordOpen, setWeakPasswordOpen] = useState(false);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -451,20 +455,27 @@ function Restore({ navigation }: Props) {
             {t('cr:key_seed_info')}
           </Text>
           <View style={styles.seedPhraseArea}>
-            <TextInput
-              multiline={true}
-              numberOfLines={4}
-              style={[Common.inputArea, Common.inputAreaColors]}
-              autoCapitalize="none"
-              placeholder={t('cr:input_mnemonic')}
-              placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-              secureTextEntry={false}
-              onChangeText={onChangeMnemonic}
-              value={mnemonic}
-              autoCorrect={false}
-              ref={seedInput}
-              onPressIn={() => seedInput.current?.focus()}
-            />
+            {isCovered ? (
+              <View
+                testID="seed-input-covered"
+                style={[Common.inputArea, Common.inputAreaColors]}
+              />
+            ) : (
+              <TextInput
+                multiline={true}
+                numberOfLines={4}
+                style={[Common.inputArea, Common.inputAreaColors]}
+                autoCapitalize="none"
+                placeholder={t('cr:input_mnemonic')}
+                placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                secureTextEntry={false}
+                onChangeText={onChangeMnemonic}
+                value={mnemonic}
+                autoCorrect={false}
+                ref={seedInput}
+                onPressIn={() => seedInput.current?.focus()}
+              />
+            )}
           </View>
           <View
             style={[

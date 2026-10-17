@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MONOSPACE_FONT } from '../../lib/typography';
 import {
   View,
@@ -13,12 +13,18 @@ import { useTheme } from '../../hooks';
 import { useAppSelector } from '../../hooks';
 import { blockchains } from '../../storage/blockchains';
 import { generateMultisigAddress } from '../../lib/wallet';
-import { decodeEvmSigningData } from '../../lib/transactions';
-import type { DecodedEvmSigningData } from '../../lib/transactions';
+import {
+  parseConsumerDerivationPath,
+  parseEip191Preimage,
+} from '../../lib/consumerGuards';
 import * as Keychain from 'react-native-keychain';
 import CryptoJS from 'crypto-js';
 import { cryptos } from '../../types';
 import Authentication from '../Authentication/Authentication';
+import {
+  armEvmSigningApproval,
+  disarmEvmSigningApproval,
+} from '../../lib/evmSigningApproval';
 
 import { SlideToApprove } from '../request';
 interface EvmSigningRequestProps {
@@ -26,6 +32,8 @@ interface EvmSigningRequestProps {
   dataToSign: string;
   chain: keyof cryptos;
   walletInUse: string;
+  /** evmSigningRequestDigest of the request shown (Home also keys on it). */
+  requestDigest: string;
   actionStatus: (status: boolean) => void;
 }
 
@@ -34,6 +42,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
   dataToSign,
   chain,
   walletInUse,
+  requestDigest,
   actionStatus,
 }) => {
   const { t } = useTranslation(['home', 'common']);
@@ -43,11 +52,17 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
   const [loadingAddress, setLoadingAddress] = useState(true);
   const [showRawData, setShowRawData] = useState(false);
 
-  // Display-only decode of the requested data — never affects what is signed.
-  const decoded: DecodedEvmSigningData = useMemo(
-    () => decodeEvmSigningData(dataToSign, chain),
-    [dataToSign, chain],
-  );
+  // AA-2: the key only co-signs EIP-191 personal messages. The text shown
+  // here is parsed from the exact preimage, and signing rebuilds the preimage
+  // from this same text; anything else is refused (no approve control).
+  const personalMessage: string | null = useMemo(() => {
+    try {
+      return parseEip191Preimage(dataToSign);
+    } catch {
+      return null;
+    }
+  }, [dataToSign]);
+  const isRefused = personalMessage === null;
 
   // Get encrypted keys from Redux
   const { xpubWallet, xpubKey } = useAppSelector((state) => state[chain]);
@@ -99,10 +114,9 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           pwForEncryption,
         ).toString(CryptoJS.enc.Utf8);
 
-        // Parse wallet path
-        const splittedDerPath = walletInUse.split('-');
-        const typeIndex = Number(splittedDerPath[0]) as 0 | 1;
-        const addressIndex = Number(splittedDerPath[1]);
+        // Parse wallet path (KEY-8: consumer branches 0 / 1 only)
+        const { typeIndex, addressIndex } =
+          parseConsumerDerivationPath(walletInUse);
 
         // Generate address
         const addrInfo = generateMultisigAddress(
@@ -126,18 +140,48 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
     generateSigningAddress();
   }, [xpubWallet, xpubKey, walletInUse, chain]);
 
+  // The request on screen when the user started approving (item 4).
+  const approvingDigest = useRef<string | undefined>(undefined);
+
+  // A different request while authentication is open: close it. The user has
+  // not seen the new one and must review and approve it again.
+  useEffect(() => {
+    if (
+      approvingDigest.current !== undefined &&
+      approvingDigest.current !== requestDigest
+    ) {
+      approvingDigest.current = undefined;
+      disarmEvmSigningApproval();
+      setAuthenticationOpen(false);
+    }
+  }, [requestDigest]);
+
   const approve = () => {
     console.log('Approve EVM signing request');
+    const approving = approvingDigest.current;
+    approvingDigest.current = undefined;
+    if (isRefused || !approving || approving !== requestDigest) {
+      disarmEvmSigningApproval();
+      return; // never approvable — the signing action refuses it too
+    }
+    // The sign action signs only the request with this digest.
+    armEvmSigningApproval(approving);
     actionStatus(true);
   };
 
   const openAuthentication = () => {
     console.log('Open Authentication for EVM signing');
+    if (isRefused || !requestDigest) {
+      return;
+    }
+    approvingDigest.current = requestDigest;
     setAuthenticationOpen(true);
   };
 
   const reject = () => {
     console.log('Reject EVM signing request');
+    approvingDigest.current = undefined;
+    disarmEvmSigningApproval();
     actionStatus(false);
   };
 
@@ -146,6 +190,8 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
     setAuthenticationOpen(false);
     if (status === true) {
       approve();
+    } else {
+      approvingDigest.current = undefined;
     }
   };
 
@@ -255,7 +301,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           </Text>
         </View>
 
-        {decoded.summary ? (
+        {personalMessage !== null ? (
           <View
             style={[
               Gutters.tinyHMargin,
@@ -269,71 +315,21 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
               },
             ]}
           >
+            <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
+              {t('home:evm_sign_message')}
+            </Text>
             <Text
               style={[
                 Fonts.textSmall,
                 Fonts.textBold,
-                { color: Colors.textGray800 },
+                { color: Colors.textGray800, marginTop: 4 },
               ]}
               selectable={true}
             >
-              {decoded.summary}
+              {personalMessage}
             </Text>
-
-            {decoded.recipient ? (
-              <View style={{ marginTop: 8 }}>
-                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
-                  {t('home:evm_sign_recipient')}
-                </Text>
-                <Text
-                  style={[
-                    Fonts.textTiny,
-                    { fontFamily: MONOSPACE_FONT, color: Colors.textGray800 },
-                  ]}
-                  selectable={true}
-                >
-                  {decoded.recipient}
-                </Text>
-              </View>
-            ) : null}
-
-            {decoded.amount ? (
-              <View style={{ marginTop: 8 }}>
-                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
-                  {t('home:evm_sign_amount')}
-                </Text>
-                <Text
-                  style={[
-                    Fonts.textTiny,
-                    Fonts.textBold,
-                    { color: Colors.textGray800 },
-                  ]}
-                  selectable={true}
-                >
-                  {decoded.amount}
-                  {decoded.tokenSymbol ? ` ${decoded.tokenSymbol}` : ''}
-                </Text>
-              </View>
-            ) : null}
-
-            {decoded.message ? (
-              <View style={{ marginTop: 8 }}>
-                <Text style={[Fonts.textTiny, { color: Colors.textGray400 }]}>
-                  {t('home:evm_sign_message')}
-                </Text>
-                <Text
-                  style={[Fonts.textTiny, { color: Colors.textGray800 }]}
-                  selectable={true}
-                >
-                  {decoded.message}
-                </Text>
-              </View>
-            ) : null}
           </View>
-        ) : null}
-
-        {/* Warning when the payload could not be confidently recognized */}
-        {!decoded.recognized && (
+        ) : (
           <View
             style={[
               Gutters.tinyHMargin,
@@ -350,11 +346,20 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           >
             <Text
               style={[
-                Fonts.textTiny,
+                Fonts.textSmall,
+                Fonts.textBold,
                 { color: Colors.error, textAlign: 'center' },
               ]}
             >
-              {t('home:evm_sign_unrecognized')}
+              {t('home:evm_sign_refused_title')}
+            </Text>
+            <Text
+              style={[
+                Fonts.textTiny,
+                { color: Colors.error, textAlign: 'center', marginTop: 4 },
+              ]}
+            >
+              {t('home:evm_sign_refused_desc')}
             </Text>
           </View>
         )}
@@ -417,14 +422,16 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
           Gutters.tinyHMargin,
         ]}
       >
-        <SlideToApprove
-          label={t('home:slide_to_approve')}
-          accessibilityLabel={t('home:approve_request')}
-          style={[Gutters.regularBMargin, Gutters.smallTMargin]}
-          disabled={authenticationOpen || activityStatus}
-          loading={authenticationOpen || activityStatus}
-          onComplete={() => openAuthentication()}
-        />
+        {!isRefused && (
+          <SlideToApprove
+            label={t('home:slide_to_approve')}
+            accessibilityLabel={t('home:approve_request')}
+            style={[Gutters.regularBMargin, Gutters.smallTMargin]}
+            disabled={authenticationOpen || activityStatus}
+            loading={authenticationOpen || activityStatus}
+            onComplete={() => openAuthentication()}
+          />
+        )}
         <TouchableOpacity
           accessibilityRole="button"
           disabled={authenticationOpen || activityStatus}

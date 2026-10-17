@@ -57,6 +57,12 @@ function generatexPubxPriv(
 ): xPrivXpub {
   const scriptType = getScriptType(type);
 
+  // Never derive from an empty or invalid mnemonic. A seed blob that did not
+  // decrypt (wrong or rotated enc_key, corrupt state) yields '' — keys derived
+  // from it would be written next to the real seed and look valid.
+  if (!mnemonic || !bip39.validateMnemonic(mnemonic, wordlist)) {
+    throw new Error('Invalid mnemonic: refusing to derive keys');
+  }
   const seed = bip39.mnemonicToSeedSync(mnemonic);
   const bipParams = blockchains[chain].bip32;
   const masterKey = HDKey.fromMasterSeed(seed, bipParams);

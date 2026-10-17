@@ -27,6 +27,17 @@ jest.mock('../../src/lib/transactions', () => ({
   decodeTransactionForApproval: jest.fn(),
 }));
 
+// The screen decrypts this chain's stored xpubs and binds the decode to them
+// and to the request path. Without a path nothing can be verified.
+jest.mock('../../src/lib/consumerKeys', () => ({
+  loadConsumerKeyMaterial: jest.fn(
+    (wallet?: string, key?: string, path?: string) =>
+      path && wallet && key
+        ? Promise.resolve({ path, xpubWallet: 'XPUB_W', xpubKey: 'XPUB_K' })
+        : Promise.reject(new Error('Request has no derivation path')),
+  ),
+}));
+
 jest.mock('../../src/lib/rates', () => ({
   getCryptoUsdRate: jest.fn(() => Promise.resolve(0)),
   formatUsdAmount: (usd: number) => usd.toFixed(2),
@@ -41,6 +52,8 @@ jest.mock('react-native-toast-message', () => ({
 jest.mock('../../src/hooks', () => {
   const anyStyle = new Proxy({}, { get: () => ({}) });
   const anyColor = new Proxy({}, { get: () => '#000000' });
+  const chainState = { xpubWallet: 'ENC_W', xpubKey: 'ENC_K' };
+  const state = new Proxy({}, { get: () => chainState });
   return {
     useTheme: () => ({
       Fonts: anyStyle,
@@ -49,6 +62,7 @@ jest.mock('../../src/hooks', () => {
       Common: anyStyle,
       Colors: anyColor,
     }),
+    useAppSelector: (selector: (s: unknown) => unknown) => selector(state),
   };
 });
 
@@ -131,9 +145,13 @@ const txInfo = (suffix: string): TxInfo => ({
 const flush = async (change: () => void) => {
   await act(async () => {
     change();
-    await Promise.resolve();
+    for (let i = 0; i < 5; i += 1) {
+      await Promise.resolve();
+    }
   });
 };
+
+const KEY_MATERIAL = { path: '0-0', xpubWallet: 'XPUB_W', xpubKey: 'XPUB_K' };
 
 /** Pending decode per rawTx, resolvable/rejectable from the test body. */
 function deferredDecodes() {
@@ -155,26 +173,36 @@ function deferredDecodes() {
   };
 }
 
-const renderRequest = (rawTx: string, actionStatus = jest.fn()) => {
+const renderRequest = async (
+  rawTx: string,
+  actionStatus = jest.fn(),
+  path = '0-0',
+) => {
   const view = render(
     <TransactionRequest
       rawTx={rawTx}
       chain="btc"
+      path={path}
       utxos={UTXOS}
       activityStatus={false}
       actionStatus={actionStatus}
     />,
   );
-  const rerenderWith = (nextRawTx: string) =>
+  // Let the key-material load resolve so the decode of rawTx is in flight.
+  await flush(() => {});
+  const rerenderWith = async (nextRawTx: string) => {
     view.rerender(
       <TransactionRequest
         rawTx={nextRawTx}
         chain="btc"
+        path={path}
         utxos={UTXOS}
         activityStatus={false}
         actionStatus={actionStatus}
       />,
     );
+    await flush(() => {});
+  };
   return { ...view, rerenderWith, actionStatus };
 };
 
@@ -188,7 +216,7 @@ beforeEach(() => {
 describe('TransactionRequest payload identity', () => {
   it('shows the loading state and blocks approval until the decode resolves', async () => {
     const decodes = deferredDecodes();
-    const { actionStatus } = renderRequest('TX_A');
+    const { actionStatus } = await renderRequest('TX_A');
 
     expect(screen.getByText('home:tx_decoding')).toBeTruthy();
     expect(screen.queryByTestId('recipient')).toBeNull();
@@ -204,14 +232,15 @@ describe('TransactionRequest payload identity', () => {
 
   it('decodes a payload that arrives while the previous decode is in flight', async () => {
     const decodes = deferredDecodes();
-    const { rerenderWith } = renderRequest('TX_A');
+    const { rerenderWith } = await renderRequest('TX_A');
 
-    rerenderWith('TX_B');
+    await rerenderWith('TX_B');
 
     // The old bug: the re-entrancy guard bailed out here and, because rawTx
-    // never changed again, TX_B was never decoded at all.
+    // never changed again, TX_B was never decoded at all. The decode is bound
+    // to the key's own key material, never to the request's utxos.
     expect(decodeMock).toHaveBeenCalledTimes(2);
-    expect(decodeMock).toHaveBeenLastCalledWith('TX_B', 'btc', UTXOS);
+    expect(decodeMock).toHaveBeenLastCalledWith('TX_B', 'btc', KEY_MATERIAL);
 
     await decodes.settle('TX_B', txInfo('B'));
 
@@ -222,11 +251,11 @@ describe('TransactionRequest payload identity', () => {
 
   it('never renders the previous payload once a new one arrives', async () => {
     const decodes = deferredDecodes();
-    const { rerenderWith } = renderRequest('TX_A');
+    const { rerenderWith } = await renderRequest('TX_A');
     await decodes.settle('TX_A', txInfo('A'));
     expect(screen.getByTestId('recipient')).toHaveTextContent('RECEIVER_A');
 
-    rerenderWith('TX_B');
+    await rerenderWith('TX_B');
 
     // Every displayed field is cleared synchronously with the payload change:
     // no value block is on screen, only the loading state.
@@ -240,9 +269,9 @@ describe('TransactionRequest payload identity', () => {
 
   it('drops the values of a decode that resolves after a newer payload arrived', async () => {
     const decodes = deferredDecodes();
-    const { rerenderWith } = renderRequest('TX_A');
+    const { rerenderWith } = await renderRequest('TX_A');
 
-    rerenderWith('TX_B');
+    await rerenderWith('TX_B');
     await decodes.settle('TX_A', txInfo('A')); // late, superseded
 
     expect(screen.getByText('home:tx_decoding')).toBeTruthy();
@@ -256,9 +285,9 @@ describe('TransactionRequest payload identity', () => {
 
   it('does not block the new payload when the superseded decode fails', async () => {
     const decodes = deferredDecodes();
-    const { rerenderWith } = renderRequest('TX_A');
+    const { rerenderWith } = await renderRequest('TX_A');
 
-    rerenderWith('TX_B');
+    await rerenderWith('TX_B');
     await decodes.fail('TX_A', new Error('decode of the abandoned payload'));
 
     // The failure belongs to a payload nobody is looking at — it must not
@@ -274,7 +303,7 @@ describe('TransactionRequest payload identity', () => {
 
   it('blocks approval and clears the values when the decode fails', async () => {
     const decodes = deferredDecodes();
-    const { actionStatus } = renderRequest('TX_A');
+    const { actionStatus } = await renderRequest('TX_A');
     await decodes.fail('TX_A', new Error('undecodable'));
 
     expect(screen.getByTestId('risk')).toHaveTextContent(
@@ -286,13 +315,13 @@ describe('TransactionRequest payload identity', () => {
 
   it('never approves a payload change that happened mid-authentication', async () => {
     const decodes = deferredDecodes();
-    const { rerenderWith, actionStatus } = renderRequest('TX_A');
+    const { rerenderWith, actionStatus } = await renderRequest('TX_A');
     await decodes.settle('TX_A', txInfo('A'));
 
     await flush(() => screen.getByTestId('slider').props.onPress());
     expect(screen.getByTestId('authentication')).toBeTruthy();
 
-    rerenderWith('TX_B');
+    await rerenderWith('TX_B');
 
     // The authentication started for TX_A is gone; the user re-approves what
     // is on screen once TX_B is decoded.
@@ -302,7 +331,7 @@ describe('TransactionRequest payload identity', () => {
 
   it('refuses to approve while a decode is in flight', async () => {
     const decodes = deferredDecodes();
-    const { actionStatus } = renderRequest('TX_A');
+    const { actionStatus } = await renderRequest('TX_A');
 
     // The real slider also refuses to fire while disabled; this drives the
     // approve() choke point itself, which both approve paths funnel through.
@@ -315,6 +344,87 @@ describe('TransactionRequest payload identity', () => {
 
     await decodes.settle('TX_A', txInfo('A'));
     expect(actionStatus).not.toHaveBeenCalled();
+  });
+});
+
+describe('TransactionRequest verified display', () => {
+  it('fails closed without a derivation path (nothing to verify against)', async () => {
+    deferredDecodes();
+    const { actionStatus } = await renderRequest('TX_A', jest.fn(), '');
+    expect(decodeMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('risk')).toHaveTextContent(
+      'home:tx_decode_failed_title',
+    );
+    expect(screen.queryByTestId('slider')).toBeNull();
+    expect(actionStatus).not.toHaveBeenCalled();
+  });
+
+  it('always shows the fee, even when the request carried no utxos (H-2)', async () => {
+    const decodes = deferredDecodes();
+    await renderRequest('TX_A');
+    await decodes.settle('TX_A', { ...txInfo('A'), fee: '0.0001' });
+    expect(screen.getByTestId('fee')).toHaveTextContent('0.0001');
+  });
+
+  it('lists every non-change destination (KAS-4)', async () => {
+    const decodes = deferredDecodes();
+    await renderRequest('TX_A');
+    await decodes.settle('TX_A', {
+      ...txInfo('A'),
+      recipientCount: 2,
+      recipients: [
+        { address: 'PAYEE_1', amount: '0.5' },
+        { address: 'ATTACKER_2', amount: '0.4' },
+      ],
+    });
+    const cards = screen.getAllByTestId('recipient');
+    expect(cards.map((c) => c.props.children)).toEqual([
+      'PAYEE_1',
+      'ATTACKER_2',
+    ]);
+  });
+
+  it('flags a contract call that carries native value (C-4)', async () => {
+    const decodes = deferredDecodes();
+    await renderRequest('TX_A');
+    await decodes.settle('TX_A', {
+      ...txInfo('A'),
+      amount: '0',
+      token: '0x1111111111111111111111111111111111111111',
+      tokenSymbol: '',
+      data: '0xdeadbeef',
+      nativeValue: '1',
+      warnings: ['contract_call_with_value'],
+    });
+    const titles = screen
+      .getAllByTestId('risk')
+      .map((banner) => banner.props.children);
+    expect(titles).toContain('home:risk_contract_call_value_title');
+    expect(titles).toContain('home:risk_unreadable_contract_call');
+    expect(screen.getByTestId('action')).toHaveTextContent(
+      'home:action_contract_interaction',
+    );
+  });
+
+  it('warns when an SPL token account owner is not verified (H-3)', async () => {
+    const decodes = deferredDecodes();
+    await renderRequest('TX_A');
+    await decodes.settle('TX_A', {
+      ...txInfo('A'),
+      token: 'MINT',
+      tokenSymbol: '',
+      recipients: [{ address: 'ATA', amount: '1', ownerVerified: false }],
+      recipientCount: 1,
+      warnings: ['spl_owner_unverified', 'unknown_token'],
+    });
+    const titles = screen
+      .getAllByTestId('risk')
+      .map((banner) => banner.props.children);
+    expect(titles).toContain('home:risk_spl_owner_unverified_title');
+    expect(titles).toContain('home:risk_unverified_token_title');
+    expect(screen.getByTestId('action')).toHaveTextContent(
+      'home:unknown_token_units',
+    );
   });
 });
 

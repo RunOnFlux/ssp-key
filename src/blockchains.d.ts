@@ -34,6 +34,8 @@ declare module '@storage/blockchains' {
     feePerByte: number;
     maxMessage: number;
     maxTxSize: number;
+    // Hard per-transaction fee cap in base units (UTXO chains)
+    maxFee?: number;
     rbf: boolean;
     cashaddr: string;
     txExpiryHeight: number;

@@ -76,6 +76,50 @@ def enableProguardInReleaseBuilds = true
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+/**
+ * Release signing is optional, so CI can build an unsigned release in one job
+ * and sign it in a separate job that alone holds the key.
+ *
+ * Each value is read from a Gradle property first (-PNAME=... or
+ * ~/.gradle/gradle.properties), then from the environment variable of the
+ * same name:
+ *   SIGNING_STORE_FILE      keystore path, relative to android/app
+ *                           (default: release.keystore)
+ *   SIGNING_STORE_PASSWORD
+ *   SIGNING_KEY_ALIAS
+ *   SIGNING_KEY_PASSWORD
+ *
+ * - None of the three secrets set: the release build is unsigned. It is never
+ *   signed with the debug key.
+ * - All three set and the keystore exists: the release build is signed, as
+ *   before.
+ * - Anything in between: the build fails, so a signing job with a missing
+ *   secret cannot silently produce an unsigned artifact.
+ */
+def signingValue = { String name ->
+    def value = project.findProperty(name)
+    if (value == null) {
+        value = System.getenv(name)
+    }
+    return (value != null && !value.toString().trim().isEmpty()) ? value.toString() : null
+}
+def releaseStoreFile = file(signingValue("SIGNING_STORE_FILE") ?: "release.keystore")
+def releaseStorePassword = signingValue("SIGNING_STORE_PASSWORD")
+def releaseKeyAlias = signingValue("SIGNING_KEY_ALIAS")
+def releaseKeyPassword = signingValue("SIGNING_KEY_PASSWORD")
+def releaseSigningValues = [releaseStorePassword, releaseKeyAlias, releaseKeyPassword]
+def releaseSigningRequested = releaseSigningValues.any { it != null }
+def hasReleaseSigning = releaseSigningValues.every { it != null } && releaseStoreFile.isFile()
+if (releaseSigningRequested && !hasReleaseSigning) {
+    throw new GradleException(
+        "Incomplete release signing config: set SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS " +
+        "and SIGNING_KEY_PASSWORD, and provide the keystore at ${releaseStoreFile} " +
+        "(or SIGNING_STORE_FILE). Unset all three to build an unsigned release.")
+}
+if (!hasReleaseSigning && gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }) {
+    logger.lifecycle("SSP Key: no release signing config, building an UNSIGNED release.")
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -96,11 +140,13 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        release {
-            storeFile file("release.keystore")
-            storePassword System.getenv("SIGNING_STORE_PASSWORD")
-            keyAlias System.getenv("SIGNING_KEY_ALIAS")
-            keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+        if (hasReleaseSigning) {
+            release {
+                storeFile releaseStoreFile
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
         }
     }
     buildTypes {
@@ -108,9 +154,12 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
+            // Signed only when the release signing config is complete (see
+            // hasReleaseSigning above); otherwise unsigned, never debug-signed.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.release
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

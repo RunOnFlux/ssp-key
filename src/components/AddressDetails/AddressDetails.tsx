@@ -12,7 +12,7 @@ import {
 } from '../../lib/wallet';
 import { useAppSelector } from '../../hooks';
 import { cryptos } from '../../types';
-import BlurOverlay from '../../BlurOverlay';
+import BlurOverlay, { useAppPrivacyCover } from '../../BlurOverlay';
 
 import { blockchains } from '@storage/blockchains';
 
@@ -39,6 +39,10 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
     (state) => state[selectedChain],
   );
   const blockchainConfig = blockchains[selectedChain];
+  // KEY-9: never render the revealed private key while the app is inactive /
+  // in the background (app-switcher snapshots).
+  const isCovered = useAppPrivacyCover();
+  const showPrivateKey = privateKeyVisible && !isCovered;
 
   const generateAddressDetails = (
     chain: keyof cryptos,
@@ -411,7 +415,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                         { fontFamily: MONOSPACE_FONT },
                       ]}
                     >
-                      {privateKeyVisible
+                      {showPrivateKey
                         ? decryptedPrivateKey
                         : '*** *** *** *** *** ***'}
                     </Text>
@@ -428,7 +432,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                           { fontFamily: MONOSPACE_FONT },
                         ]}
                       >
-                        {privateKeyVisible
+                        {showPrivateKey
                           ? decryptedPrivateKey.slice(
                               0,
                               Math.floor(decryptedPrivateKey.length / 2),
@@ -445,7 +449,7 @@ const AddressDetails = (props: { actionStatus: (status: boolean) => void }) => {
                           { fontFamily: MONOSPACE_FONT },
                         ]}
                       >
-                        {privateKeyVisible
+                        {showPrivateKey
                           ? decryptedPrivateKey.slice(
                               Math.floor(decryptedPrivateKey.length / 2),
                               decryptedPrivateKey.length,

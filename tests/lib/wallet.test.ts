@@ -82,6 +82,28 @@ describe('Wallet Lib', () => {
       );
     });
 
+    test('refuses to derive keys from an empty mnemonic (undecryptable seed)', () => {
+      expect(() => getMasterXpriv('', 48, 1, 0, 'p2sh', 'flux')).toThrow(
+        /Invalid mnemonic/,
+      );
+      expect(() => getMasterXpub('', 48, 1, 0, 'p2sh', 'flux')).toThrow(
+        /Invalid mnemonic/,
+      );
+    });
+
+    test('refuses to derive keys from a mnemonic with a bad checksum', () => {
+      const words = mnemonic.split(' ');
+      words[words.length - 1] = 'abandon';
+      const badChecksum = words.join(' ');
+      expect(validateMnemonic(badChecksum)).toBe(false);
+      expect(() =>
+        getMasterXpriv(badChecksum, 48, 1, 0, 'p2sh', 'flux'),
+      ).toThrow(/Invalid mnemonic/);
+      expect(() =>
+        getMasterXpub(badChecksum, 48, 19167, 0, 'p2wsh', 'btc'),
+      ).toThrow(/Invalid mnemonic/);
+    });
+
     test('should return generateMultisigAddressEVM data when value is valid', () => {
       const res = generateMultisigAddressEVM(
         'xpub6DrK6ePttTnvR7NRoCkLEYRdNHb8y5oRbzJLeDCv8dCcGJ3yamC9y37iKpAdUnyjmeb6wphWTTRpWFHPdTe8hUDkCUN7YXM5M834FmHr9K5',

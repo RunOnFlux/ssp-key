@@ -3,7 +3,11 @@ import * as CryptoJS from 'crypto-js';
 import * as Keychain from 'react-native-keychain';
 import { sspConfig } from '@storage/ssp';
 import { generatePublicNonce } from '../../../lib/wallet';
-import { setSspKeyEnterprisePublicNonces } from '../../../store/ssp';
+import { createReadAuthHeadersFromStore } from '../../../hooks/useRelayAuth';
+import {
+  addEnterpriseNonces,
+  readEnterpriseNonces,
+} from '../../../lib/enterpriseNoncePool';
 import { publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
 
@@ -21,47 +25,85 @@ export interface EnterpriseNonceSyncResult {
     | 'busy'
     | 'not_needed'
     | 'no_credentials'
+    | 'no_auth'
     | 'submit_failed';
 }
 
 /**
+ * Adds the WK identity auth fields (RA-2: `/v1/nonces*` require auth) to a
+ * nonce request body. The signature binds a hash of `body`. Fails closed:
+ * returns null when auth cannot be produced, and the caller then sends
+ * NOTHING (an unsigned nonce write is never posted) and reports `no_auth`
+ * so the sync is retried later.
+ */
+const withWkAuth = async (
+  ctx: HomeActionContext,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> => {
+  try {
+    const auth = ctx.createWkAuth
+      ? await ctx.createWkAuth('action', ctx.sspWalletKeyInternalIdentity, body)
+      : null;
+    return auth ? { ...body, ...auth } : null;
+  } catch (error) {
+    console.log('[Enterprise Nonces] Could not sign nonce request:', error);
+    return null;
+  }
+};
+
+const NO_AUTH_RESULT: EnterpriseNonceSyncResult = {
+  ok: false,
+  generated: 0,
+  reason: 'no_auth',
+};
+
+/**
+ * Single in-flight replenish for the whole app (K2). Module scope, so a
+ * remounted Home — which gets a fresh nonceReplenishInProgressRef — cannot
+ * start a second replenish next to one that is still on the network.
+ */
+let replenishInFlight = false;
+
+/** Test-only: the module-level replenish lock state. */
+export const isEnterpriseReplenishInFlight = (): boolean => replenishInFlight;
+
+/**
  * Check enterprise nonce pool and replenish if below threshold.
- * Generates nonces locally, stores private parts in Keychain,
- * submits public parts to relay.
+ * Generates nonces locally, submits public parts to relay, then stores them
+ * (encrypted) in the persisted pool.
  *
- * @param forceReplace - If true, delete all existing nonces and generate a fresh full set.
- *   Used by the manual "Sync Nonces" action triggered from the enterprise app.
+ * K2: the pool written at the end is NOT built from the snapshot read at the
+ * start. addEnterpriseNonces re-reads the current pool under the pool lock
+ * and filters it against the used-nonce ledger, so a nonce a vault signature
+ * consumed while this function was on the network is never written back.
+ *
+ * @param forceReplace - If true, generate a full set even when the relay says
+ *   no replenish is needed. Used by the manual "Sync Nonces" action.
  */
 export const checkAndReplenishEnterpriseNonces = async (
   ctx: HomeActionContext,
   forceReplace = false,
 ): Promise<EnterpriseNonceSyncResult> => {
-  const {
-    sspWalletKeyInternalIdentity,
-    nonceReplenishInProgressRef,
-    enterprisePublicNonces,
-    dispatch,
-  } = ctx;
+  const { sspWalletKeyInternalIdentity, nonceReplenishInProgressRef } = ctx;
   if (!sspWalletKeyInternalIdentity) {
     return { ok: false, generated: 0, reason: 'no_identity' };
   }
-  if (nonceReplenishInProgressRef.current) {
+  const isBusy = () => replenishInFlight || nonceReplenishInProgressRef.current;
+  if (isBusy()) {
     if (!forceReplace) {
       return { ok: false, generated: 0, reason: 'busy' };
     }
     // Force replace: wait for background replenish to finish before proceeding
     const maxWait = 30_000;
     const start = Date.now();
-    while (
-      nonceReplenishInProgressRef.current &&
-      Date.now() - start < maxWait
-    ) {
+    while (isBusy() && Date.now() - start < maxWait) {
       await new Promise((r) => setTimeout(r, 200));
     }
-    if (nonceReplenishInProgressRef.current) {
+    if (isBusy()) {
       return { ok: false, generated: 0, reason: 'busy' }; // timed out
     }
   }
+  replenishInFlight = true;
   nonceReplenishInProgressRef.current = true;
   try {
     const TARGET_COUNT = 50;
@@ -69,8 +111,21 @@ export const checkAndReplenishEnterpriseNonces = async (
     // Check server-side pool status
     let serverAvailable = 0;
     try {
+      // RA-4: the status read is signed with the WK identity (headers), so
+      // it keeps working once the relay enforces read auth.
+      const statusPath = `/v1/nonces/status/${sspWalletKeyInternalIdentity}`;
+      let readHeaders: Record<string, string> | null = null;
+      try {
+        readHeaders = await createReadAuthHeadersFromStore(
+          statusPath,
+          sspWalletKeyInternalIdentity,
+        );
+      } catch {
+        readHeaders = null;
+      }
       const statusRes = await axios.get(
-        `https://${sspConfig().relay}/v1/nonces/status/${sspWalletKeyInternalIdentity}`,
+        `https://${sspConfig().relay}${statusPath}`,
+        readHeaders ? { headers: readHeaders } : undefined,
       );
       const poolData = statusRes.data?.data;
       if (!forceReplace && !poolData?.replenishNeeded?.key) {
@@ -99,18 +154,11 @@ export const checkAndReplenishEnterpriseNonces = async (
     const pwForEncryption =
       encryptionKey.password + passwordDecrypted.toString(CryptoJS.enc.Utf8);
 
-    // Load existing enterprise nonces from Redux store
+    // The CURRENT pool (read from the store now, used nonces removed) — only
+    // used for the reconcile list and the count. The write below re-reads.
     let existingNonces: publicPrivateNonce[] = [];
     try {
-      if (enterprisePublicNonces) {
-        const decrypted = CryptoJS.AES.decrypt(
-          enterprisePublicNonces,
-          pwForEncryption,
-        );
-        existingNonces = JSON.parse(
-          decrypted.toString(CryptoJS.enc.Utf8),
-        ) as publicPrivateNonce[];
-      }
+      existingNonces = readEnterpriseNonces(pwForEncryption);
     } catch {
       // No existing nonces or corrupt data — start fresh
       existingNonces = [];
@@ -127,18 +175,24 @@ export const checkAndReplenishEnterpriseNonces = async (
     // making them permanently unsignable. Reconciling against the real local
     // list fixes the same desyncs without either failure mode.
     if (existingNonces.length > 0 || serverAvailable > 0) {
-      try {
-        const localPublicKeys = existingNonces.map((n) => ({
+      const reconcileBody = await withWkAuth(ctx, {
+        wkIdentity: sspWalletKeyInternalIdentity,
+        source: 'key',
+        localNonces: existingNonces.map((n) => ({
           kPublic: n.kPublic,
           kTwoPublic: n.kTwoPublic,
-        }));
+        })),
+      });
+      if (!reconcileBody) {
+        console.log(
+          '[Enterprise Nonces] WK auth unavailable — not sending; retry later',
+        );
+        return NO_AUTH_RESULT;
+      }
+      try {
         const reconcileRes = await axios.post(
           `https://${sspConfig().relay}/v1/nonces/reconcile`,
-          {
-            wkIdentity: sspWalletKeyInternalIdentity,
-            source: 'key',
-            localNonces: localPublicKeys,
-          },
+          reconcileBody,
         );
         const purged =
           (reconcileRes.data as { data?: { purged?: number } } | undefined)
@@ -176,22 +230,27 @@ export const checkAndReplenishEnterpriseNonces = async (
       kPublic: n.kPublic,
       kTwoPublic: n.kTwoPublic,
     }));
-    await axios.post(`https://${sspConfig().relay}/v1/nonces`, {
+    const submitBody = await withWkAuth(ctx, {
       wkIdentity: sspWalletKeyInternalIdentity,
       source: 'key',
       nonces: publicParts,
     });
+    if (!submitBody) {
+      // Fail closed: nothing is posted and nothing is stored — the freshly
+      // generated nonces never leave this function.
+      console.log(
+        '[Enterprise Nonces] WK auth unavailable — not sending; retry later',
+      );
+      return NO_AUTH_RESULT;
+    }
+    await axios.post(`https://${sspConfig().relay}/v1/nonces`, submitBody);
 
-    // Merge and store locally (encrypted in Redux, persisted via MMKV)
-    const allNonces = [...existingNonces, ...newNonces];
-    const encryptedNonces = CryptoJS.AES.encrypt(
-      JSON.stringify(allNonces),
-      pwForEncryption,
-    ).toString();
-    dispatch(setSspKeyEnterprisePublicNonces(encryptedNonces));
+    // Merge into the pool as it is NOW (re-read under the pool lock, used
+    // nonces filtered out) and flush it to disk.
+    const poolSize = await addEnterpriseNonces(newNonces, pwForEncryption);
 
     console.log(
-      `[Enterprise Nonces] Key: Generated and submitted ${toGenerate} nonces (server had ${serverAvailable}, local had ${existingNonces.length})`,
+      `[Enterprise Nonces] Key: Generated and submitted ${toGenerate} nonces (server had ${serverAvailable}, local pool now ${poolSize})`,
     );
     return { ok: true, generated: toGenerate };
   } catch (error) {
@@ -201,6 +260,7 @@ export const checkAndReplenishEnterpriseNonces = async (
     console.log('[Enterprise Nonces] Key replenish error:', error);
     return { ok: false, generated: 0, reason: 'submit_failed' };
   } finally {
+    replenishInFlight = false;
     nonceReplenishInProgressRef.current = false;
   }
 };

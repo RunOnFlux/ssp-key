@@ -15,10 +15,15 @@
 import * as CryptoJS from 'crypto-js';
 import * as Keychain from 'react-native-keychain';
 import axios from 'axios';
+import { createMMKV } from 'react-native-mmkv';
 
 import type { publicPrivateNonce } from '../../src/types';
 import type { HomeActionContext } from '../../src/screens/Home/actions/types';
-import { checkAndReplenishEnterpriseNonces } from '../../src/screens/Home/actions/nonceActions';
+import {
+  checkAndReplenishEnterpriseNonces,
+  isEnterpriseReplenishInFlight,
+} from '../../src/screens/Home/actions/nonceActions';
+import { burnEnterpriseNonce } from '../../src/lib/enterpriseNoncePool';
 
 jest.mock('axios', () => ({
   __esModule: true,
@@ -51,11 +56,28 @@ jest.mock('../../src/lib/wallet', () => ({
   },
 }));
 
-jest.mock('../../src/store/ssp', () => ({
-  setSspKeyEnterprisePublicNonces: (data: string) => ({
-    type: 'ssp/setSspKeyEnterprisePublicNonces',
-    payload: data,
-  }),
+// RA-4 read-auth headers for the status GET (built from the store in the app).
+const mockReadHeaders = jest.fn<
+  Promise<Record<string, string> | null>,
+  [string, string]
+>(() => Promise.resolve({ 'x-ssp-signature': 'read-sig' }));
+jest.mock('../../src/hooks/useRelayAuth', () => ({
+  createReadAuthHeadersFromStore: (path: string, identity: string) =>
+    mockReadHeaders(path, identity),
+}));
+
+// The pool lives in the persisted store; the replenish re-reads it at write
+// time (K2) and flushes it (K4), so the test drives a fake store + persistor.
+let mockCipher = '';
+const mockFlush = jest.fn((): Promise<void> => Promise.resolve());
+jest.mock('../../src/store', () => ({
+  store: {
+    getState: () => ({ ssp: { enterprisePublicNonces: mockCipher } }),
+    dispatch: (action: { payload: string }) => {
+      mockCipher = action.payload;
+    },
+  },
+  persistor: { flush: () => mockFlush() },
 }));
 
 const mockedAxios = axios as unknown as {
@@ -94,15 +116,32 @@ const makeCtx = (
     enterprisePublicNonces: '',
     nonceReplenishInProgressRef: { current: false },
     dispatch,
+    createWkAuth: jest.fn(() =>
+      Promise.resolve({ signature: 'sig', message: 'msg', publicKey: 'pk' }),
+    ),
     ...overrides,
   } as unknown as HomeActionContext;
   return { ctx, dispatch };
+};
+
+const PW = ENC_KEY + PASSWORD;
+const storedPool = (): publicPrivateNonce[] =>
+  mockCipher
+    ? (JSON.parse(
+        CryptoJS.AES.decrypt(mockCipher, PW).toString(CryptoJS.enc.Utf8),
+      ) as publicPrivateNonce[])
+    : [];
+const setStoredPool = (nonces: publicPrivateNonce[]) => {
+  mockCipher = CryptoJS.AES.encrypt(JSON.stringify(nonces), PW).toString();
 };
 
 describe('checkAndReplenishEnterpriseNonces', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNonceCounter = 0;
+    mockCipher = '';
+    createMMKV().clearAll();
+    mockFlush.mockImplementation(() => Promise.resolve());
     withCredentials();
     mockedAxios.get.mockResolvedValue({
       data: { data: { key: { available: 0 }, replenishNeeded: { key: true } } },
@@ -111,7 +150,7 @@ describe('checkAndReplenishEnterpriseNonces', () => {
   });
 
   it('reports the submitted count on a successful forced sync', async () => {
-    const { ctx, dispatch } = makeCtx();
+    const { ctx } = makeCtx();
     const result = await checkAndReplenishEnterpriseNonces(ctx, true);
 
     expect(result).toEqual({ ok: true, generated: 50 });
@@ -120,8 +159,145 @@ describe('checkAndReplenishEnterpriseNonces', () => {
     );
     expect(submit).toBeDefined();
     expect((submit?.[1] as { nonces: unknown[] }).nonces).toHaveLength(50);
-    expect(dispatch).toHaveBeenCalledTimes(1);
+    // stored in the persisted pool and flushed to disk
+    expect(storedPool()).toHaveLength(50);
+    expect(mockFlush).toHaveBeenCalledTimes(1);
     expect(ctx.nonceReplenishInProgressRef.current).toBe(false);
+    expect(isEnterpriseReplenishInFlight()).toBe(false);
+  });
+
+  it('signs the status read with read-auth headers from createReadAuthHeadersFromStore (RA-4)', async () => {
+    const { ctx } = makeCtx();
+    await checkAndReplenishEnterpriseNonces(ctx, true);
+    expect(mockReadHeaders).toHaveBeenCalledWith(
+      '/v1/nonces/status/wk-identity',
+      'wk-identity',
+    );
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      'https://relay.example.com/v1/nonces/status/wk-identity',
+      { headers: { 'x-ssp-signature': 'read-sig' } },
+    );
+  });
+
+  it('fails closed when WK auth is unavailable: nothing is posted or stored', async () => {
+    const { ctx } = makeCtx({
+      createWkAuth: jest.fn(() => Promise.resolve(null)),
+    });
+
+    expect(await checkAndReplenishEnterpriseNonces(ctx, true)).toEqual({
+      ok: false,
+      generated: 0,
+      reason: 'no_auth',
+    });
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockCipher).toBe('');
+    expect(isEnterpriseReplenishInFlight()).toBe(false);
+  });
+
+  it('fails closed when signing throws, and also skips an unsigned reconcile', async () => {
+    setStoredPool([
+      {
+        k: 'k-1',
+        kTwo: 'kTwo-1',
+        kPublic: 'kPublic-1',
+        kTwoPublic: 'kTwoPublic-1',
+      },
+    ]);
+    const before = mockCipher;
+    const { ctx } = makeCtx({
+      createWkAuth: jest.fn(() => Promise.reject(new Error('locked'))),
+    });
+
+    expect(await checkAndReplenishEnterpriseNonces(ctx, true)).toEqual({
+      ok: false,
+      generated: 0,
+      reason: 'no_auth',
+    });
+    // neither the reconcile nor the submission went out unsigned
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockCipher).toBe(before);
+  });
+
+  it('signs the nonce submission with the WK identity (RA-2)', async () => {
+    const { ctx } = makeCtx();
+    await checkAndReplenishEnterpriseNonces(ctx, true);
+
+    const submit = mockedAxios.post.mock.calls.find((call) =>
+      String(call[0]).endsWith('/v1/nonces'),
+    );
+    const body = submit?.[1] as Record<string, unknown>;
+    expect(body).toMatchObject({
+      wkIdentity: 'wk-identity',
+      source: 'key',
+      signature: 'sig',
+      message: 'msg',
+      publicKey: 'pk',
+    });
+    // the signature binds the body without the auth fields
+    expect(ctx.createWkAuth).toHaveBeenCalledWith(
+      'action',
+      'wk-identity',
+      expect.objectContaining({ wkIdentity: 'wk-identity', source: 'key' }),
+    );
+  });
+
+  it('K2: a nonce burned by a signature during the relay round-trip is not written back', async () => {
+    const existing = [
+      {
+        k: 'k-old',
+        kTwo: 'kTwo-old',
+        kPublic: 'kPublic-old',
+        kTwoPublic: 'kTwoPublic-old',
+      },
+      {
+        k: 'k-keep',
+        kTwo: 'kTwo-keep',
+        kPublic: 'kPublic-keep',
+        kTwoPublic: 'kTwoPublic-keep',
+      },
+    ];
+    setStoredPool(existing);
+    mockedAxios.post.mockImplementation(async (url: string) => {
+      if (String(url).endsWith('/v1/nonces')) {
+        // a vault signature consumes kPublic-old while the POST is in flight
+        await burnEnterpriseNonce(
+          { kPublic: 'kPublic-old', kTwoPublic: 'kTwoPublic-old' },
+          PW,
+        );
+      }
+      return { data: { data: { purged: 0 } } };
+    });
+    const { ctx } = makeCtx();
+
+    const result = await checkAndReplenishEnterpriseNonces(ctx, true);
+
+    expect(result.ok).toBe(true);
+    const kPublics = storedPool().map((n) => n.kPublic);
+    expect(kPublics).not.toContain('kPublic-old');
+    expect(kPublics).toContain('kPublic-keep');
+    expect(kPublics).toHaveLength(1 + (result.generated ?? 0));
+  });
+
+  it('K2: only one replenish runs at a time, across Home instances', async () => {
+    let release: () => void = () => undefined;
+    mockedAxios.get.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = () =>
+            resolve({
+              data: {
+                data: { key: { available: 0 }, replenishNeeded: { key: true } },
+              },
+            });
+        }),
+    );
+    const first = checkAndReplenishEnterpriseNonces(makeCtx().ctx);
+    // a remounted Home has a fresh ref, but the module lock still holds
+    const second = await checkAndReplenishEnterpriseNonces(makeCtx().ctx);
+    expect(second).toEqual({ ok: false, generated: 0, reason: 'busy' });
+    release();
+    expect((await first).ok).toBe(true);
+    expect(isEnterpriseReplenishInFlight()).toBe(false);
   });
 
   it('reports failure when the mandatory nonce submission fails', async () => {
@@ -132,7 +308,7 @@ describe('checkAndReplenishEnterpriseNonces', () => {
         ? Promise.reject(new Error('relay unreachable'))
         : Promise.resolve({ data: { data: { purged: 0 } } }),
     );
-    const { ctx, dispatch } = makeCtx();
+    const { ctx } = makeCtx();
 
     const result = await checkAndReplenishEnterpriseNonces(ctx, true);
 
@@ -142,7 +318,7 @@ describe('checkAndReplenishEnterpriseNonces', () => {
       reason: 'submit_failed',
     });
     // nothing was stored locally either — the pools stay consistent
-    expect(dispatch).not.toHaveBeenCalled();
+    expect(mockCipher).toBe('');
     expect(ctx.nonceReplenishInProgressRef.current).toBe(false);
   });
 
@@ -196,7 +372,7 @@ describe('checkAndReplenishEnterpriseNonces', () => {
         data: { key: { available: 50 }, replenishNeeded: { key: false } },
       },
     });
-    const { ctx, dispatch } = makeCtx();
+    const { ctx } = makeCtx();
 
     expect(await checkAndReplenishEnterpriseNonces(ctx)).toEqual({
       ok: true,
@@ -204,7 +380,7 @@ describe('checkAndReplenishEnterpriseNonces', () => {
       reason: 'not_needed',
     });
     expect(mockedAxios.post).not.toHaveBeenCalled();
-    expect(dispatch).not.toHaveBeenCalled();
+    expect(mockCipher).toBe('');
     expect(ctx.nonceReplenishInProgressRef.current).toBe(false);
   });
 
@@ -223,18 +399,15 @@ describe('checkAndReplenishEnterpriseNonces', () => {
         data: { key: { available: 50 }, replenishNeeded: { key: true } },
       },
     });
-    const { ctx, dispatch } = makeCtx({
-      enterprisePublicNonces: CryptoJS.AES.encrypt(
-        JSON.stringify(existing),
-        ENC_KEY + PASSWORD,
-      ).toString(),
-    });
+    setStoredPool(existing);
+    const before = mockCipher;
+    const { ctx } = makeCtx();
 
     expect(await checkAndReplenishEnterpriseNonces(ctx)).toEqual({
       ok: true,
       generated: 0,
       reason: 'not_needed',
     });
-    expect(dispatch).not.toHaveBeenCalled();
+    expect(mockCipher).toBe(before);
   });
 });

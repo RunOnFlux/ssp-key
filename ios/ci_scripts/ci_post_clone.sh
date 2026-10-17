@@ -18,7 +18,12 @@ brew install cocoapods node@24 yarn
 brew link --overwrite node@24
 
 echo ">>> INSTALL JS DEPENDENCIES"
-yarn
+# .yarnrc has ignore-scripts (security review DEP-5): install with the frozen
+# lockfile and no dependency install scripts, then `yarn setup` runs only the
+# allowlisted scripts plus the root postinstall (patch-package + rn-nodeify).
+# Mirrors the Android release workflows.
+yarn install --frozen-lockfile --ignore-scripts
+yarn setup
 
 echo ">>> POD INSTALL"
 cd ..

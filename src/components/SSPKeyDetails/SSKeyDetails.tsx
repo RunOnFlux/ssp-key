@@ -18,7 +18,7 @@ import * as Keychain from 'react-native-keychain';
 import { useAppSelector } from '../../hooks';
 import { cryptos } from '../../types';
 import { getMasterXpriv, getMasterXpub } from '../../lib/wallet';
-import BlurOverlay from '../../BlurOverlay';
+import BlurOverlay, { useAppPrivacyCover } from '../../BlurOverlay';
 
 import { blockchains } from '@storage/blockchains';
 
@@ -43,6 +43,13 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
   const { Fonts, Gutters, Layout, Colors, Common } = useTheme();
   const blockchainConfig = blockchains[selectedChain];
   const [activityLoading, setActivityLoading] = useState(false);
+  // KEY-9: never render a revealed secret while the app is inactive / in the
+  // background — the app-switcher snapshot must not contain it even if the
+  // privacy cover commits late.
+  const isCovered = useAppPrivacyCover();
+  const showXpub = xpubVisible && !isCovered;
+  const showXpriv = xprivVisible && !isCovered;
+  const showMnemonic = mnemonicVisible && !isCovered;
 
   useEffect(() => {
     Keychain.getGenericPassword({
@@ -242,13 +249,13 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                         { fontFamily: MONOSPACE_FONT },
                       ]}
                     >
-                      {xpubVisible ? decryptedXpub : '*** *** *** *** *** ***'}
+                      {showXpub ? decryptedXpub : '*** *** *** *** *** ***'}
                     </Text>
                   )}
                   {/* Offline manual sync: a scannable QR of this chain's xpub
                       so the wallet can scan it instead of the user typing it.
                       Shown only when the xpub is revealed. Display-only. */}
-                  {!activityLoading && xpubVisible && !!decryptedXpub && (
+                  {!activityLoading && showXpub && !!decryptedXpub && (
                     <View
                       style={[Layout.alignItemsCenter, Gutters.smallBMargin]}
                     >
@@ -318,7 +325,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                           { fontFamily: MONOSPACE_FONT },
                         ]}
                       >
-                        {xprivVisible
+                        {showXpriv
                           ? deryptedXpriv.slice(
                               0,
                               Math.floor(deryptedXpriv.length / 2),
@@ -335,7 +342,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                           { fontFamily: MONOSPACE_FONT },
                         ]}
                       >
-                        {xprivVisible
+                        {showXpriv
                           ? deryptedXpriv.slice(
                               Math.floor(deryptedXpriv.length / 2),
                               deryptedXpriv.length,
@@ -391,7 +398,7 @@ const SSPKeyDetails = (props: { actionStatus: (status: boolean) => void }) => {
                 <View style={[Gutters.smallTMargin, Gutters.smallBMargin]}>
                   <SeedPhraseGrid
                     phrase={decryptedMnemonic}
-                    visible={mnemonicVisible}
+                    visible={showMnemonic}
                   />
                 </View>
               </View>

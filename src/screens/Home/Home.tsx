@@ -13,7 +13,7 @@ import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
 import axios from 'axios';
 import { sspConfig } from '@storage/ssp';
-import { chainStateKey, cryptos, utxo } from '../../types';
+import { chainStateKey, cryptos, utxo, wkSigningRequest } from '../../types';
 import { blockchains } from '@storage/blockchains';
 
 import * as CryptoJS from 'crypto-js';
@@ -23,6 +23,7 @@ import {
   getMasterXpub,
   generateMultisigAddress,
   generateAddressKeypair,
+  validateMnemonic,
 } from '../../lib/wallet';
 import { recordSignAction } from '../../lib/signHistory';
 
@@ -34,6 +35,11 @@ import {
   setSspKeyRecoveryKeys,
 } from '../../store/ssp';
 import { deriveRecoveryAccount } from '../../lib/recoveryAccount';
+import {
+  consumeVaultRejectionCode,
+  fluxNodeRejectionPayload,
+  vaultSignRejectionPayload,
+} from '../../lib/vaultDescriptorGate';
 
 import { useAppSelector, useAppDispatch, useRelayAuth } from '../../hooks';
 import { useSocket } from '../../hooks/useSocket';
@@ -62,7 +68,14 @@ import {
   type ParsedChainSyncRequest,
 } from '../../lib/chainSyncRequest';
 import { looksLikeXpub, splitSSPInput } from '../../lib/inputParsing';
+import {
+  checkWkSigningRequest,
+  deriveIdentityPubKeyFromXpub,
+  type WkRequestCheck,
+} from '../../lib/wkMessage';
+import RePairWarning from '../../components/ChainSyncRequest/RePairWarning';
 import type { HomeActionContext } from './actions/types';
+import type { RePairRequest } from './actions/syncActions';
 import * as syncActions from './actions/syncActions';
 import * as signingActions from './actions/signingActions';
 import * as recoveryActions from './actions/recoveryActions';
@@ -239,6 +252,17 @@ function Home({ navigation }: Props) {
   // sync alone does. Prevents showing an identity-only code that a following
   // batch would supersede.
   const batchStartedRef = useRef(false);
+  // CS-3: a sync that would replace an existing pairing waits here for the
+  // user's explicit confirmation — nothing has been saved while it is set.
+  const [rePairRequest, setRePairRequest] = useState<RePairRequest | null>(
+    null,
+  );
+  // Words of a confirmed single-chain re-pair, shown again once it completed.
+  const rePairWordsRef = useRef<string[] | null>(null);
+  // H-7: the WK request currently on screen, only once it passed the
+  // classification + paired-wallet signature check.
+  const [verifiedWkRequest, setVerifiedWkRequest] =
+    useState<wkSigningRequest | null>(null);
 
   const {
     evmSigningRequest,
@@ -252,7 +276,7 @@ function Home({ navigation }: Props) {
     chainSyncRequest: socketChainSyncRequest,
     clearChainSyncRequest,
   } = useSocket();
-  const { createWkIdentityAuth } = useRelayAuth();
+  const { createWkIdentityAuth, createReadAuthHeaders } = useRelayAuth();
 
   // A recovery request can arrive over either transport: the socket keeps it
   // in SocketContext, the GET /v1/action poll (handleRefresh, also the
@@ -476,6 +500,11 @@ function Home({ navigation }: Props) {
           const pwForEncryption = idData.password + passwordDecrypted;
           const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
           const mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
+          // KEY-3: a seed that does not decrypt under the current keys (e.g.
+          // an interrupted enc_key rotation) must never yield derived keys.
+          if (!validateMnemonic(mnemonicPhrase)) {
+            throw new Error('Unable to decrypt stored data');
+          }
           // generate master xpriv, xpub for chain
           const xpriv = getMasterXpriv(
             mnemonicPhrase,
@@ -568,14 +597,25 @@ function Home({ navigation }: Props) {
     });
   };
 
+  // CS-3: a sync that would replace an existing pairing hands its request
+  // here instead of saving; the request screen it came from is closed and the
+  // RePairWarning takes over.
+  const requireRePairConfirmation = (request: RePairRequest) => {
+    setSyncReq('');
+    setChainSyncData(null);
+    setRePairRequest(request);
+  };
+
   const generateAddressesForActiveChain = (
     suppliedXpubWallet: string,
     chain: keyof cryptos,
+    options: syncActions.SyncFlowOptions = {},
   ) =>
     syncActions.generateAddressesForActiveChain(
       actionCtx,
       suppliedXpubWallet,
       chain,
+      { onRePairRequired: requireRePairConfirmation, ...options },
     );
 
   // ==== Batch chain sync (chainsyncrequest) ====
@@ -649,11 +689,85 @@ function Home({ navigation }: Props) {
     }
   };
 
-  const processChainSyncBatch = async () =>
-    syncActions.processChainSyncBatch(actionCtx);
+  const processChainSyncBatch = async (
+    options: syncActions.SyncFlowOptions = {},
+  ) =>
+    syncActions.processChainSyncBatch(actionCtx, {
+      onRePairRequired: requireRePairConfirmation,
+      ...options,
+    });
 
-  const generateAddressesForSyncIdentity = (suppliedXpubWallet: string) =>
-    syncActions.generateAddressesForSyncIdentity(actionCtx, suppliedXpubWallet);
+  const generateAddressesForSyncIdentity = (
+    suppliedXpubWallet: string,
+    options: syncActions.SyncFlowOptions = {},
+  ) =>
+    syncActions.generateAddressesForSyncIdentity(
+      actionCtx,
+      suppliedXpubWallet,
+      { onRePairRequired: requireRePairConfirmation, ...options },
+    );
+
+  /**
+   * The user answered the CS-3 re-pair warning. Confirm re-runs the very same
+   * sync with the replacement allowed; cancel saves nothing (a batch is
+   * reported to the wallet as declined, like a rejected chain-sync request).
+   */
+  const handleRePairAction = (confirmed: boolean) => {
+    const request = rePairRequest;
+    setRePairRequest(null);
+    if (!request) {
+      return;
+    }
+    if (request.kind === 'single' && request.chain && request.xpubWallet) {
+      if (!confirmed) {
+        setActiveChain(identityChain);
+        displayMessage('info', t('home:repair_cancelled'));
+        return;
+      }
+      if (request.chain === identityChain) {
+        generateAddressesForSyncIdentity(request.xpubWallet, {
+          confirmedRePair: true,
+        });
+        return;
+      }
+      if (request.chain !== activeChain) {
+        // the active chain moved on — never pair the wrong chain's keys
+        setActiveChain(identityChain);
+        displayMessage('error', t('home:err_sync_failed'));
+        return;
+      }
+      rePairWordsRef.current = request.words;
+      generateAddressesForActiveChain(request.xpubWallet, request.chain, {
+        confirmedRePair: true,
+      });
+      return;
+    }
+    if (request.kind === 'batch' && request.request) {
+      if (confirmed) {
+        batchStartedRef.current = true;
+        void processChainSyncBatch({
+          confirmedRePair: true,
+          request: request.request,
+        });
+        return;
+      }
+      displayMessage('info', t('home:repair_cancelled'));
+      // Same as declining the chain-sync request.
+      batchStartedRef.current = false;
+      if (identityVerifyEntryRef.current) {
+        setBatchVerifyWords(
+          sessionVerificationWords([identityVerifyEntryRef.current]),
+        );
+      }
+      postAction(
+        'chainsyncrejected',
+        buildChainSyncRejectionPayload('declined'),
+        identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      ).catch((error) => console.log(error));
+    }
+  };
 
   const openManualInput = () => {
     setIsMenuModalOpen(false);
@@ -697,20 +811,14 @@ function Home({ navigation }: Props) {
         wkIdentity,
       };
 
-      // Add authentication if available (includes hash of request body)
-      try {
-        const auth = await createWkIdentityAuth('action', wkIdentity, data);
-        if (auth) {
-          Object.assign(data, auth);
-        } else {
-          console.warn(
-            '[postAction] Auth not available, sending without signature',
-          );
-        }
-      } catch (error) {
-        console.error('[postAction] Error creating auth:', error);
-        // Continue without auth for backward compatibility
+      // RA-2: every action post is signed (the signature binds a hash of the
+      // body). Never send an unsigned action — the relay refuses them, and an
+      // unsigned post is exactly what an impersonator would send.
+      const auth = await createWkIdentityAuth('action', wkIdentity, data);
+      if (!auth) {
+        throw new Error('Relay authentication unavailable');
       }
+      Object.assign(data, auth);
 
       return axios.post(`https://${sspConfig().relay}/v1/action`, data, {
         timeout: RELAY_REQUEST_TIMEOUT_MS,
@@ -760,20 +868,14 @@ function Home({ navigation }: Props) {
       wkIdentity,
     };
 
-    // Add authentication if available (includes hash of request body)
-    try {
-      const auth = await createWkIdentityAuth('token', wkIdentity, data);
-      if (auth) {
-        Object.assign(data, auth);
-      } else {
-        console.warn(
-          '[postSyncToken] Auth not available, sending without signature',
-        );
-      }
-    } catch (error) {
-      console.error('[postSyncToken] Error creating auth:', error);
-      // Continue without auth for backward compatibility
+    // Signed only — an unsigned token post is never sent (RA-2). The token is
+    // refreshed again on the next app start once auth is available.
+    const auth = await createWkIdentityAuth('token', wkIdentity, data);
+    if (!auth) {
+      console.warn('[postSyncToken] Auth not available, token not posted');
+      return;
     }
+    Object.assign(data, auth);
 
     axios
       .post(`https://${sspConfig().relay}/v1/token`, data)
@@ -1118,11 +1220,20 @@ function Home({ navigation }: Props) {
         // case — a Flux tx with hundreds of UTXOs is several hundred KB) used
         // to leave isRefreshing true forever, hiding the refresh button behind
         // a pulsing logo with no way out.
+        // RA-4: the poll is signed as the wkIdentity it reads (headers bind
+        // `GET <path>`). Until the identity key material exists the poll goes
+        // out unsigned and the relay decides (it serves it in log mode).
+        const actionPath = `/v1/action/${sspWalletKeyInternalIdentity}`;
+        const readAuthHeaders = await createReadAuthHeaders(
+          actionPath,
+          sspWalletKeyInternalIdentity,
+        );
         const result = await axios.get(
-          `https://${
-            sspConfig().relay
-          }/v1/action/${sspWalletKeyInternalIdentity}`,
-          { timeout: RELAY_REQUEST_TIMEOUT_MS },
+          `https://${sspConfig().relay}${actionPath}`,
+          {
+            timeout: RELAY_REQUEST_TIMEOUT_MS,
+            ...(readAuthHeaders ? { headers: readAuthHeaders } : {}),
+          },
         );
         console.log('result', result.data);
         // Single dispatch table shared with the socket transport's action
@@ -1364,6 +1475,86 @@ function Home({ navigation }: Props) {
     }
   };
 
+  /**
+   * H-7 / KEY-1: classify the message and verify the request's walletSignature
+   * against the PAIRED wallet's identity key (/10/0, derived here from the
+   * wallet identity xpub stored at pairing — never taken from the request)
+   * before the request is shown at all. handleSignWkAction re-checks before
+   * signing.
+   */
+  const verifyIncomingWkRequest = async (
+    request: wkSigningRequest,
+  ): Promise<WkRequestCheck> => {
+    try {
+      const encryptionKey = await Keychain.getGenericPassword({
+        service: 'enc_key',
+      });
+      const passwordData = await Keychain.getGenericPassword({
+        service: 'sspkey_pw',
+      });
+      if (!encryptionKey || !passwordData || !identityChainState.xpubWallet) {
+        return { ok: false, reason: 'wallet_key_mismatch' };
+      }
+      const pwForEncryption =
+        encryptionKey.password +
+        CryptoJS.AES.decrypt(
+          passwordData.password,
+          encryptionKey.password,
+        ).toString(CryptoJS.enc.Utf8);
+      const walletIdentityXpub = CryptoJS.AES.decrypt(
+        identityChainState.xpubWallet,
+        pwForEncryption,
+      ).toString(CryptoJS.enc.Utf8);
+      return checkWkSigningRequest({
+        request,
+        ownWkIdentity: sspWalletKeyInternalIdentity,
+        pairedWalletIdentityPubKey: deriveIdentityPubKeyFromXpub(
+          walletIdentityXpub,
+          blockchains[identityChain].bip32,
+        ),
+        messagePrefix: blockchains[identityChain].messagePrefix,
+      });
+    } catch (error) {
+      console.log('[WK Sign] verification error', error);
+      return { ok: false, reason: 'malformed' };
+    }
+  };
+
+  useEffect(() => {
+    if (!wkSigningData) {
+      setVerifiedWkRequest(null);
+      return;
+    }
+    let cancelled = false;
+    setVerifiedWkRequest(null);
+    void verifyIncomingWkRequest(wkSigningData).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (result.ok) {
+        setVerifiedWkRequest(wkSigningData);
+        return;
+      }
+      // Refused before it is ever displayed. Never log the message itself.
+      console.log('[WK Sign] request refused:', result.reason);
+      displayMessage('error', t('home:err_wk_request_refused'), 6000);
+      setWkSigningData(null);
+      clearWkSigningRequest?.();
+      if (sspWalletKeyInternalIdentity) {
+        postAction(
+          'wksigningrejected',
+          '{}',
+          identityChain,
+          '',
+          sspWalletKeyInternalIdentity,
+        ).catch((error) => console.log(error));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wkSigningData]);
+
   const handleWkSigningRequestAction = async (status: boolean) => {
     try {
       setActivityStatus(true);
@@ -1419,18 +1610,27 @@ function Home({ navigation }: Props) {
     if (!fluxNodeStartData) return;
     try {
       if (!status) {
-        // User rejected via the UI
+        // User rejected via the UI. A rejection caused by the vault
+        // descriptor (or a declined pin confirmation) carries its errorCode,
+        // which SSP Wallet forwards to SSP Enterprise.
         const requestId = (fluxNodeStartData.requestId as string) || '';
         const nodeChain = (fluxNodeStartData.chain as string) || '';
         await postAction(
           'enterprisefluxnodestarted',
-          JSON.stringify({ requestId, error: 'User rejected' }),
+          JSON.stringify(
+            fluxNodeRejectionPayload(
+              requestId,
+              'User rejected',
+              consumeVaultRejectionCode(),
+            ),
+          ),
           nodeChain,
           '',
           sspWalletKeyInternalIdentity,
         );
         return;
       }
+      consumeVaultRejectionCode(); // never outlives the request it was set for
       setActivityStatus(true);
       await handleFluxNodeStart(fluxNodeStartData);
     } catch (err) {
@@ -1451,14 +1651,21 @@ function Home({ navigation }: Props) {
     try {
       setActivityStatus(true);
       if (status === true) {
+        consumeVaultRejectionCode(); // never outlives the request it was set for
         await handleVaultSignAction();
       } else {
-        // reject
+        // reject — name the request (so SSP Wallet and the relay drop exactly
+        // this one) and, for a vault descriptor refusal or a declined pin
+        // confirmation, the errorCode SSP Wallet forwards to SSP Enterprise.
+        const rejectedRequestId = vaultSigningData?.requestId;
+        const rejectionCode = consumeVaultRejectionCode();
         clearVaultSigningState(); // also discards any in-flight sol decode
         clearVaultSigningRequest?.();
         await postAction(
           'enterprisevaultsignrejected',
-          '{}',
+          JSON.stringify(
+            vaultSignRejectionPayload(rejectedRequestId, rejectionCode),
+          ),
           identityChain,
           '',
           sspWalletKeyInternalIdentity,
@@ -1493,6 +1700,13 @@ function Home({ navigation }: Props) {
   const handleSyncSuccessModalAction = () => {
     console.log('sync success modal close.');
     setSyncSuccessOpen(false);
+    // A confirmed single-chain re-pair (CS-3): show the same words the warning
+    // showed, now that SSP Wallet can display its side of the code.
+    if (rePairWordsRef.current) {
+      setBatchVerifyWords(rePairWordsRef.current);
+      rePairWordsRef.current = null;
+      return;
+    }
     // Identity-only pairing (no batch this session): show the ONE unified
     // verification code now. If a batch is/was in flight, its completion drives
     // the code instead (folding in the identity entry), so don't show it here.
@@ -1620,6 +1834,7 @@ function Home({ navigation }: Props) {
             !keyNonceSyncDialogOpen &&
             !chainSyncData &&
             !chainSyncProgress &&
+            !rePairRequest &&
             !recoveryRequest && (
               <HomeIdle
                 sspWalletKeyInternalIdentity={sspWalletKeyInternalIdentity}
@@ -1630,9 +1845,18 @@ function Home({ navigation }: Props) {
                 scanCode={() => scanCode()}
               />
             )}
+          {rePairRequest && !chainSyncProgress && (
+            <RePairWarning
+              chains={rePairRequest.chains}
+              words={rePairRequest.words}
+              activityStatus={activityStatus}
+              actionStatus={handleRePairAction}
+            />
+          )}
           <HomeRequests
             submittingTransaction={submittingTransaction}
             rawTx={rawTx}
+            txPath={txPath}
             xpubWallet={xpubWallet}
             xpubKey={xpubKey}
             activeChain={activeChain}
@@ -1662,7 +1886,11 @@ function Home({ navigation }: Props) {
             handleEvmSigningSuccessModalAction={
               handleEvmSigningSuccessModalAction
             }
-            wkSigningData={wkSigningData}
+            wkSigningData={
+              wkSigningData && verifiedWkRequest === wkSigningData
+                ? wkSigningData
+                : null
+            }
             handleWkSigningRequestAction={handleWkSigningRequestAction}
             vaultXpubData={vaultXpubData}
             handleVaultXpubRequestAction={handleVaultXpubRequestAction}
