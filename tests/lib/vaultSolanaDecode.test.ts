@@ -405,11 +405,21 @@ describe('decodeVaultSolTransaction — create bundles', () => {
     const bundle = buildSplBundle(recipient, 2500000n, 6, KNOWN_MINT);
     const result = await decodeVaultSolTransaction(bundle, 'solDevnet', {
       recipients: [{ address: recipient.toBase58(), amount: '2500000' }],
+      // The relay's mint is only an expectation compared against the bytes.
+      tokenMint: KNOWN_MINT.toBase58(),
     });
     expect(result.mismatch).toBe(false);
     expect(result.decoded.tokenContract).toBe(KNOWN_MINT.toBase58());
     expect(result.decoded.tokenSymbol).toBe('TEST-USDC');
     expect(result.decoded.tokenDecimals).toBe(6);
+  });
+
+  test('an SPL transfer whose payload names no token is refused (asset binding, solana-multisig 0.12.1)', async () => {
+    const bundle = buildSplBundle(recipient, 2500000n, 6, KNOWN_MINT);
+    const result = await decodeVaultSolTransaction(bundle, 'solDevnet', {
+      recipients: [{ address: recipient.toBase58(), amount: '2500000' }],
+    });
+    expect(result.mismatch).toBe(true);
   });
 
   test('H-14: decimals in the bytes that contradict the device token list block approval', async () => {
@@ -509,7 +519,10 @@ describe('decodeVaultSolTransaction — create bundles', () => {
     });
     expect(result.kind).toBe('create');
     expect(result.mismatch).toBe(true);
-    expect(result.mismatchReasons.join(' ')).toMatch(/legacy SPL Transfer/);
+    // solana-multisig 0.12.1 refuses tag 3 itself (counted as unrecognized).
+    expect(result.mismatchReasons.join(' ')).toMatch(
+      /unrecognized inner instruction/,
+    );
   });
 
   test('a proposal moving native SOL and a token at once is refused', async () => {
