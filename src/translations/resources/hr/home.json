@@ -53,6 +53,7 @@
   "err_relay_unreachable": "Could not reach SSP Relay. Check your connection, or use Scan Code instead.",
   "err_refresh_failed": "Could not check for pending requests. Try again.",
   "err_tx_failed": "Transakcija nije uspjela. Pokušajte kasnije.",
+  "warn_tx_sent_notify_failed": "Transaction sent to the network, but SSP Wallet could not be notified. It will detect the transaction on its own shortly.",
   "err_sync_with_ssp_needed": "Potrebna je sinkronizacija s SSP Wallet.",
   "err_invalid_manual_input": "Nevažeći ručni unos.",
   "err_invalid_scanned_data": "Nevažeći skenirani podaci.",

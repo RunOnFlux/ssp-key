@@ -53,6 +53,7 @@
   "err_relay_unreachable": "Could not reach SSP Relay. Check your connection, or use Scan Code instead.",
   "err_refresh_failed": "Could not check for pending requests. Try again.",
   "err_tx_failed": "লেনদেন ব্যর্থ হয়েছে. পরে আবার চেষ্টা করুন.",
+  "warn_tx_sent_notify_failed": "Transaction sent to the network, but SSP Wallet could not be notified. It will detect the transaction on its own shortly.",
   "err_sync_with_ssp_needed": "SSP ওয়ালেটের সাথে সিঙ্ক্রোনাইজেশন প্রয়োজন.",
   "err_invalid_manual_input": "অবৈধ ম্যানুয়াল ইনপুট.",
   "err_invalid_scanned_data": "অবৈধ স্ক্যান করা ডেটা.",

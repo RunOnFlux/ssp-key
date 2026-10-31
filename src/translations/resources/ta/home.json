@@ -53,6 +53,7 @@
   "err_relay_unreachable": "Could not reach SSP Relay. Check your connection, or use Scan Code instead.",
   "err_refresh_failed": "Could not check for pending requests. Try again.",
   "err_tx_failed": "பரிவர்த்தனை தோல்வி. பின்னர் மறுபடியும் முயற்சிக்கவும்.",
+  "warn_tx_sent_notify_failed": "Transaction sent to the network, but SSP Wallet could not be notified. It will detect the transaction on its own shortly.",
   "err_sync_with_ssp_needed": "SSP வாலெட்டுடன் ஒத்திசைவு தேவை.",
   "err_invalid_manual_input": "தவறான கைமுறை உள்ளீடு.",
   "err_invalid_scanned_data": "தவறான ஸ்கேன் செய்யப்பட்ட தரவு.",

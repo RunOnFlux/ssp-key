@@ -53,6 +53,7 @@
   "err_relay_unreachable": "Tidak dapat terhubung ke SSP Relay. Periksa koneksi Anda, atau gunakan Pindai Kode sebagai gantinya.",
   "err_refresh_failed": "Tidak dapat memeriksa permintaan yang tertunda. Coba lagi.",
   "err_tx_failed": "Transaksi gagal. Coba lagi nanti.",
+  "warn_tx_sent_notify_failed": "Transaksi telah dikirim ke dalam jaringan, tetapi SSP Wallet tidak dapat diberi notifikasi. Dompet tersebut akan mendeteksi transaksi itu sendiri dalam waktu dekat.",
   "err_sync_with_ssp_needed": "Sinkronisasi dengan SSP Wallet diperlukan.",
   "err_invalid_manual_input": "Masukan manual tidak valid.",
   "err_invalid_scanned_data": "Data yang Dipindai Tidak Valid.",

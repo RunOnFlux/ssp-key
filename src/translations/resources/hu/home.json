@@ -53,6 +53,7 @@
   "err_relay_unreachable": "Could not reach SSP Relay. Check your connection, or use Scan Code instead.",
   "err_refresh_failed": "Could not check for pending requests. Try again.",
   "err_tx_failed": "A tranzakció sikertelen. Próbálja meg később.",
+  "warn_tx_sent_notify_failed": "Transaction sent to the network, but SSP Wallet could not be notified. It will detect the transaction on its own shortly.",
   "err_sync_with_ssp_needed": "SSP tárcával való szinkronizálás szükséges.",
   "err_invalid_manual_input": "Érvénytelen manuális bevitel.",
   "err_invalid_scanned_data": "Érvénytelen szkennelt adat.",

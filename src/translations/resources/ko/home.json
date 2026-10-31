@@ -53,6 +53,7 @@
   "err_relay_unreachable": "Could not reach SSP Relay. Check your connection, or use Scan Code instead.",
   "err_refresh_failed": "Could not check for pending requests. Try again.",
   "err_tx_failed": "거래에 실패했습니다. 나중에 다시 시도하세요.",
+  "warn_tx_sent_notify_failed": "Transaction sent to the network, but SSP Wallet could not be notified. It will detect the transaction on its own shortly.",
   "err_sync_with_ssp_needed": "SSP 지갑과의 동기화가 필요합니다.",
   "err_invalid_manual_input": "잘못된 수동 입력입니다.",
   "err_invalid_scanned_data": "잘못된 스캔 데이터입니다.",
