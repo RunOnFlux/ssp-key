@@ -22,36 +22,54 @@ const SEED =
 const HISTORY_SERVICE = 'sspkey_sign_history';
 
 // ---- keychain (in memory, with fault injection) ----
+// The access group each item was written to is tracked alongside, so calls
+// naming another group — as lib/keychain's clean-up of an earlier build's
+// copy does — leave it alone. Items seeded straight into the map sit in the
+// app group: Startup moves everything there before the rotation runs.
+const MOCK_APP_GROUP = 'group.io.runonflux.sspkey';
 const mockKeychain = new Map<string, string>();
+const mockKeychainGroups = new Map<string, string>();
 const mockHangOn = new Set<string>();
 const mockFailOn = new Set<string>();
-jest.mock('react-native-keychain', () => ({
-  STORAGE_TYPE: { AES_GCM_NO_AUTH: 'AES_GCM_NO_AUTH' },
-  ACCESSIBLE: {
-    WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
-  },
-  getGenericPassword: jest.fn(({ service }: { service: string }) =>
-    Promise.resolve(
-      mockKeychain.has(service)
-        ? { username: service, password: mockKeychain.get(service) }
-        : false,
-    ),
-  ),
-  setGenericPassword: jest.fn(
-    (_user: string, value: string, { service }: { service: string }) => {
-      if (mockHangOn.has(service)) return new Promise(() => {});
-      if (mockFailOn.has(service)) {
-        return Promise.reject(new Error(`write failed: ${service}`));
-      }
-      mockKeychain.set(service, value);
-      return Promise.resolve(true);
+type MockKeychainOptions = { service: string; accessGroup?: string };
+jest.mock('react-native-keychain', () => {
+  const inScope = ({ service, accessGroup }: MockKeychainOptions) =>
+    mockKeychain.has(service) &&
+    (accessGroup === undefined ||
+      (mockKeychainGroups.get(service) ?? MOCK_APP_GROUP) === accessGroup);
+  return {
+    STORAGE_TYPE: { AES_GCM_NO_AUTH: 'AES_GCM_NO_AUTH' },
+    ACCESSIBLE: {
+      WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
     },
-  ),
-  resetGenericPassword: jest.fn(({ service }: { service: string }) => {
-    mockKeychain.delete(service);
-    return Promise.resolve(true);
-  }),
-}));
+    getGenericPassword: jest.fn((opts: MockKeychainOptions) =>
+      Promise.resolve(
+        inScope(opts)
+          ? { username: opts.service, password: mockKeychain.get(opts.service) }
+          : false,
+      ),
+    ),
+    setGenericPassword: jest.fn(
+      (_user: string, value: string, opts: MockKeychainOptions) => {
+        const { service } = opts;
+        if (mockHangOn.has(service)) return new Promise(() => {});
+        if (mockFailOn.has(service)) {
+          return Promise.reject(new Error(`write failed: ${service}`));
+        }
+        mockKeychain.set(service, value);
+        mockKeychainGroups.set(service, opts.accessGroup ?? 'default');
+        return Promise.resolve(true);
+      },
+    ),
+    resetGenericPassword: jest.fn((opts: MockKeychainOptions) => {
+      if (inScope(opts)) {
+        mockKeychain.delete(opts.service);
+        mockKeychainGroups.delete(opts.service);
+      }
+      return Promise.resolve(true);
+    }),
+  };
+});
 
 jest.mock('react-native-device-info', () => ({
   getUniqueId: jest.fn(() => Promise.resolve(UID)),
@@ -59,12 +77,14 @@ jest.mock('react-native-device-info', () => ({
 
 // ---- app state (the rotation only runs in the foreground) ----
 let mockAppState = 'active';
+// iOS: keychain reads and writes go through lib/keychain's app-group path.
 jest.mock('react-native', () => ({
   AppState: {
     get currentState() {
       return mockAppState;
     },
   },
+  Platform: { OS: 'ios' },
 }));
 
 // ---- store: in-memory state + a separate "persisted" (MMKV) copy ----
@@ -144,6 +164,7 @@ const PLAIN = {
 /** A legacy install: everything encrypted with UID + password. */
 function seedLegacyInstall(encKey = UID) {
   mockKeychain.clear();
+  mockKeychainGroups.clear();
   mockKeychain.set('enc_key', encKey);
   mockKeychain.set(
     'sspkey_pw',
@@ -243,6 +264,19 @@ describe('migrateLegacyEncKey', () => {
     expect(
       JSON.parse(dec(mockKeychain.get(HISTORY_SERVICE) as string, newKey)),
     ).toEqual([{ id: '1', type: 'transaction' }]);
+  });
+
+  it('rotates an install whose items are still in the default access group, into the app group', async () => {
+    // e.g. the launch-time move to the app group failed
+    for (const service of mockKeychain.keys()) {
+      mockKeychainGroups.set(service, 'default');
+    }
+    expect(await migrateLegacyEncKey()).toBe('migrated');
+    expect(mockKeychain.get('enc_key')).not.toBe(UID);
+    expectConsistent();
+    for (const service of ['enc_key', 'sspkey_pw', HISTORY_SERVICE]) {
+      expect(mockKeychainGroups.get(service)).toBe(MOCK_APP_GROUP);
+    }
   });
 
   it('is idempotent', async () => {

@@ -18,33 +18,49 @@ import {
   resetAttempts,
 } from '../../src/components/Authentication/passwordAttempts';
 
+// The access group each item was written to is tracked alongside (unset = the
+// default group), so calls naming another group — as lib/keychain's clean-up
+// of an earlier build's copy does — leave it alone.
 const mockKeychainStore = new Map<string, string>();
-jest.mock('react-native-keychain', () => ({
-  STORAGE_TYPE: { AES_GCM_NO_AUTH: 'AES_GCM_NO_AUTH' },
-  ACCESSIBLE: {
-    WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
-  },
-  getGenericPassword: jest.fn(({ service }: { service: string }) =>
-    Promise.resolve(
-      mockKeychainStore.has(service)
-        ? { password: mockKeychainStore.get(service) }
-        : false,
-    ),
-  ),
-  setGenericPassword: jest.fn(
-    (_user: string, password: string, { service }: { service: string }) => {
-      mockKeychainStore.set(service, password);
-      return Promise.resolve(true);
+const mockKeychainGroups = new Map<string, string>();
+type MockKeychainOptions = { service: string; accessGroup?: string };
+jest.mock('react-native-keychain', () => {
+  const inScope = ({ service, accessGroup }: MockKeychainOptions) =>
+    mockKeychainStore.has(service) &&
+    (accessGroup === undefined ||
+      (mockKeychainGroups.get(service) ?? 'default') === accessGroup);
+  return {
+    STORAGE_TYPE: { AES_GCM_NO_AUTH: 'AES_GCM_NO_AUTH' },
+    ACCESSIBLE: {
+      WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
     },
-  ),
-  resetGenericPassword: jest.fn(({ service }: { service: string }) => {
-    mockKeychainStore.delete(service);
-    return Promise.resolve(true);
-  }),
-}));
+    getGenericPassword: jest.fn((opts: MockKeychainOptions) =>
+      Promise.resolve(
+        inScope(opts)
+          ? { password: mockKeychainStore.get(opts.service) }
+          : false,
+      ),
+    ),
+    setGenericPassword: jest.fn(
+      (_user: string, password: string, opts: MockKeychainOptions) => {
+        mockKeychainStore.set(opts.service, password);
+        mockKeychainGroups.set(opts.service, opts.accessGroup ?? 'default');
+        return Promise.resolve(true);
+      },
+    ),
+    resetGenericPassword: jest.fn((opts: MockKeychainOptions) => {
+      if (inScope(opts)) {
+        mockKeychainStore.delete(opts.service);
+        mockKeychainGroups.delete(opts.service);
+      }
+      return Promise.resolve(true);
+    }),
+  };
+});
 
 beforeEach(() => {
   mockKeychainStore.clear();
+  mockKeychainGroups.clear();
   jest.clearAllMocks();
 });
 

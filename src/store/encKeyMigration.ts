@@ -44,7 +44,7 @@
  * After rotation neither holds anything that decrypts the seed.
  */
 import { AppState } from 'react-native';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../lib/keychain';
 import * as CryptoJS from 'crypto-js';
 import { Buffer } from 'buffer';
 import { getUniqueId } from 'react-native-device-info';

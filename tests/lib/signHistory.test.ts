@@ -1,33 +1,55 @@
-// Mock keychain with an in-memory store keyed by `service`.
+// Mock keychain with an in-memory store keyed by `service`. The access group
+// each item was written to is tracked alongside (unset = the default group), so
+// calls naming another group — as lib/keychain's clean-up of an earlier
+// build's copy does — leave it alone.
 // Prefixed `mock` so jest.mock's factory is allowed to reference it.
 const mockKeychainStore = new Map<string, string>();
+const mockKeychainGroups = new Map<string, string>();
 
-jest.mock('react-native-keychain', () => ({
-  getGenericPassword: jest.fn((opts?: { service?: string }) => {
+type MockKeychainOptions = { service?: string; accessGroup?: string };
+
+jest.mock('react-native-keychain', () => {
+  const inScope = (opts?: MockKeychainOptions) => {
     const service = opts?.service ?? 'default';
-    if (!mockKeychainStore.has(service)) {
-      return Promise.resolve(false);
-    }
-    return Promise.resolve({
-      username: service,
-      password: mockKeychainStore.get(service),
-    });
-  }),
-  setGenericPassword: jest.fn(
-    (_username: string, password: string, opts?: { service?: string }) => {
+    return (
+      mockKeychainStore.has(service) &&
+      (opts?.accessGroup === undefined ||
+        (mockKeychainGroups.get(service) ?? 'default') === opts.accessGroup)
+    );
+  };
+  return {
+    getGenericPassword: jest.fn((opts?: MockKeychainOptions) => {
       const service = opts?.service ?? 'default';
-      mockKeychainStore.set(service, password);
+      if (!inScope(opts)) {
+        return Promise.resolve(false);
+      }
+      return Promise.resolve({
+        username: service,
+        password: mockKeychainStore.get(service),
+      });
+    }),
+    setGenericPassword: jest.fn(
+      (_username: string, password: string, opts?: MockKeychainOptions) => {
+        const service = opts?.service ?? 'default';
+        mockKeychainStore.set(service, password);
+        mockKeychainGroups.set(service, opts?.accessGroup ?? 'default');
+        return Promise.resolve(true);
+      },
+    ),
+    resetGenericPassword: jest.fn((opts?: MockKeychainOptions) => {
+      const service = opts?.service ?? 'default';
+      if (inScope(opts)) {
+        mockKeychainStore.delete(service);
+        mockKeychainGroups.delete(service);
+      }
       return Promise.resolve(true);
+    }),
+    STORAGE_TYPE: { AES_GCM_NO_AUTH: 'AESGCMNoAuth' },
+    ACCESSIBLE: {
+      WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WhenUnlockedThisDeviceOnly',
     },
-  ),
-  resetGenericPassword: jest.fn((opts?: { service?: string }) => {
-    const service = opts?.service ?? 'default';
-    mockKeychainStore.delete(service);
-    return Promise.resolve(true);
-  }),
-  STORAGE_TYPE: { AES_GCM_NO_AUTH: 'AESGCMNoAuth' },
-  ACCESSIBLE: { WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WhenUnlockedThisDeviceOnly' },
-}));
+  };
+});
 
 import * as CryptoJS from 'crypto-js';
 import * as Keychain from 'react-native-keychain';
@@ -66,6 +88,7 @@ function seedAppKeys(encKey = 'enc-key-xyz', rawPw = 'user-password') {
 
 beforeEach(() => {
   mockKeychainStore.clear();
+  mockKeychainGroups.clear();
   jest.clearAllMocks();
 });
 

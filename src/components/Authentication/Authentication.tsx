@@ -14,7 +14,7 @@ import { Eye, EyeOff, FingerprintPattern } from 'lucide-react-native';
 import * as CryptoJS from 'crypto-js';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import { useTheme } from '../../hooks';
 import ToastNotif from '../Toast/Toast';
 import BlurOverlay from '../../BlurOverlay';

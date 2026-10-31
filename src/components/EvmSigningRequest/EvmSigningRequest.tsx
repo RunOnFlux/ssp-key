@@ -18,7 +18,7 @@ import {
   parseConsumerDerivationPath,
   parseEip191Preimage,
 } from '../../lib/consumerGuards';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import CryptoJS from 'crypto-js';
 import { cryptos } from '../../types';
 import Authentication from '../Authentication/Authentication';

@@ -16,7 +16,7 @@
 // This module does NOT change any signing/crypto/derivation logic. It is a purely
 // additive record written after a co-sign action has already been posted.
 
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from './keychain';
 import * as CryptoJS from 'crypto-js';
 
 /** NEW keychain service — must never collide with existing services. */
