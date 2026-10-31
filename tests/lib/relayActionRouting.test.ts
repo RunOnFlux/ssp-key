@@ -194,12 +194,19 @@ describe('routeRelayAction', () => {
       },
       {
         action: 'enterprisevaultsign',
-        payload: { chain: 'btc', recipients: [] },
+        payload: {
+          chain: 'btc',
+          orgIndex: 100,
+          vaultIndex: 0,
+          rawUnsignedTx: '0200',
+          inputDetails: [{ index: 0, addressIndex: 0 }],
+          recipients: [],
+        },
         handler: 'onVaultSigningRequest',
       },
       {
         action: 'enterprisevaultxpub',
-        payload: { chain: 'btc', vaultId: 'v1' },
+        payload: { chain: 'btc', orgIndex: 100, vaultIndex: 0, vaultId: 'v1' },
         handler: 'onVaultXpubRequest',
       },
     ];
@@ -233,6 +240,66 @@ describe('routeRelayAction', () => {
     });
   });
 
+  it('H-1: refuses enterprise requests for non-organisation accounts at receipt', () => {
+    const refused: { action: string; payload: Record<string, unknown> }[] = [
+      // consumer account 0' (KEY-2 / KAS-1 PoC)
+      {
+        action: 'enterprisevaultsign',
+        payload: {
+          chain: 'btc',
+          orgIndex: 0,
+          vaultIndex: 0,
+          rawUnsignedTx: '0200',
+          inputDetails: [{ addressIndex: 0 }],
+          orgName: 'Acme Treasury',
+        },
+      },
+      // recovery account 99'
+      {
+        action: 'enterprisevaultxpub',
+        payload: { chain: 'btc', orgIndex: 99, vaultIndex: 0 },
+      },
+      // string index (path injection)
+      {
+        action: 'enterprisevaultxpub',
+        payload: { chain: 'btc', orgIndex: "100'/0", vaultIndex: 0 },
+      },
+      {
+        action: 'enterprisefluxnodestart',
+        payload: {
+          chain: 'flux',
+          orgIndex: 0,
+          vaultIndex: 0,
+          collateralVout: 0,
+        },
+      },
+      // CHN-5: message signing on a non-EVM chain
+      {
+        action: 'enterprisevaultsign',
+        payload: {
+          chain: 'solMainnet',
+          orgIndex: 100,
+          vaultIndex: 0,
+          rawUnsignedTx: 'AQID',
+          signMessage: 'Sign in',
+        },
+      },
+    ];
+    refused.forEach(({ action, payload }) => {
+      const handlers = makeHandlers();
+      expect(
+        routeRelayAction(
+          { action, payload: JSON.stringify(payload) },
+          handlers,
+        ),
+      ).toBe(true);
+      expect(handlers.onInvalidPayload).toHaveBeenCalledTimes(1);
+      expect(handlers.onVaultSigningRequest).not.toHaveBeenCalled();
+      expect(handlers.onVaultXpubRequest).not.toHaveBeenCalled();
+      expect(handlers.onFluxNodeStartRequest).not.toHaveBeenCalled();
+    });
+  });
+
   it('routes enterprisekeynoncesync, which carries no payload', () => {
     const handlers = makeHandlers();
     expect(
@@ -243,7 +310,14 @@ describe('routeRelayAction', () => {
 
   it('routes enterprisefluxnodestart — the poll path used to drop it', () => {
     const handlers = makeHandlers();
-    const request = { requestId: 'req-1', chain: 'flux', collateral: 'x' };
+    const request = {
+      requestId: 'req-1',
+      chain: 'flux',
+      orgIndex: 100,
+      vaultIndex: 0,
+      collateralVout: 0,
+      collateral: 'x',
+    };
     expect(
       routeRelayAction(
         { action: 'enterprisefluxnodestart', payload: JSON.stringify(request) },

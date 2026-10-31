@@ -31,8 +31,10 @@ const App = () => {
     alreadyMounted.current = true;
     requestUserPermission();
     notificationListener();
-    // @TODO this still does not prevent modal screenshot, unable to find a solution, notify user that screenshot was taken - unable to find a solution
-    // only package that works is rn-screenshot-prevent, but it does not work on modal, enable screenshots on iOS to not cause confusion. Android uses secure FLAG_SECURE
+    // App-switcher snapshots: BlurOverlay (root, below, and inside every
+    // Modal) renders an opaque cover from one shared app-state store on
+    // 'inactive'/'background' (KEY-9). User-taken screenshots cannot be
+    // blocked from JS on iOS; Android uses FLAG_SECURE (MainActivity).
   });
 
   return (

@@ -352,6 +352,14 @@ export interface syncSSPRelay {
   // key it derives itself, so the value does not depend on trusting the relay.
   recoveryXpub?: string;
   xpubSignature?: string;
+  // CS-1: this Key's identity-key signature over
+  // `SSP_CHAIN_SYNC:${chain}:${walletXpub}:${keyXpub}`. SSP Wallet verifies it
+  // against the Key identity pubkey it stored at identity pairing.
+  keyXpubSignature?: string;
+  // The address-level witness script, sent under this name on POST /v1/sync
+  // because the relay's multisig auth reads the identity script from
+  // `witnessScript`. The relay stores it back as the document's witnessScript.
+  chainWitnessScript?: string;
 }
 
 export interface actionSSPRelay {
@@ -583,6 +591,9 @@ interface evmSigningRequest {
   chain: string;
   walletInUse: string; // this is walletInUse
   requestId: string; // this is the requestId - usually walletconnect requestId
+  // 'eip712': data is typed-data JSON (eth_signTypedData_v3 / _v4), signed
+  // over its EIP-712 digest. Absent: data is an EIP-191 personal message.
+  messageType?: 'eip712';
 }
 
 interface WkSignRequesterInfo {

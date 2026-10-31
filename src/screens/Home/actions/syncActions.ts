@@ -12,6 +12,7 @@ import {
   generatePublicNonce,
   generateSolanaPubkeyArray,
 } from '../../../lib/wallet';
+import { isDerivableSeedPhrase } from '../../../lib/seedPhrase';
 import {
   setXpubKey,
   setXprivKey,
@@ -33,9 +34,155 @@ import {
   type VerifyEntry,
 } from '../../../lib/pairingVerification';
 import { signRecoveryXpub } from '../../../lib/recoveryPublish';
-import { CHAIN_SYNC_POST_SPACING_MS } from '../../../lib/chainSyncRequest';
+import {
+  CHAIN_SYNC_POST_SPACING_MS,
+  chainSyncAttestationMessage,
+  classifyPairingChange,
+  type PairingChange,
+  type ParsedChainSyncRequest,
+} from '../../../lib/chainSyncRequest';
+import {
+  computeBodyHash,
+  createMultisigAuth,
+  signMessage,
+} from '../../../lib/relayAuth';
 import { cryptos, syncSSPRelay, publicNonce } from '../../../types';
 import type { HomeActionContext } from './types';
+
+/**
+ * CS-3: a pending re-pair that needs the user's explicit confirmation before
+ * anything is saved. Raised instead of silently overwriting a stored wallet
+ * xpub with a different one.
+ */
+export interface RePairRequest {
+  kind: 'single' | 'batch';
+  /** Chains whose existing pairing would be replaced. */
+  chains: (keyof cryptos)[];
+  /**
+   * The session verification words of the NEW pairing, computed from this
+   * device's own view before anything is stored — the same words this device
+   * shows once the sync completes, and that SSP Wallet must show.
+   */
+  words: string[];
+  /** single: the chain and the wallet xpub that was scanned / requested. */
+  chain?: keyof cryptos;
+  xpubWallet?: string;
+  /** batch: the whole chain-sync request, replayed on confirmation. */
+  request?: ParsedChainSyncRequest;
+}
+
+export interface SyncFlowOptions {
+  /** The user explicitly confirmed replacing existing pairings (CS-3). */
+  confirmedRePair?: boolean;
+  /**
+   * Called — instead of saving anything — when the sync would replace an
+   * existing pairing and confirmedRePair is not set. Without it such a sync
+   * fails closed.
+   */
+  onRePairRequired?: (request: RePairRequest) => void;
+  /** batch only: the request to process (defaults to ctx.chainSyncData). */
+  request?: ParsedChainSyncRequest;
+}
+
+/** Identity leaf m/48'/coin'/0'/scriptType'/10/0. */
+const IDENTITY_TYPE_INDEX = 10;
+
+/** AES-decrypt a stored blob; '' when it does not decrypt (never throws). */
+const decryptOrEmpty = (blob: string, pwForEncryption: string): string => {
+  try {
+    return CryptoJS.AES.decrypt(blob, pwForEncryption).toString(
+      CryptoJS.enc.Utf8,
+    );
+  } catch {
+    return '';
+  }
+};
+
+/**
+ * CS-3: compare a supplied wallet xpub with what this device stores for the
+ * chain. A stored blob that no longer decrypts counts as a different pairing
+ * (fail closed: it is never overwritten without confirmation).
+ */
+export const storedPairingChange = (
+  chain: keyof cryptos,
+  suppliedXpubWallet: string,
+  pwForEncryption: string,
+): PairingChange => {
+  const stored = store.getState()[chain]?.xpubWallet;
+  if (!stored) return classifyPairingChange(null, suppliedXpubWallet);
+  return classifyPairingChange(
+    decryptOrEmpty(stored, pwForEncryption),
+    suppliedXpubWallet,
+  );
+};
+
+/** Plaintext identity-chain xpriv, or '' when unavailable. */
+const identityXpriv = (ctx: HomeActionContext, pwForEncryption: string) => {
+  const blob = ctx.identityChainState?.xprivKey;
+  return blob ? decryptOrEmpty(blob, pwForEncryption) : '';
+};
+
+/** Message prefix chain for identity-key signatures (utxo identity chains). */
+const identitySigningChain = (identityChain: keyof cryptos): keyof cryptos =>
+  blockchains[identityChain].chainType === 'utxo' ? identityChain : 'btc';
+
+/**
+ * CS-1: sign `SSP_CHAIN_SYNC:<chain>:<walletXpub>:<keyXpub>` with the Key's
+ * identity key — the same /10/0 key and signing helper WK signing uses.
+ * Returns undefined when the identity key is unavailable; SSP Wallet then
+ * requires the out-of-band verification code for this chain (CS-2).
+ */
+export const signChainSyncAttestation = (
+  xprivKeyIdentity: string,
+  identityChain: keyof cryptos,
+  chain: string,
+  walletXpub: string,
+  keyXpub: string,
+): string | undefined => {
+  if (!xprivKeyIdentity) return undefined;
+  try {
+    const identityKeypair = generateAddressKeypair(
+      xprivKeyIdentity,
+      IDENTITY_TYPE_INDEX,
+      0,
+      identityChain,
+    );
+    return signMessage(
+      chainSyncAttestationMessage(chain, walletXpub, keyXpub),
+      identityKeypair.privKey,
+      identitySigningChain(identityChain),
+    );
+  } catch (error) {
+    console.log('[Chain Sync] Could not sign chain attestation', error);
+    return undefined;
+  }
+};
+
+/**
+ * Body + wkIdentity auth for POST /v1/sync (RA-2). The relay's multisig auth
+ * reads the identity witness script from the body's `witnessScript` field, so
+ * the address-level script the sync document carries travels as
+ * `chainWitnessScript` instead; the relay stores it back as the document's
+ * `witnessScript` (SSP Wallet compares it when present). Throws instead of
+ * ever posting an unsigned sync.
+ */
+const signSyncBody = async (
+  syncData: syncSSPRelay,
+  sign: (
+    body: Record<string, unknown>,
+  ) => Promise<Record<string, unknown> | null> | Record<string, unknown> | null,
+): Promise<Record<string, unknown>> => {
+  const body: Record<string, unknown> = { ...syncData };
+  if (body.witnessScript) {
+    body.chainWitnessScript = body.witnessScript;
+  }
+  delete body.witnessScript;
+  const auth = await sign(body);
+  if (!auth) {
+    throw new Error('Relay authentication unavailable for sync');
+  }
+  return { ...body, ...auth };
+};
 
 /**
  * The recovery account xpub for the sync payload, with this Key's signature
@@ -121,6 +268,51 @@ const generateKeyPublicNonces = (
 // sharedPublicNonces: returns the batch flow's ONE pool for the whole batch,
 // generating it on first use (see generateKeyPublicNonces). Omitted by the
 // single-chain flow, which generates its own pool exactly as before.
+/**
+ * The Key xpub exactly as it is posted for `chain`. For Solana chains the
+ * "xpub" is a JSON-stringified array of 20 base58 Ed25519 leaf pubkeys
+ * (Ed25519 has no non-hardened public-key derivation); a chain set up before
+ * Solana support still stores a regular xpub, so the array is derived on the
+ * fly from xprivKey and persisted back.
+ */
+const resolveKeyXpubForSync = (
+  chain: keyof cryptos,
+  pwForEncryption: string,
+  xpubKeyEncrypted: string,
+  xprivKeyEncrypted: string,
+): string => {
+  const xpubKeyDecrypted = decryptOrEmpty(xpubKeyEncrypted, pwForEncryption);
+  if (
+    blockchains[chain].chainType !== 'sol' ||
+    xpubKeyDecrypted.startsWith('[')
+  ) {
+    return xpubKeyDecrypted;
+  }
+  const xprivKeyDecrypted = decryptOrEmpty(xprivKeyEncrypted, pwForEncryption);
+  // Consumer wallet on-the-fly migration: derive at typeIndex=0 (receiving
+  // slot). Enterprise vaults take a different code path
+  // (handleVaultXpubAction) which passes vault.vaultIndex.
+  const keyPubkeys = generateSolanaPubkeyArray(xprivKeyDecrypted, chain, 0);
+  const asArray = JSON.stringify(keyPubkeys);
+  // Persist the JSON-encoded form so subsequent calls don't re-derive.
+  setXpubKey(chain, CryptoJS.AES.encrypt(asArray, pwForEncryption).toString());
+  return asArray;
+};
+
+// Shared per-chain sync core: decrypts the key xpub for the chain, runs the
+// Solana on-the-fly migration when needed, generates + verifies the first
+// multisig address, stores the wallet xpub, and posts the standard
+// syncSSPRelay payload to POST /v1/sync. Used by the single-chain sync flow
+// (generateAddressesForActiveChain) and looped over by the batch chain sync
+// (processChainSyncBatch) — same crypto calls, same sync POST, unchanged
+// endpoint so old wallets keep working.
+//
+// The caller has already established (CS-3) that storing suppliedXpubWallet
+// is either a new pairing, the same pairing, or a re-pair the user confirmed.
+//
+// sharedPublicNonces: returns the batch flow's ONE pool for the whole batch,
+// generating it on first use (see generateKeyPublicNonces). Omitted by the
+// single-chain flow, which generates its own pool exactly as before.
 export const syncChainToRelay = async (
   ctx: HomeActionContext,
   chain: keyof cryptos,
@@ -135,41 +327,26 @@ export const syncChainToRelay = async (
     sspWalletKeyInternalIdentity,
     sspKeyInternalIdentity,
     xpubRecovery,
+    identityChain,
     dispatch,
   } = ctx;
-  const xprk = CryptoJS.AES.decrypt(xprivKeyEncrypted, pwForEncryption);
+  // The identity xpriv (NOT this chain's) signs both attestations.
+  const xprivKeyIdentity = identityXpriv(ctx, pwForEncryption);
   const recoveryFields = recoveryFieldsForSync(
     xpubRecovery,
-    xprk.toString(CryptoJS.enc.Utf8),
+    xprivKeyIdentity,
     sspWalletKeyInternalIdentity,
-    ctx.identityChain,
+    identityChain,
     pwForEncryption,
   );
-  const xpk = CryptoJS.AES.decrypt(xpubKeyEncrypted, pwForEncryption);
-  let xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-  // For Solana chains, "xpub" is actually a JSON-stringified array of
-  // 20 base58 Ed25519 leaf pubkeys (Ed25519 has no non-hardened
-  // public-key derivation). If the stored xpubKey for this chain is
-  // still in regular xpub form (e.g., chain was set up before Solana
-  // support), derive the 20-pubkey array on the fly from xprivKey.
-  if (
-    blockchains[chain].chainType === 'sol' &&
-    !xpubKeyDecrypted.startsWith('[')
-  ) {
-    const xprk = CryptoJS.AES.decrypt(xprivKeyEncrypted, pwForEncryption);
-    const xprivKeyDecrypted = xprk.toString(CryptoJS.enc.Utf8);
-    // Consumer wallet on-the-fly migration: derive at typeIndex=0
-    // (receiving slot). Enterprise vaults take a different code path
-    // (handleVaultXpubAction) which passes vault.vaultIndex.
-    const keyPubkeys = generateSolanaPubkeyArray(xprivKeyDecrypted, chain, 0);
-    xpubKeyDecrypted = JSON.stringify(keyPubkeys);
-    // Persist the JSON-encoded form back to encrypted storage so
-    // subsequent calls don't need to re-derive.
-    const reEncryptedXpubKey = CryptoJS.AES.encrypt(
-      xpubKeyDecrypted,
-      pwForEncryption,
-    ).toString();
-    setXpubKey(chain, reEncryptedXpubKey);
+  const xpubKeyDecrypted = resolveKeyXpubForSync(
+    chain,
+    pwForEncryption,
+    xpubKeyEncrypted,
+    xprivKeyEncrypted,
+  );
+  if (!xpubKeyDecrypted) {
+    throw new Error('Could not decrypt key xpub');
   }
   const addrInfo = generateMultisigAddress(
     suppliedXpubWallet,
@@ -203,11 +380,23 @@ export const syncChainToRelay = async (
     // Include additional fields for verification
     walletXpub: suppliedXpubWallet,
     keyIdentity: sspKeyInternalIdentity,
-    // Scripts from first address (index 0) - not strictly needed but extra assurance
+    // Script from first address (index 0) - not strictly needed but extra
+    // assurance. The witnessScript rides as chainWitnessScript (signSyncBody).
     redeemScript: addrInfo.redeemScript,
     witnessScript: addrInfo.witnessScript,
     ...recoveryFields,
   };
+  // CS-1: the Key attests this exact (chain, walletXpub, keyXpub) triple.
+  const keyXpubSignature = signChainSyncAttestation(
+    xprivKeyIdentity,
+    identityChain,
+    chain,
+    suppliedXpubWallet,
+    xpubKeyDecrypted,
+  );
+  if (keyXpubSignature) {
+    syncData.keyXpubSignature = keyXpubSignature;
+  }
   // == EVM ==
   if (blockchains[chain].chainType === 'evm') {
     // one pool per install: reuse the batch's pool when the caller supplied
@@ -217,7 +406,10 @@ export const syncChainToRelay = async (
       : generateKeyPublicNonces(dispatch, pwForEncryption);
   }
   // == EVM end
-  await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
+  const body = await signSyncBody(syncData, (unsigned) =>
+    ctx.createWkAuth('sync', sspWalletKeyInternalIdentity, unsigned),
+  );
+  await axios.post(`https://${sspConfig().relay}/v1/sync`, body);
   // Return this device's decrypted view of the pair so the batch flow can
   // derive the out-of-band verification code. Display-only — never logged.
   return {
@@ -226,10 +418,33 @@ export const syncChainToRelay = async (
     keyXpub: xpubKeyDecrypted,
   };
 };
+
+/** The identity entry of this pairing session, if identity paired this session. */
+const sessionIdentityEntries = (ctx: HomeActionContext): VerifyEntry[] =>
+  ctx.identityVerifyEntryRef.current
+    ? [ctx.identityVerifyEntryRef.current]
+    : [];
+
+/** Decrypted stored password + enc_key, i.e. the AES passphrase for blobs. */
+const loadPwForEncryption = async (): Promise<string> => {
+  const idData = await Keychain.getGenericPassword({
+    service: 'enc_key',
+  });
+  const passwordData = await Keychain.getGenericPassword({
+    service: 'sspkey_pw',
+  });
+  if (!passwordData || !idData) {
+    throw new Error('Unable to decrypt stored data');
+  }
+  const password = CryptoJS.AES.decrypt(passwordData.password, idData.password);
+  return idData.password + password.toString(CryptoJS.enc.Utf8);
+};
+
 export const generateAddressesForActiveChain = (
   ctx: HomeActionContext,
   suppliedXpubWallet: string,
   chain: keyof cryptos,
+  options: SyncFlowOptions = {},
 ) => {
   const {
     xpubKey,
@@ -241,24 +456,39 @@ export const generateAddressesForActiveChain = (
     displayMessage,
     t,
   } = ctx;
-  Keychain.getGenericPassword({
-    service: 'enc_key',
-  })
-    .then(async (idData) => {
-      // clean up password from encrypted storage
-      const passwordData = await Keychain.getGenericPassword({
-        service: 'sspkey_pw',
-      });
-      if (!passwordData || !idData) {
-        throw new Error('Unable to decrypt stored data');
-      }
-      // decrypt passwordData.password with idData.password
-      const password = CryptoJS.AES.decrypt(
-        passwordData.password,
-        idData.password,
+  return loadPwForEncryption()
+    .then(async (pwForEncryption) => {
+      // CS-3: never silently replace an existing pairing for this chain.
+      const change = storedPairingChange(
+        chain,
+        suppliedXpubWallet,
+        pwForEncryption,
       );
-      const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
-      const pwForEncryption = idData.password + passwordDecrypted;
+      if (change === 'replace' && !options.confirmedRePair) {
+        if (!options.onRePairRequired) {
+          throw new Error('Re-pairing an already paired chain was refused');
+        }
+        const keyXpub = resolveKeyXpubForSync(
+          chain,
+          pwForEncryption,
+          xpubKey,
+          xprivKey,
+        );
+        if (!keyXpub) {
+          throw new Error('Could not decrypt key xpub');
+        }
+        options.onRePairRequired({
+          kind: 'single',
+          chains: [chain],
+          chain,
+          xpubWallet: suppliedXpubWallet,
+          words: sessionVerificationWords([
+            ...sessionIdentityEntries(ctx),
+            { chain, walletXpub: suppliedXpubWallet, keyXpub },
+          ]),
+        });
+        return;
+      }
       await syncChainToRelay(
         ctx,
         chain,
@@ -282,6 +512,7 @@ export const generateAddressesForActiveChain = (
 export const generateAddressesForSyncIdentity = (
   ctx: HomeActionContext,
   suppliedXpubWallet: string,
+  options: SyncFlowOptions = {},
 ) => {
   const {
     xpubKey,
@@ -295,28 +526,39 @@ export const generateAddressesForSyncIdentity = (
     displayMessage,
     t,
   } = ctx;
-  Keychain.getGenericPassword({
-    service: 'enc_key',
-  })
-    .then(async (idData) => {
-      // clean up password from encrypted storage
-      const passwordData = await Keychain.getGenericPassword({
-        service: 'sspkey_pw',
-      });
-      if (!passwordData || !idData) {
-        throw new Error('Unable to decrypt stored data');
+  return loadPwForEncryption()
+    .then(async (pwForEncryption) => {
+      const xpubKeyDecrypted = decryptOrEmpty(xpubKey, pwForEncryption);
+      const xprivKeyDecrypted = decryptOrEmpty(xprivKey, pwForEncryption);
+      if (!xpubKeyDecrypted || !xprivKeyDecrypted) {
+        throw new Error('Could not decrypt identity keys');
       }
-      // decrypt passwordData.password with idData.password
-      const password = CryptoJS.AES.decrypt(
-        passwordData.password,
-        idData.password,
+      // CS-3: scanning a DIFFERENT wallet's identity QR re-pairs this Key with
+      // another wallet. Never do that silently.
+      const change = storedPairingChange(
+        identityChain,
+        suppliedXpubWallet,
+        pwForEncryption,
       );
-      const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
-      const pwForEncryption = idData.password + passwordDecrypted;
-      const xpk = CryptoJS.AES.decrypt(xpubKey, pwForEncryption);
-      const xpubKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
-      const xprk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
-      const xprivKeyDecrypted = xprk.toString(CryptoJS.enc.Utf8);
+      if (change === 'replace' && !options.confirmedRePair) {
+        if (!options.onRePairRequired) {
+          throw new Error('Re-pairing the identity chain was refused');
+        }
+        options.onRePairRequired({
+          kind: 'single',
+          chains: [identityChain],
+          chain: identityChain,
+          xpubWallet: suppliedXpubWallet,
+          words: sessionVerificationWords([
+            {
+              chain: identityChain,
+              walletXpub: suppliedXpubWallet,
+              keyXpub: xpubKeyDecrypted,
+            },
+          ]),
+        });
+        return;
+      }
       const addrInfo = generateMultisigAddress(
         suppliedXpubWallet,
         xpubKeyDecrypted,
@@ -331,11 +573,6 @@ export const generateAddressesForSyncIdentity = (
         addrInfo.redeemScript || addrInfo.witnessScript || '',
         pwForEncryption,
       ).toString(); // just to test all is ok
-      const encryptedXpubWallet = CryptoJS.AES.encrypt(
-        suppliedXpubWallet,
-        pwForEncryption,
-      ).toString();
-      setXpubWalletIdentity(encryptedXpubWallet);
       const generatedSspWalletKeyInternalIdentity = generateMultisigAddress(
         suppliedXpubWallet,
         xpubKeyDecrypted,
@@ -357,6 +594,23 @@ export const generateAddressesForSyncIdentity = (
         0,
         identityChain,
       );
+      // generate ssp wallet identity
+      const generatedSspWalletInternalIdentity =
+        generateInternalIdentityAddress(suppliedXpubWallet, identityChain);
+      if (!generatedSspWalletInternalIdentity) {
+        throw new Error('Could not generate SSP Wallet internal identity');
+      }
+      // Generate key's internal identity (single-sig from key's xpub)
+      const keyInternalIdentity = generateInternalIdentityAddress(
+        xpubKeyDecrypted,
+        identityChain,
+      );
+      // Everything derived — only now persist the pairing.
+      const encryptedXpubWallet = CryptoJS.AES.encrypt(
+        suppliedXpubWallet,
+        pwForEncryption,
+      ).toString();
+      setXpubWalletIdentity(encryptedXpubWallet);
       dispatch(
         setSspWalletKeyInternalIdentity(
           generatedSspWalletKeyInternalIdentity.address,
@@ -368,19 +622,8 @@ export const generateAddressesForSyncIdentity = (
         ),
       );
       dispatch(setSspWalletKeyInternalIdentityPubKey(identityKeypair.pubKey));
-      // generate ssp wallet identity
-      const generatedSspWalletInternalIdentity =
-        generateInternalIdentityAddress(suppliedXpubWallet, identityChain);
-      if (!generatedSspWalletInternalIdentity) {
-        throw new Error('Could not generate SSP Wallet internal identity');
-      }
       dispatch(
         setSspWalletInternalIdentity(generatedSspWalletInternalIdentity),
-      );
-      // Generate key's internal identity (single-sig from key's xpub)
-      const keyInternalIdentity = generateInternalIdentityAddress(
-        xpubKeyDecrypted,
-        identityChain,
       );
       if (keyInternalIdentity) {
         dispatch(setSspKeyInternalIdentity(keyInternalIdentity));
@@ -396,7 +639,9 @@ export const generateAddressesForSyncIdentity = (
         // Include additional fields for verification
         walletXpub: suppliedXpubWallet,
         keyIdentity: keyInternalIdentity,
-        // Scripts from first address (index 0) - not strictly needed but extra assurance
+        // Script from first address (index 0) - not strictly needed but
+        // extra assurance. The witnessScript rides as chainWitnessScript
+        // (signSyncBody).
         redeemScript: addrInfo.redeemScript,
         witnessScript: addrInfo.witnessScript,
         ...recoveryFieldsForSync(
@@ -407,7 +652,23 @@ export const generateAddressesForSyncIdentity = (
           pwForEncryption,
         ),
       };
-      await axios.post(`https://${sspConfig().relay}/v1/sync`, syncData);
+      // RA-2: signed as the wkIdentity this pairing just produced. The
+      // store values the hook signs with are not updated yet in this render,
+      // so the auth is built from the freshly derived material directly.
+      const body = await signSyncBody(
+        syncData,
+        (unsigned) =>
+          createMultisigAuth(
+            'sync',
+            generatedSspWalletKeyInternalIdentity.address,
+            xprivKeyDecrypted,
+            generatedSspWalletKeyInternalIdentity.witnessScript as string,
+            identityKeypair.pubKey,
+            identitySigningChain(identityChain),
+            computeBodyHash(unsigned),
+          ) as unknown as Record<string, unknown>,
+      );
+      await axios.post(`https://${sspConfig().relay}/v1/sync`, body);
       // Capture the identity chain's verification entry so it can be folded
       // into the ONE unified session code (with any batch chains). The words
       // themselves are derived on demand from this device's own key view.
@@ -428,7 +689,10 @@ export const generateAddressesForSyncIdentity = (
       }, 200);
     });
 };
-export const processChainSyncBatch = async (ctx: HomeActionContext) => {
+export const processChainSyncBatch = async (
+  ctx: HomeActionContext,
+  options: SyncFlowOptions = {},
+) => {
   const {
     chainSyncData,
     seedPhrase,
@@ -441,29 +705,117 @@ export const processChainSyncBatch = async (ctx: HomeActionContext) => {
     displayMessage,
     t,
   } = ctx;
-  const request = chainSyncData;
+  const request = options.request ?? chainSyncData;
   if (!request) {
     return;
   }
   setActivityStatus(true);
   let mnemonicPhrase = '';
   try {
-    const idData = await Keychain.getGenericPassword({
-      service: 'enc_key',
-    });
-    const passwordData = await Keychain.getGenericPassword({
-      service: 'sspkey_pw',
-    });
-    if (!passwordData || !idData) {
-      throw new Error('Unable to decrypt stored data');
-    }
-    const password = CryptoJS.AES.decrypt(
-      passwordData.password,
-      idData.password,
-    );
-    const passwordDecrypted = password.toString(CryptoJS.enc.Utf8);
-    const pwForEncryption = idData.password + passwordDecrypted;
+    const pwForEncryption = await loadPwForEncryption();
     const total = request.chains.length;
+
+    // Make sure this device holds its OWN keys for a chain, deriving them the
+    // way checkXpubXpriv does for the active chain when they were never
+    // prepared. Only the Key's own key cache is written here — no pairing.
+    const prepareChainKeys = async (index: number) => {
+      const entry = request.chains[index];
+      setChainSyncProgress({
+        current: index + 1,
+        total,
+        chain: entry.chain,
+      });
+      // let the progress UI paint before the synchronous ~3s derivation
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      let { xpubKey: chainXpubKey, xprivKey: chainXprivKey } =
+        store.getState()[entry.chain];
+      if (!chainXpubKey || !chainXprivKey) {
+        if (!mnemonicPhrase) {
+          mnemonicPhrase = decryptOrEmpty(seedPhrase, pwForEncryption);
+        }
+        // KEY-3: never derive (and store) keys from a seed that did not
+        // decrypt — '' or garbage under a wrong / rotated enc_key. Not a
+        // BIP-39 check: a restored non-standard phrase is valid.
+        if (!isDerivableSeedPhrase(mnemonicPhrase)) {
+          throw new Error('Unable to decrypt stored data');
+        }
+        const chainConfig = blockchains[entry.chain];
+        const xpriv = getMasterXpriv(
+          mnemonicPhrase,
+          48,
+          chainConfig.slip,
+          0,
+          chainConfig.scriptType,
+          entry.chain,
+        ); // takes ~3 secs
+        const xpub = getMasterXpub(
+          mnemonicPhrase,
+          48,
+          chainConfig.slip,
+          0,
+          chainConfig.scriptType,
+          entry.chain,
+        ); // takes ~3 secs
+        chainXprivKey = CryptoJS.AES.encrypt(xpriv, pwForEncryption).toString();
+        chainXpubKey = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
+        setXprivKey(entry.chain, chainXprivKey);
+        setXpubKey(entry.chain, chainXpubKey);
+      }
+      return { entry, chainXpubKey, chainXprivKey };
+    };
+
+    // CS-3: a relay-delivered batch must not silently replace a chain that is
+    // already paired with a different wallet xpub. Detect that BEFORE anything
+    // is saved; the user confirms on a warning screen that shows the new
+    // pairing's verification words first, or cancels and nothing is stored.
+    const replacing = request.chains
+      .filter(
+        (entry) =>
+          storedPairingChange(
+            entry.chain,
+            entry.xpubWallet,
+            pwForEncryption,
+          ) === 'replace',
+      )
+      .map((entry) => entry.chain);
+    if (replacing.length > 0 && !options.confirmedRePair) {
+      if (!options.onRePairRequired) {
+        throw new Error('Re-pairing already paired chains was refused');
+      }
+      const preview: VerifyEntry[] = [];
+      for (let i = 0; i < total; i += 1) {
+        try {
+          const { entry, chainXpubKey, chainXprivKey } =
+            await prepareChainKeys(i);
+          const keyXpub = resolveKeyXpubForSync(
+            entry.chain,
+            pwForEncryption,
+            chainXpubKey,
+            chainXprivKey,
+          );
+          if (keyXpub) {
+            preview.push({
+              chain: entry.chain,
+              walletXpub: entry.xpubWallet,
+              keyXpub,
+            });
+          }
+        } catch (error) {
+          console.log('[Chain Sync] Could not prepare chain', error);
+        }
+      }
+      options.onRePairRequired({
+        kind: 'batch',
+        chains: replacing,
+        request,
+        words: sessionVerificationWords([
+          ...sessionIdentityEntries(ctx),
+          ...preview,
+        ]),
+      });
+      return;
+    }
+
     let failedChains = 0;
     const verifyEntries: {
       chain: string;
@@ -482,49 +834,9 @@ export const processChainSyncBatch = async (ctx: HomeActionContext) => {
       return pool;
     };
     for (let i = 0; i < total; i += 1) {
-      const entry = request.chains[i];
-      setChainSyncProgress({
-        current: i + 1,
-        total,
-        chain: entry.chain,
-      });
-      // let the progress UI paint before the synchronous ~3s derivation
-      await new Promise((resolve) => setTimeout(resolve, 50));
       try {
-        let { xpubKey: chainXpubKey, xprivKey: chainXprivKey } =
-          store.getState()[entry.chain];
-        if (!chainXpubKey || !chainXprivKey) {
-          // chain keys were never prepared on this device — derive them
-          // now, exactly as checkXpubXpriv does for the active chain
-          if (!mnemonicPhrase) {
-            const mmm = CryptoJS.AES.decrypt(seedPhrase, pwForEncryption);
-            mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
-          }
-          const chainConfig = blockchains[entry.chain];
-          const xpriv = getMasterXpriv(
-            mnemonicPhrase,
-            48,
-            chainConfig.slip,
-            0,
-            chainConfig.scriptType,
-            entry.chain,
-          ); // takes ~3 secs
-          const xpub = getMasterXpub(
-            mnemonicPhrase,
-            48,
-            chainConfig.slip,
-            0,
-            chainConfig.scriptType,
-            entry.chain,
-          ); // takes ~3 secs
-          chainXprivKey = CryptoJS.AES.encrypt(
-            xpriv,
-            pwForEncryption,
-          ).toString();
-          chainXpubKey = CryptoJS.AES.encrypt(xpub, pwForEncryption).toString();
-          setXprivKey(entry.chain, chainXprivKey);
-          setXpubKey(entry.chain, chainXpubKey);
-        }
+        const { entry, chainXpubKey, chainXprivKey } =
+          await prepareChainKeys(i);
         const synced = await syncChainToRelay(
           ctx,
           entry.chain,
@@ -537,7 +849,11 @@ export const processChainSyncBatch = async (ctx: HomeActionContext) => {
         verifyEntries.push(synced);
       } catch (error) {
         failedChains += 1;
-        console.log('[Chain Sync] Failed for chain', entry.chain, error);
+        console.log(
+          '[Chain Sync] Failed for chain',
+          request.chains[i].chain,
+          error,
+        );
       }
       if (i < total - 1) {
         // spacing so the wallet's 1s sync poll catches every chain

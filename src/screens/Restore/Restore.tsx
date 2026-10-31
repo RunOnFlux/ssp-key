@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Modal,
   Switch,
+  Alert,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,7 +23,7 @@ import * as Keychain from 'react-native-keychain';
 import { blockchains } from '@storage/blockchains';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 import ToastNotif from '../../components/Toast/Toast';
-import BlurOverlay from '../../BlurOverlay';
+import BlurOverlay, { useAppPrivacyCover } from '../../BlurOverlay';
 
 import * as CryptoJS from 'crypto-js';
 
@@ -31,6 +32,7 @@ import {
   getMasterXpub,
   validateMnemonic,
 } from '../../lib/wallet';
+import { isDerivableSeedPhrase } from '../../lib/seedPhrase';
 
 import { setSeedPhrase, setSSPInitialState } from '../../store/ssp';
 import { setXpubKeyIdentity, setXprivKeyIdentity } from '../../store';
@@ -59,6 +61,8 @@ function Restore({ navigation }: Props) {
   const seedInput = useRef<TextInput | null>(null);
   const passwordInputA = useRef<TextInput | null>(null);
   const passwordInputB = useRef<TextInput | null>(null);
+  // The non-standard phrase the user confirmed restoring as it is.
+  const acceptedNonStandardSeed = useRef<string | null>(null);
   const dispatch = useAppDispatch();
   const { seedPhrase, identityChain } = useAppSelector((state) => state.ssp);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +81,10 @@ function Restore({ navigation }: Props) {
     useTheme();
   const blockchainConfig = blockchains[identityChain];
   const keyboardVisible = useKeyboardVisible();
+  // KEY-9: the typed seed phrase must not be on screen for an app-switcher
+  // snapshot — swap the input for an empty placeholder while covered (the
+  // typed value stays in state and comes back on return).
+  const isCovered = useAppPrivacyCover();
   const [weakPasswordOpen, setWeakPasswordOpen] = useState(false);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
@@ -123,15 +131,45 @@ function Restore({ navigation }: Props) {
       const invalidWords = splittedSeed.filter(
         (word) => !wordlist.includes(word),
       );
-      if (invalidWords.length) {
-        displayMessage(
-          'error',
-          t('cr:err_seed_invalid_words', { words: invalidWords.join(', ') }),
-        );
-      } else {
-        displayMessage('error', t('cr:err_invalid_seed'));
+      // SSP only creates standard English BIP-39 phrases, but a phrase from
+      // another wallet still derives keys when it has a BIP-39 word count.
+      // It is restored only after an explicit confirmation.
+      if (!isDerivableSeedPhrase(newSeedPhrase)) {
+        if (invalidWords.length) {
+          displayMessage(
+            'error',
+            t('cr:err_seed_invalid_words', { words: invalidWords.join(', ') }),
+          );
+        } else {
+          displayMessage('error', t('cr:err_invalid_seed'));
+        }
+        return;
       }
-      return;
+      if (acceptedNonStandardSeed.current !== newSeedPhrase) {
+        Alert.alert(
+          t('cr:nonstandard_seed_title'),
+          `${
+            invalidWords.length
+              ? t('cr:nonstandard_seed_words', {
+                  words: invalidWords.join(', '),
+                })
+              : t('cr:nonstandard_seed_checksum')
+          }\n\n${t('cr:nonstandard_seed_desc')}`,
+          [
+            { text: t('common:cancel'), style: 'cancel' },
+            {
+              text: t('cr:nonstandard_seed_continue'),
+              style: 'destructive',
+              onPress: () => {
+                acceptedNonStandardSeed.current = newSeedPhrase;
+                setupImportKey();
+              },
+            },
+          ],
+          { cancelable: true },
+        );
+        return;
+      }
     }
     if (password !== passwordConfirm) {
       displayMessage('error', t('cr:err_pins_no_match'));
@@ -451,20 +489,27 @@ function Restore({ navigation }: Props) {
             {t('cr:key_seed_info')}
           </Text>
           <View style={styles.seedPhraseArea}>
-            <TextInput
-              multiline={true}
-              numberOfLines={4}
-              style={[Common.inputArea, Common.inputAreaColors]}
-              autoCapitalize="none"
-              placeholder={t('cr:input_mnemonic')}
-              placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
-              secureTextEntry={false}
-              onChangeText={onChangeMnemonic}
-              value={mnemonic}
-              autoCorrect={false}
-              ref={seedInput}
-              onPressIn={() => seedInput.current?.focus()}
-            />
+            {isCovered ? (
+              <View
+                testID="seed-input-covered"
+                style={[Common.inputArea, Common.inputAreaColors]}
+              />
+            ) : (
+              <TextInput
+                multiline={true}
+                numberOfLines={4}
+                style={[Common.inputArea, Common.inputAreaColors]}
+                autoCapitalize="none"
+                placeholder={t('cr:input_mnemonic')}
+                placeholderTextColor={darkMode ? '#777' : '#c7c7c7'}
+                secureTextEntry={false}
+                onChangeText={onChangeMnemonic}
+                value={mnemonic}
+                autoCorrect={false}
+                ref={seedInput}
+                onPressIn={() => seedInput.current?.focus()}
+              />
+            )}
           </View>
           <View
             style={[

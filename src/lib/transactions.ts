@@ -1,14 +1,26 @@
 import BigNumber from 'bignumber.js';
-import QuickCrypto from 'react-native-quick-crypto';
 import utxolib from '@runonflux/utxo-lib';
-import { decodeFunctionData, erc20Abi, hexToString, isHex } from 'viem';
+import { decodeFunctionData, erc20Abi } from 'viem';
 import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
-import { getTokenMetadata } from './tokens';
 import { getLibId } from './wallet';
-import { cryptos, utxo } from '../types';
+import { fetchRawTransactionHex, fetchUtxos } from './constructTx';
+import { getCryptoUsdRate } from './rates';
+import { assertEvmCallSafe, hasEvmCalldata } from './consumerGuards';
+import { verifyConsumerUtxoTransaction } from './consumerUtxo';
+import type { ConsumerKeyMaterial, ConsumerUtxoDeps } from './consumerUtxo';
+import {
+  decodeConsumerSolanaTransaction,
+  parseConsumerSolanaPayload,
+  resolveConsumerSolanaLeaves,
+} from './consumerSolana';
+import {
+  assertConsumerEvmFeeWithinCap,
+  verifyConsumerEvmRequest,
+} from './consumerEvm';
+import { cryptos } from '../types';
 
-import { blockchains, Token } from '@storage/blockchains';
+import { blockchains } from '@storage/blockchains';
 
 export interface VaultDecodedRecipient {
   address: string;
@@ -207,8 +219,19 @@ function decodeVaultEvmTransaction(
 
   const executeTarget = decodedData.args[0];
   const executeValue = decodedData.args[1].toString();
+  const executeData = decodedData.args[2];
 
-  if (executeValue !== '0') {
+  // EVM call-safety rules (C-4): a self-call or an account-upgrade selector
+  // can replace the account implementation in one signature — refuse it.
+  assertEvmCallSafe({ target: executeTarget, data: executeData }, sender);
+
+  if (executeValue !== '0' && hasEvmCalldata(executeData)) {
+    // Any non-empty inner calldata is a contract call whatever the value. It
+    // used to be shown as a plain native send with the calldata dropped.
+    result.tokenSymbol = blockchains[chain].symbol;
+    result.callData = executeData;
+    result.error = 'Contract call with native value cannot be verified';
+  } else if (executeValue !== '0') {
     result.recipients = [{ address: executeTarget, amount: executeValue }];
     result.tokenSymbol = blockchains[chain].symbol;
   } else {
@@ -264,154 +287,32 @@ function decodeVaultEvmTransaction(
   return result;
 }
 
+// ===========================================================================
+// Consumer (2-of-2 wallet + key) approval decode
+// ===========================================================================
+
 /**
- * Display-only decode of an arbitrary EVM signing request (`personal_sign`,
- * EIP-712 typed data, or raw transaction calldata) so the co-signer sees a
- * human-readable summary instead of raw hex on the approval screen.
- *
- * This NEVER affects what is signed — it only interprets `data` for display.
- * The caller keeps the original raw `data` for the actual signature. When the
- * payload cannot be confidently recognised, `recognized` is false so the UI can
- * warn the user and fall back to showing the raw hex.
+ * Key material the consumer decode binds the request to: the request's
+ * derivation path and this chain's DECRYPTED wallet + key xpubs (for Solana:
+ * the JSON leaf-pubkey lists). Without it nothing can be verified, so the
+ * decode fails closed.
  */
-export type EvmSigningKind =
-  | 'erc20-transfer'
-  | 'contract-call'
-  | 'message'
-  | 'typed-data'
-  | 'unknown';
+export type ConsumerDecodeContext = ConsumerKeyMaterial;
 
-export interface DecodedEvmSigningData {
-  kind: EvmSigningKind;
-  recognized: boolean;
-  summary: string; // plain-language one-liner
-  method?: string; // function name / selector for calldata
-  recipient?: string;
-  tokenContract?: string;
-  tokenSymbol?: string;
-  amount?: string; // human-readable, decimals applied where known
-  message?: string; // decoded UTF-8 message (personal_sign)
+export interface ApprovalRecipient {
+  address: string;
+  /** Human-readable amount (decimals applied). */
+  amount: string;
+  /** Solana SPL: destination token account. */
+  ata?: string;
+  /** Solana SPL: the ATA was derived from the wallet-supplied owner. */
+  ownerVerified?: boolean;
 }
 
-export function decodeEvmSigningData(
-  data: string,
-  chain: keyof cryptos,
-): DecodedEvmSigningData {
-  const raw = (data || '').trim();
-  if (!raw) {
-    return { kind: 'unknown', recognized: false, summary: '' };
-  }
-
-  // EIP-712 typed data is delivered as JSON.
-  if (raw.startsWith('{') || raw.startsWith('[')) {
-    try {
-      const parsed = JSON.parse(raw) as {
-        primaryType?: string;
-        domain?: { name?: string };
-      };
-      const primaryType =
-        typeof parsed.primaryType === 'string' ? parsed.primaryType : undefined;
-      const domainName =
-        parsed.domain && typeof parsed.domain.name === 'string'
-          ? parsed.domain.name
-          : undefined;
-      return {
-        kind: 'typed-data',
-        recognized: true,
-        summary: domainName
-          ? `Typed data signature for ${domainName}${
-              primaryType ? ` (${primaryType})` : ''
-            }`
-          : 'Typed data (EIP-712) signature request',
-        method: primaryType,
-      };
-    } catch {
-      // Not valid JSON — fall through to other interpretations.
-    }
-  }
-
-  // Hex payloads: either calldata (function selector) or a hex-encoded message.
-  if (isHex(raw)) {
-    const hex = raw;
-    const byteLen = (hex.length - 2) / 2;
-
-    // A 4-byte selector + ABI-encoded args looks like calldata. Try ERC-20
-    // transfer first, then fall back to a generic contract-call summary.
-    if (byteLen >= 4 && (byteLen - 4) % 32 === 0) {
-      try {
-        const decoded = decodeFunctionData({ abi: erc20Abi, data: hex });
-        if (
-          decoded.functionName === 'transfer' &&
-          Array.isArray(decoded.args) &&
-          decoded.args.length >= 2
-        ) {
-          const to = String(decoded.args[0]);
-          const rawAmount = decoded.args[1].toString();
-          const token = blockchains[chain].tokens.find(
-            (tk) => tk.contract.toLowerCase() === to.toLowerCase(),
-          );
-          // `to` here is the transfer recipient; token decimals are unknown
-          // from calldata alone, so only format when this is a known token on
-          // the contract address — otherwise show base units.
-          return {
-            kind: 'erc20-transfer',
-            recognized: true,
-            method: 'transfer',
-            recipient: to,
-            amount: rawAmount,
-            summary: `ERC-20 transfer of ${rawAmount} (base units) to ${to}`,
-            tokenSymbol: token?.symbol,
-          };
-        }
-      } catch {
-        // Not an ERC-20 transfer — fall through to generic calldata.
-      }
-
-      const selector = hex.slice(0, 10);
-      return {
-        kind: 'contract-call',
-        recognized: false,
-        method: selector,
-        summary: `Contract call (method ${selector}, ${byteLen} bytes). Unable to fully decode — verify the requesting site.`,
-      };
-    }
-
-    // Not calldata-shaped: attempt to read it as a UTF-8 message.
-    try {
-      const text = hexToString(hex);
-      // eslint-disable-next-line no-control-regex
-      if (text && /^[\x09\x0a\x0d\x20-\x7e]*$/.test(text)) {
-        return {
-          kind: 'message',
-          recognized: true,
-          message: text,
-          summary: 'Plain-text message signature request',
-        };
-      }
-    } catch {
-      // Not decodable as text — fall through.
-    }
-
-    return {
-      kind: 'unknown',
-      recognized: false,
-      summary: `Unrecognized hex payload (${byteLen} bytes). Verify the requesting site before approving.`,
-    };
-  }
-
-  // Non-hex, non-JSON input is treated as a plain-text personal_sign message.
-  return {
-    kind: 'message',
-    recognized: true,
-    message: raw,
-    summary: 'Plain-text message signature request',
-  };
-}
-
-interface output {
-  script: Buffer;
-  value: number;
-}
+export type ApprovalWarning =
+  | 'spl_owner_unverified'
+  | 'unknown_token'
+  | 'contract_call_with_value';
 
 interface tokenInfo {
   sender: string;
@@ -421,183 +322,171 @@ interface tokenInfo {
   tokenSymbol: string;
   token?: string;
   data?: string;
-  // UTXO only: number of non-change destinations. >1 means `amount` is their
-  // sum and `receiver` is the first — the approval UI warns on this.
+  // Number of non-change destinations. >1 means `amount` is their sum and
+  // `receiver` is the first — the approval UI lists every one of them.
   recipientCount?: number;
+  /** Every non-change destination with its own amount (UTXO / Solana). */
+  recipients?: ApprovalRecipient[];
+  /** EVM: native value sent along with a contract call (human-readable). */
+  nativeValue?: string;
+  warnings?: ApprovalWarning[];
+  memo?: string;
+  /** Why the decode failed (sentinel fields are then 'decodingError'). */
+  error?: string;
 }
 
+function decodingErrorInfo(
+  chain: keyof cryptos,
+  error: unknown,
+): tokenInfo & { token: string; data: string } {
+  const message =
+    error instanceof Error ? error.message : 'Failed to decode transaction';
+  console.log('[decodeTransactionForApproval] refused:', chain, message);
+  return {
+    sender: 'decodingError',
+    receiver: 'decodingError',
+    amount: 'decodingError',
+    fee: 'decodingError',
+    tokenSymbol: 'decodingError',
+    token: 'decodingError',
+    data: 'decodingError',
+    error: message,
+  };
+}
+
+function toHumanAmount(base: string | BigNumber, decimals: number): string {
+  return new BigNumber(base)
+    .dividedBy(new BigNumber(10).pow(decimals))
+    .toFixed();
+}
+
+/** The key's own backends — used by display AND signing. */
+export const consumerUtxoDeps: ConsumerUtxoDeps = {
+  fetchOwnUtxos: (address, chain) => fetchUtxos(address, chain, 2),
+  fetchRawTransaction: (txid, chain) => fetchRawTransactionHex(txid, chain),
+  getUsdRate: (chain) => getCryptoUsdRate(chain),
+};
+
+/**
+ * Decode a consumer transaction request for the approval screen.
+ *
+ * Every chain is verified against the key's own key material (see
+ * consumerUtxo / consumerSolana / consumerEvm). Anything that cannot be
+ * verified returns the 'decodingError' sentinels (plus `error`), which the
+ * approval screen renders as a blocking error.
+ */
 export async function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
-  utxos?: utxo[],
+  ctx?: ConsumerDecodeContext,
+  deps: Partial<ConsumerUtxoDeps> = {},
 ): Promise<tokenInfo> {
+  const resolvedDeps: ConsumerUtxoDeps = {
+    ...consumerUtxoDeps,
+    ...deps,
+  };
   try {
-    if (blockchains[chain].chainType === 'evm') {
-      const decodedTx = await decodeEVMTransactionForApproval(rawTx, chain);
-      return decodedTx;
+    if (!ctx || !ctx.path || !ctx.xpubWallet || !ctx.xpubKey) {
+      throw new Error('Missing key material to verify the request');
     }
-    if (blockchains[chain].chainType === 'sol') {
-      // Single-roundtrip flow: payload is JSON wrapping the unsigned tx
-      // plus token metadata (mint/symbol/decimals so the approval screen
-      // can show the real SPL token, since the proposal bytes only carry
-      // ATAs). Older callers pass a bare base64 tx string.
-      let serializedForDecode = rawTx;
-      let tokenMeta:
-        | { mint?: string; symbol?: string; decimals?: number }
-        | undefined;
-      try {
-        const parsed = JSON.parse(rawTx) as {
-          unsignedTxBase64?: string;
-          tokenMint?: string;
-          tokenSymbol?: string;
-          tokenDecimals?: number;
-        };
-        if (parsed && typeof parsed.unsignedTxBase64 === 'string') {
-          serializedForDecode = parsed.unsignedTxBase64;
-          tokenMeta = {
-            mint:
-              typeof parsed.tokenMint === 'string'
-                ? parsed.tokenMint
-                : undefined,
-            symbol:
-              typeof parsed.tokenSymbol === 'string'
-                ? parsed.tokenSymbol
-                : undefined,
-            decimals:
-              typeof parsed.tokenDecimals === 'number'
-                ? parsed.tokenDecimals
-                : undefined,
-          };
-        }
-      } catch {
-        // Not JSON — fall through to decode rawTx directly.
+    const chainType = blockchains[chain].chainType;
+    if (chainType === 'evm') {
+      verifyConsumerEvmRequest(rawTx, chain, ctx);
+      // Item 7: the operation's maximum gas cost is capped like UTXO/Solana.
+      const usdRate = await resolvedDeps.getUsdRate(chain).catch(() => 0);
+      assertConsumerEvmFeeWithinCap(rawTx, chain, usdRate);
+      const decoded = await decodeEVMTransactionForApproval(rawTx, chain);
+      if (decoded.amount === 'decodingError') {
+        throw new Error(decoded.error ?? 'Could not decode the operation');
       }
-      const decodedTx = await decodeSOLTransactionForApproval(
-        serializedForDecode,
+      return decoded;
+    }
+    if (chainType === 'sol') {
+      const payload = parseConsumerSolanaPayload(rawTx);
+      const leaves = resolveConsumerSolanaLeaves(
+        ctx.xpubWallet,
+        ctx.xpubKey,
+        ctx.path,
+      );
+      const usdRate = await resolvedDeps.getUsdRate(chain).catch(() => 0);
+      const decoded = await decodeConsumerSolanaTransaction(
         chain,
-        tokenMeta,
+        payload,
+        leaves,
+        usdRate,
       );
-      return decodedTx;
+      const recipients: ApprovalRecipient[] = decoded.recipients.map((r) => ({
+        address: r.address,
+        amount: toHumanAmount(r.amount, decoded.decimals),
+        ata: r.ata,
+        ownerVerified: r.ownerVerified,
+      }));
+      const total = decoded.recipients.reduce(
+        (sum, r) => sum.plus(r.amount),
+        new BigNumber(0),
+      );
+      return {
+        sender: decoded.sender,
+        receiver: recipients[0].address,
+        amount: toHumanAmount(total, decoded.decimals),
+        fee: toHumanAmount(decoded.feeLamports, blockchains[chain].decimals),
+        tokenSymbol: decoded.tokenSymbol,
+        token: decoded.mint,
+        recipientCount: recipients.length,
+        recipients,
+        warnings: decoded.warnings,
+        memo: decoded.memo,
+      };
     }
-    const libID = getLibId(chain);
-    const decimals = blockchains[chain].decimals;
-    const cashAddrPrefix = blockchains[chain].cashaddr;
-    const network = utxolib.networks[libID];
-    const txhex = rawTx;
-    const txb = utxolib.TransactionBuilder.fromTransaction(
-      utxolib.Transaction.fromHex(txhex, network),
-      network,
+    const verified = await verifyConsumerUtxoTransaction(
+      rawTx,
+      chain,
+      ctx,
+      resolvedDeps,
     );
-    console.log(JSON.stringify(txb));
-    let txReceiver = 'decodingError';
-    let amount = '0';
-    let senderAddress = '';
-    let totalInputsAmount = new BigNumber(0);
-    let totalOutputsAmount = new BigNumber(0);
-
-    if (txb.inputs[0].witnessScript && txb.inputs[0].redeemScript) {
-      // p2sh-p2wsh
-      const scriptPubKey = utxolib.script.scriptHash.output.encode(
-        utxolib.crypto.hash160(txb.inputs[0].redeemScript),
-      );
-      senderAddress = utxolib.address.fromOutputScript(scriptPubKey, network);
-    } else if (txb.inputs[0].witnessScript) {
-      // p2wsh
-      const scriptPubKey = utxolib.script.witnessScriptHash.output.encode(
-        utxolib.crypto.sha256(txb.inputs[0].witnessScript),
-      );
-      senderAddress = utxolib.address.fromOutputScript(scriptPubKey, network);
-    } else {
-      // p2sh
-      const scriptPubKey = utxolib.script.scriptHash.output.encode(
-        utxolib.crypto.hash160(txb.inputs[0].redeemScript),
-      );
-      senderAddress = utxolib.address.fromOutputScript(scriptPubKey, network);
-    }
-
-    // Accumulate ALL non-change recipients, so the amount is the SUM across
-    // every non-self output and recipientCount surfaces when more than one
-    // destination is present. The approval screen has to describe the whole
-    // transaction, not one output of it.
-    let recipientTotal = new BigNumber(0);
-    let recipientCount = 0;
-    txb.tx.outs.forEach((out: output) => {
-      if (out.value) {
-        const address = utxolib.address.fromOutputScript(out.script, network);
-        console.log(address);
-        totalOutputsAmount = totalOutputsAmount.plus(new BigNumber(out.value));
-        if (address !== senderAddress) {
-          if (recipientCount === 0) {
-            txReceiver = address;
-          }
-          recipientCount += 1;
-          recipientTotal = recipientTotal.plus(new BigNumber(out.value));
-        }
-      }
-    });
-    if (recipientCount > 0) {
-      amount = recipientTotal
-        .dividedBy(new BigNumber(10 ** decimals))
-        .toFixed();
-    }
-    if (txReceiver === 'decodingError') {
-      // use first output as being the receiver
-      const outOne = txb.tx.outs[0];
-      if (outOne.value) {
-        const address = utxolib.address.fromOutputScript(
-          outOne.script,
-          network,
-        );
-        console.log(address);
-        txReceiver = address;
-        amount = new BigNumber(outOne.value)
-          .dividedBy(new BigNumber(10 ** decimals))
-          .toFixed();
-      }
-    }
-
-    if (utxos && utxos.length) {
-      // utxos were supplied, we can calculate fee
-      utxos.forEach((u) => {
-        totalInputsAmount = totalInputsAmount.plus(new BigNumber(u.satoshis));
-      });
-    }
-
-    const fee = totalInputsAmount
-      .minus(totalOutputsAmount)
-      .dividedBy(10 ** decimals)
-      .toFixed();
-    // calculate fee
-    if (utxos && utxos.length && +fee < 0) {
-      // fee is negative, something is wrong. Reject.
-      throw new Error('Unexpected negative fee. Transaction Rejected.');
-    }
-    if (cashAddrPrefix) {
-      senderAddress = toCashAddress(senderAddress);
-      txReceiver = toCashAddress(txReceiver);
-    }
-    const txInfo = {
-      sender: senderAddress,
-      receiver: txReceiver,
-      amount,
-      fee,
+    const decimals = blockchains[chain].decimals;
+    const recipients: ApprovalRecipient[] = verified.recipients.map((r) => ({
+      address: r.address,
+      amount: toHumanAmount(r.amount, decimals),
+    }));
+    const recipientTotal = verified.recipients.reduce(
+      (sum, r) => sum.plus(r.amount),
+      new BigNumber(0),
+    );
+    // A transaction whose only outputs return to the derived address is a
+    // self-transfer: show the sender as the destination, never a guess.
+    const selfTransfer = recipients.length === 0;
+    return {
+      sender: verified.sender,
+      receiver: selfTransfer ? verified.sender : recipients[0].address,
+      amount: toHumanAmount(
+        selfTransfer ? verified.change : recipientTotal,
+        decimals,
+      ),
+      fee: toHumanAmount(verified.fee, decimals),
       tokenSymbol: blockchains[chain].symbol,
-      // >1 when the tx pays multiple non-change destinations; amount is their
-      // sum and receiver is the first. The approval UI warns on this.
-      recipientCount,
+      recipientCount: recipients.length,
+      recipients,
     };
-    return txInfo;
   } catch (error) {
-    console.log(error);
-    const txInfo = {
-      sender: 'decodingError',
-      receiver: 'decodingError',
-      amount: 'decodingError',
-      fee: 'decodingError',
-      tokenSymbol: 'decodingError',
+    if (blockchains[chain]?.chainType === 'evm') {
+      return decodingErrorInfo(chain, error);
+    }
+    const info = decodingErrorInfo(chain, error);
+    return {
+      sender: info.sender,
+      receiver: info.receiver,
+      amount: info.amount,
+      fee: info.fee,
+      tokenSymbol: info.tokenSymbol,
+      error: info.error,
     };
-    return txInfo;
   }
+}
+
+interface output {
+  script: Buffer;
+  value: number;
 }
 
 interface decodedAbiData {
@@ -617,12 +506,27 @@ interface userOperation {
   };
 }
 
-export async function decodeEVMTransactionForApproval(
+/**
+ * Decode the consumer smart-account operation for display. Applies the EVM
+ * call-safety rules (C-4): any non-empty inner calldata is a contract call
+ * whatever the value, self-calls and account-upgrade selectors are refused,
+ * and anything other than a single `execute` (e.g. `executeBatch`) fails
+ * closed. Token symbol/decimals come ONLY from this device's token list —
+ * an unknown token is shown in raw base units with its contract.
+ */
+export function decodeEVMTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
-) {
+): Promise<tokenInfo & { token: string; data: string }> {
+  return Promise.resolve(decodeEvmOperation(rawTx, chain));
+}
+
+function decodeEvmOperation(
+  rawTx: string,
+  chain: keyof cryptos,
+): tokenInfo & { token: string; data: string } {
   try {
-    let decimals = blockchains[chain].decimals;
+    const nativeDecimals = blockchains[chain].decimals;
     const multisigUserOpJSON = JSON.parse(rawTx) as userOperation;
 
     if (!multisigUserOpJSON.userOpRequest) {
@@ -643,358 +547,99 @@ export async function decodeEVMTransactionForApproval(
       .plus(new BigNumber(preVerificationGas));
 
     // maxFeePerGas already includes the priority fee — do not add it again
-    const totalFeeWei = totalGasLimit
+    const totalFee = totalGasLimit
       .multipliedBy(new BigNumber(maxFeePerGas))
-      .dividedBy(10 ** 18);
+      .dividedBy(new BigNumber(10).pow(18));
+    if (!totalFee.isFinite()) {
+      throw new Error('Invalid gas values');
+    }
 
-    console.log(multisigUserOpJSON);
-
-    // callGasLimit":"0x5ea6","verificationGasLimit":"0x11b5a","preVerificationGas":"0xdf89","maxFeePerGas":"0xee6b28000","maxPriorityFeePerGas":"0x77359400",
-
-    const decodedData: decodedAbiData = decodeFunctionData({
+    const decodedData = decodeFunctionData({
       abi: abi.MultiSigSmartAccount_abi,
       data: callData,
-    }) as decodedAbiData; // Cast decodedData to decodedAbiData type.
-
-    console.log(decodedData);
-
-    let txReceiver = 'decodingError';
-    let amount = '0';
+    }) as decodedAbiData;
 
     if (
-      decodedData &&
-      decodedData.functionName === 'execute' &&
-      decodedData.args &&
-      decodedData.args.length >= 3
+      !decodedData ||
+      decodedData.functionName !== 'execute' ||
+      !decodedData.args ||
+      decodedData.args.length < 3
     ) {
-      txReceiver = decodedData.args[0];
-      amount = new BigNumber(decodedData.args[1].toString())
-        .dividedBy(new BigNumber(10 ** decimals))
-        .toFixed();
-    } else {
+      // executeBatch and anything else: not decodable call-by-call here.
       throw new Error('Unexpected decoded data.');
     }
 
-    const txInfo = {
-      sender,
-      receiver: txReceiver,
-      amount,
-      fee: totalFeeWei.toFixed(),
-      token: '',
-      tokenSymbol: '',
-      data: '',
-    };
+    const [target, value, innerData] = decodedData.args;
+    assertEvmCallSafe({ target, data: innerData }, sender);
+    const nativeAmount = toHumanAmount(value.toString(), nativeDecimals);
+    const hasValue = value.toString() !== '0';
 
-    if (amount === '0') {
-      // token transfer or contract execution
-      txInfo.token = decodedData.args[0];
-
-      // find the token in our token list
-      let token = blockchains[chain].tokens.find(
-        (t) => t.contract.toLowerCase() === txInfo.token.toLowerCase(),
-      );
-
-      if (!token) {
-        token = (await getTokenMetadata(
-          txInfo.token.toLowerCase(),
-          chain.toLowerCase(),
-        )) as Token; // this is actually a tokenDataSSPRelay missing contract but we need only decimals
-      }
-
-      if (token && token.name && token.symbol) {
-        decimals = token.decimals;
-        txInfo.tokenSymbol = token.symbol;
-        const contractData: `0x${string}` = decodedData
-          .args[2] as `0x${string}`;
-        // most likely we are dealing with a contract call, sending some erc20 token
-        // docode args[2] which is operation
-        let decodedDataContract: decodedAbiData | null = null;
-        try {
-          decodedDataContract = decodeFunctionData({
-            abi: erc20Abi,
-            data: contractData,
-          }) as unknown as decodedAbiData; // Cast decodedDataContract to decodedAbiData type.
-        } catch {
-          // Not an ERC-20 call at all (arbitrary calldata aimed at a contract
-          // we happen to recognise as a token). Handled below by retaining the
-          // raw calldata rather than failing the whole decode.
-          decodedDataContract = null;
-        }
-        if (
-          decodedDataContract &&
-          decodedDataContract.functionName === 'transfer' &&
-          decodedDataContract.args &&
-          decodedDataContract.args.length >= 2
-        ) {
-          txInfo.receiver = decodedDataContract.args[0];
-          txInfo.amount = new BigNumber(decodedDataContract.args[1].toString())
-            .dividedBy(new BigNumber(10 ** decimals))
-            .toFixed();
-        } else {
-          // NOT a plain transfer — approve / transferFrom / setApprovalForAll /
-          // unrecognised calldata. Retain the raw inner calldata so the approval
-          // screen runs decodeErc20Calldata and raises its allowance-risk or
-          // unreadable-calldata banner. Without this, `data` stayed empty and
-          // an unlimited approve() rendered as "Send 0 <SYMBOL>" — a
-          // spend-rights grant presented as moving no funds.
-          //
-          // Deliberately NOT set for a recognised transfer: the amount decoded
-          // above uses relay-supplied decimals, which decodeErc20Calldata will
-          // not guess, so re-deriving it there would downgrade a good display
-          // to raw base units.
-          txInfo.data = contractData;
-        }
-      } else {
-        // this is not a standard token transfer, treat it as a contract execution and only display data information
-        txInfo.data = decodedData.args[2];
-      }
-    } else {
-      txInfo.tokenSymbol = blockchains[chain].symbol;
-      txInfo.data = decodedData.args[2];
+    if (!hasEvmCalldata(innerData)) {
+      // Plain native transfer.
+      return {
+        sender,
+        receiver: target,
+        amount: nativeAmount,
+        fee: totalFee.toFixed(),
+        token: '',
+        tokenSymbol: blockchains[chain].symbol,
+        data: '',
+      };
     }
 
+    // Contract call — whatever the value.
+    const knownToken = blockchains[chain].tokens.find(
+      (t) => !!t.contract && t.contract.toLowerCase() === target.toLowerCase(),
+    );
+    const txInfo: tokenInfo & { token: string; data: string } = {
+      sender,
+      receiver: target,
+      amount: '0',
+      fee: totalFee.toFixed(),
+      token: target,
+      tokenSymbol: knownToken?.symbol ?? '',
+      data: innerData,
+    };
+    if (hasValue) {
+      txInfo.nativeValue = nativeAmount;
+      txInfo.warnings = ['contract_call_with_value'];
+      return txInfo;
+    }
+    if (knownToken) {
+      let decodedTransfer: decodedAbiData | null = null;
+      try {
+        decodedTransfer = decodeFunctionData({
+          abi: erc20Abi,
+          data: innerData as `0x${string}`,
+        }) as unknown as decodedAbiData;
+      } catch {
+        decodedTransfer = null;
+      }
+      if (
+        decodedTransfer &&
+        decodedTransfer.functionName === 'transfer' &&
+        decodedTransfer.args &&
+        decodedTransfer.args.length >= 2
+      ) {
+        // A plain transfer of a token this device knows: friendly display
+        // with on-device decimals. `data` is cleared deliberately so the
+        // screen keeps the decoded amount.
+        txInfo.receiver = decodedTransfer.args[0];
+        txInfo.amount = toHumanAmount(
+          decodedTransfer.args[1].toString(),
+          knownToken.decimals,
+        );
+        txInfo.data = '';
+        return txInfo;
+      }
+      // approve / transferFrom / setApprovalForAll / unknown calldata: the
+      // raw calldata stays so the screen raises its risk banners.
+      return txInfo;
+    }
+    // Unknown token / contract: never take decimals or symbol from the relay.
+    txInfo.warnings = ['unknown_token'];
     return txInfo;
   } catch (error) {
-    console.log(error);
-    const txInfo = {
-      sender: 'decodingError',
-      receiver: 'decodingError',
-      amount: 'decodingError',
-      fee: 'decodingError',
-      token: 'decodingError',
-      tokenSymbol: 'decodingError',
-      data: 'decodingError',
-    };
-    return txInfo;
-  }
-}
-
-// Decode an SSP Solana proposal for the approval screen. Splits the
-// proposal's transfers into the user's send (vault → recipient) and the
-// fee (vault → outer feePayer = paymaster). SPL transfers show the
-// destination ATA as the receiver; explorers resolve ATAs to owners.
-async function decodeSOLTransactionForApproval(
-  rawTxBase64: string,
-  chain: keyof cryptos,
-  tokenMeta?: { mint?: string; symbol?: string; decimals?: number },
-): Promise<tokenInfo> {
-  try {
-    const { Transaction, PublicKey, SystemProgram } =
-      await import('@solana/web3.js');
-    const decimals = blockchains[chain].decimals;
-    const tokenSymbol = blockchains[chain].symbol;
-
-    const tx = Transaction.from(Buffer.from(rawTxBase64, 'base64'));
-    if (!tx.feePayer) {
-      throw new Error('Solana tx missing feePayer');
-    }
-    const paymasterPubkey = tx.feePayer;
-
-    // Compute the create_transaction discriminator (first 8 bytes of
-    // sha256("global:create_transaction")) using react-native-quick-crypto
-    // — Node's `crypto.createHash` isn't available in RN, and utxolib's
-    // sha256 wasn't reachable from this RN bundle either.
-    const createIxDiscriminator: Buffer = Buffer.from(
-      QuickCrypto.createHash('sha256')
-        .update('global:create_transaction')
-        .digest(),
-    ).subarray(0, 8);
-    console.log(createIxDiscriminator);
-    console.log(tx.instructions);
-    // `ix.data` from `Transaction.from(...)` is typed as Buffer but the
-    // RN runtime can deliver a plain JS array of numbers (no `.subarray`,
-    // no `.readUInt32LE`, no `.equals`). Compare byte-by-byte using only
-    // index access, then `Buffer.from(...)` the matched ix's data so all
-    // the parser helpers below have a real Buffer to work with.
-    const createIx = tx.instructions.find((ix) => {
-      if (!ix.data || ix.data.length < 8) return false;
-      for (let i = 0; i < 8; i++) {
-        if ((ix.data as ArrayLike<number>)[i] !== createIxDiscriminator[i])
-          return false;
-      }
-      return true;
-    });
-    if (!createIx) {
-      throw new Error('Solana tx does not contain a create_transaction ix');
-    }
-    const data = Buffer.from(createIx.data as ArrayLike<number>);
-    let off = 8 + 1 + 3; // skip discriminator + vault_index + 3-byte header
-    const accountKeysLen = data.readUInt32LE(off);
-    off += 4;
-    const accountKeys: InstanceType<typeof PublicKey>[] = [];
-    for (let i = 0; i < accountKeysLen; i++) {
-      accountKeys.push(new PublicKey(data.subarray(off, off + 32)));
-      off += 32;
-    }
-    const ixCount = data.readUInt32LE(off);
-    off += 4;
-
-    const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-
-    let vaultPubkey = accountKeys[0]; // convention: vault is at index 0
-    let userReceiver = '';
-    let feeBase = '0';
-    // ACCUMULATORS, not last-write-wins: the total and recipient count have to
-    // cover every user transfer in the proposal, matching how the paymaster
-    // branch already sums its fee. recipientCount is returned so the approval
-    // screen's warn_multi_recipient banner reflects Solana proposals too.
-    let recipientTotal = new BigNumber(0);
-    let recipientCount = 0;
-    let sawNative = false;
-    const splMints = new Set<string>();
-    let userTokenSymbol = tokenSymbol; // default to native
-    let userTokenContract: string | undefined;
-    let isSpl = false; // explicit — don't rely on userTokenSymbol === tokenSymbol
-    // because the SPL mint's symbol could coincidentally match the chain
-    // symbol (e.g., a token branded "SOL" on Solana mainnet) which would
-    // mis-classify the tx as native and divide by wrong decimals.
-    let verifiedDecimals: number | undefined;
-
-    for (let i = 0; i < ixCount; i++) {
-      const programIdIdx = data.readUInt8(off);
-      off += 1;
-      const aiLen = data.readUInt32LE(off);
-      off += 4;
-      const accountIdxs = Buffer.from(data.subarray(off, off + aiLen));
-      off += aiLen;
-      const ixDataLen = data.readUInt32LE(off);
-      off += 4;
-      const ixData = Buffer.from(data.subarray(off, off + ixDataLen));
-      off += ixDataLen;
-
-      const ixProgram = accountKeys[programIdIdx];
-      if (!ixProgram) continue;
-
-      if (ixProgram.equals(SystemProgram.programId)) {
-        if (ixData.length < 12 || ixData.readUInt32LE(0) !== 2) continue;
-        if (accountIdxs.length < 2) continue;
-        const fromIdx = accountIdxs[0];
-        const toPubkey = accountKeys[accountIdxs[1]];
-        if (!toPubkey) continue;
-        const amountLamports = ixData.readBigUInt64LE(4).toString();
-        if (toPubkey.equals(paymasterPubkey)) {
-          feeBase = new BigNumber(feeBase).plus(amountLamports).toFixed();
-        } else {
-          // ACCUMULATE, do not overwrite. See the note at recipientCount below.
-          vaultPubkey = accountKeys[fromIdx];
-          if (recipientCount === 0) {
-            userReceiver = toPubkey.toBase58();
-          }
-          recipientCount += 1;
-          recipientTotal = recipientTotal.plus(amountLamports);
-          sawNative = true;
-        }
-        continue;
-      }
-
-      // SPL Transfer (tag 3) vs TransferChecked (tag 12). TransferChecked
-      // embeds the mint + decimals in the signed bytes, so we can verify
-      // wallet-supplied tokenMeta against the bytes the user is about to
-      // sign — mismatches throw. Plain Transfer carries neither, so the
-      // wallet-supplied metadata is the only source (used as-is).
-      if (ixProgram.toBase58() === TOKEN_PROGRAM) {
-        const tag = ixData.readUInt8(0);
-        if (tag === 12 && ixData.length >= 10 && accountIdxs.length >= 4) {
-          // TransferChecked: accountIndexes = [source, mint, dest, authority]
-          const ixMint = accountKeys[accountIdxs[1]];
-          const destAta = accountKeys[accountIdxs[2]];
-          if (!ixMint || !destAta) continue;
-          const ixDecimals = ixData.readUInt8(9);
-          if (tokenMeta?.mint && tokenMeta.mint !== ixMint.toBase58()) {
-            throw new Error(
-              'SPL mint mismatch: wallet-supplied mint differs from signed transaction',
-            );
-          }
-          if (
-            tokenMeta?.decimals != null &&
-            tokenMeta.decimals !== ixDecimals
-          ) {
-            throw new Error(
-              'SPL decimals mismatch: wallet-supplied decimals differ from signed transaction',
-            );
-          }
-          if (recipientCount === 0) {
-            userReceiver = destAta.toBase58();
-          }
-          recipientCount += 1;
-          recipientTotal = recipientTotal.plus(
-            ixData.readBigUInt64LE(1).toString(),
-          );
-          userTokenSymbol = tokenMeta?.symbol || '(token)';
-          userTokenContract = ixMint.toBase58(); // trustless from signed bytes
-          verifiedDecimals = ixDecimals; // authoritative — on-chain re-verifies
-          isSpl = true;
-          splMints.add(ixMint.toBase58());
-          continue;
-        }
-        if (tag === 3 && ixData.length >= 9 && accountIdxs.length >= 3) {
-          // Legacy Transfer: accountIndexes = [source, dest, authority]; mint
-          // + decimals are NOT in the bytes — wallet metadata is unverified.
-          const destAta = accountKeys[accountIdxs[1]];
-          if (!destAta) continue;
-          if (recipientCount === 0) {
-            userReceiver = destAta.toBase58();
-          }
-          recipientCount += 1;
-          recipientTotal = recipientTotal.plus(
-            ixData.readBigUInt64LE(1).toString(),
-          );
-          userTokenSymbol = tokenMeta?.symbol || '(token)';
-          userTokenContract = tokenMeta?.mint;
-          verifiedDecimals = tokenMeta?.decimals;
-          isSpl = true;
-          if (tokenMeta?.mint) {
-            splMints.add(tokenMeta.mint);
-          }
-          continue;
-        }
-        continue;
-      }
-    }
-
-    // A single amount + symbol cannot honestly represent a proposal that mixes
-    // native SOL with SPL transfers, or mixes two different mints. Rather than
-    // show one of them and sign all of them, fail closed — TransactionRequest
-    // renders a visible decode error and approval becomes impossible while
-    // reject stays reachable.
-    if ((sawNative && isSpl) || splMints.size > 1) {
-      throw new Error(
-        'Solana proposal mixes transfer types or mints — cannot be represented as one amount',
-      );
-    }
-
-    const userAmountBase = recipientTotal.toFixed();
-
-    // SPL amounts use decimals from the signed TransferChecked bytes when
-    // available (authoritative), else wallet-supplied (legacy Transfer).
-    // Native SOL uses chain decimals.
-    const splDecimals = verifiedDecimals;
-    const displayAmount = !isSpl
-      ? new BigNumber(userAmountBase).dividedBy(10 ** decimals).toFixed()
-      : splDecimals != null
-        ? new BigNumber(userAmountBase).dividedBy(10 ** splDecimals).toFixed()
-        : userAmountBase;
-    const displayFee = new BigNumber(feeBase)
-      .dividedBy(10 ** decimals)
-      .toFixed();
-
-    return {
-      sender: vaultPubkey.toBase58(),
-      receiver: userReceiver || 'decodingError',
-      amount: displayAmount,
-      fee: displayFee,
-      tokenSymbol: userTokenSymbol,
-      token: userTokenContract,
-      recipientCount,
-    };
-  } catch (e) {
-    console.log('[decodeSOLTransactionForApproval] error', e);
-    return {
-      sender: 'decodingError',
-      receiver: 'decodingError',
-      amount: 'decodingError',
-      fee: '0',
-      tokenSymbol: blockchains[chain].symbol,
-    };
+    return decodingErrorInfo(chain, error);
   }
 }

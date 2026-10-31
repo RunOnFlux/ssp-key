@@ -4,6 +4,7 @@ import { Buffer } from 'buffer';
 import { HDKey } from '@scure/bip32';
 import * as bip39 from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
+import { isDerivableSeedPhrase } from './seedPhrase';
 import { toCashAddress } from 'bchaddrjs';
 import * as nacl from 'tweetnacl';
 import bs58 from 'bs58';
@@ -57,6 +58,13 @@ function generatexPubxPriv(
 ): xPrivXpub {
   const scriptType = getScriptType(type);
 
+  // Never derive from an empty or garbled mnemonic. A seed blob that did not
+  // decrypt (wrong or rotated enc_key, corrupt state) yields '' — keys derived
+  // from it would be written next to the real seed and look valid. A phrase
+  // the user restored that is not standard BIP-39 still derives.
+  if (!isDerivableSeedPhrase(mnemonic)) {
+    throw new Error('Invalid mnemonic: refusing to derive keys');
+  }
   const seed = bip39.mnemonicToSeedSync(mnemonic);
   const bipParams = blockchains[chain].bip32;
   const masterKey = HDKey.fromMasterSeed(seed, bipParams);

@@ -16,9 +16,126 @@ import {
   messageDigestMatches,
 } from '../../../lib/userOpVerify';
 import { signMessage } from '../../../lib/relayAuth';
-import { setSspKeyEnterprisePublicNonces } from '../../../store/ssp';
+import {
+  EnterpriseRequestError,
+  assertEnterpriseDerivation,
+  checkVaultEvmUserOp,
+  fluxNodeAddressIndex,
+  inputAddressIndexes,
+  parseInputDetails,
+  primaryAddressIndex,
+  validateFluxNodeStartRequest,
+  validateVaultSigningRequest,
+  validateVaultXpubRequest,
+} from '../../../lib/enterpriseGuards';
+import {
+  consumeVaultApproval,
+  vaultRequestDigest,
+} from '../../../lib/vaultApprovalBinding';
+import {
+  EnterpriseNonceError,
+  burnEnterpriseNonce,
+  findEnterpriseNonce,
+} from '../../../lib/enterpriseNoncePool';
+import { isNonceTombstoned } from '../../../lib/enterpriseNonceLedger';
+import {
+  VaultDescriptorError,
+  checkFluxNodeCollateral,
+  checkVaultEvmAccount,
+  checkVaultUtxoTransaction,
+  commitVaultPin,
+  fluxNodeRejectionPayload,
+  requireVaultDescriptor,
+  vaultRejectionCode,
+  vaultSignRejectionPayload,
+  vaultSolBinding,
+  type OwnVaultIdentity,
+} from '../../../lib/vaultDescriptorGate';
+import { verifyVaultUtxoAmounts } from '../../../lib/vaultUtxoAmounts';
 import { cryptos, publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
+
+/** This device's identity for the vault descriptor checks (VD-3). */
+const ownVaultIdentity = (
+  ctx: HomeActionContext,
+  accountXpub: string | null,
+): OwnVaultIdentity => ({
+  wkIdentity: ctx.sspWalletKeyInternalIdentity,
+  identityPubKey: ctx.sspWalletKeyInternalIdentityPubKey || null,
+  accountXpub,
+});
+
+/** User-facing text for a refused vault descriptor (VD-3 / VD-4). */
+export const vaultDescriptorErrorMessage = (
+  error: VaultDescriptorError,
+  t: HomeActionContext['t'],
+): string => {
+  switch (error.code) {
+    case 'missing':
+      return t('home:err_vault_descriptor_missing');
+    case 'mismatch':
+      return t('home:err_vault_descriptor_changed');
+    case 'unconfirmed':
+      return t('home:err_vault_descriptor_unconfirmed');
+    default:
+      return `${t('home:err_vault_descriptor_invalid')} (${error.message})`;
+  }
+};
+
+/**
+ * This device's own account "xpub" for the vault, computed from its seed:
+ * the xpub at m/48'/coin'/orgIndex'/script' (UTXO/EVM, exactly what the xpub
+ * request exported), or the JSON array of its 20 ed25519 leaves at
+ * [vaultIndex][0..19] (Solana).
+ */
+const ownVaultAccountXpub = (
+  mnemonicPhrase: string,
+  vaultXpriv: string,
+  chain: keyof cryptos,
+  orgIndex: number,
+  vaultIndex: number,
+): string => {
+  const config = blockchains[chain];
+  if (config.chainType === 'sol') {
+    return JSON.stringify(
+      generateSolanaPubkeyArray(vaultXpriv, chain, vaultIndex),
+    );
+  }
+  return getMasterXpub(
+    mnemonicPhrase,
+    48,
+    config.slip,
+    orgIndex,
+    config.scriptType,
+    chain,
+  );
+};
+
+/** txid:vout:sequence of every input — the spends a signature commits to. */
+const inputOutpoints = (tx: {
+  ins: Array<{ hash: Buffer; index: number; sequence: number }>;
+}): string[] =>
+  tx.ins.map(
+    (input) =>
+      `${Buffer.from(input.hash).toString('hex')}:${input.index}:${input.sequence}`,
+  );
+
+/** User-facing text for a nonce-pool failure that aborted a signature. */
+const nonceErrorMessage = (
+  error: EnterpriseNonceError,
+  t: HomeActionContext['t'],
+): string => {
+  switch (error.code) {
+    case 'already_used':
+      return t('home:err_vault_nonce_already_used');
+    case 'persist_failed':
+      return t('home:err_vault_nonce_persist_failed');
+    case 'not_found':
+      return 'Reserved nonce not found locally. Nonces may be out of sync. Please sync nonces and recreate the proposal.';
+    default:
+      return error.message;
+  }
+};
 
 export const handleVaultXpubAction = async (ctx: HomeActionContext) => {
   const {
@@ -41,6 +158,14 @@ export const handleVaultXpubAction = async (ctx: HomeActionContext) => {
   let xprivKeyDecrypted = '';
 
   try {
+    // H-1: the receipt guard again, before anything is decrypted or derived.
+    // Only organisation accounts 100'–99999' may be exported — never the
+    // consumer account 0' or the recovery account 99'.
+    const requestProblem = validateVaultXpubRequest(vaultXpubData);
+    if (requestProblem) {
+      throw new EnterpriseRequestError(requestProblem);
+    }
+
     // Get decryption keys from keychain
     const encryptionKey = await Keychain.getGenericPassword({
       service: 'enc_key',
@@ -85,15 +210,12 @@ export const handleVaultXpubAction = async (ctx: HomeActionContext) => {
     // relay payload) provides per-vault key separation — mirrors EVM/UTXO
     // behavior where vault.vaultIndex shifts the HD derivation.
     let vaultXpub: string;
-    if (
-      typeof vaultXpubData.vaultIndex !== 'number' ||
-      !Number.isInteger(vaultXpubData.vaultIndex) ||
-      vaultXpubData.vaultIndex < 0
-    ) {
-      throw new Error(
-        'vaultXpub request missing valid vaultIndex (wallet must send a non-negative integer)',
-      );
-    }
+    // H-1, right before derivation: integer org index in [100, 99999] and an
+    // integer vault index in [0, 2^31).
+    assertEnterpriseDerivation(
+      vaultXpubData.orgIndex,
+      vaultXpubData.vaultIndex,
+    );
     const solVaultTypeIndex = vaultXpubData.vaultIndex;
     if (blockchainConfig.chainType === 'sol') {
       const solVaultXpriv = getMasterXpriv(
@@ -175,7 +297,12 @@ export const handleVaultXpubAction = async (ctx: HomeActionContext) => {
     mnemonicPhrase = '';
     pwForEncryption = '';
     console.error('[Vault Xpub] Error:', error);
-    displayMessage('error', t('home:err_vault_xpub_failed'));
+    displayMessage(
+      'error',
+      error instanceof EnterpriseRequestError
+        ? t('home:err_vault_request_invalid')
+        : t('home:err_vault_xpub_failed'),
+    );
   } finally {
     setVaultXpubData(null);
     clearVaultXpubRequest?.();
@@ -186,8 +313,6 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     vaultSigningData,
     solDecodeState,
     seedPhrase,
-    enterprisePublicNonces,
-    dispatch,
     postAction,
     displayMessage,
     t,
@@ -197,12 +322,24 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
   } = ctx;
   if (!vaultSigningData) return;
 
+  // CHN-5: sign only the exact request the user approved on screen. The
+  // approval screen arms the digest of the request it displayed; a request
+  // the relay swapped in while authentication was open has a different
+  // digest and is refused here. The new request stays open for review.
+  const requestDigest = vaultRequestDigest(vaultSigningData);
+  if (!consumeVaultApproval(requestDigest)) {
+    displayMessage('error', t('home:err_vault_request_changed'), 8000);
+    return;
+  }
+
   // Sign-time fail-closed recheck for Solana: the Approve button's
   // disabled prop is evaluated at press time, but the byte-decode verdict
   // can land while biometric auth is open (or the press can race the
   // async decode). NEVER partial-sign while the trustless decode is still
-  // pending or after it flagged a mismatch. Keeps the request open — the
-  // user sees the banner/disabled state instead of a silent dismissal.
+  // pending, after it flagged a mismatch, when the bytes were undecodable,
+  // or when the verdict belongs to a different request. Keeps the request
+  // open — the user sees the banner/disabled state instead of a silent
+  // dismissal.
   if (
     blockchains[vaultSigningData.chain as keyof cryptos]?.chainType === 'sol'
   ) {
@@ -211,8 +348,16 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       // is defensive-only; refuse to sign without a verdict.
       return;
     }
+    if (solDecodeState.requestDigest !== requestDigest) {
+      displayMessage('error', t('home:err_vault_request_changed'), 8000);
+      return;
+    }
     if (solDecodeState.mismatch) {
       displayMessage('error', t('home:vault_sign_sol_decode_mismatch'), 8000);
+      return;
+    }
+    if (solDecodeState.kind === 'undecodable') {
+      displayMessage('error', t('home:vault_sign_sol_undecodable'), 8000);
       return;
     }
   }
@@ -223,6 +368,20 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
   let mnemonicPhrase = '';
 
   try {
+    // H-1 / CHN-5: the receipt guard again at sign time — organisation index
+    // in [100, 99999], integer vault/address indices, message signing on EVM
+    // vaults only. Nothing below runs for a request that fails it.
+    const requestProblem = validateVaultSigningRequest(vaultSigningData);
+    if (requestProblem) {
+      throw new EnterpriseRequestError(requestProblem);
+    }
+    // Every address index the request will sign at, validated.
+    const addressIndexes = inputAddressIndexes(vaultSigningData.inputDetails);
+    // VD-3, before anything is decrypted: the request carries the vault
+    // descriptor, it verifies, it names this vault, and the vault is pinned
+    // (or its pin was confirmed on screen). Throws otherwise.
+    requireVaultDescriptor(vaultSigningData, ownVaultIdentity(ctx, null));
+
     // Get decryption keys from keychain
     const encryptionKey = await Keychain.getGenericPassword({
       service: 'enc_key',
@@ -260,6 +419,13 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       throw new Error('Unsupported chain: ' + vaultSigningData.chain);
     }
 
+    // H-1, right before derivation.
+    assertEnterpriseDerivation(
+      vaultSigningData.orgIndex,
+      vaultSigningData.vaultIndex,
+      addressIndexes,
+    );
+
     // Derive xpriv at m/48'/coin'/orgIndex'/scriptType'
     vaultXpriv = getMasterXpriv(
       mnemonicPhrase,
@@ -269,6 +435,27 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       blockchainConfig.scriptType,
       vaultChain,
     );
+
+    // VD-3 in full: this device's own vault xpub (computed from its seed)
+    // must be the one the descriptor lists for it. A pin the user confirmed
+    // on screen is saved only after EVERY transaction check below passed,
+    // right before the nonce burn / signature (commitPinBeforeSigning).
+    const vaultCheck = requireVaultDescriptor(
+      vaultSigningData,
+      ownVaultIdentity(
+        ctx,
+        ownVaultAccountXpub(
+          mnemonicPhrase,
+          vaultXpriv,
+          vaultChain,
+          vaultSigningData.orgIndex,
+          vaultSigningData.vaultIndex,
+        ),
+      ),
+    );
+    const commitPinBeforeSigning = () =>
+      commitVaultPin(vaultCheck, vaultSigningData.vaultName);
+    const vaultDescriptor = vaultCheck.descriptor;
 
     // Clear mnemonic immediately — no longer needed
     mnemonicPhrase = '';
@@ -282,29 +469,13 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     // for Key's slot.
     if (blockchainConfig.chainType === 'sol') {
       // Read addressIndex from the synthesized inputDetails[0] entry the
-      // wallet/enterprise-app forwards. Must match the index used to
+      // wallet/enterprise-app forwards (validated integer; 0 when the
+      // request carries no input details). Must match the index used to
       // derive the on-chain multisig PDA; otherwise the derived pubkey
       // wouldn't be a member and approve_transaction would reject.
-      // Defensive: vaultSigningData.inputDetails may arrive as either a
-      // JSON string (relay payload) or already-parsed Array — match the
-      // existing UTXO path's accommodation.
-      let solInputDetailsParsed: Array<{ addressIndex?: number }> = [];
-      const rawInputDetails = vaultSigningData.inputDetails;
-      if (typeof rawInputDetails === 'string') {
-        try {
-          solInputDetailsParsed = JSON.parse(rawInputDetails) as Array<{
-            addressIndex?: number;
-          }>;
-        } catch {
-          solInputDetailsParsed = [];
-        }
-      } else if (Array.isArray(rawInputDetails)) {
-        solInputDetailsParsed = rawInputDetails;
-      }
-      const solAddressIndex =
-        typeof solInputDetailsParsed[0]?.addressIndex === 'number'
-          ? solInputDetailsParsed[0].addressIndex
-          : 0;
+      const solAddressIndex = primaryAddressIndex(
+        vaultSigningData.inputDetails,
+      );
       // Sign at HD path [vaultIndex][addressIndex]. Mirrors the per-vault
       // xpub flow (generateSolanaPubkeyArray now also derives at
       // typeIndex=vault.vaultIndex), so the wallet's signing pubkey
@@ -317,7 +488,39 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         vaultChain,
       );
       keyPubKey = signingKeypair.pubKey;
+      // VD-4: the bytes act on the multisig derived from the pinned vault
+      // descriptor at this address index, and this device's own leaf is one
+      // of its members.
+      const solBinding = vaultSolBinding(vaultDescriptor, solAddressIndex);
+      if (solDecodeState?.multisigPda !== solBinding.multisigPda) {
+        signingKeypair.privKey = '';
+        throw new VaultDescriptorError(
+          'invalid',
+          'the transaction does not act on this vault',
+        );
+      }
+      if (!solBinding.members.includes(signingKeypair.pubKey)) {
+        signingKeypair.privKey = '';
+        throw new Error(t('home:err_vault_sign_not_member'));
+      }
+      // SOL-7: when the decode verified the multisig member set (request
+      // members re-derived to the PDA, or read from chain for approve-only),
+      // this device's own leaf must be one of them.
+      if (
+        solDecodeState?.members &&
+        !solDecodeState.members.includes(signingKeypair.pubKey)
+      ) {
+        signingKeypair.privKey = '';
+        throw new Error(t('home:err_vault_sign_not_member'));
+      }
 
+      // Every check passed: save a pin confirmed on screen, then sign.
+      try {
+        commitPinBeforeSigning();
+      } catch (error) {
+        signingKeypair.privKey = '';
+        throw error;
+      }
       const { Transaction: SolTransaction, Keypair: SolKeypair } =
         await import('@solana/web3.js');
       const secretKey = new Uint8Array(
@@ -378,11 +581,14 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     // EVM vault signing: use enterprise nonce for Schnorr partial signature
     const isEvmChain = blockchainConfig.chainType === 'evm';
     let usedEnterpriseNonce: publicPrivateNonce | null = null;
-    // Removes the reserved nonce from the local store. Deliberately deferred
-    // until the trustless binding check has passed: burning it up front turned
-    // every rejected request into a permanently lost nonce, so the next attempt
-    // failed with "nonce not found / out of sync" instead of the real error.
-    let consumeReservedNonce: (() => void) | null = null;
+    // Removes the reserved nonce from the local pool for good. Deliberately
+    // deferred until the trustless binding check has passed: burning it up
+    // front turned every rejected request into a permanently lost nonce, so
+    // the next attempt failed with "nonce not found / out of sync" instead of
+    // the real error. K4: it resolves only after the used-nonce ledger and
+    // the shrunken pool are on disk, and the partial signature is produced
+    // only after it resolves; any failure aborts the signature.
+    let consumeReservedNonce: (() => Promise<publicPrivateNonce>) | null = null;
 
     // Wallet-only mode: Key's nonce is empty placeholder — skip nonce lookup
     const keyNonceIsPlaceholder =
@@ -393,86 +599,35 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       vaultSigningData.reservedNonce &&
       !keyNonceIsPlaceholder
     ) {
-      // Load enterprise nonces from Redux store
-      let enterpriseNonces: publicPrivateNonce[] = [];
-      try {
-        if (enterprisePublicNonces) {
-          const decrypted = CryptoJS.AES.decrypt(
-            enterprisePublicNonces,
-            pwForEncryption,
-          );
-          enterpriseNonces = JSON.parse(
-            decrypted.toString(CryptoJS.enc.Utf8),
-          ) as publicPrivateNonce[];
-        }
-      } catch {
-        throw new Error('Failed to decrypt enterprise nonces');
-      }
-
-      if (enterpriseNonces.length === 0) {
-        throw new Error(
-          'No enterprise nonces available. Please sync your SSP Key to generate nonces.',
-        );
-      }
-
-      // Find the reserved nonce by matching public parts
       const reservedNonce = vaultSigningData.reservedNonce;
-      let matchIdx = enterpriseNonces.findIndex(
-        (n) =>
-          n.kPublic === reservedNonce.kPublic &&
-          n.kTwoPublic === reservedNonce.kTwoPublic,
-      );
-      if (matchIdx === -1 && enterpriseNonces.length > 0) {
-        // Retry after short delay — storage may need a moment
+      // A nonce this device already signed with is never used again, even
+      // if a stale pool write brought it back (K2).
+      if (isNonceTombstoned(reservedNonce.kPublic)) {
+        throw new Error(t('home:err_vault_nonce_already_used'));
+      }
+
+      // K2: read the pool from the store NOW, not the render-time snapshot.
+      let localNonce = findEnterpriseNonce(reservedNonce, pwForEncryption);
+      if (!localNonce) {
+        // Retry after short delay — a replenish may be writing the pool
         console.log(
           '[Vault Signing] Nonce not found on first try, retrying in 2s…',
         );
         await new Promise((r) => setTimeout(r, 2000));
-        // Reload from Redux store
-        try {
-          if (enterprisePublicNonces) {
-            const retryDecrypted = CryptoJS.AES.decrypt(
-              enterprisePublicNonces,
-              pwForEncryption,
-            );
-            enterpriseNonces = JSON.parse(
-              retryDecrypted.toString(CryptoJS.enc.Utf8),
-            ) as publicPrivateNonce[];
-          }
-        } catch {
-          // Keep existing nonces from first attempt
-        }
-        matchIdx = enterpriseNonces.findIndex(
-          (n) =>
-            n.kPublic === reservedNonce.kPublic &&
-            n.kTwoPublic === reservedNonce.kTwoPublic,
-        );
+        localNonce = findEnterpriseNonce(reservedNonce, pwForEncryption);
       }
-      if (matchIdx === -1) {
-        const localPrefixes = enterpriseNonces
-          .slice(0, 5)
-          .map((n) => n.kPublic.slice(0, 8))
-          .join(', ');
+      if (!localNonce) {
         console.log(
-          `[Vault Signing] NONCE MISMATCH — looking for ${reservedNonce.kPublic.slice(0, 8)}, local pool (${enterpriseNonces.length}): [${localPrefixes}…]`,
+          `[Vault Signing] NONCE MISMATCH — looking for ${reservedNonce.kPublic.slice(0, 8)}`,
         );
         throw new Error(
           'Reserved nonce not found locally. Nonces may be out of sync. Please sync nonces and recreate the proposal.',
         );
       }
-      usedEnterpriseNonce = enterpriseNonces[matchIdx];
 
-      // Delete used nonce from local store before it is ever used (never reuse)
-      const usedNonceIdx = matchIdx;
       const noncePassword = pwForEncryption;
-      consumeReservedNonce = () => {
-        enterpriseNonces.splice(usedNonceIdx, 1);
-        const encryptedNonces = CryptoJS.AES.encrypt(
-          JSON.stringify(enterpriseNonces),
-          noncePassword,
-        ).toString();
-        dispatch(setSspKeyEnterprisePublicNonces(encryptedNonces));
-      };
+      consumeReservedNonce = () =>
+        burnEnterpriseNonce(reservedNonce, noncePassword);
     }
 
     // Parse M-of-N signing arrays (sent as JSON strings from wallet)
@@ -496,27 +651,27 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
           : vaultSigningData.allSignerNonces;
     }
 
-    // Parse inputDetails from JSON string (wallet sends as serialized JSON in relay payload)
-    const parsedInputDetails: Array<{
-      index: number;
-      addressIndex: number;
-      witnessScript?: string;
-      redeemScript?: string;
-      amount?: string;
-    }> =
-      typeof vaultSigningData.inputDetails === 'string'
-        ? (JSON.parse(vaultSigningData.inputDetails) as Array<{
-            index: number;
-            addressIndex: number;
-            witnessScript?: string;
-            redeemScript?: string;
-            amount?: string;
-          }>)
-        : vaultSigningData.inputDetails;
+    // Input details (JSON string or array in the relay payload); every
+    // addressIndex was validated above.
+    const parsedInputDetails = parseInputDetails(
+      vaultSigningData.inputDetails,
+    ).map((entry, i) => ({
+      addressIndex: addressIndexes[i],
+      witnessScript:
+        typeof entry.witnessScript === 'string'
+          ? entry.witnessScript
+          : undefined,
+      redeemScript:
+        typeof entry.redeemScript === 'string' ? entry.redeemScript : undefined,
+      amount:
+        typeof entry.amount === 'string' || typeof entry.amount === 'number'
+          ? String(entry.amount)
+          : undefined,
+    }));
 
     if (
       isEvmChain &&
-      (usedEnterpriseNonce || keyNonceIsPlaceholder) &&
+      (consumeReservedNonce || keyNonceIsPlaceholder) &&
       vaultSigningData.sigOne != null &&
       parsedAllSignerKeys &&
       parsedAllSignerNonces
@@ -530,6 +685,7 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       // benign operation while the key co-signs a vault-draining one. The
       // recompute uses the same aa-core entry-point hash the wallet builds
       // with, so a legitimate operation always matches.
+      let evmSender: unknown;
       if (vaultSigningData.signMessage !== undefined) {
         if (
           !messageDigestMatches(
@@ -540,26 +696,38 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
           throw new Error(t('home:err_vault_sign_mismatch'));
         }
       } else if (vaultSigningData.evmUserOp !== undefined) {
-        const userOp =
-          typeof vaultSigningData.evmUserOp === 'string'
-            ? (JSON.parse(vaultSigningData.evmUserOp) as unknown)
-            : vaultSigningData.evmUserOp;
+        // EVM call-safety (C-4): one flat operation, `execute` only, no call
+        // to the vault account itself, no upgrade selector, no payable
+        // contract call. The hash is then checked over that same object —
+        // with this device's own EntryPoint and chainId (userOpVerify).
+        const safety = checkVaultEvmUserOp(vaultSigningData.evmUserOp);
+        if (!safety.ok) {
+          throw new Error(
+            `${t('home:err_vault_sign_unsafe_call')}: ${safety.reason}`,
+          );
+        }
         if (
-          !userOpHashMatches(userOp, vaultChain, vaultSigningData.rawUnsignedTx)
+          !userOpHashMatches(
+            safety.userOp,
+            vaultChain,
+            vaultSigningData.rawUnsignedTx,
+          )
         ) {
           throw new Error(t('home:err_vault_sign_mismatch'));
         }
+        evmSender = safety.userOp.sender;
       } else {
         // No decodable preimage accompanied the hash — cannot verify what we
         // would sign. Fail closed rather than blind-sign.
         throw new Error(t('home:err_vault_sign_unverifiable'));
       }
-      // Binding verified — burn the reserved nonce now, before any partial
-      // signature is produced with it.
-      consumeReservedNonce?.();
-
+      // VD-4: the operation's sender is the vault account derived from the
+      // pinned descriptor at this address index, and every Schnorr signer
+      // key is one of that vault's keys (message signing: the keys).
+      const evmAddressIndex = primaryAddressIndex(
+        vaultSigningData.inputDetails,
+      );
       // Derive keypair at the transaction's source address index
-      const evmAddressIndex = parsedInputDetails[0]?.addressIndex ?? 0;
       const signingKeypair = generateAddressKeypair(
         vaultXpriv,
         vaultSigningData.vaultIndex,
@@ -567,6 +735,36 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         vaultChain,
       );
       keyPubKey = signingKeypair.pubKey;
+      // When this device signs (not wallet-only), its OWN key must be one of
+      // the request's signer keys — every one of which is a key of the
+      // pinned vault, without duplicates (wallet parity).
+      const evmVaultProblem = checkVaultEvmAccount(
+        vaultDescriptor,
+        evmAddressIndex,
+        evmSender,
+        parsedAllSignerKeys,
+        vaultSigningData.signingMode === 'wallet_only'
+          ? undefined
+          : signingKeypair.pubKey,
+      );
+      if (evmVaultProblem) {
+        signingKeypair.privKey = '';
+        throw new VaultDescriptorError('invalid', evmVaultProblem);
+      }
+      // Every check passed: save a pin confirmed on screen before the nonce
+      // is burned and anything is signed.
+      try {
+        commitPinBeforeSigning();
+        // Binding verified — burn the reserved nonce now (durably: ledger
+        // entry + flushed pool), before any partial signature is produced
+        // with it. A failure here aborts: nothing is signed or sent.
+        if (consumeReservedNonce) {
+          usedEnterpriseNonce = await consumeReservedNonce();
+        }
+      } catch (error) {
+        signingKeypair.privKey = '';
+        throw error;
+      }
 
       let vaultSchnorrResult: {
         signerContribution: string;
@@ -635,7 +833,9 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     } else if (isEvmChain) {
       // EVM chain but missing Schnorr data — cannot sign
       const missing = [];
-      if (!usedEnterpriseNonce && !keyNonceIsPlaceholder) missing.push('nonce');
+      if (!consumeReservedNonce && !keyNonceIsPlaceholder) {
+        missing.push('nonce');
+      }
       if (vaultSigningData.sigOne == null) missing.push('sigOne');
       if (!parsedAllSignerKeys) missing.push('signerKeys');
       if (!parsedAllSignerNonces) missing.push('signerNonces');
@@ -646,13 +846,34 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       if (!walletSignedHex) {
         throw new Error('Missing wallet-signed TX hex for UTXO vault signing');
       }
+      // VD-4: even a pass-through approval is only given for a transaction
+      // that spends this vault's addresses.
+      const passThroughCheck = checkVaultUtxoTransaction(
+        vaultDescriptor,
+        vaultSigningData.rawUnsignedTx,
+        vaultSigningData.inputDetails,
+      );
+      if (!passThroughCheck.ok) {
+        throw new VaultDescriptorError('invalid', passThroughCheck.reason);
+      }
+      // ...with verified input amounts and a capped fee (item 2).
+      const passThroughAmounts = await verifyVaultUtxoAmounts(
+        vaultChain,
+        vaultSigningData.rawUnsignedTx,
+        vaultSigningData.inputDetails,
+        passThroughCheck.inputs,
+      );
+      if (!passThroughAmounts.ok) {
+        throw new Error(passThroughAmounts.reason);
+      }
+      commitPinBeforeSigning();
 
       console.log(
         '[Vault Signing] Wallet-only UTXO mode — skipping Key signing',
       );
 
       // Derive pubkey for response (no signing needed)
-      const firstAddrIdx = parsedInputDetails[0]?.addressIndex ?? 0;
+      const firstAddrIdx = addressIndexes[0] ?? 0;
       const pubKeypair = generateAddressKeypair(
         vaultXpriv,
         vaultSigningData.vaultIndex,
@@ -691,6 +912,30 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         throw new Error('Missing wallet-signed TX hex for UTXO vault signing');
       }
 
+      // VD-4: every input spends a vault address derived from the pinned
+      // descriptor (its scripts are re-derived, never taken from the relay),
+      // and every non-change output is one the screen showed as a recipient.
+      const utxoCheck = checkVaultUtxoTransaction(
+        vaultDescriptor,
+        vaultSigningData.rawUnsignedTx,
+        vaultSigningData.inputDetails,
+      );
+      if (!utxoCheck.ok) {
+        throw new VaultDescriptorError('invalid', utxoCheck.reason);
+      }
+      // Again at sign time: every input amount verified (hash-checked
+      // previous transactions on DOGE/RVN) and the fee within the vault cap.
+      // The key signs with exactly these amounts.
+      const amountCheck = await verifyVaultUtxoAmounts(
+        vaultChain,
+        vaultSigningData.rawUnsignedTx,
+        vaultSigningData.inputDetails,
+        utxoCheck.inputs,
+      );
+      if (!amountCheck.ok) {
+        throw new Error(amountCheck.reason);
+      }
+
       const libID = getLibId(vaultChain);
       const network = utxolib.networks[libID];
 
@@ -714,13 +959,22 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       // matches exactly what was displayed, and refuse on any divergence.
       if (vaultSigningData.rawUnsignedTx) {
         type TxOut = { value: number; script: Buffer };
-        const displayedOuts = (
-          utxolib.Transaction.fromHex(
-            vaultSigningData.rawUnsignedTx,
-            network,
-          ) as { outs: TxOut[] }
-        ).outs;
+        type TxIn = { hash: Buffer; index: number; sequence: number };
+        const displayedTx = utxolib.Transaction.fromHex(
+          vaultSigningData.rawUnsignedTx,
+          network,
+        ) as { outs: TxOut[]; ins: TxIn[] };
+        const displayedOuts = displayedTx.outs;
         const signedOuts = (signedTx as { outs: TxOut[] }).outs;
+        // The key also commits to the inputs: the wallet-signed transaction
+        // must spend exactly the displayed (and verified) outpoints — extra or
+        // different vault inputs would turn into an unseen fee.
+        if (
+          inputOutpoints(displayedTx).join(',') !==
+          inputOutpoints(signedTx as { ins: TxIn[] }).join(',')
+        ) {
+          throw new Error(t('home:err_vault_sign_mismatch'));
+        }
         const sameOutputs =
           displayedOuts.length === signedOuts.length &&
           displayedOuts.every((out: TxOut, i: number) => {
@@ -748,6 +1002,9 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         );
       }
 
+      // Every check passed: save a pin confirmed on screen, then sign.
+      commitPinBeforeSigning();
+
       // Sign each input with Key's per-address keypair
       for (let i = 0; i < parsedInputDetails.length; i++) {
         const input = parsedInputDetails[i];
@@ -764,13 +1021,16 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
 
         const keyPair = utxolib.ECPair.fromWIF(signingKeypair.privKey, network);
 
-        const witnessScriptBuf = input.witnessScript
-          ? Buffer.from(input.witnessScript, 'hex')
+        // Scripts re-derived from the pinned descriptor (VD-4), equal to the
+        // relay's inputDetails by the check above.
+        const derivedScripts = utxoCheck.inputs[i];
+        const witnessScriptBuf = derivedScripts.witnessScript
+          ? Buffer.from(derivedScripts.witnessScript, 'hex')
           : undefined;
-        const redeemScriptBuf = input.redeemScript
-          ? Buffer.from(input.redeemScript, 'hex')
+        const redeemScriptBuf = derivedScripts.redeemScript
+          ? Buffer.from(derivedScripts.redeemScript, 'hex')
           : undefined;
-        const amount = input.amount ? Number(input.amount) : 0;
+        const amount = amountCheck.amounts[i];
 
         txb.sign(
           i,
@@ -816,13 +1076,43 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     vaultXpriv = '';
     pwForEncryption = '';
     mnemonicPhrase = '';
-    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    const errMsg =
+      error instanceof EnterpriseNonceError
+        ? nonceErrorMessage(error, t)
+        : error instanceof VaultDescriptorError
+          ? vaultDescriptorErrorMessage(error, t)
+          : error instanceof EnterpriseRequestError
+            ? `${t('home:err_vault_request_invalid')} (${error.message})`
+            : error instanceof Error
+              ? error.message
+              : 'Unknown error';
     console.error('[Vault Signing] Error:', errMsg);
     displayMessage(
       'error',
       `${t('home:err_vault_sign_failed')}: ${errMsg}`,
       8000,
     );
+    // A vault descriptor refusal is answered with a machine-readable code so
+    // SSP Wallet can tell the app why (instead of waiting for a timeout).
+    if (error instanceof VaultDescriptorError) {
+      try {
+        await postAction(
+          'enterprisevaultsignrejected',
+          JSON.stringify(
+            vaultSignRejectionPayload(
+              vaultSigningData.requestId,
+              vaultRejectionCode(error.code),
+              errMsg,
+            ),
+          ),
+          ctx.identityChain,
+          '',
+          sspWalletKeyInternalIdentity,
+        );
+      } catch (postError) {
+        console.error('[Vault Signing] Rejection not delivered:', postError);
+      }
+    }
   } finally {
     clearVaultSigningState(); // also discards any in-flight sol decode
     clearVaultSigningRequest?.();
@@ -849,14 +1139,9 @@ export const handleFluxNodeStart = async (
   const nodeChain = (request.chain as string) || '';
 
   try {
-    const nodeOrgIndex = request.orgIndex as number;
-    const nodeVaultIndex = request.vaultIndex as number;
-    const nodeAddressIndex = (request.addressIndex as number) || 0;
     const identityPubKey = request.identityPubKey as string;
     const collateralTxid = request.collateralTxid as string;
-    const nodeCollateralVout = request.collateralVout as number;
     const nodeRedeemScript = request.redeemScript as string;
-    const nodeDelegates = (request.delegates as string[]) || [];
 
     if (!nodeChain || !collateralTxid || !identityPubKey || !nodeRedeemScript) {
       console.error('[Enterprise Flux Node] Missing required parameters');
@@ -868,6 +1153,76 @@ export const handleFluxNodeStart = async (
           error: 'Missing required parameters',
         }),
         nodeChain || identityChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+      return;
+    }
+
+    // H-1: organisation index in [100, 99999], integer vault/address
+    // indices, integer collateral output — before anything is decrypted. An
+    // org index of 0 or 99 would sign the start with the consumer or
+    // recovery account's collateral key.
+    const requestProblem = validateFluxNodeStartRequest(request);
+    if (requestProblem) {
+      console.error('[Enterprise Flux Node] Refused:', requestProblem);
+      displayMessage('error', t('home:err_vault_request_invalid'));
+      await postAction(
+        'enterprisefluxnodestarted',
+        JSON.stringify({
+          requestId,
+          error: `Request refused: ${requestProblem}`,
+        }),
+        nodeChain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
+      return;
+    }
+    const nodeOrgIndex = request.orgIndex as number;
+    const nodeVaultIndex = request.vaultIndex as number;
+    const nodeAddressIndex = fluxNodeAddressIndex(request);
+    const nodeCollateralVout = request.collateralVout as number;
+    const nodeDelegates = Array.isArray(request.delegates)
+      ? (request.delegates as string[])
+      : [];
+
+    // VD-3 / VD-4 before anything is decrypted: the request carries the
+    // pinned (or on-screen confirmed) vault descriptor, and the collateral
+    // script and address are the vault address derived from it.
+    try {
+      const nodeVault = requireVaultDescriptor(
+        request,
+        ownVaultIdentity(ctx, null),
+      );
+      const collateralProblem = checkFluxNodeCollateral(
+        nodeVault.descriptor,
+        nodeAddressIndex,
+        nodeRedeemScript,
+        request.collateralAddress,
+      );
+      if (collateralProblem) {
+        throw new VaultDescriptorError('invalid', collateralProblem);
+      }
+    } catch (error) {
+      const message =
+        error instanceof VaultDescriptorError
+          ? vaultDescriptorErrorMessage(error, t)
+          : t('home:err_vault_request_invalid');
+      console.error('[Enterprise Flux Node] Refused:', message);
+      displayMessage('error', message, 8000);
+      await postAction(
+        'enterprisefluxnodestarted',
+        JSON.stringify(
+          fluxNodeRejectionPayload(
+            requestId,
+            `Request refused: ${message}`,
+            vaultRejectionCode(
+              error instanceof VaultDescriptorError ? error.code : 'invalid',
+            ),
+          ),
+        ),
+        nodeChain,
         '',
         sspWalletKeyInternalIdentity,
       );
@@ -908,6 +1263,11 @@ export const handleFluxNodeStart = async (
       throw new Error(t('home:err_flux_node_unsupported_chain'));
     }
 
+    // H-1, right before derivation.
+    assertEnterpriseDerivation(nodeOrgIndex, nodeVaultIndex, [
+      nodeAddressIndex,
+    ]);
+
     // Derive xpriv at m/48'/coin'/orgIndex'/scriptType'
     vaultXpriv = getMasterXpriv(
       mnemonicPhrase,
@@ -916,6 +1276,24 @@ export const handleFluxNodeStart = async (
       nodeOrgIndex,
       blockchainConfig.scriptType,
       vaultChain,
+    );
+
+    // VD-3 in full (own vault xpub). A pin confirmed on screen is saved
+    // only right before the collateral key signs. The signing path
+    // m/48'/coin'/orgIndex'/script'/vaultIndex/addressIndex is then a key of
+    // the pinned vault.
+    const nodeVaultCheck = requireVaultDescriptor(
+      request,
+      ownVaultIdentity(
+        ctx,
+        ownVaultAccountXpub(
+          mnemonicPhrase,
+          vaultXpriv,
+          vaultChain,
+          nodeOrgIndex,
+          nodeVaultIndex,
+        ),
+      ),
     );
 
     // Clear mnemonic immediately
@@ -943,6 +1321,12 @@ export const handleFluxNodeStart = async (
         delegatePublicKeys: nodeDelegates,
       };
     }
+
+    // Every check passed: save a pin confirmed on screen, then sign.
+    commitVaultPin(
+      nodeVaultCheck,
+      typeof request.vaultName === 'string' ? request.vaultName : undefined,
+    );
 
     // Call startFluxNodev6WithPubKey — uses identity public key directly (no private key needed)
     const signedTxHex = fluxnode.startFluxNodev6WithPubKey(
@@ -976,13 +1360,24 @@ export const handleFluxNodeStart = async (
     mnemonicPhrase = '';
     pwForEncryption = '';
     console.error('[Enterprise Flux Node] Error:', err);
+    if (err instanceof VaultDescriptorError) {
+      displayMessage('error', vaultDescriptorErrorMessage(err, t), 8000);
+    }
     await postAction(
       'enterprisefluxnodestarted',
-      JSON.stringify({
-        requestId,
-        error:
-          err instanceof Error ? err.message : t('home:err_flux_node_failed'),
-      }),
+      JSON.stringify(
+        fluxNodeRejectionPayload(
+          requestId,
+          err instanceof VaultDescriptorError
+            ? `Request refused: ${vaultDescriptorErrorMessage(err, t)}`
+            : err instanceof Error
+              ? err.message
+              : t('home:err_flux_node_failed'),
+          err instanceof VaultDescriptorError
+            ? vaultRejectionCode(err.code)
+            : null,
+        ),
+      ),
       nodeChain || identityChain,
       '',
       sspWalletKeyInternalIdentity,
