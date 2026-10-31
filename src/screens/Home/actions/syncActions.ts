@@ -11,8 +11,8 @@ import {
   generateAddressKeypair,
   generatePublicNonce,
   generateSolanaPubkeyArray,
-  validateMnemonic,
 } from '../../../lib/wallet';
+import { isDerivableSeedPhrase } from '../../../lib/seedPhrase';
 import {
   setXpubKey,
   setXprivKey,
@@ -734,8 +734,9 @@ export const processChainSyncBatch = async (
           mnemonicPhrase = decryptOrEmpty(seedPhrase, pwForEncryption);
         }
         // KEY-3: never derive (and store) keys from a seed that did not
-        // decrypt — '' or garbage under a wrong / rotated enc_key.
-        if (!validateMnemonic(mnemonicPhrase)) {
+        // decrypt — '' or garbage under a wrong / rotated enc_key. Not a
+        // BIP-39 check: a restored non-standard phrase is valid.
+        if (!isDerivableSeedPhrase(mnemonicPhrase)) {
           throw new Error('Unable to decrypt stored data');
         }
         const chainConfig = blockchains[entry.chain];

@@ -48,8 +48,7 @@ import * as Keychain from 'react-native-keychain';
 import * as CryptoJS from 'crypto-js';
 import { Buffer } from 'buffer';
 import { getUniqueId } from 'react-native-device-info';
-import * as bip39 from '@scure/bip39';
-import { wordlist } from '@scure/bip39/wordlists/english.js';
+import { isDerivableSeedPhrase } from '../lib/seedPhrase';
 import {
   store,
   flushPersistedState,
@@ -201,12 +200,13 @@ function decryptState(passphrase: string): PlainState | null {
  * Whether `value` looks like what `field` holds. CryptoJS does not
  * authenticate: a wrong key yields '' or, now and then, a short string of
  * valid UTF-8 garbage. The checks are sized so garbage practically never
- * passes: the seed must be a valid mnemonic, the nonce lists JSON, the
+ * passes: the seed must be a derivable phrase, the nonce lists JSON, the
  * extended keys (base58, or JSON for Solana) printable ASCII of 8+ chars.
  */
 function plausible(field: BlobField, value: string): boolean {
   if (field === 'seedPhrase') {
-    return bip39.validateMnemonic(value, wordlist);
+    // Not a BIP-39 check: a restored non-standard phrase must migrate too.
+    return isDerivableSeedPhrase(value);
   }
   if (field === 'publicNonces' || field === 'enterprisePublicNonces') {
     try {

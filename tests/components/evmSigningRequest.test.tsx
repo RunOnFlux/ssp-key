@@ -136,3 +136,72 @@ describe('EvmSigningRequest approval binding (item 4)', () => {
     expect(consumeEvmSigningApproval('digest-1')).toBe(false);
   });
 });
+
+describe('EvmSigningRequest typed data (EIP-712)', () => {
+  const PERMIT = JSON.stringify({
+    domain: {
+      name: 'USD Coin',
+      version: '2',
+      chainId: 1,
+      verifyingContract: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    },
+    types: {
+      Permit: [
+        { name: 'owner', type: 'address' },
+        { name: 'spender', type: 'address' },
+        { name: 'value', type: 'uint256' },
+      ],
+    },
+    primaryType: 'Permit',
+    message: {
+      owner: '0x1111111111111111111111111111111111111111',
+      spender: '0x2222222222222222222222222222222222222222',
+      value: '1000',
+    },
+  });
+
+  const renderTyped = (chain: 'eth' | 'sepolia', actionStatus = jest.fn()) =>
+    render(
+      <EvmSigningRequest
+        activityStatus={false}
+        dataToSign={PERMIT}
+        messageType="eip712"
+        chain={chain}
+        walletInUse="0-0"
+        requestDigest="digest-typed"
+        actionStatus={actionStatus}
+      />,
+    );
+
+  it('shows the warning and the decoded fields', async () => {
+    renderTyped('eth');
+    expect(
+      await screen.findByText('home:evm_typed_data_approval_warning'),
+    ).toBeTruthy();
+    expect(screen.getByText('USD Coin')).toBeTruthy();
+    expect(screen.getByText('Permit')).toBeTruthy();
+    expect(screen.queryByText('home:evm_sign_refused_title')).toBeNull();
+  });
+
+  it('approves only after the user acknowledges the risk', async () => {
+    const actionStatus = jest.fn();
+    renderTyped('eth', actionStatus);
+    fireEvent.press(await screen.findByTestId('slider'));
+    expect(mockAuthResult).toBeNull();
+    fireEvent(
+      screen.getByLabelText('home:evm_typed_data_acknowledge'),
+      'valueChange',
+      true,
+    );
+    fireEvent.press(screen.getByTestId('slider'));
+    act(() => mockAuthResult?.(true));
+    expect(actionStatus).toHaveBeenCalledWith(true);
+    expect(consumeEvmSigningApproval('digest-typed')).toBe(true);
+  });
+
+  it('refuses typed data for another chain', async () => {
+    renderTyped('sepolia');
+    expect(await screen.findByText('home:evm_sign_refused_title')).toBeTruthy();
+    expect(screen.queryByTestId('slider')).toBeNull();
+  });
+});

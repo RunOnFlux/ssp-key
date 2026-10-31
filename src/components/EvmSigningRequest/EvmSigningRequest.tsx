@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  Switch,
 } from 'react-native';
 import { SquarePen } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -25,11 +26,19 @@ import {
   armEvmSigningApproval,
   disarmEvmSigningApproval,
 } from '../../lib/evmSigningApproval';
+import {
+  parseTypedData,
+  typedDataMatchesChain,
+  typedDataRisk,
+  type Eip712Payload,
+} from '../../lib/typedData';
 
 import { SlideToApprove } from '../request';
 interface EvmSigningRequestProps {
   activityStatus: boolean;
   dataToSign: string;
+  /** 'eip712': dataToSign is typed-data JSON; absent: a personal message. */
+  messageType?: string;
   chain: keyof cryptos;
   walletInUse: string;
   /** evmSigningRequestDigest of the request shown (Home also keys on it). */
@@ -40,6 +49,7 @@ interface EvmSigningRequestProps {
 const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
   activityStatus,
   dataToSign,
+  messageType,
   chain,
   walletInUse,
   requestDigest,
@@ -52,23 +62,42 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
   const [loadingAddress, setLoadingAddress] = useState(true);
   const [showRawData, setShowRawData] = useState(false);
 
-  // AA-2: the key only co-signs EIP-191 personal messages. The text shown
-  // here is parsed from the exact preimage, and signing rebuilds the preimage
-  // from this same text; anything else is refused (no approve control).
+  // Typed data can authorise spending: the user confirms they understand.
+  const [riskAcknowledged, setRiskAcknowledged] = useState(false);
+
+  // Get blockchain configuration
+  const blockchainConfig = blockchains[chain];
+
+  // AA-2: the key co-signs EIP-191 personal messages and EIP-712 typed data.
+  // The text shown here is parsed from the exact preimage, and signing
+  // rebuilds the preimage from this same text; typed data is parsed from the
+  // same JSON the signing action recomputes the digest from. Anything else,
+  // and typed data for another chain, is refused (no approve control).
   const personalMessage: string | null = useMemo(() => {
+    if (messageType !== undefined) return null;
     try {
       return parseEip191Preimage(dataToSign);
     } catch {
       return null;
     }
-  }, [dataToSign]);
-  const isRefused = personalMessage === null;
+  }, [dataToSign, messageType]);
+  const typedData: Eip712Payload | null = useMemo(() => {
+    if (messageType !== 'eip712') return null;
+    try {
+      const payload = parseTypedData(dataToSign);
+      // chainId exists only on EVM chain configs
+      const { chainId } = blockchainConfig as { chainId?: string };
+      return typedDataMatchesChain(payload, chainId) ? payload : null;
+    } catch {
+      return null;
+    }
+  }, [dataToSign, messageType, blockchainConfig]);
+  const typedRisk = typedData ? typedDataRisk(typedData) : null;
+  const isRefused = personalMessage === null && typedData === null;
+  const approvalBlocked = typedData !== null && !riskAcknowledged;
 
   // Get encrypted keys from Redux
   const { xpubWallet, xpubKey } = useAppSelector((state) => state[chain]);
-
-  // Get blockchain configuration
-  const blockchainConfig = blockchains[chain];
 
   // Generate the signing address on component mount
   useEffect(() => {
@@ -160,7 +189,12 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
     console.log('Approve EVM signing request');
     const approving = approvingDigest.current;
     approvingDigest.current = undefined;
-    if (isRefused || !approving || approving !== requestDigest) {
+    if (
+      isRefused ||
+      approvalBlocked ||
+      !approving ||
+      approving !== requestDigest
+    ) {
       disarmEvmSigningApproval();
       return; // never approvable — the signing action refuses it too
     }
@@ -171,7 +205,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
 
   const openAuthentication = () => {
     console.log('Open Authentication for EVM signing');
-    if (isRefused || !requestDigest) {
+    if (isRefused || approvalBlocked || !requestDigest) {
       return;
     }
     approvingDigest.current = requestDigest;
@@ -329,6 +363,144 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
               {personalMessage}
             </Text>
           </View>
+        ) : typedData !== null ? (
+          <View style={{ alignSelf: 'stretch' }}>
+            <View
+              style={[
+                Gutters.tinyHMargin,
+                {
+                  backgroundColor: Colors.inputBackground,
+                  borderRadius: 8,
+                  padding: 10,
+                  borderWidth: 1,
+                  borderColor: typedRisk ? Colors.error : Colors.warning,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textBold,
+                  { color: typedRisk ? Colors.error : Colors.textGray800 },
+                ]}
+              >
+                {t('home:evm_typed_data_warning_title')}
+              </Text>
+              {typedRisk === 'approval' && (
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    Fonts.textBold,
+                    { color: Colors.error, marginTop: 4 },
+                  ]}
+                >
+                  {t('home:evm_typed_data_approval_warning')}
+                </Text>
+              )}
+              {typedRisk === 'order' && (
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    Fonts.textBold,
+                    { color: Colors.error, marginTop: 4 },
+                  ]}
+                >
+                  {t('home:evm_typed_data_order_warning')}
+                </Text>
+              )}
+              <Text
+                style={[
+                  Fonts.textTiny,
+                  { color: Colors.textGray800, marginTop: 4 },
+                ]}
+              >
+                {t('home:evm_typed_data_warning_desc')}
+              </Text>
+            </View>
+            <View
+              style={[
+                Gutters.tinyHMargin,
+                {
+                  marginTop: 8,
+                  backgroundColor: Colors.inputBackground,
+                  borderRadius: 8,
+                  padding: 10,
+                  borderWidth: 1,
+                  borderColor: Colors.textGray200,
+                },
+              ]}
+            >
+              {typeof typedData.domain.name === 'string' && (
+                <Text style={[Fonts.textTiny, { color: Colors.textGray800 }]}>
+                  {t('home:evm_typed_data_domain')}:{' '}
+                  <Text style={Fonts.textBold}>{typedData.domain.name}</Text>
+                </Text>
+              )}
+              {typeof typedData.domain.verifyingContract === 'string' && (
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    { color: Colors.textGray800, marginTop: 2 },
+                  ]}
+                  selectable={true}
+                >
+                  {t('home:evm_typed_data_contract')}:{' '}
+                  <Text style={{ fontFamily: MONOSPACE_FONT }}>
+                    {typedData.domain.verifyingContract}
+                  </Text>
+                </Text>
+              )}
+              <Text
+                style={[
+                  Fonts.textTiny,
+                  { color: Colors.textGray800, marginTop: 2 },
+                ]}
+              >
+                {t('home:evm_typed_data_type')}:{' '}
+                <Text style={{ fontFamily: MONOSPACE_FONT }}>
+                  {typedData.primaryType}
+                </Text>
+              </Text>
+              <ScrollView
+                style={{ maxHeight: 160, marginTop: 6 }}
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}
+              >
+                <Text
+                  style={[
+                    Fonts.textTiny,
+                    {
+                      fontFamily: MONOSPACE_FONT,
+                      lineHeight: 16,
+                      color: Colors.textGray800,
+                    },
+                  ]}
+                  selectable={true}
+                >
+                  {JSON.stringify(typedData.message, null, 2)}
+                </Text>
+              </ScrollView>
+            </View>
+            <View
+              style={[
+                Layout.row,
+                Layout.alignItemsCenter,
+                Gutters.tinyHMargin,
+                { marginTop: 8 },
+              ]}
+            >
+              <Switch
+                onValueChange={setRiskAcknowledged}
+                value={riskAcknowledged}
+                trackColor={{ true: Colors.primary }}
+                thumbColor={riskAcknowledged ? Colors.textOnPrimary : undefined}
+                accessibilityLabel={t('home:evm_typed_data_acknowledge')}
+              />
+              <Text style={[Fonts.textTiny, Gutters.smallLMargin, Layout.fill]}>
+                {t('home:evm_typed_data_acknowledge')}
+              </Text>
+            </View>
+          </View>
         ) : (
           <View
             style={[
@@ -427,7 +599,7 @@ const EvmSigningRequest: React.FC<EvmSigningRequestProps> = ({
             label={t('home:slide_to_approve')}
             accessibilityLabel={t('home:approve_request')}
             style={[Gutters.regularBMargin, Gutters.smallTMargin]}
-            disabled={authenticationOpen || activityStatus}
+            disabled={authenticationOpen || activityStatus || approvalBlocked}
             loading={authenticationOpen || activityStatus}
             onComplete={() => openAuthentication()}
           />

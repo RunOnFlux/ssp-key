@@ -18,6 +18,7 @@ import {
   RelayAuthUnavailableError,
 } from '../../../lib/constructTx';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
+import { parseTypedData, typedDataMatchesChain } from '../../../lib/typedData';
 import {
   consumeEvmSigningApproval,
   evmSigningRequestDigest,
@@ -589,12 +590,36 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     ) {
       throw new Error('Not an EVM chain');
     }
-    // AA-2: the only accepted payload is an EIP-191 personal message. The
-    // preimage is rebuilt from the text the approval screen displayed, and
-    // anything else (raw strings, typed-data JSON, `\x19\x01…` bytes) is
-    // refused BEFORE a nonce is burned — never a signature over a raw digest.
-    const messageText = parseEip191Preimage(evmSigningData.data);
-    const preimageToSign = buildEip191Preimage(messageText);
+    // AA-2: the accepted payloads are an EIP-191 personal message (the
+    // preimage is rebuilt from the text the approval screen displayed) and,
+    // when the request says so, EIP-712 typed data (the digest is recomputed
+    // from the typed data the screen displayed). Anything else (raw strings,
+    // `\x19\x01…` bytes, an unknown messageType) is refused BEFORE a nonce
+    // is burned — never a signature over a digest taken from the request.
+    const messageType = evmSigningData.messageType;
+    if (messageType !== undefined && messageType !== 'eip712') {
+      throw new Error('Unsupported message type');
+    }
+    let dataToSign: string;
+    if (messageType === 'eip712') {
+      // chainId exists only on EVM chain configs (checked above).
+      const chainConfig = blockchains[
+        evmSigningData.chain as keyof cryptos
+      ] as { chainId?: string };
+      if (
+        !typedDataMatchesChain(
+          parseTypedData(evmSigningData.data),
+          chainConfig.chainId,
+        )
+      ) {
+        throw new Error('Typed data is for another chain');
+      }
+      dataToSign = evmSigningData.data;
+    } else {
+      dataToSign = buildEip191Preimage(
+        parseEip191Preimage(evmSigningData.data),
+      );
+    }
 
     // Use the same nonce management as normal transactions
     const pNs = CryptoJS.AES.decrypt(publicNonces, pwForEncryption);
@@ -670,7 +695,7 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     ); // ssp wallet
 
     const result = continueSigningSchnorrMultisig(
-      preimageToSign,
+      dataToSign,
       keyPair,
       publicKeyWallet,
       evmSigningData.pubNoncesOne || {
@@ -680,6 +705,7 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
       noncesToUse, // our key nonces with pks
       evmSigningData.sigOne || '',
       evmSigningData.challenge || '',
+      messageType === 'eip712' ? 'eip712' : 'personal',
     );
 
     // Clear private key from keypair

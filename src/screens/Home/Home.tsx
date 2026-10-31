@@ -23,8 +23,8 @@ import {
   getMasterXpub,
   generateMultisigAddress,
   generateAddressKeypair,
-  validateMnemonic,
 } from '../../lib/wallet';
+import { isDerivableSeedPhrase } from '../../lib/seedPhrase';
 import { recordSignAction } from '../../lib/signHistory';
 
 import { setXpubKey, setXprivKey } from '../../store';
@@ -502,7 +502,8 @@ function Home({ navigation }: Props) {
           const mnemonicPhrase = mmm.toString(CryptoJS.enc.Utf8);
           // KEY-3: a seed that does not decrypt under the current keys (e.g.
           // an interrupted enc_key rotation) must never yield derived keys.
-          if (!validateMnemonic(mnemonicPhrase)) {
+          // Not a BIP-39 check: a restored non-standard phrase is valid.
+          if (!isDerivableSeedPhrase(mnemonicPhrase)) {
             throw new Error('Unable to decrypt stored data');
           }
           // generate master xpriv, xpub for chain

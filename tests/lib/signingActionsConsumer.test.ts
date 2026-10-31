@@ -190,6 +190,61 @@ describe('handleSignEVMAction (AA-2, KEY-8)', () => {
     );
   });
 
+  const typedData = (chainId: number) =>
+    JSON.stringify({
+      domain: { name: 'App', version: '1', chainId },
+      types: { Login: [{ name: 'nonce', type: 'uint256' }] },
+      primaryType: 'Login',
+      message: { nonce: '7' },
+    });
+  const typedRequest = (ctx, data: string, messageType: string) => ({
+    chain: 'eth',
+    walletInUse: '0-0',
+    data,
+    messageType,
+    pubNoncesTwo: {
+      kPublic: ctx.nonce.kPublic,
+      kTwoPublic: ctx.nonce.kTwoPublic,
+    },
+    pubNoncesOne: {
+      kPublic: ctx.nonce.kPublic,
+      kTwoPublic: ctx.nonce.kTwoPublic,
+    },
+    sigOne: '00'.repeat(32),
+    challenge: '00'.repeat(32),
+    requestId: 'r1',
+  });
+
+  it('signs EIP-712 typed data for this chain as typed data', async () => {
+    const ctx = makeCtx(keys);
+    mockContinueSigning.mockClear();
+    ctx.evmSigningData = typedRequest(ctx, typedData(1), 'eip712');
+    approveOnScreen(ctx);
+    await handleSignEVMAction(ctx);
+    expect(mockContinueSigning).toHaveBeenCalledTimes(1);
+    const args = mockContinueSigning.mock.calls[0];
+    expect(args[0]).toBe(typedData(1));
+    expect(args[args.length - 1]).toBe('eip712');
+  });
+
+  it.each([
+    ['typed data for another chain', typedData(5), 'eip712'],
+    ['malformed typed data', '{"primaryType":"Permit","domain":{}}', 'eip712'],
+    ['an unknown message type', typedData(1), 'eth_sign'],
+  ])('refuses %s before burning the nonce', async (_l, data, messageType) => {
+    const ctx = makeCtx(keys);
+    mockContinueSigning.mockClear();
+    ctx.evmSigningData = typedRequest(ctx, data, messageType);
+    approveOnScreen(ctx);
+    await handleSignEVMAction(ctx);
+    expect(ctx.dispatch).not.toHaveBeenCalled();
+    expect(mockContinueSigning).not.toHaveBeenCalled();
+    expect(ctx.displayMessage).toHaveBeenCalledWith(
+      'error',
+      'home:err_invalid_request',
+    );
+  });
+
   it('refuses the identity branch (KEY-8) before burning the nonce', async () => {
     const ctx = makeCtx(keys);
     ctx.evmSigningData = {

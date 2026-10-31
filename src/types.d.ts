@@ -591,6 +591,9 @@ interface evmSigningRequest {
   chain: string;
   walletInUse: string; // this is walletInUse
   requestId: string; // this is the requestId - usually walletconnect requestId
+  // 'eip712': data is typed-data JSON (eth_signTypedData_v3 / _v4), signed
+  // over its EIP-712 digest. Absent: data is an EIP-191 personal message.
+  messageType?: 'eip712';
 }
 
 interface WkSignRequesterInfo {

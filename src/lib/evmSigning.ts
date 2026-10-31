@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 
 import { keyPair, publicPrivateNonce } from '../types';
 import { buildEip191Preimage, parseEip191Preimage } from './consumerGuards';
+import { parseTypedData, typedDataDigest } from './typedData';
 
 interface publicNonces {
   kPublic: string;
@@ -10,14 +11,18 @@ interface publicNonces {
 }
 
 /**
- * Complete the consumer 2-of-2 Schnorr signature over a personal message.
+ * Complete the consumer 2-of-2 Schnorr signature over a personal message or
+ * EIP-712 typed data.
  *
- * AA-2: `messageToSign` must be an EIP-191 personal-message preimage
- * (`\x19Ethereum Signed Message:\n` + UTF-8 byte length + text). The SDK
- * signs keccak256(utf8(messageToSign)); without this guard any string whose
- * bytes are e.g. an EIP-712 `\x19\x01…` preimage would yield a signature an
- * ERC-1271 protocol accepts as authorisation. Anything else throws before a
- * nonce is touched.
+ * AA-2, personal (default): `messageToSign` must be an EIP-191
+ * personal-message preimage (`\x19Ethereum Signed Message:\n` + UTF-8 byte
+ * length + text). The SDK signs keccak256(utf8(messageToSign)); without this
+ * guard any string whose bytes are e.g. an EIP-712 `\x19\x01…` preimage
+ * would yield a signature an ERC-1271 protocol accepts as authorisation.
+ *
+ * 'eip712': `messageToSign` is the typed-data JSON the approval screen
+ * displayed; the digest signed is recomputed from it here, never taken from
+ * the request. Anything malformed throws before a nonce is touched.
  */
 export function continueSigningSchnorrMultisig(
   messageToSign: string,
@@ -27,10 +32,16 @@ export function continueSigningSchnorrMultisig(
   publicNoncesKey: publicPrivateNonce,
   sigOneHex: string,
   challenge: string,
+  messageType: 'personal' | 'eip712' = 'personal',
 ): string {
-  const text = parseEip191Preimage(messageToSign);
-  if (buildEip191Preimage(text) !== messageToSign) {
-    throw new Error('Not an EIP-191 personal message');
+  let digest: string | null = null;
+  if (messageType === 'eip712') {
+    digest = typedDataDigest(parseTypedData(messageToSign));
+  } else {
+    const text = parseEip191Preimage(messageToSign);
+    if (buildEip191Preimage(text) !== messageToSign) {
+      throw new Error('Not an EIP-191 personal message');
+    }
   }
   try {
     console.log('Signing formatted message:', {
@@ -89,11 +100,9 @@ export function continueSigningSchnorrMultisig(
 
     console.log('🔐 Generated combined public key');
 
-    const { signature: sigTwo } = schnorrSigner2.signMultiSigMsg(
-      messageToSign,
-      publicKeys,
-      publicNonces,
-    );
+    const { signature: sigTwo } = digest
+      ? schnorrSigner2.signMultiSigHash(digest, publicKeys, publicNonces)
+      : schnorrSigner2.signMultiSigMsg(messageToSign, publicKeys, publicNonces);
 
     console.log('🔐 Generated signature');
 

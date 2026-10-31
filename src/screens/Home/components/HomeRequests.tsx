@@ -202,6 +202,7 @@ const HomeRequests = (props: {
           key={evmSigningDigest}
           activityStatus={activityStatus}
           dataToSign={evmSigningData.data || ''}
+          messageType={evmSigningData.messageType}
           chain={evmSigningData.chain as keyof cryptos}
           walletInUse={evmSigningData.walletInUse}
           requestDigest={evmSigningDigest}
