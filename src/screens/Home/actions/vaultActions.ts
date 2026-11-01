@@ -1,5 +1,5 @@
 import * as CryptoJS from 'crypto-js';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../../lib/keychain';
 import { fluxnode } from '@runonflux/flux-sdk';
 import utxolib from '@runonflux/utxo-lib';
 import { blockchains } from '@storage/blockchains';

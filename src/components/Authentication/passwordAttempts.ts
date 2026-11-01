@@ -8,7 +8,7 @@
  * per failure up to MAX_LOCKOUT_MS. A successful unlock (password or
  * biometrics) resets the counter. Nothing is ever wiped.
  */
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 
 export const PW_ATTEMPTS_SERVICE = 'sspkey_pw_attempts';
 export const FREE_ATTEMPTS = 5;

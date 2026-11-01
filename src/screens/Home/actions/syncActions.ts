@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as CryptoJS from 'crypto-js';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../../lib/keychain';
 import { sspConfig } from '@storage/ssp';
 import { blockchains } from '@storage/blockchains';
 import {

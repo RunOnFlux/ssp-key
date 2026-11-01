@@ -3,7 +3,7 @@
  * verify a request against the key's OWN derivation (wallet xpub stored at
  * pairing + own xpub), without touching any private key.
  */
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from './keychain';
 import * as CryptoJS from 'crypto-js';
 import type { ConsumerKeyMaterial } from './consumerUtxo';
 

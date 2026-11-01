@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import * as CryptoJS from 'crypto-js';
 import { getUniqueId } from 'react-native-device-info';
 import JailMonkey from 'jail-monkey';
@@ -162,6 +162,9 @@ const Startup = ({ navigation }: ApplicationScreenProps) => {
     if (AppState.currentState !== 'active') return;
     startupRunning.current = true;
     try {
+      // move keychain items into the app group so they survive the app's
+      // transfer to another Apple developer team (see lib/keychain)
+      await Keychain.migrateKeychainToAppGroup();
       await migrateFromEncryptedStorage();
 
       // KEY-3: installs migrated above (here or in an earlier version) used the

@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { useKeyboardVisible } from '../../hooks/keyboardVisible';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import { blockchains } from '@storage/blockchains';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 import ToastNotif from '../../components/Toast/Toast';

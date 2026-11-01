@@ -87,6 +87,26 @@ export default [
     },
   },
   {
+    // Keychain access goes through src/lib/keychain, which keeps iOS items in
+    // the app group so they survive a transfer to another developer team.
+    files: ['src/**/*.{js,ts,jsx,tsx}'],
+    ignores: ['src/lib/keychain.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-native-keychain',
+              message:
+                'Import from src/lib/keychain so iOS items stay in the app group.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['tests/**/*.ts', 'tests/**/*.tsx'],
     rules: {
       '@typescript-eslint/unbound-method': 'off',
