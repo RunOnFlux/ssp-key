@@ -2,6 +2,7 @@ Security update. Please update SSP Wallet to 2.2 as well.
 • Typed data (EIP-712) signing with clear warnings
 • Confirm enterprise vault signers on first use
 • Restore non-standard seed phrases
+• Verification code shown on both devices after every sync
 • Stronger transaction checks and safety prompts
 
 Open SSP Key once after updating to finish a quick security upgrade.
