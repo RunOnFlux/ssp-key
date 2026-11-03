@@ -489,7 +489,7 @@ export const generateAddressesForActiveChain = (
         });
         return;
       }
-      await syncChainToRelay(
+      const synced = await syncChainToRelay(
         ctx,
         chain,
         suppliedXpubWallet,
@@ -497,10 +497,17 @@ export const generateAddressesForActiveChain = (
         xpubKey,
         xprivKey,
       );
+      // SSP Wallet shows the verification code after every sync, so show
+      // this device's side once the success screen is closed.
+      ctx.singleChainWordsRef.current = sessionVerificationWords([
+        ...sessionIdentityEntries(ctx),
+        synced,
+      ]);
       setSyncReq('');
       setSyncSuccessOpen(true);
     })
     .catch((error) => {
+      ctx.singleChainWordsRef.current = null;
       setSyncReq('');
       setActiveChain(identityChain);
       console.log(error);

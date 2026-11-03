@@ -117,6 +117,7 @@ const buildContext = (
     setChainSyncData: jest.fn(),
     setBatchVerifyWords: jest.fn(),
     identityVerifyEntryRef: { current: null },
+    singleChainWordsRef: { current: null },
     identityChain: 'btc',
     identityChainState: {},
     // RA-2: every /v1/sync post is signed
