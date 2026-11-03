@@ -257,8 +257,9 @@ function Home({ navigation }: Props) {
   const [rePairRequest, setRePairRequest] = useState<RePairRequest | null>(
     null,
   );
-  // Words of a confirmed single-chain re-pair, shown again once it completed.
-  const rePairWordsRef = useRef<string[] | null>(null);
+  // Words of a finished single-chain sync (new pairing or confirmed re-pair),
+  // shown once its success screen is closed — SSP Wallet shows the same code.
+  const singleChainWordsRef = useRef<string[] | null>(null);
   // H-7: the WK request currently on screen, only once it passed the
   // classification + paired-wallet signature check.
   const [verifiedWkRequest, setVerifiedWkRequest] =
@@ -737,7 +738,6 @@ function Home({ navigation }: Props) {
         displayMessage('error', t('home:err_sync_failed'));
         return;
       }
-      rePairWordsRef.current = request.words;
       generateAddressesForActiveChain(request.xpubWallet, request.chain, {
         confirmedRePair: true,
       });
@@ -937,6 +937,7 @@ function Home({ navigation }: Props) {
     setChainSyncProgress,
     setBatchVerifyWords,
     identityVerifyEntryRef,
+    singleChainWordsRef,
     nonceReplenishInProgressRef,
     evmSigningRequest,
     clearEvmSigningRequest,
@@ -1701,11 +1702,11 @@ function Home({ navigation }: Props) {
   const handleSyncSuccessModalAction = () => {
     console.log('sync success modal close.');
     setSyncSuccessOpen(false);
-    // A confirmed single-chain re-pair (CS-3): show the same words the warning
-    // showed, now that SSP Wallet can display its side of the code.
-    if (rePairWordsRef.current) {
-      setBatchVerifyWords(rePairWordsRef.current);
-      rePairWordsRef.current = null;
+    // A single-chain sync (new pairing or confirmed CS-3 re-pair): show its
+    // verification code, which SSP Wallet shows after every sync too.
+    if (singleChainWordsRef.current) {
+      setBatchVerifyWords(singleChainWordsRef.current);
+      singleChainWordsRef.current = null;
       return;
     }
     // Identity-only pairing (no batch this session): show the ONE unified

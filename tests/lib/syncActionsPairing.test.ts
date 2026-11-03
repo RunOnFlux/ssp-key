@@ -157,6 +157,7 @@ const buildContext = (overrides: Record<string, unknown> = {}) =>
     setSyncSuccessOpen: jest.fn(),
     setActiveChain: jest.fn(),
     identityVerifyEntryRef: { current: null },
+    singleChainWordsRef: { current: null },
     createWkAuth: jest.fn(() =>
       Promise.resolve({
         signature: 'wk-sig',
@@ -411,6 +412,34 @@ describe('single-chain QR sync (CS-3)', () => {
     });
     expect(setXpubWallet).toHaveBeenCalledWith('eth', expect.any(String));
     expect(ctx.setSyncSuccessOpen).toHaveBeenCalledWith(true);
+    // the words the warning showed are shown again after the sync
+    expect(ctx.singleChainWordsRef.current).toEqual(
+      sessionVerificationWords([
+        {
+          chain: 'eth',
+          walletXpub: 'new-wallet-xpub-eth',
+          keyXpub: 'key-xpub-eth',
+        },
+      ]),
+    );
+  });
+
+  it('shows the verification words after a first single-chain sync too', async () => {
+    const ctx = buildContext({
+      xpubKey: encrypt('key-xpub-eth'),
+      xprivKey: encrypt('key-xpriv-eth'),
+    });
+    await generateAddressesForActiveChain(ctx, 'wallet-xpub-eth', 'eth');
+    expect(ctx.setSyncSuccessOpen).toHaveBeenCalledWith(true);
+    expect(ctx.singleChainWordsRef.current).toEqual(
+      sessionVerificationWords([
+        {
+          chain: 'eth',
+          walletXpub: 'wallet-xpub-eth',
+          keyXpub: 'key-xpub-eth',
+        },
+      ]),
+    );
   });
 
   it('re-pairing the identity chain to another wallet needs confirmation too', async () => {
