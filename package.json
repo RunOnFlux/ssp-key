@@ -1,6 +1,6 @@
 {
   "name": "ssp-key",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "private": true,
   "scripts": {
     "android": "react-native run-android",

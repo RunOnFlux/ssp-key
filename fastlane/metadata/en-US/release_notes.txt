@@ -1,4 +1,5 @@
 Security update. Please update SSP Wallet to 2.2 as well.
+• Fixes SSP Key not opening on iOS 27
 • Typed data (EIP-712) signing with clear warnings
 • Confirm enterprise vault signers on first use
 • Restore non-standard seed phrases
