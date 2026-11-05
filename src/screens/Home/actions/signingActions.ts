@@ -28,7 +28,7 @@ import {
   checkWkSigningRequest,
   deriveIdentityPubKeyFromXpub,
 } from '../../../lib/wkMessage';
-import { getCryptoUsdRate } from '../../../lib/rates';
+import { getCryptoUsdRateForCap } from '../../../lib/rates';
 import {
   buildEip191Preimage,
   parseConsumerDerivationPath,
@@ -274,7 +274,7 @@ export const approveTransaction = async (
       assertConsumerEvmFeeWithinCap(
         rawTransaction,
         chain,
-        await getCryptoUsdRate(chain).catch(() => 0),
+        await getCryptoUsdRateForCap(chain).catch(() => 0),
       );
       // C-4: the same call-safety rules the approval screen applied.
       const decodedEvm = await decodeEVMTransactionForApproval(
@@ -329,7 +329,7 @@ export const approveTransaction = async (
         xpubKeyDecrypted,
         derivationPath,
       );
-      const usdRate = await getCryptoUsdRate(chain);
+      const usdRate = await getCryptoUsdRateForCap(chain);
       ttxid = await cosignAndBroadcastSOLTransaction({
         chain,
         payload,

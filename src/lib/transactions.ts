@@ -5,7 +5,8 @@ import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
 import { getLibId } from './wallet';
 import { fetchRawTransactionHex, fetchUtxos } from './constructTx';
-import { getCryptoUsdRate } from './rates';
+import { getCryptoUsdRateForCap } from './rates';
+import type { ApprovalProgressListener } from './approvalProgress';
 import { assertEvmCallSafe, hasEvmCalldata } from './consumerGuards';
 import { verifyConsumerUtxoTransaction } from './consumerUtxo';
 import type { ConsumerKeyMaterial, ConsumerUtxoDeps } from './consumerUtxo';
@@ -364,7 +365,8 @@ function toHumanAmount(base: string | BigNumber, decimals: number): string {
 export const consumerUtxoDeps: ConsumerUtxoDeps = {
   fetchOwnUtxos: (address, chain) => fetchUtxos(address, chain, 2),
   fetchRawTransaction: (txid, chain) => fetchRawTransactionHex(txid, chain),
-  getUsdRate: (chain) => getCryptoUsdRate(chain),
+  // Fee-cap rate: never holds the approval for more than a moment.
+  getUsdRate: (chain) => getCryptoUsdRateForCap(chain),
 };
 
 /**
@@ -373,13 +375,15 @@ export const consumerUtxoDeps: ConsumerUtxoDeps = {
  * Every chain is verified against the key's own key material (see
  * consumerUtxo / consumerSolana / consumerEvm). Anything that cannot be
  * verified returns the 'decodingError' sentinels (plus `error`), which the
- * approval screen renders as a blocking error.
+ * approval screen renders as a blocking error. `onProgress` reports what
+ * the check is doing, for display under the loading state.
  */
 export async function decodeTransactionForApproval(
   rawTx: string,
   chain: keyof cryptos,
   ctx?: ConsumerDecodeContext,
   deps: Partial<ConsumerUtxoDeps> = {},
+  onProgress?: ApprovalProgressListener,
 ): Promise<tokenInfo> {
   const resolvedDeps: ConsumerUtxoDeps = {
     ...consumerUtxoDeps,
@@ -391,24 +395,30 @@ export async function decodeTransactionForApproval(
     }
     const chainType = blockchains[chain].chainType;
     if (chainType === 'evm') {
+      onProgress?.({ step: 'checking_operation' });
+      // The rate (fee cap's USD ceiling) is fetched while the operation is
+      // verified and decoded, not before.
+      const usdRatePromise = resolvedDeps.getUsdRate(chain).catch(() => 0);
       verifyConsumerEvmRequest(rawTx, chain, ctx);
-      // Item 7: the operation's maximum gas cost is capped like UTXO/Solana.
-      const usdRate = await resolvedDeps.getUsdRate(chain).catch(() => 0);
-      assertConsumerEvmFeeWithinCap(rawTx, chain, usdRate);
       const decoded = await decodeEVMTransactionForApproval(rawTx, chain);
+      onProgress?.({ step: 'checking_fee' });
+      // Item 7: the operation's maximum gas cost is capped like UTXO/Solana.
+      assertConsumerEvmFeeWithinCap(rawTx, chain, await usdRatePromise);
       if (decoded.amount === 'decodingError') {
         throw new Error(decoded.error ?? 'Could not decode the operation');
       }
       return decoded;
     }
     if (chainType === 'sol') {
+      onProgress?.({ step: 'checking_operation' });
+      const usdRatePromise = resolvedDeps.getUsdRate(chain).catch(() => 0);
       const payload = parseConsumerSolanaPayload(rawTx);
       const leaves = resolveConsumerSolanaLeaves(
         ctx.xpubWallet,
         ctx.xpubKey,
         ctx.path,
       );
-      const usdRate = await resolvedDeps.getUsdRate(chain).catch(() => 0);
+      const usdRate = await usdRatePromise;
       const decoded = await decodeConsumerSolanaTransaction(
         chain,
         payload,
@@ -443,6 +453,7 @@ export async function decodeTransactionForApproval(
       chain,
       ctx,
       resolvedDeps,
+      onProgress,
     );
     const decimals = blockchains[chain].decimals;
     const recipients: ApprovalRecipient[] = verified.recipients.map((r) => ({
