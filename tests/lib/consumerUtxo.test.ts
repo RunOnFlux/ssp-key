@@ -810,3 +810,135 @@ describe('UTXO-8: shielded data and wallet partial signatures', () => {
     ).rejects.toThrow(/non-ALL sighash/);
   });
 });
+
+describe('approval speed: noble signer, verified-signature cache, progress', () => {
+  it.each(['btc', 'flux', 'bch', 'ltc', 'doge', 'zec'])(
+    "%s: the key signs byte-identically to utxo-lib's own signer",
+    async (chain) => {
+      const m = material(chain);
+      const f1 = fundingTx(chain, m.scripts.scriptPubKey, 150000, 41);
+      const f2 = fundingTx(chain, m.scripts.scriptPubKey, 90000, 42);
+      const inputs = [
+        { tx: f1, vout: 0, value: 150000 },
+        { tx: f2, vout: 0, value: 90000 },
+      ];
+      const raw = walletBuild(chain, m, inputs, [
+        { script: payee(), value: 100000 },
+        { script: m.scripts.scriptPubKey, value: 135000 },
+      ]);
+      const verified = await verifyConsumerUtxoTransaction(
+        raw,
+        chain,
+        m.keys,
+        depsFor(chain, inputs),
+      );
+      const signed = signTransaction(raw, chain, m.keyKp.privKey, verified);
+
+      // Reference: the same co-sign with utxo-lib's own ECPair.
+      const net = network(chain);
+      const txb = utxolib.TransactionBuilder.fromTransaction(
+        utxolib.Transaction.fromHex(raw, net),
+        net,
+      );
+      const keyPair = utxolib.ECPair.fromWIF(m.keyKp.privKey, net);
+      inputs.forEach((input, i) =>
+        txb.sign(
+          i,
+          keyPair,
+          m.scripts.redeemScript,
+          hashTypeFor(chain),
+          input.value,
+          m.scripts.witnessScript,
+        ),
+      );
+      expect(signed).toBe(txb.buildIncomplete().toHex());
+    },
+  );
+
+  it('a remembered valid signature never lets a different signature through', async () => {
+    const chain = 'flux';
+    const m = material(chain);
+    const f1 = fundingTx(chain, m.scripts.scriptPubKey, 100000, 43);
+    const inputs = [{ tx: f1, vout: 0, value: 100000 }];
+    const outputs = [{ script: payee(), value: 90000 }];
+    const honest = walletBuild(chain, m, inputs, outputs);
+    await expect(
+      verifyConsumerUtxoTransaction(
+        honest,
+        chain,
+        m.keys,
+        depsFor(chain, inputs),
+      ),
+    ).resolves.toBeDefined();
+    // Same transaction, same sighash, but the wallet signed a different
+    // amount: the signature bytes differ, so it is verified (and refused).
+    const forged = walletBuild(chain, m, inputs, outputs, {
+      signValue: 100001,
+    });
+    await expect(
+      verifyConsumerUtxoTransaction(
+        forged,
+        chain,
+        m.keys,
+        depsFor(chain, inputs),
+      ),
+    ).rejects.toThrow(/wallet signature is invalid/);
+  });
+
+  it('reports progress while verifying many inputs', async () => {
+    const chain = 'flux';
+    const m = material(chain);
+    const inputs = Array.from({ length: 30 }, (_, i) => ({
+      tx: fundingTx(chain, m.scripts.scriptPubKey, 10000, 100 + i),
+      vout: 0,
+      value: 10000,
+    }));
+    const raw = walletBuild(chain, m, inputs, [
+      { script: payee(), value: 290000 },
+    ]);
+    const progress = [];
+    await verifyConsumerUtxoTransaction(
+      raw,
+      chain,
+      m.keys,
+      depsFor(chain, inputs),
+      (p) => progress.push(p),
+    );
+    expect(progress).toEqual([
+      { step: 'loading_inputs' },
+      { step: 'verifying_signatures', done: 0, total: 30 },
+      { step: 'verifying_signatures', done: 25, total: 30 },
+      { step: 'verifying_signatures', done: 30, total: 30 },
+      { step: 'checking_fee' },
+    ]);
+  });
+
+  it('asks for the USD rate before the input lookup finishes (in parallel)', async () => {
+    const chain = 'btc';
+    const m = material(chain);
+    const f1 = fundingTx(chain, m.scripts.scriptPubKey, 100000, 44);
+    const inputs = [{ tx: f1, vout: 0, value: 100000 }];
+    const raw = walletBuild(chain, m, inputs, [
+      { script: payee(), value: 90000 },
+    ]);
+    const order = [];
+    const base = depsFor(chain, inputs);
+    const deps = {
+      ...base,
+      fetchOwnUtxos: jest.fn(async (...args) => {
+        order.push('utxos:start');
+        const result = await base.fetchOwnUtxos(...args);
+        order.push('utxos:done');
+        return result;
+      }),
+      getUsdRate: jest.fn(() => {
+        order.push('rate:start');
+        return Promise.resolve(0);
+      }),
+    };
+    await verifyConsumerUtxoTransaction(raw, chain, m.keys, deps);
+    expect(order.indexOf('rate:start')).toBeLessThan(
+      order.indexOf('utxos:done'),
+    );
+  });
+});

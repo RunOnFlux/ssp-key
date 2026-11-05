@@ -18,6 +18,7 @@ import {
 import { backends } from '@storage/backends';
 import { blockchains } from '@storage/blockchains';
 import { getLibId } from './wallet';
+import { fastUtxoSigner } from './fastSecp256k1';
 import {
   inspectConsumerUtxoTransaction,
   verifyWalletPartialSignatures,
@@ -263,10 +264,9 @@ export function signTransaction(
       return new BigNumber(known.satoshis).toNumber();
     });
     verifyWalletPartialSignatures(txb, chain, scripts, values);
-    const keyPair = utxolib.ECPair.fromWIF(privateKey, network) as {
-      sign: (hash: Buffer) => Buffer;
-      getPublicKeyBuffer: () => Buffer;
-    };
+    // noble-backed signer: same RFC 6979 low-S signatures as utxo-lib's
+    // own, without the slow pure-JS curve fallback.
+    const keyPair = fastUtxoSigner(utxolib.ECPair.fromWIF(privateKey, network));
     if (!keyPair.getPublicKeyBuffer().equals(scripts.keyPubKey)) {
       throw new Error('Signing key does not belong to this address');
     }

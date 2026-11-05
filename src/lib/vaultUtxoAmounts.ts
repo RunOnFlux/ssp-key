@@ -27,7 +27,7 @@ import utxolib from '@runonflux/utxo-lib';
 import { Buffer } from 'buffer';
 import { blockchains } from '@storage/blockchains';
 import { fetchRawTransactionHex } from './constructTx';
-import { getCryptoUsdRate } from './rates';
+import { getCryptoUsdRateForCap } from './rates';
 import { maxVaultFee } from './consumerGuards';
 import {
   sighashCommitsToInputAmount,
@@ -46,7 +46,7 @@ export type VaultUtxoAmountDeps = Pick<
 /** The Key's own backends. */
 export const vaultUtxoAmountDeps: VaultUtxoAmountDeps = {
   fetchRawTransaction: (txid, chain) => fetchRawTransactionHex(txid, chain),
-  getUsdRate: (chain) => getCryptoUsdRate(chain),
+  getUsdRate: (chain) => getCryptoUsdRateForCap(chain),
 };
 
 export type VaultUtxoAmountCheck =

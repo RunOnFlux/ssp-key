@@ -35,6 +35,7 @@
   "dependencies": {
     "@alchemy/aa-core": "3.19.0",
     "@lavamoat/react-native-lockdown": "1.0.0",
+    "@noble/curves": "1.9.1",
     "@noble/hashes": "2.2.0",
     "@notifee/react-native": "9.1.8",
     "@react-native-clipboard/clipboard": "1.16.3",
