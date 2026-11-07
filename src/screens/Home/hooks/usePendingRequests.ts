@@ -51,6 +51,12 @@ import {
   messageDigestMatches,
   userOpHashMatches,
 } from '../../../lib/userOpVerify';
+import {
+  applyVaultTronDecode,
+  type TronVaultDecodeState,
+} from '../../../lib/tronVault';
+import { isTronChainLive } from '../../../lib/tron';
+import { getCryptoUsdRate } from '../../../lib/rates';
 import { useSocket } from '../../../hooks/useSocket';
 import type { RecoveryRequestPayload } from '../../../lib/recoveryHandler';
 
@@ -331,7 +337,12 @@ export function usePendingRequests(
   );
   const [solDecodeState, setSolDecodeState] =
     useState<VaultSolDecodeState | null>(null);
-  // Monotonic token guarding the async sol decode — a decode started for an
+  // TRON vault verdict (digest recomputed from tronOp, vault re-derived,
+  // enterprise policy): null while not yet computed. Approval is allowed ONLY
+  // from { status: 'ok' }.
+  const [tronDecodeState, setTronDecodeState] =
+    useState<TronVaultDecodeState | null>(null);
+  // Monotonic token guarding the async sol AND tron decodes — a decode started for an
   // older vault payload must never overwrite the verdict of a newer one
   // (bumped on every new request and on reject/completion cleanup).
   const solDecodeSeqRef = useRef(0);
@@ -398,6 +409,15 @@ export function usePendingRequests(
       rejectUnsupportedChain('tx', chain);
       return;
     }
+    if (blockchains[chain].chainType === 'tron' && !isTronChainLive(chain)) {
+      // The SDK has no pinned deployment for this network yet: nothing about
+      // a TRON vault can be verified, so the request is refused outright and
+      // SSP Wallet is told (txrejected) instead of waiting.
+      console.log('[Pending Requests] TRON not live, refusing tx:', chain);
+      displayMessage('error', t('home:err_tron_not_live'), 6000);
+      onUnsupportedChain?.('tx', chain);
+      return;
+    }
     setActiveChain(chain);
     if (utxos) {
       setTxUtxos(utxos);
@@ -417,7 +437,11 @@ export function usePendingRequests(
   const handleEvmSigningRequest = (data: evmSigningRequest) => {
     // never log the request body — it carries the wallet's partial signature
     console.log('[EVM Signing] request received:', data.chain);
-    if (!isSupportedChain(data.chain)) {
+    if (
+      !isSupportedChain(data.chain) ||
+      // TRON message signing is out of scope (TRON_SSP_CONTRACT.md §7)
+      blockchains[data.chain].chainType === 'tron'
+    ) {
       rejectUnsupportedChain('evmsigning', data.chain);
       return;
     }
@@ -509,6 +533,7 @@ export function usePendingRequests(
     const decodeSeq = solDecodeSeqRef.current;
     setDecodedVaultTx(null);
     setSolDecodeState(null);
+    setTronDecodeState(null);
     if (verdict.kind === 'refused') {
       console.log('[Vault Signing] Vault descriptor refused:', verdict.code);
       setDecodedVaultTx(failed(verdict.reason));
@@ -619,6 +644,27 @@ export function usePendingRequests(
         },
         { requestDigest, vaultBinding },
       );
+    } else if (chainType === 'tron') {
+      // TRON: rawUnsignedTx is the Op digest — recompute it from tronOp,
+      // re-derive the vault from its signers/threshold and decode the Op
+      // under the enterprise policy (lib/tronVault.ts). Never the utxolib
+      // path below. Offline except for the TRX/USD rate behind the fee
+      // cap; seq-guarded like the sol decode; the decoded view is bound to
+      // this request (CHN-5).
+      void applyVaultTronDecode(
+        data,
+        (tx) => {
+          if (solDecodeSeqRef.current === decodeSeq) {
+            setDecodedVaultTx(bind(tx));
+          }
+        },
+        (state) => {
+          if (solDecodeSeqRef.current === decodeSeq) {
+            setTronDecodeState(state);
+          }
+        },
+        getCryptoUsdRate,
+      );
     } else {
       // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
       const inputs = Array.isArray(data.inputDetails) ? data.inputDetails : [];
@@ -718,10 +764,11 @@ export function usePendingRequests(
   const clearVaultSigningState = () => {
     // also drops a pin confirmation staged for this request (VD-3)
     clearVaultRequestState('vaultsign');
-    solDecodeSeqRef.current += 1; // discard any in-flight sol decode
+    solDecodeSeqRef.current += 1; // discard any in-flight sol/tron decode
     setVaultSigningData(null);
     setDecodedVaultTx(null);
     setSolDecodeState(null);
+    setTronDecodeState(null);
   };
 
   useEffect(() => {
@@ -835,6 +882,7 @@ export function usePendingRequests(
     vaultSigningData,
     decodedVaultTx,
     solDecodeState,
+    tronDecodeState,
     fluxNodeStartData,
     setFluxNodeStartData,
     keyNonceSyncDialogOpen,

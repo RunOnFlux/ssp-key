@@ -26,6 +26,8 @@ import {
 } from '../../../types';
 import { type VaultDecodedTx } from '../../../lib/transactions';
 import { type VaultSolDecodeState } from '../../../lib/vaultSolanaDecode';
+import { type TronVaultDecodeState } from '../../../lib/tronVault';
+import { type TronApprovedSummary } from '../../../lib/tron';
 import { parseProposalSimulation } from '../../../lib/vaultSimulation';
 import { type ParsedChainSyncRequest } from '../../../lib/chainSyncRequest';
 import { evmSigningRequestDigest } from '../../../lib/evmSigningApproval';
@@ -54,7 +56,10 @@ const HomeRequests = (props: {
   activeChain: keyof cryptos;
   txUtxos: utxo[];
   activityStatus: boolean;
-  handleTransactionRequestAction: (status: boolean) => Promise<void>;
+  handleTransactionRequestAction: (
+    status: boolean,
+    tronApproved?: TronApprovedSummary,
+  ) => Promise<void>;
   syncReq: string;
   handleSynchronisationRequestAction: (status: boolean) => void;
   chainSyncData: ParsedChainSyncRequest | null;
@@ -81,7 +86,11 @@ const HomeRequests = (props: {
   vaultSigningData: vaultSigningRequest | null;
   decodedVaultTx: VaultDecodedTx | null;
   solDecodeState: VaultSolDecodeState | null;
-  handleVaultSigningRequestAction: (status: boolean) => Promise<void>;
+  tronDecodeState: TronVaultDecodeState | null;
+  handleVaultSigningRequestAction: (
+    status: boolean,
+    tronApprovedDigest?: string,
+  ) => Promise<void>;
   fluxNodeStartData: Record<string, unknown> | null;
   handleFluxNodeStartAction: (status: boolean) => Promise<void>;
   txid: string;
@@ -127,6 +136,7 @@ const HomeRequests = (props: {
     vaultSigningData,
     decodedVaultTx,
     solDecodeState,
+    tronDecodeState,
     handleVaultSigningRequestAction,
     fluxNodeStartData,
     handleFluxNodeStartAction,
@@ -267,6 +277,14 @@ const HomeRequests = (props: {
             blockchains[vaultSigningData.chain as keyof cryptos]?.chainType ===
               'sol' && solDecodeState === null
           }
+          // TRON fails closed on BOTH a pending (null) and a failed verdict.
+          tronDecodeBlocked={
+            blockchains[vaultSigningData.chain as keyof cryptos]?.chainType ===
+              'tron' && tronDecodeState?.status !== 'ok'
+          }
+          tronDecodeReasons={tronDecodeState?.reasons}
+          tronView={tronDecodeState?.view}
+          tronDigest={tronDecodeState?.digest}
           signMessage={vaultSigningData.signMessage}
           dappOrigin={vaultSigningData.dappOrigin}
         />

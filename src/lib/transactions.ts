@@ -18,6 +18,22 @@ import {
   assertConsumerEvmFeeWithinCap,
   verifyConsumerEvmRequest,
 } from './consumerEvm';
+import {
+  TronVerifyError,
+  TronNotLiveError,
+  fetchTronBalance,
+  tronApprovedSummary,
+  tronErrorReason,
+  tronHttpClient,
+  tronNetwork,
+  tronOpView,
+  tronSdk,
+  tronSelfPayAccount,
+  verifyTronConsumerRequest,
+  type TronApprovedSummary,
+  type TronNetworkConfig,
+  type TronOpView,
+} from './tron';
 import { cryptos } from '../types';
 
 import { blockchains } from '@storage/blockchains';
@@ -61,6 +77,11 @@ export function decodeVaultTransaction(
   try {
     if (blockchains[chain].chainType === 'evm') {
       return decodeVaultEvmTransaction(rawTx, chain);
+    }
+    if (blockchains[chain].chainType === 'tron') {
+      // TRON proposals carry a digest, not a transaction: they are decoded
+      // from `tronOp` by lib/tronVault.ts, never by utxolib.
+      throw new Error('TRON vault proposals are decoded from tronOp');
     }
     return decodeVaultUtxoTransaction(rawTx, chain, inputAmounts, inputScripts);
   } catch (error) {
@@ -297,7 +318,13 @@ function decodeVaultEvmTransaction(
  * the JSON leaf-pubkey lists). Without it nothing can be verified, so the
  * decode fails closed.
  */
-export type ConsumerDecodeContext = ConsumerKeyMaterial;
+/**
+ * The key material every consumer decode verifies against. The optional TRON
+ * fields override the pinned SDK network, the clock and the self-pay balance
+ * source (tests); by default they come from this device.
+ */
+export type ConsumerDecodeContext = ConsumerKeyMaterial &
+  Partial<Pick<TronApprovalContext, 'network' | 'now' | 'getBalance'>>;
 
 export interface ApprovalRecipient {
   address: string;
@@ -333,6 +360,87 @@ interface tokenInfo {
   memo?: string;
   /** Why the decode failed (sentinel fields are then 'decodingError'). */
   error?: string;
+  // TRON only: the decoded, policy-checked Op (every call, the fee, the
+  // deadline, the self-pay account) exactly as the approval screen shows it.
+  tron?: TronOpView;
+  // TRON only: what this screen shows (chain, vault, Op digest). Handed back
+  // on approval; the signing path signs only if its own re-verification of
+  // the payload yields the identical digest (constructTx.ts).
+  tronApproved?: TronApprovedSummary;
+  // Set on a failed decode when the cause is known ('tron': the TRON
+  // verification refused it), so the UI can say why.
+  errorReason?: string;
+  // TRON: the stable refusal reason ('policy:FEE_ABOVE_CEILING', 'wrong_vault',
+  // 'not_live', …) behind errorReason 'tron'.
+  errorDetail?: string;
+}
+
+/**
+ * What the TRON approval decode needs beyond the payload: the pair's decrypted
+ * account xpubs and the `0-{addressIndex}` path, so the vault, its signers and
+ * threshold are derived HERE (never taken from the payload); the pinned SDK
+ * network; and a balance source for the self-pay account (tests override).
+ */
+export interface TronApprovalContext {
+  xpubWallet: string;
+  xpubKey: string;
+  path: string;
+  network: TronNetworkConfig;
+  /** Unix seconds; defaults to the device clock. */
+  now?: bigint;
+  /** Balance (sun) of a TRON account; used only for a self-pay Op. */
+  getBalance: (address: string) => Promise<bigint>;
+}
+
+/**
+ * Consumer TRON approval decode (TRON_SSP_CONTRACT.md §5 rules 1–5):
+ *  - parse the `ssp-tron-op` v1 payload (SDK canonical Op decoder);
+ *  - re-derive signers / threshold / vault from THIS device's leaf and the
+ *    wallet xpub stored at pairing at the request path, and require the
+ *    payload to state exactly those;
+ *  - decodeOpForDisplay under the consumer policy (transfers only), the
+ *    pinned fee collector, TRX / USDT fee under 30 TRX / 8 USDT, deadline
+ *    ≤ now + 2 h;
+ *  - recompute the digest and require the wallet signature to recover to the
+ *    wallet leaf.
+ * Every failure throws; decodeTransactionForApproval fails closed on it.
+ */
+export async function decodeTRONTransactionForApproval(
+  rawTx: string,
+  chain: keyof cryptos,
+  tron: TronApprovalContext,
+): Promise<tokenInfo> {
+  const verified = verifyTronConsumerRequest(rawTx, chain, {
+    xpubWallet: tron.xpubWallet,
+    xpubKey: tron.xpubKey,
+    path: tron.path,
+    network: tron.network,
+    now: tron.now ?? BigInt(Math.floor(Date.now() / 1000)),
+  });
+  const view = tronOpView(verified.display, chain);
+  if (view.selfPay) {
+    // No sponsor: this device submits from its OWN leaf account, which
+    // must hold TRX first (shown with its address on the approval screen).
+    view.selfPayAccount = await tronSelfPayAccount(
+      verified.keySigner,
+      tron.getBalance,
+    );
+  }
+  const first = view.calls[0];
+  const isToken = first?.kind === 'trc20Transfer';
+  return {
+    sender: view.vault,
+    receiver: first ? first.to : view.vault,
+    amount: first ? first.amount : '0',
+    fee: view.fee.kind === 'none' ? '0' : view.fee.amount,
+    // An unknown TRC-20 / a TRC-10 has no symbol on this device: never fall
+    // back to the native one (its raw units would read as TRX).
+    tokenSymbol: first ? (first.symbol ?? '') : blockchains[chain].symbol,
+    token: isToken ? first.token : undefined,
+    recipientCount: view.calls.length,
+    tron: view,
+    tronApproved: tronApprovedSummary(verified),
+  };
 }
 
 function decodingErrorInfo(
@@ -390,6 +498,21 @@ export async function decodeTransactionForApproval(
       throw new Error('Missing key material to verify the request');
     }
     const chainType = blockchains[chain].chainType;
+    if (chainType === 'tron') {
+      // Never falls through to utxolib: the vault, signers and threshold are
+      // derived here from the pair's xpubs + path (TRON_SSP_CONTRACT.md §5).
+      return await decodeTRONTransactionForApproval(rawTx, chain, {
+        xpubWallet: ctx.xpubWallet,
+        xpubKey: ctx.xpubKey,
+        path: ctx.path,
+        network: ctx.network ?? tronNetwork(chain),
+        now: ctx.now,
+        getBalance:
+          ctx.getBalance ??
+          ((address: string) =>
+            fetchTronBalance(tronHttpClient(chain), address)),
+      });
+    }
     if (chainType === 'evm') {
       verifyConsumerEvmRequest(rawTx, chain, ctx);
       // Item 7: the operation's maximum gas cost is capped like UTXO/Solana.
@@ -480,6 +603,12 @@ export async function decodeTransactionForApproval(
       fee: info.fee,
       tokenSymbol: info.tokenSymbol,
       error: info.error,
+      // A TRON refusal carries its stable reason, so the UI can say why.
+      ...(error instanceof TronVerifyError ||
+      error instanceof TronNotLiveError ||
+      error instanceof tronSdk.TronMultisigError
+        ? { errorReason: 'tron', errorDetail: tronErrorReason(error) }
+        : {}),
     };
   }
 }

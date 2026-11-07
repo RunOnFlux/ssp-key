@@ -16,7 +16,22 @@ import {
   selectPublicNonce,
   cosignAndBroadcastSOLTransaction,
   RelayAuthUnavailableError,
+  cosignAndBroadcastTRON,
+  TronBroadcastUnknownError,
+  TronRelayRefusedError,
+  TronSelfPayBalanceError,
 } from '../../../lib/constructTx';
+import {
+  TRON_SELF_PAY_MIN_BALANCE_SUN,
+  TRX_DECIMALS,
+  assertNoOutstandingTronOp,
+  formatTronUnits,
+  parseTronOpPayload,
+  tronHttpClient,
+  tronNonceUsedLookup,
+  tronNetwork,
+  type TronApprovedSummary,
+} from '../../../lib/tron';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
 import { parseTypedData, typedDataMatchesChain } from '../../../lib/typedData';
 import {
@@ -186,6 +201,9 @@ export const approveTransaction = async (
   chain: keyof cryptos,
   derivationPath: string,
   suggestedUtxos: utxo[],
+  // TRON: the chain / vault / Op digest the approval screen displayed.
+  // Required for tron — the co-sign re-verifies and refuses on any change.
+  tronApproved?: TronApprovedSummary,
 ) => {
   const {
     xpubKey,
@@ -316,6 +334,87 @@ export const approveTransaction = async (
         publicNonceKey,
         verifiedEvm,
       );
+    } else if (blockchains[chain].chainType === 'tron') {
+      // TRON (TRON_SSP_CONTRACT.md §6): the payload is the wallet's signed
+      // `ssp-tron-op`. The co-sign re-runs every §5 check against the vault
+      // derived from the stored xpubs + path, signs only the digest that was
+      // displayed, then either hands both signatures to the relay sponsor
+      // (fee > 0) or submits from this device's own leaf account (self-pay).
+      if (!tronApproved) {
+        keyPair.privKey = '';
+        throw new Error(t('home:err_tron_not_displayed'));
+      }
+      try {
+        // CHN-9: the vault and nonce this request would co-sign (strictly
+        // parsed again — and fully verified — by the co-sign). An earlier Op
+        // of this vault that this device co-signed may still execute,
+        // whatever its broadcast answered: refuse a second payment under
+        // another nonce until this device's node shows that nonce used
+        // on-chain or its deadline has passed. The co-sign itself records
+        // this Op before it leaves the device.
+        const tronPayload = parseTronOpPayload(rawTransaction);
+        await assertNoOutstandingTronOp({
+          chain,
+          vault: tronPayload.vault,
+          nonce: tronPayload.op.nonce,
+          isNonceUsed: tronNonceUsedLookup(tronHttpClient(chain)),
+        });
+        ttxid = await cosignAndBroadcastTRON({
+          chain,
+          rawTx: rawTransaction,
+          approved: tronApproved,
+          xpubWallet: xpubKeyWalletDecrypted,
+          xpubKey: xpubKeyDecrypted,
+          path: derivationPath,
+          keyPrivKeyHex: keyPair.privKey,
+          network: tronNetwork(chain),
+          relayHost: sspConfig().relay,
+        });
+      } catch (error) {
+        if (error instanceof TronRelayRefusedError) {
+          // A definite refusal: nothing was broadcast. But this device DID
+          // co-sign the Op and the relay keeps it until its deadline; it was
+          // recorded before it left the device, so a re-send under a new
+          // nonce is refused (CHN-9). Tell SSP Wallet so it stops waiting,
+          // and show the relay's reason.
+          setRawTx('');
+          setTxPath('');
+          setTxUtxos([]);
+          await postAction(
+            'txrejected',
+            rawTransaction,
+            chain,
+            derivationPath,
+            sspWalletKeyInternalIdentity,
+          ).catch((postError: unknown) => console.log(postError));
+          throw new Error(
+            t('home:err_tron_relay_refused', { message: error.message }),
+          );
+        }
+        if (error instanceof TronBroadcastUnknownError) {
+          // It may still land: keep the request (a retry of the same signed
+          // Op is deduplicated) and never report it as rejected.
+          throw new Error(
+            t('home:err_tron_broadcast_unknown', {
+              message: error.relayMessage || error.message,
+            }),
+          );
+        }
+        if (error instanceof TronSelfPayBalanceError) {
+          throw new Error(
+            t('home:err_tron_self_pay_balance', {
+              address: error.address,
+              minimum: formatTronUnits(
+                TRON_SELF_PAY_MIN_BALANCE_SUN,
+                TRX_DECIMALS,
+              ),
+            }),
+          );
+        }
+        throw error;
+      } finally {
+        keyPair.privKey = '';
+      }
     } else if (blockchains[chain].chainType === 'sol') {
       // Wallet pre-signed the outer tx with its leaf. The key re-runs the
       // fail-closed consumer decode on the exact bytes (bound to its own

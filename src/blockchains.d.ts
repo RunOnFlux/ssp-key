@@ -52,6 +52,9 @@ declare module '@storage/blockchains' {
     tokens: Token[];
     // sol
     programId?: string; // on-chain Solana program for chainType='sol'
+    // tron: chainType 'tron'; the @runonflux/tron-multisig network name.
+    // Deployment addresses come only from the SDK's pinned table.
+    tronNetwork?: 'mainnet' | 'nile';
   }
   type blockchains = Record<string, Blockchain>;
   let blockchains: blockchains;

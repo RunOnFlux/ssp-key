@@ -52,6 +52,9 @@ import {
   type OwnVaultIdentity,
 } from '../../../lib/vaultDescriptorGate';
 import { verifyVaultUtxoAmounts } from '../../../lib/vaultUtxoAmounts';
+import { signTronVaultRequest } from '../../../lib/tronVault';
+import { tronNetwork } from '../../../lib/tron';
+import { getCryptoUsdRate } from '../../../lib/rates';
 import { cryptos, publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
 
@@ -308,10 +311,16 @@ export const handleVaultXpubAction = async (ctx: HomeActionContext) => {
     clearVaultXpubRequest?.();
   }
 };
-export const handleVaultSignAction = async (ctx: HomeActionContext) => {
+export const handleVaultSignAction = async (
+  ctx: HomeActionContext,
+  // TRON: the Op digest the approval screen displayed when the user
+  // approved. Required for tron — signing refuses any other digest.
+  tronApprovedDigest?: string,
+) => {
   const {
     vaultSigningData,
     solDecodeState,
+    tronDecodeState,
     seedPhrase,
     postAction,
     displayMessage,
@@ -360,6 +369,23 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       displayMessage('error', t('home:vault_sign_sol_undecodable'), 8000);
       return;
     }
+  }
+  // Same sign-time recheck for TRON: only an 'ok' verdict (digest recomputed
+  // from tronOp, vault re-derived, enterprise policy) may proceed; pending
+  // and failed both refuse. It must also be the proposal the user approved:
+  // a request swapped in after approval has a different digest and is
+  // refused. The signing path re-verifies from scratch and re-checks it.
+  if (
+    blockchains[vaultSigningData.chain as keyof cryptos]?.chainType ===
+      'tron' &&
+    (tronDecodeState?.status !== 'ok' ||
+      !tronApprovedDigest ||
+      tronDecodeState.digest !== tronApprovedDigest)
+  ) {
+    if (tronDecodeState) {
+      displayMessage('error', t('home:vault_sign_tron_decode_failed'), 8000);
+    }
+    return;
   }
 
   // Hoist sensitive vars outside try so they can be cleared in catch/finally
@@ -574,6 +600,50 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         sspWalletKeyInternalIdentity,
       );
 
+      displayMessage('success', t('home:vault_sign_success'));
+      return;
+    }
+
+    // TRON enterprise: MUST come before the EVM / UTXO paths below (a TRON
+    // proposal would otherwise fall into utxolib). Recomputes the Op digest
+    // from `tronOp` and requires it to equal rawUnsignedTx, requires the
+    // vault to be predict(signers, threshold) and this key's leaf
+    // m/48'/195'/org'/0'/vaultIndex/addressIndex to be a signer, decodes the
+    // Op under SSP Key's fixed enterprise policy (no approve / unknown /
+    // staking calls; a relay-supplied policy is ignored), requires the
+    // digest the user approved, then signs it. walletSignedHex is never used
+    // for TRON. A pin confirmed on screen is saved right before signing
+    // (VD-3).
+    if (blockchainConfig.chainType === 'tron') {
+      const trxUsdRate = await getCryptoUsdRate(vaultSigningData.chain);
+      commitPinBeforeSigning();
+      const tronResult = signTronVaultRequest({
+        data: vaultSigningData,
+        vaultXpriv,
+        vaultIndex: vaultSigningData.vaultIndex,
+        signingMode: vaultSigningData.signingMode,
+        network: tronNetwork(vaultChain),
+        // the enterprise fee cap: min($100 of TRX, 300 TRX) / $100 of USDT
+        trxUsdRate,
+        // checked above: the digest the approval screen displayed
+        approvedDigest: tronApprovedDigest ?? '',
+      });
+      vaultXpriv = '';
+      pwForEncryption = '';
+      await postAction(
+        'enterprisevaultsigned',
+        JSON.stringify({
+          // wallet_only: verified, nothing signed — no keySignature field
+          ...(tronResult.keySignature
+            ? { keySignature: tronResult.keySignature }
+            : {}),
+          keyPubKey: tronResult.keyPubKey,
+          requestId: vaultSigningData.requestId,
+        }),
+        vaultSigningData.chain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
       displayMessage('success', t('home:vault_sign_success'));
       return;
     }

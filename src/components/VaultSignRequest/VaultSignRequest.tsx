@@ -21,6 +21,7 @@ import {
   requestDigestOfDecoded,
 } from '../../lib/vaultApprovalBinding';
 import VaultRiskStrip from './VaultRiskStrip';
+import { isTronChain, type TronOpView } from '../../lib/tron';
 import VaultPinConfirm from '../VaultPinConfirm/VaultPinConfirm';
 import {
   isVaultPinStaged,
@@ -36,7 +37,7 @@ import {
 } from '../../lib/vaultDescriptorGate';
 
 import { Card } from '../ui';
-import { SlideToApprove } from '../request';
+import { SlideToApprove, TronOpDetails } from '../request';
 /**
  * Format a base-unit amount (satoshis/wei) to human-readable using chain decimals.
  */
@@ -67,7 +68,9 @@ interface VaultSignRequestProps {
   chain: string;
   vaultName?: string;
   orgName?: string;
-  actionStatus: (status: boolean) => void;
+  // TRON: an approval carries the digest that was on screen when the user
+  // approved (see tronDigest); every other chain passes only the status.
+  actionStatus: (status: boolean, tronApprovedDigest?: string) => void;
   // Relay-supplied token metadata. NEVER used for display (H-14): the token
   // contract/mint, decimals and symbol come only from decodedTx, i.e. from
   // the signed bytes and this device's own token list.
@@ -88,6 +91,17 @@ interface VaultSignRequestProps {
   // True while the async sol byte-decode has not produced a verdict yet —
   // approval stays disabled (fail closed) until the decode resolves.
   solDecodePending?: boolean;
+  // TRON (see lib/tronVault): approval is blocked unless this device
+  // recomputed the digest from tronOp, re-derived the vault and decoded the
+  // Op under the enterprise policy. Blocked while pending too (fail closed).
+  tronDecodeBlocked?: boolean;
+  tronDecodeReasons?: string[];
+  // The on-device decode of the Op: every call, the fee and the deadline.
+  tronView?: TronOpView;
+  // The Op digest (0x…) of that decode. Approval hands back the digest that
+  // was displayed when the user started approving; a proposal swapped in
+  // meanwhile closes Authentication and is never approved unseen.
+  tronDigest?: string;
   // WalletConnect Phase 2 — vault MESSAGE signing (personal_sign). When set, this
   // is a message signature (not a transaction): show the message text + dApp
   // instead of recipients/amounts. Signing math is identical (signs the digest).
@@ -108,6 +122,10 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   solDecodeKind,
   solMismatchReasons,
   solDecodePending,
+  tronDecodeBlocked,
+  tronDecodeReasons,
+  tronView,
+  tronDigest,
   signMessage,
   dappOrigin,
 }) => {
@@ -174,6 +192,12 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   // Fail closed on ANY decode error, matching TransactionRequest: nothing this
   // device cannot read is approvable. Reject stays reachable.
   const decodeBlocked = !!decodedTx?.error;
+  // TRON: only an 'ok' verdict with a decoded view AND its digest is
+  // approvable.
+  const isTron = isTronChain(chain);
+  const tronBlocked =
+    isTron && (tronDecodeBlocked === true || !tronView || !tronDigest);
+  const tronFailed = isTron && (tronDecodeReasons ?? []).length > 0;
   // CHN-5: message signing exists only for EVM vaults.
   const messageUnsupported = isMessageSign && chainType !== 'evm';
   // CHN-5: the request this screen shows. A decoded view not bound to a
@@ -208,9 +232,27 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
     decodeBlocked ||
     messageUnsupported ||
     descriptorBlocked ||
+    tronBlocked ||
     !requestDigest;
   // The request on screen when the user started approving.
   const approvingDigest = useRef<string | undefined>(undefined);
+  // TRON: the Op digest on screen when the user started approving.
+  const tronApprovingDigest = useRef<string | undefined>(undefined);
+
+  // A different TRON proposal (its verdict changed) while Authentication is
+  // open: close it. The user has not seen this one yet and must review and
+  // approve it again.
+  useEffect(() => {
+    if (
+      tronApprovingDigest.current !== undefined &&
+      tronApprovingDigest.current !== tronDigest
+    ) {
+      tronApprovingDigest.current = undefined;
+      approvingDigest.current = undefined;
+      disarmVaultApproval();
+      setAuthenticationOpen(false);
+    }
+  }, [tronDigest]);
 
   // A different request (the relay replaced it, or its decode changed)
   // while authentication is open: close authentication. The user has not
@@ -232,20 +274,31 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
     // open never approves.
     const approving = approvingDigest.current;
     approvingDigest.current = undefined;
+    const tronApproving = tronApprovingDigest.current;
+    tronApprovingDigest.current = undefined;
     if (approvalBlocked || !approving || approving !== requestDigest) {
       disarmVaultApproval();
       return;
     }
+    if (isTron && (!tronApproving || tronApproving !== tronDigest)) {
+      disarmVaultApproval();
+      return; // not the Op the user was looking at when approving
+    }
     // The sign action signs only the request with this digest.
     armVaultApproval(approving);
+    if (isTron) {
+      actionStatus(true, tronApproving);
+      return;
+    }
     actionStatus(true);
   };
 
   const openAuthentication = () => {
-    if (approvalBlocked || !requestDigest) {
+    if (approvalBlocked || !requestDigest || (isTron && !tronDigest)) {
       return;
     }
     approvingDigest.current = requestDigest;
+    tronApprovingDigest.current = isTron ? tronDigest : undefined;
     setAuthenticationOpen(true);
   };
 
@@ -273,6 +326,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
       approve();
     } else {
       approvingDigest.current = undefined;
+      tronApprovingDigest.current = undefined;
     }
   };
 
@@ -472,8 +526,37 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </Card>
         )}
 
+        {/* TRON: digest / vault / policy verification failed */}
+        {tronFailed && (
+          <Card style={[styles.card, { borderColor: Colors.error }]}>
+            <Text
+              style={[
+                Fonts.textTiny,
+                Fonts.textBold,
+                { color: Colors.error, textAlign: 'center' },
+              ]}
+            >
+              {t('home:vault_sign_tron_decode_failed')}
+            </Text>
+            {(tronDecodeReasons ?? []).map((reason, index) => (
+              <Text
+                key={index}
+                style={[
+                  Fonts.textTiny,
+                  { color: Colors.error, textAlign: 'center', marginTop: 4 },
+                ]}
+              >
+                {reason}
+              </Text>
+            ))}
+          </Card>
+        )}
+
         {/* Decode error — approval is blocked */}
-        {decodedTx?.error && !solUndecodable && !descriptorRefused ? (
+        {decodedTx?.error &&
+        !solUndecodable &&
+        !descriptorRefused &&
+        !tronFailed ? (
           <Card style={[styles.card, { borderColor: Colors.error }]}>
             <Text
               style={[
@@ -603,8 +686,13 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </Card>
         ) : null}
 
+        {/* TRON: every call, the fee and the deadline of the on-device
+            decode of tronOp (replaces the generic recipients / fee cards). */}
+        {isTron && tronView ? <TronOpDetails view={tronView} /> : null}
+
         {/* Recipients — decoded from raw transaction */}
         {!isMessageSign &&
+          !isTron &&
           (displayRecipients.length > 0 ? (
             displayRecipients.map((recipient, index) => (
               <Card key={index} style={styles.card}>
@@ -667,7 +755,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           ))}
 
         {/* Fee Card — decoded from raw transaction (omitted for message signing) */}
-        {!isMessageSign && (
+        {!isMessageSign && !isTron && (
           <Card style={styles.card}>
             <Text style={[styles.label, { color: Colors.textGray400 }]}>
               {t('home:vault_sign_fee')}

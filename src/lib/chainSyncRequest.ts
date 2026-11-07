@@ -22,7 +22,9 @@ import { blockchains } from '@storage/blockchains';
 import type { cryptos } from '../types';
 
 export const CHAIN_SYNC_REQUEST_VERSION = 1;
-export const CHAIN_SYNC_MAX_CHAINS = 20;
+// Raised 20 → 24 with TRON (tron + tronNile). SSP Key ships this BEFORE the
+// wallet starts batching more than 20 chains (TRON_SSP_CONTRACT.md §1).
+export const CHAIN_SYNC_MAX_CHAINS = 24;
 /**
  * Spacing between per-chain POST /v1/sync calls. The relay sync document is
  * last-write-wins keyed on walletIdentity and the wallet polls it every 1s —

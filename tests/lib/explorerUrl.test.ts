@@ -1,0 +1,24 @@
+import { explorerAddressUrl, explorerTxUrl } from '../../src/lib/explorerUrl';
+
+describe('explorerUrl', () => {
+  it('keeps the singular paths elsewhere', () => {
+    expect(explorerTxUrl('eth', '0x1')).toBe('https://etherscan.io/tx/0x1');
+    expect(explorerTxUrl('solDevnet', 'sig')).toBe(
+      'https://explorer.solana.com/tx/sig?cluster=devnet',
+    );
+  });
+});
+
+describe('explorerUrl (tron)', () => {
+  it('uses tronscan hash routes', () => {
+    expect(explorerTxUrl('tron', 'ab'.repeat(32))).toBe(
+      `https://tronscan.org/#/transaction/${'ab'.repeat(32)}`,
+    );
+    expect(
+      explorerAddressUrl('tron', 'TWq9eJbomJDmkME7ahC4renGL2BXacL2vd'),
+    ).toBe('https://tronscan.org/#/address/TWq9eJbomJDmkME7ahC4renGL2BXacL2vd');
+    expect(explorerTxUrl('tronNile', 'cd')).toBe(
+      'https://nile.tronscan.org/#/transaction/cd',
+    );
+  });
+});
