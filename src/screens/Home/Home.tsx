@@ -68,6 +68,7 @@ import {
   type ParsedChainSyncRequest,
 } from '../../lib/chainSyncRequest';
 import { looksLikeXpub, splitSSPInput } from '../../lib/inputParsing';
+import type { TronApprovedSummary } from '../../lib/tron';
 import {
   checkWkSigningRequest,
   deriveIdentityPubKeyFromXpub,
@@ -199,6 +200,7 @@ function Home({ navigation }: Props) {
     vaultSigningData,
     decodedVaultTx,
     solDecodeState,
+    tronDecodeState,
     fluxNodeStartData,
     setFluxNodeStartData,
     keyNonceSyncDialogOpen,
@@ -924,6 +926,7 @@ function Home({ navigation }: Props) {
     setVaultXpubData,
     vaultSigningData,
     solDecodeState,
+    tronDecodeState,
     clearVaultSigningState,
     setSubmittingTransaction,
     setTxid,
@@ -1024,6 +1027,7 @@ function Home({ navigation }: Props) {
     chain: keyof cryptos,
     derivationPath: string,
     suggestedUtxos: utxo[],
+    tronApproved?: TronApprovedSummary,
   ) =>
     signingActions.approveTransaction(
       actionCtx,
@@ -1031,6 +1035,7 @@ function Home({ navigation }: Props) {
       chain,
       derivationPath,
       suggestedUtxos,
+      tronApproved,
     );
   const handleManualInput = (inputValue: string) => {
     try {
@@ -1374,7 +1379,10 @@ function Home({ navigation }: Props) {
     }
   };
 
-  const handleTransactionRequestAction = async (status: boolean) => {
+  const handleTransactionRequestAction = async (
+    status: boolean,
+    tronApproved?: TronApprovedSummary,
+  ) => {
     try {
       setActivityStatus(true);
       if (status === true) {
@@ -1382,7 +1390,7 @@ function Home({ navigation }: Props) {
         const rchain = activeChain;
         const rpath = txPath;
         const rUtxos = txUtxos;
-        await approveTransaction(rtx, rchain, rpath, rUtxos);
+        await approveTransaction(rtx, rchain, rpath, rUtxos, tronApproved);
       } else {
         // reject
         const rtx = rawTx;
@@ -1649,12 +1657,16 @@ function Home({ navigation }: Props) {
   const handleVaultXpubAction = async () =>
     vaultActions.handleVaultXpubAction(actionCtx);
 
-  const handleVaultSigningRequestAction = async (status: boolean) => {
+  const handleVaultSigningRequestAction = async (
+    status: boolean,
+    // TRON: the Op digest VaultSignRequest displayed when the user approved
+    tronApprovedDigest?: string,
+  ) => {
     try {
       setActivityStatus(true);
       if (status === true) {
         consumeVaultRejectionCode(); // never outlives the request it was set for
-        await handleVaultSignAction();
+        await handleVaultSignAction(tronApprovedDigest);
       } else {
         // reject — name the request (so SSP Wallet and the relay drop exactly
         // this one) and, for a vault descriptor refusal or a declined pin
@@ -1680,8 +1692,8 @@ function Home({ navigation }: Props) {
     }
   };
 
-  const handleVaultSignAction = async () =>
-    vaultActions.handleVaultSignAction(actionCtx);
+  const handleVaultSignAction = async (tronApprovedDigest?: string) =>
+    vaultActions.handleVaultSignAction(actionCtx, tronApprovedDigest);
 
   const handlePublicNoncesSharedModalAction = () => {
     console.log('public nonces modal close.');
@@ -1901,6 +1913,7 @@ function Home({ navigation }: Props) {
             vaultSigningData={vaultSigningData}
             decodedVaultTx={decodedVaultTx}
             solDecodeState={solDecodeState}
+            tronDecodeState={tronDecodeState}
             handleVaultSigningRequestAction={handleVaultSigningRequestAction}
             fluxNodeStartData={fluxNodeStartData}
             handleFluxNodeStartAction={handleFluxNodeStartAction}

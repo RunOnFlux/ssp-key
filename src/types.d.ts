@@ -448,6 +448,8 @@ export interface cryptos {
   bsc: number;
   solDevnet: number;
   solMainnet: number;
+  tron: number;
+  tronNile: number;
 }
 
 export interface externalIdentity {
@@ -684,4 +686,11 @@ interface vaultSigningRequest {
   // are no recipients. signMessage is the human-readable text; dappOrigin the dApp.
   signMessage?: string;
   dappOrigin?: string;
+  // TRON (TRON_SSP_CONTRACT.md §3): rawUnsignedTx is the Op digest (0x…32
+  // bytes) and this is the structured Op it must be recomputed from —
+  // {network, vault, signers, threshold, op}. JSON string or object.
+  tronOp?: string | Record<string, unknown>;
+  // No TRON policy field: the Op is decoded under the Key's own fixed
+  // enterprise policy (lib/tronVault.ts TRON_KEY_ENTERPRISE_POLICY). A policy
+  // in the request would be relay-supplied and is never read (CHN-6 / TRX-3).
 }

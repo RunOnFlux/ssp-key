@@ -43,6 +43,8 @@ const chains = {
   bsc: chainSliceBase('bsc'),
   solDevnet: chainSliceBase('solDevnet'),
   solMainnet: chainSliceBase('solMainnet'),
+  tron: chainSliceBase('tron'),
+  tronNile: chainSliceBase('tronNile'),
 };
 // ********** Import chains **********
 

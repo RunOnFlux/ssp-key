@@ -103,6 +103,19 @@ const assetBackends: backends = {
     api: 'node-solana.sspwallet.io',
     explorer: 'explorer.solana.com',
   },
+  tron: {
+    // ssp-backends-proxy Worker: `node-` serves the full-node /wallet/* and
+    // /walletsolidity/* POST API (balances, broadcasthex, receipts),
+    // `api-` the TronGrid /v1 history API. No API key ships in this bundle.
+    node: 'node-tron.sspwallet.io',
+    api: 'api-tron.sspwallet.io',
+    explorer: 'tronscan.org',
+  },
+  tronNile: {
+    node: 'node-tronnile.sspwallet.io',
+    api: 'api-tronnile.sspwallet.io',
+    explorer: 'nile.tronscan.org',
+  },
 };
 
 export function backends() {

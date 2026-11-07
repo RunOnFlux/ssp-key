@@ -21,6 +21,7 @@ import type {
 import { loadConsumerKeyMaterial } from '../../lib/consumerKeys';
 import { decodeErc20Calldata } from '../../lib/calldataDecode';
 import { truncateAddress } from '../../lib/addressDisplay';
+import type { TronApprovedSummary, TronOpView } from '../../lib/tron';
 import { getCryptoUsdRate, formatUsdAmount } from '../../lib/rates';
 import { cryptos, utxo } from '../../types';
 
@@ -34,6 +35,7 @@ import {
   RiskBanner,
   AdvancedSection,
   SlideToApprove,
+  TronOpDetails,
 } from '../request';
 
 /**
@@ -65,7 +67,9 @@ const TransactionRequest = (props: {
   path?: string;
   utxos: utxo[];
   activityStatus: boolean;
-  actionStatus: (status: boolean) => void;
+  // TRON approvals hand back exactly what was displayed; the signing path
+  // refuses unless its own re-verification yields the identical digest.
+  actionStatus: (status: boolean, tronApproved?: TronApprovedSummary) => void;
 }) => {
   // Monotonic decode token. Every decode run captures its value; a run whose
   // token is no longer current has been superseded by a newer payload and
@@ -94,8 +98,38 @@ const TransactionRequest = (props: {
   const [warnings, setWarnings] = useState<ApprovalWarning[]>([]);
   const [nativeValue, setNativeValue] = useState('');
   const [memo, setMemo] = useState('');
+  // TRON: the decoded Op view and the digest summary of the CURRENT payload
+  // (undefined until its decode resolves). Approval of a tron payload
+  // without one never signs.
+  const [tronView, setTronView] = useState<TronOpView | undefined>(undefined);
+  const [tronApproved, setTronApproved] = useState<
+    TronApprovedSummary | undefined
+  >(undefined);
+  // Why the decode failed, when this device knows (shown in the banner).
+  const [decodeFailReason, setDecodeFailReason] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
+  // Why a TRON payload was refused, as shown to the user.
+  const tronRefusalMessage = (detail: string | undefined): string => {
+    if (detail === 'not_live') return t('home:err_tron_not_live');
+    if (
+      detail === 'wrong_vault' ||
+      detail === 'wrong_network' ||
+      detail === 'bad_path'
+    ) {
+      return t('home:err_tron_wrong_vault');
+    }
+    if (detail === 'bad_wallet_signature') {
+      return t('home:err_tron_wallet_signature');
+    }
+    if (detail?.startsWith('policy:')) {
+      const reason = detail.slice('policy:'.length);
+      return `${t('home:err_tron_policy')} ${t(`home:tron_policy_${reason}`, {
+        defaultValue: '',
+      })}`.trim();
+    }
+    return t('home:err_tx_decode');
+  };
   // Encrypted per-chain xpubs; decrypted only inside the decode run.
   const chainState = useAppSelector((state) => state[props.chain]);
   const encryptedXpubWallet = chainState?.xpubWallet;
@@ -106,6 +140,17 @@ const TransactionRequest = (props: {
     if (decoding || decodeFailed) {
       // Single choke point for BOTH approve paths (slider and a completed
       // Authentication): what was not decoded and displayed is never signed.
+      return;
+    }
+    if (blockchainConfig.chainType === 'tron') {
+      if (!tronApproved || !tronView) {
+        return; // nothing displayed for this payload — never sign it
+      }
+      // Self-pay: an unfunded account is shown (TronOpDetails banner) but
+      // not blocked here — the user may fund it while this screen is open.
+      // The signing path re-reads the balance and refuses before anything
+      // is broadcast (constructTx.selfSubmitTronOp).
+      props.actionStatus(true, tronApproved);
       return;
     }
     props.actionStatus(true);
@@ -151,6 +196,9 @@ const TransactionRequest = (props: {
     setReceiverAddress('');
     setSenderAddress('');
     setMultiRecipient(false);
+    setTronView(undefined);
+    setTronApproved(undefined);
+    setDecodeFailReason('');
     setRecipients([]);
     setWarnings([]);
     setNativeValue('');
@@ -190,6 +238,8 @@ const TransactionRequest = (props: {
         setToken(txInfo.token || '');
         setTokenSymbol(txInfo.tokenSymbol);
         setTxData(txInfo.data || '');
+        setTronView(txInfo.tron);
+        setTronApproved(txInfo.tronApproved);
         // H-2: the fee is computed on-device for every chain and is always
         // shown; a decode that cannot compute it fails below.
         setFee(txInfo.fee);
@@ -215,7 +265,14 @@ const TransactionRequest = (props: {
         ) {
           // Fail closed with a VISIBLE error state — approval is impossible,
           // reject stays reachable. Previously this silently auto-rejected.
-          displayMessage('error', t('home:err_tx_decode'));
+          const failMessage =
+            txInfo.errorReason === 'tron'
+              ? tronRefusalMessage(txInfo.errorDetail)
+              : t('home:err_tx_decode');
+          displayMessage('error', failMessage);
+          if (txInfo.errorReason === 'tron') {
+            setDecodeFailReason(failMessage);
+          }
           setDecodeFailed(true);
         }
       } catch (error) {
@@ -255,8 +312,20 @@ const TransactionRequest = (props: {
       : null;
 
   // Native amount fiat (never for tokens); fee fiat (fees are always native).
+  // TRON: a fiat estimate only for a single plain TRX transfer (never for a
+  // token, a batch or a cancellation).
+  const tronSingleTrx =
+    !!tronView &&
+    tronView.calls.length === 1 &&
+    tronView.calls[0].kind === 'trxTransfer';
   const amountUsd = (() => {
-    if (token || !sendingAmount || decodeFailed || usdRate <= 0) {
+    if (
+      token ||
+      !sendingAmount ||
+      decodeFailed ||
+      usdRate <= 0 ||
+      (tronView && !tronSingleTrx)
+    ) {
       return '';
     }
     const usd = new BigNumber(sendingAmount).multipliedBy(usdRate);
@@ -355,6 +424,26 @@ const TransactionRequest = (props: {
     // symbol from the request — say so and show the raw units.
     actionText = t('home:unknown_token_units', { amount: sendingAmount });
   }
+  if (tronView) {
+    // TRON: the headline summarizes the WHOLE Op; every call is listed below.
+    const only = tronView.calls.length === 1 ? tronView.calls[0] : null;
+    if (tronView.isCancellation) {
+      actionText = t('home:tron_cancellation', { nonce: tronView.nonce });
+    } else if (only && only.symbol !== null && only.kind !== 'trc10Transfer') {
+      actionText = t('home:action_send_amount', {
+        amount: only.amount,
+        symbol: only.symbol,
+      });
+    } else if (only) {
+      actionText = t('home:action_send_raw_units', {
+        amount: only.amountBaseUnits,
+      });
+    } else {
+      actionText = t('home:tron_action_multi', {
+        count: tronView.calls.length,
+      });
+    }
+  }
 
   // Solana SPL: the recipient card shows the verified OWNER when the wallet
   // supplied one, otherwise the raw token account with a warning.
@@ -372,12 +461,14 @@ const TransactionRequest = (props: {
     warnings.includes('unknown_token') &&
     (!!humanCalldata || (!txData && !!token));
   // KAS-4: every non-change destination is listed, not only the first.
-  const listAllRecipients = !humanCalldata && recipients.length > 1;
+  const listAllRecipients =
+    !tronView && !humanCalldata && recipients.length > 1;
   const contractCallWithValue =
     warnings.includes('contract_call_with_value') && !!nativeValue;
   // A token transfer (EVM token contract or Solana mint) always shows the
   // token address in the main view.
-  const showTokenAddress = !!token && (!!humanCalldata || !txData);
+  // (TRON lists every call's token contract in TronOpDetails.)
+  const showTokenAddress = !tronView && !!token && (!!humanCalldata || !txData);
 
   const hasAdvancedContent =
     !!senderAddress || (!!txData && txData !== '0x') || !!token;
@@ -402,7 +493,11 @@ const TransactionRequest = (props: {
           <RiskBanner
             severity="critical"
             title={t('home:tx_decode_failed_title')}
-            messages={[t('home:tx_decode_failed_desc')]}
+            messages={
+              decodeFailReason
+                ? [decodeFailReason, t('home:tx_decode_failed_desc')]
+                : [t('home:tx_decode_failed_desc')]
+            }
           />
         ) : decoding ? (
           // Nothing has been decoded from the CURRENT payload yet, so there is
@@ -524,13 +619,15 @@ const TransactionRequest = (props: {
                   />
                 ))}
               </>
+            ) : tronView ? (
+              <TronOpDetails view={tronView} />
             ) : recipientAddress ? (
               <RecipientCard
                 label={recipientLabel}
                 address={recipientAddress}
               />
             ) : null}
-            {multiRecipient && !listAllRecipients ? (
+            {!tronView && multiRecipient && !listAllRecipients ? (
               <Text
                 style={[
                   Fonts.textSmall,
@@ -569,7 +666,7 @@ const TransactionRequest = (props: {
                 </Text>
               </View>
             ) : null}
-            {fee ? (
+            {!tronView && fee ? (
               <FeeRow
                 label={t('home:network_fee')}
                 fee={fee}
@@ -678,11 +775,16 @@ const TransactionRequest = (props: {
             accessibilityLabel={
               decoding
                 ? t('home:tx_decoding')
-                : t('home:a11y_approve_send', {
-                    amount: sendingAmount,
-                    symbol: displaySymbol,
-                    recipient: recipientAddress,
-                  })
+                : tronView
+                  ? // TRON: the headline summarizes the WHOLE Op (every
+                    // call, raw units for unknown tokens) — never the first
+                    // call's amount with the native symbol.
+                    t('home:a11y_approve_action', { action: actionText })
+                  : t('home:a11y_approve_send', {
+                      amount: sendingAmount,
+                      symbol: displaySymbol,
+                      recipient: recipientAddress,
+                    })
             }
             style={[Gutters.regularBMargin, Gutters.smallTMargin]}
             disabled={decoding || authenticationOpen || props.activityStatus}

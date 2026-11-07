@@ -1,5 +1,14 @@
 import { cryptos } from '../types';
 
+// Same literal as lib/tron.ts TRON_OP_FORMAT; kept local so this pure
+// parsing module does not pull in the TRON library and chain registry.
+const TRON_OP_FORMAT = 'ssp-tron-op';
+// The payload's `network` (the SDK network name) → chain.
+const TRON_PAYLOAD_CHAINS: Record<string, keyof cryptos> = {
+  mainnet: 'tron',
+  nile: 'tronNile',
+};
+
 // Pure helpers for classifying and splitting scanned / manually entered
 // SSP input. Relocated verbatim from src/screens/Home/Home.tsx.
 
@@ -44,6 +53,38 @@ export function splitSSPInput(
   input: string,
   defaultChain: keyof cryptos,
 ): { chain: keyof cryptos; wallet: string; dataToProcess: string } {
+  // A bare TRON `ssp-tron-op` payload (JSON, full of colons) carries no
+  // chain prefix of its own: route it to the chain its `network` names, at
+  // the DEFAULT vault path 0-0. Routing only — the TRON decode re-derives the
+  // vault from this device's xpubs at that path and fails CLOSED ("not this
+  // device's vault") for a payload of another path; `tron:0-4:{…}` selects
+  // any other path through the normal split below.
+  const trimmed = input.trim();
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed) as {
+        format?: unknown;
+        network?: unknown;
+      };
+      if (
+        parsed &&
+        parsed.format === TRON_OP_FORMAT &&
+        typeof parsed.network === 'string' &&
+        Object.prototype.hasOwnProperty.call(
+          TRON_PAYLOAD_CHAINS,
+          parsed.network,
+        )
+      ) {
+        return {
+          chain: TRON_PAYLOAD_CHAINS[parsed.network],
+          wallet: '0-0',
+          dataToProcess: trimmed,
+        };
+      }
+    } catch {
+      // not JSON — fall through
+    }
+  }
   const splittedInput = input.split(':');
   let chain: keyof cryptos = defaultChain;
   let wallet = '0-0';
