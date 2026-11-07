@@ -8,6 +8,7 @@
 import { fluxnode } from '@runonflux/flux-sdk';
 import { Buffer } from 'buffer';
 import QuickCrypto from 'react-native-quick-crypto';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { wifToPrivateKey, generateAddressKeypair } from './wallet';
 import { blockchains } from '@storage/blockchains';
 import { cryptos } from '../types';
@@ -17,7 +18,12 @@ import { cryptos } from '../types';
  */
 export interface SignaturePayload {
   timestamp: number;
-  action: 'sync' | 'action' | 'token' | 'join';
+  /**
+   * 'read' is only valid for header-signed GET polls (RA-4) — the relay
+   * refuses it on POST/socket verifiers, so a read signature can never
+   * authorise a write.
+   */
+  action: 'sync' | 'action' | 'token' | 'join' | 'read';
   identity: string;
   nonce: string;
   data?: string;
@@ -161,4 +167,78 @@ export function addAuthToRequest<T extends Record<string, unknown>>(
     ...body,
     ...authFields,
   };
+}
+
+// ---------------------------------------------------------------------------
+// RA-4: authenticated GET reads
+// ---------------------------------------------------------------------------
+
+/** Header names of the read-auth scheme (all present, or none). */
+export const READ_AUTH_HEADERS = {
+  signature: 'x-ssp-signature',
+  message: 'x-ssp-message',
+  publicKey: 'x-ssp-publickey',
+  witnessScript: 'x-ssp-witnessscript',
+} as const;
+
+/** `x-ssp-*` header name -> value. */
+export type ReadAuthHeaders = Record<string, string>;
+
+/**
+ * The request path a read signature binds: the URL path WITHOUT the query
+ * string (and without scheme/host), e.g. `/v1/action/bc1q…`.
+ */
+export function relayRequestPath(urlOrPath: string): string {
+  const withoutOrigin = urlOrPath.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]+/i, '');
+  const path = withoutOrigin.split(/[?#]/)[0];
+  return path.startsWith('/') ? path : `/${path}`;
+}
+
+/**
+ * `data` of a read signature: sha256 hex of the UTF-8 string `GET <path>`.
+ * Real SHA-256 from @noble/hashes (not the quick-crypto shim) so the value is
+ * exactly what the relay recomputes.
+ */
+export function readAuthDataHash(path: string): string {
+  const digest = sha256(new TextEncoder().encode(`GET ${path}`));
+  return Buffer.from(digest).toString('hex');
+}
+
+/**
+ * Build the RA-4 read-auth headers for `GET <path>` as `identity`.
+ *
+ * @param identityPrivKeyWIF - the identity /10/0 private key (WIF)
+ * @param publicKey - its compressed public key (66 hex)
+ * @param witnessScript - the 2-of-2 identity script; required for multisig
+ *   identities (wkIdentity), omitted for single-sig ones
+ * @param chain - chain whose message prefix signs (the identity chain)
+ */
+export function createReadAuthHeaders(params: {
+  path: string;
+  identity: string;
+  identityPrivKeyWIF: string;
+  publicKey: string;
+  witnessScript?: string;
+  chain?: keyof cryptos;
+}): ReadAuthHeaders {
+  const path = relayRequestPath(params.path);
+  const payload = createSignaturePayload(
+    'read',
+    params.identity,
+    readAuthDataHash(path),
+  );
+  const message = JSON.stringify(payload);
+  const headers: ReadAuthHeaders = {
+    [READ_AUTH_HEADERS.signature]: signMessage(
+      message,
+      params.identityPrivKeyWIF,
+      params.chain ?? 'btc',
+    ),
+    [READ_AUTH_HEADERS.message]: message,
+    [READ_AUTH_HEADERS.publicKey]: params.publicKey,
+  };
+  if (params.witnessScript) {
+    headers[READ_AUTH_HEADERS.witnessScript] = params.witnessScript;
+  }
+  return headers;
 }

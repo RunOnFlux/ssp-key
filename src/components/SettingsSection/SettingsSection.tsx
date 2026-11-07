@@ -21,6 +21,7 @@ import {
   Trash2,
   ShieldCheck,
   ListChecks,
+  Lock,
   SlidersHorizontal,
   Server,
   Info,
@@ -32,6 +33,7 @@ import { useTheme } from '../../hooks';
 import { storage } from '../../store/index'; // mmkv
 import Authentication from '../Authentication/Authentication';
 import VerifyBackupModal from '../VerifyBackup/VerifyBackupModal';
+import VaultPinsModal from '../VaultPinsModal/VaultPinsModal';
 import { setSSPInitialState } from '../../store/ssp';
 
 import { setInitialStateForAllChains } from '../../store';
@@ -97,6 +99,7 @@ const SettingsSection = (props: {
   const explorerDefault = chainOriginal.explorer;
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const [verifyBackupOpen, setVerifyBackupOpen] = useState(false);
+  const [vaultPinsOpen, setVaultPinsOpen] = useState(false);
   const deviceLanguage =
     Platform.OS === 'ios'
       ? Settings.get('AppleLocale') || Settings.get('AppleLanguages')[0]
@@ -324,6 +327,21 @@ const SettingsSection = (props: {
 
   const handleVerifyBackupClose = () => {
     setVerifyBackupOpen(false);
+    setTimeout(() => {
+      setIsMainModalOpen(true);
+    }, 100);
+  };
+
+  // Vault pins (VD-3): same modal handoff as the backup check.
+  const handleOpenVaultPins = () => {
+    setIsMainModalOpen(false);
+    setTimeout(() => {
+      setVaultPinsOpen(true);
+    }, 100);
+  };
+
+  const handleVaultPinsClose = () => {
+    setVaultPinsOpen(false);
     setTimeout(() => {
       setIsMainModalOpen(true);
     }, 100);
@@ -688,6 +706,34 @@ const SettingsSection = (props: {
                 {rowDivider}
                 <TouchableOpacity
                   accessibilityRole="button"
+                  accessibilityLabel={t('home:vault_pins_settings_row')}
+                  style={styles.row}
+                  onPress={() => handleOpenVaultPins()}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={styles.rowIcon}>
+                      <Lock size={20} color={Colors.textGray400} />
+                    </View>
+                    <Text
+                      style={[
+                        Fonts.textSmall,
+                        styles.rowLabelText,
+                        { color: Colors.textGray800 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t('home:vault_pins_settings_row')}
+                    </Text>
+                  </View>
+                  <ChevronRight
+                    size={18}
+                    color={Colors.textGray200}
+                    style={styles.chevron}
+                  />
+                </TouchableOpacity>
+                {rowDivider}
+                <TouchableOpacity
+                  accessibilityRole="button"
                   accessibilityLabel={t('home:delete_ssp_key')}
                   // destructive action — semantic error, never amber
                   style={styles.row}
@@ -1024,6 +1070,7 @@ const SettingsSection = (props: {
         open={verifyBackupOpen}
         onClose={handleVerifyBackupClose}
       />
+      <VaultPinsModal open={vaultPinsOpen} onClose={handleVaultPinsClose} />
     </>
   );
 };

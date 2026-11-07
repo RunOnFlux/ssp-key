@@ -107,38 +107,54 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     useState<RecoveryRequestPayload | null>(null);
   const [chainSyncRequest, setChainSyncRequest] = useState<string | null>(null);
 
+  // Whether THIS socket connection has sent an authenticated join. Reset on
+  // every (re)connect and on leave, so a join is (re)sent exactly when needed.
+  const joinedRef = useRef(false);
+
   /**
-   * Emit an authenticated join event.
+   * Emit an authenticated join event (RA-1).
+   *
+   * The relay no longer accepts an unauthenticated join, and an unauthenticated
+   * join never protected anything anyway — so when the identity key material
+   * is not available yet NOTHING is sent. Pending requests are still picked
+   * up by the authenticated-identity GET poll (Home refresh / notification
+   * open), and the join is retried as soon as auth becomes available.
    */
   const emitAuthenticatedJoin = useCallback(
     async (socketToUse: Socket, identity: string) => {
+      if (!isAuthAvailable) {
+        console.log('[Socket] Join deferred until relay auth is available');
+        return;
+      }
       try {
-        if (isAuthAvailable) {
-          // Create join data to hash
-          const joinData = { wkIdentity: identity };
-          const auth = await createWkIdentityAuth('join', identity, joinData);
-          if (auth) {
-            console.log('[Socket] Emitting authenticated join');
-            socketToUse.emit('join', {
-              ...joinData,
-              ...auth,
-            });
-            return;
-          }
+        const joinData = { wkIdentity: identity };
+        const auth = await createWkIdentityAuth('join', identity, joinData);
+        if (!auth) {
+          console.log('[Socket] Join skipped: could not create relay auth');
+          return;
         }
-        // Fallback to unauthenticated join (for backward compatibility during transition)
-        console.log(
-          '[Socket] Emitting unauthenticated join (auth not available)',
-        );
-        socketToUse.emit('join', { wkIdentity: identity });
+        if (!socketToUse.connected) {
+          return;
+        }
+        console.log('[Socket] Emitting authenticated join');
+        socketToUse.emit('join', {
+          ...joinData,
+          ...auth,
+        });
+        joinedRef.current = true;
       } catch (error) {
         console.error('[Socket] Error creating auth for join:', error);
-        // Fallback to unauthenticated join
-        socketToUse.emit('join', { wkIdentity: identity });
       }
     },
     [createWkIdentityAuth, isAuthAvailable],
   );
+  // The connection effect below is keyed on wkIdentity only; its handlers
+  // reach the CURRENT join function (and with it the current auth state)
+  // through this ref.
+  const emitJoinRef = useRef(emitAuthenticatedJoin);
+  useEffect(() => {
+    emitJoinRef.current = emitAuthenticatedJoin;
+  }, [emitAuthenticatedJoin]);
 
   useEffect(() => {
     console.log('[Socket] Initializing SSP Key socket connection');
@@ -155,7 +171,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     newSocket.on('connect', () => {
       console.log('[Socket] Connected to SSP Relay');
-      emitAuthenticatedJoin(newSocket, wkIdentity);
+      joinedRef.current = false;
+      emitJoinRef.current(newSocket, wkIdentity);
     });
 
     newSocket.on('connect_error', (error) => {
@@ -164,6 +181,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     newSocket.on('disconnect', () => {
       console.log('[Socket] Disconnected from SSP Relay');
+      joinedRef.current = false;
     });
 
     // Handle transaction requests
@@ -344,9 +362,25 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       if (newSocket.connected) {
         newSocket.emit('leave', { wkIdentity });
       }
+      joinedRef.current = false;
       newSocket.close();
     };
   }, [wkIdentity]);
+
+  // Auth can become available after the socket connected (e.g. the identity
+  // witness script / pubkey are derived right after pairing): join then.
+  useEffect(() => {
+    if (
+      socket &&
+      wkIdentity &&
+      isAuthAvailable &&
+      socket.connected &&
+      !joinedRef.current &&
+      AppState.currentState === 'active'
+    ) {
+      emitAuthenticatedJoin(socket, wkIdentity);
+    }
+  }, [socket, wkIdentity, isAuthAvailable, emitAuthenticatedJoin]);
 
   // Tracks whether we emitted 'leave' on the way to background. iOS
   // briefly transitions to 'inactive' (not 'background') for system
@@ -363,12 +397,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     if (socket && wkIdentity) {
       subscription = AppState.addEventListener('change', (state) => {
         if (state === 'active') {
-          if (wasInBackground.current) {
+          if (wasInBackground.current || !joinedRef.current) {
             emitAuthenticatedJoin(socket, wkIdentity);
             wasInBackground.current = false;
           }
         } else if (state === 'background') {
           socket.emit('leave', { wkIdentity });
+          joinedRef.current = false;
           wasInBackground.current = true;
         }
       });

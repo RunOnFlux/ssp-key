@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import QRCode from 'react-native-qrcode-svg';
 import { generateMultisigAddress } from '../../lib/wallet';
 import { useAppSelector } from '../../hooks';

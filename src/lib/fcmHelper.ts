@@ -10,7 +10,7 @@ import {
   getToken,
   AuthorizationStatus,
 } from '@react-native-firebase/messaging';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from './keychain';
 import notifee, { EventType } from '@notifee/react-native';
 import { AppState, Platform } from 'react-native';
 

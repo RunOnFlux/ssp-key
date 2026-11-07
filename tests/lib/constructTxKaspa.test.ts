@@ -456,7 +456,7 @@ describe('decodeTransactionForApproval (kas)', () => {
     const utxos = [fakeUtxo(spend, 500000000n)];
     const { json } = await walletBundle(utxos, 150000000n, 20000n);
     const c = ctx(utxos);
-    const info = await decodeTransactionForApproval(json, KAS, [], c);
+    const info = await decodeTransactionForApproval(json, KAS, c);
     expect(c.fetchUtxos).toHaveBeenCalledWith([vaultAddress]);
     expect(info).toEqual({
       sender: vaultAddress,
@@ -465,7 +465,7 @@ describe('decodeTransactionForApproval (kas)', () => {
       fee: '0.0002',
       tokenSymbol: 'KAS',
       recipientCount: 1,
-      warnings: [],
+      kasWarnings: [],
       kasApproved: approvedFor(json, utxos),
     });
     // the summary is exactly what is shown: txid, fee, external outputs
@@ -480,21 +480,11 @@ describe('decodeTransactionForApproval (kas)', () => {
     });
   });
 
-  it('ignores relay-supplied utxos and still uses its own lookup', async () => {
+  it('takes no relay-supplied utxos and uses its own lookup', async () => {
     const utxos = [fakeUtxo(spend, 500000000n)];
     const { json } = await walletBundle(utxos, 150000000n, 20000n);
     const c = ctx(utxos);
-    const relayUtxos = [
-      {
-        txid: 'x',
-        vout: 0,
-        scriptPubKey: '',
-        satoshis: '1',
-        confirmations: 1,
-        coinbase: false,
-      },
-    ];
-    const info = await decodeTransactionForApproval(json, KAS, relayUtxos, c);
+    const info = await decodeTransactionForApproval(json, KAS, c);
     expect(info.fee).toBe('0.0002');
     expect(c.fetchUtxos).toHaveBeenCalledTimes(1);
   });
@@ -502,9 +492,9 @@ describe('decodeTransactionForApproval (kas)', () => {
   it('surfaces describeTransaction warnings', async () => {
     const utxos = [fakeUtxo(spend, 500000000n)];
     const { json } = await walletBundle(utxos, 100000000n, 200000000n); // 2 KAS fee
-    const info = await decodeTransactionForApproval(json, KAS, [], ctx(utxos));
+    const info = await decodeTransactionForApproval(json, KAS, ctx(utxos));
     expect(info.fee).toBe('2');
-    expect(info.warnings).toEqual(
+    expect(info.kasWarnings).toEqual(
       expect.arrayContaining(['fee-above-threshold']),
     );
   });
@@ -513,7 +503,7 @@ describe('decodeTransactionForApproval (kas)', () => {
     const real = fakeUtxo(spend, 5000000000n);
     const lie = { ...real, entry: { ...real.entry, amount: 500000000n } };
     const { json } = await walletBundle([lie], 400000000n, 20000n);
-    const info = await decodeTransactionForApproval(json, KAS, [], ctx([real]));
+    const info = await decodeTransactionForApproval(json, KAS, ctx([real]));
     expect(info.amount).toBe('decodingError');
     expect(info.sender).toBe('decodingError');
   });
@@ -521,7 +511,7 @@ describe('decodeTransactionForApproval (kas)', () => {
   it('fails closed with a UTXO-fetch reason when the lookup fails', async () => {
     const utxos = [fakeUtxo(spend, 500000000n)];
     const { json } = await walletBundle(utxos, 150000000n, 20000n);
-    const info = await decodeTransactionForApproval(json, KAS, [], {
+    const info = await decodeTransactionForApproval(json, KAS, {
       ...ctx(utxos),
       fetchUtxos: () => Promise.reject(new Error('offline')),
     });
@@ -532,13 +522,13 @@ describe('decodeTransactionForApproval (kas)', () => {
   it('fails closed without the paired xpubs, or on the wrong path', async () => {
     const utxos = [fakeUtxo(spend, 500000000n)];
     const { json } = await walletBundle(utxos, 150000000n, 20000n);
-    expect((await decodeTransactionForApproval(json, KAS, [])).amount).toBe(
+    expect((await decodeTransactionForApproval(json, KAS)).amount).toBe(
       'decodingError',
     );
     // path 0-1 is a different vault: its lookup cannot contain these inputs
     expect(
       (
-        await decodeTransactionForApproval(json, KAS, [], {
+        await decodeTransactionForApproval(json, KAS, {
           ...ctx(utxos),
           path: '0-1',
         })
@@ -546,7 +536,7 @@ describe('decodeTransactionForApproval (kas)', () => {
     ).toBe('decodingError');
     expect(
       (
-        await decodeTransactionForApproval(json, KAS, [], {
+        await decodeTransactionForApproval(json, KAS, {
           ...ctx(utxos),
           path: 'bogus',
         })
@@ -562,12 +552,12 @@ describe('decodeTransactionForApproval (kas)', () => {
     const tx = buildTx(utxos, to, 150000000n, 20000n, spend01);
     const json = JSON.stringify(K.createSigningBundle(tx, utxos, []));
     const c = ctx(utxos);
-    const info = await decodeTransactionForApproval(json, KAS, [], c);
+    const info = await decodeTransactionForApproval(json, KAS, c);
     expect(info.amount).toBe('decodingError');
     expect(info.errorReason).toBe('kas_wrong_vault');
     expect(c.fetchUtxos).not.toHaveBeenCalled();
     // …and the same bundle decodes at its real path
-    const ok = await decodeTransactionForApproval(json, KAS, [], {
+    const ok = await decodeTransactionForApproval(json, KAS, {
       ...c,
       path: '0-1',
     });
@@ -575,12 +565,7 @@ describe('decodeTransactionForApproval (kas)', () => {
   });
 
   it('never treats a kas payload as a utxolib hex transaction', async () => {
-    const info = await decodeTransactionForApproval(
-      '0100000001',
-      KAS,
-      [],
-      ctx([]),
-    );
+    const info = await decodeTransactionForApproval('0100000001', KAS, ctx([]));
     expect(info.amount).toBe('decodingError');
   });
 });

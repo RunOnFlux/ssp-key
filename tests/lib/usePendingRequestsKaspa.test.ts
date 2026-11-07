@@ -61,7 +61,24 @@ jest.mock('../../src/lib/kaspaVault', () => ({
     }),
 }));
 
+// The vault descriptor gate (VD-3) has its own suites; here the vault is
+// pinned so the Kaspa routing is exercised on its own.
+jest.mock('../../src/lib/vaultDescriptorGate', () => {
+  const actual = jest.requireActual('../../src/lib/vaultDescriptorGate');
+  return {
+    ...actual,
+    evaluateVaultDescriptor: jest.fn(() => ({
+      kind: 'ok',
+      descriptor: {},
+      hash: 'h',
+      pinKey: 'k',
+      persisted: true,
+    })),
+  };
+});
+
 import { usePendingRequests } from '../../src/screens/Home/hooks/usePendingRequests';
+import { requestDigestOfDecoded } from '../../src/lib/vaultApprovalBinding';
 
 const kasRequest = (requestId: string) =>
   ({
@@ -116,6 +133,10 @@ describe('usePendingRequests (kas)', () => {
     });
     expect(result.current.kasDecodeState).toEqual(ok);
     expect(result.current.decodedVaultTx).toEqual(decodedFor('a'));
+    // bound to the request it was decoded from (CHN-5)
+    expect(requestDigestOfDecoded(result.current.decodedVaultTx)).toEqual(
+      expect.any(String),
+    );
   });
 
   it('a stale decode never overwrites the verdict of a newer request', async () => {

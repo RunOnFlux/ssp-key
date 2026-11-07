@@ -19,9 +19,18 @@ import { cryptos } from '../types';
  * address, and inventing a value there would need a bespoke helper on both
  * sides of the protocol.
  *
- * The final level is non-hardened by design: the wallet holds this account's
- * xpub, so it derives pk_r(i) for a fresh i on every envelope rebuild. That
- * makes the recovery key rotatable per envelope.
+ * The final level is non-hardened so the wallet can derive pk_r(i) from this
+ * account's xpub, which is public (sync payload, GET /v1/recoverypub). A fresh
+ * i per envelope is therefore NOT a key rotation: BIP32 lets anyone who holds
+ * ONE released sk_r(i) plus the account xpub compute the account private key,
+ * and with it every past and future sk_r(j) (security review KEY-5,
+ * poc/recovery_parent_leak.mjs). Hardened derivation above this account keeps
+ * the consumer (0') and enterprise (100'+) keys out of reach.
+ *
+ * What actually protects an envelope after a release is (a) its inner layer,
+ * which still needs the wallet password, and (b) SSP Wallet replacing
+ * randomParams after every completed recovery. The derivation itself is left
+ * as is: changing it would invalidate every recovery xpub already published.
  */
 export const RECOVERY_ACCOUNT_INDEX = 99;
 

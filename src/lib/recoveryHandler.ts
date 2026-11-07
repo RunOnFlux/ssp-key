@@ -123,7 +123,9 @@ export function buildRecoveryResponse(params: {
   const bipParams = blockchains[identityChain].bip32;
 
   // sk_r(i) from the recovery account. The final two levels are non-hardened so
-  // the wallet can derive pk_r(i) from the published account xpub.
+  // the wallet can derive pk_r(i) from the published account xpub — which also
+  // means a released sk_r(i) plus that xpub yields the whole 99' account key
+  // (KEY-5). Only 99' is exposed; see lib/recoveryAccount.ts.
   const recoveryAccountHd = HDKey.fromExtendedKey(xprivRecovery, bipParams);
   const recoveryChild = recoveryAccountHd
     .deriveChild(RECOVERY_CHANGE_INDEX)

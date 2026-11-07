@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -13,6 +13,10 @@ interface VaultXpubRequestProps {
   vaultName: string;
   orgName: string;
   chain: string;
+  /** Organisation account index (m/48'/coin'/orgIndex'/…). */
+  orgIndex: unknown;
+  /** Vault slot within the organisation account. */
+  vaultIndex: unknown;
   actionStatus: (status: boolean) => void;
 }
 
@@ -21,6 +25,8 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
   vaultName,
   orgName,
   chain,
+  orgIndex,
+  vaultIndex,
   actionStatus,
 }) => {
   const { t } = useTranslation(['home', 'common']);
@@ -31,18 +37,47 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
     ? `${chainConfig.name} (${chainConfig.symbol})`
     : chain;
 
+  // The request on screen when the user started approving. A request the
+  // relay swaps in while authentication is open closes it and is never
+  // approved unseen (CHN-5 pattern). The organisation and vault indices pick
+  // the key account that is exported, so they are part of it (and shown).
+  const shownRequest = JSON.stringify([
+    vaultName,
+    orgName,
+    chain,
+    orgIndex,
+    vaultIndex,
+  ]);
+  const approvingRequest = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (
+      approvingRequest.current !== undefined &&
+      approvingRequest.current !== shownRequest
+    ) {
+      approvingRequest.current = undefined;
+      setAuthenticationOpen(false);
+    }
+  }, [shownRequest]);
+
   const approve = () => {
+    const approving = approvingRequest.current;
+    approvingRequest.current = undefined;
+    if (approving !== shownRequest) {
+      return;
+    }
     console.log('Approve vault xpub request');
     actionStatus(true);
   };
 
   const openAuthentication = () => {
     console.log('Open Authentication for vault xpub');
+    approvingRequest.current = shownRequest;
     setAuthenticationOpen(true);
   };
 
   const reject = () => {
     console.log('Reject vault xpub request');
+    approvingRequest.current = undefined;
     actionStatus(false);
   };
 
@@ -51,6 +86,8 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
     setAuthenticationOpen(false);
     if (status === true) {
       approve();
+    } else {
+      approvingRequest.current = undefined;
     }
   };
 
@@ -126,6 +163,49 @@ const VaultXpubRequest: React.FC<VaultXpubRequestProps> = ({
             selectable={true}
           >
             {chainDisplay}
+          </Text>
+        </View>
+
+        {/* Key account: which organisation account and vault slot */}
+        <View
+          style={[
+            Gutters.regularTMargin,
+            Gutters.regularLMargin,
+            Gutters.regularRMargin,
+            Layout.alignItemsCenter,
+          ]}
+        >
+          <Text
+            style={[
+              Fonts.textSmall,
+              Fonts.textBold,
+              { color: Colors.textGray400, marginBottom: 4 },
+            ]}
+          >
+            {t('home:vault_xpub_key_account')}:
+          </Text>
+        </View>
+        <View
+          style={[
+            Gutters.tinyHMargin,
+            {
+              backgroundColor: Colors.inputBackground,
+              borderRadius: 8,
+              padding: 12,
+              alignSelf: 'stretch',
+              borderWidth: 1,
+              borderColor: Colors.textGray200,
+            },
+          ]}
+        >
+          <Text
+            style={[Fonts.textSmall, Fonts.textBold, Fonts.textCenter]}
+            selectable={true}
+          >
+            {t('home:vault_xpub_key_account_value', {
+              orgIndex: String(orgIndex),
+              vaultIndex: String(vaultIndex),
+            })}
           </Text>
         </View>
       </View>

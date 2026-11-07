@@ -1,6 +1,18 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import VaultSignRequest from '../../src/components/VaultSignRequest/VaultSignRequest';
+import type { VaultDecodedTx } from '../../src/lib/transactions';
+import {
+  bindDecodedToRequest,
+  disarmVaultApproval,
+} from '../../src/lib/vaultApprovalBinding';
+import {
+  clearVaultVerdict,
+  publishVaultVerdict,
+  resetAllVaultPins,
+} from '../../src/lib/vaultPins';
+import type { VaultDescriptorVerdict } from '../../src/lib/vaultDescriptorGate';
+import type { VaultDescriptor } from '../../src/lib/vaultDescriptor';
 
 /**
  * Kaspa enterprise approval gate: approval is impossible while the own-lookup
@@ -22,7 +34,10 @@ jest.mock('../../src/hooks', () => {
   };
 });
 
-jest.mock('lucide-react-native', () => ({ Shield: () => null }));
+jest.mock(
+  'lucide-react-native',
+  () => new Proxy({}, { get: () => () => null }),
+);
 
 jest.mock('../../src/components/VaultSignRequest/VaultRiskStrip', () => ({
   __esModule: true,
@@ -69,11 +84,34 @@ jest.mock('../../src/components/request', () => {
   };
 });
 
-const decodedTx = {
-  sender: 'kaspa:pvault',
-  recipients: [{ address: 'kaspa:qrecipient', amount: '100000000' }],
-  fee: '30000',
+const DIGEST = 'digest-kas';
+
+// The descriptor gate (VD-3) has its own suites; here the vault is pinned so
+// the Kaspa gate is exercised on its own.
+const OK_VERDICT: VaultDescriptorVerdict = {
+  kind: 'ok',
+  descriptor: { orgId: 'org', vaultId: 'vault' } as unknown as VaultDescriptor,
+  hash: 'a'.repeat(64),
+  pinKey: 'org:vault',
+  persisted: true,
 };
+
+// A decoded view bound to the request it was decoded from (CHN-5).
+const decodedTx: VaultDecodedTx = bindDecodedToRequest(
+  {
+    sender: 'kaspa:pvault',
+    recipients: [{ address: 'kaspa:qrecipient', amount: '100000000' }],
+    fee: '30000',
+  },
+  DIGEST,
+);
+
+beforeEach(() => {
+  disarmVaultApproval();
+  clearVaultVerdict('vaultsign');
+  resetAllVaultPins();
+  publishVaultVerdict('vaultsign', DIGEST, OK_VERDICT);
+});
 
 const renderKas = (
   props: Partial<React.ComponentProps<typeof VaultSignRequest>> = {},

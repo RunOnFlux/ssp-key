@@ -1,4 +1,4 @@
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from './keychain';
 import * as CryptoJS from 'crypto-js';
 
 /**

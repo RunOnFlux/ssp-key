@@ -30,6 +30,7 @@ import { type KasVaultDecodeState } from '../../../lib/kaspaVault';
 import { type KasApprovedSummary } from '../../../lib/kaspa';
 import { parseProposalSimulation } from '../../../lib/vaultSimulation';
 import { type ParsedChainSyncRequest } from '../../../lib/chainSyncRequest';
+import { evmSigningRequestDigest } from '../../../lib/evmSigningApproval';
 import { type RecoveryRequestPayload } from '../../../lib/recoveryHandler';
 import { type ChainSyncProgressState } from './HomeProgress';
 
@@ -48,6 +49,7 @@ import { type ChainSyncProgressState } from './HomeProgress';
 const HomeRequests = (props: {
   submittingTransaction: boolean;
   rawTx: string;
+  /** Derivation path (`typeIndex-addressIndex`) of the pending tx request. */
   txPath: string;
   xpubWallet: string;
   xpubKey: string;
@@ -143,6 +145,10 @@ const HomeRequests = (props: {
     handleVerificationClose,
   } = props;
 
+  const evmSigningDigest = evmSigningData
+    ? evmSigningRequestDigest(evmSigningData)
+    : '';
+
   return (
     <>
       {!submittingTransaction && rawTx && xpubWallet && xpubKey && (
@@ -155,11 +161,9 @@ const HomeRequests = (props: {
         <TransactionRequest
           key={rawTx}
           rawTx={rawTx}
+          path={txPath}
           chain={activeChain}
           utxos={txUtxos}
-          path={txPath}
-          xpubWallet={xpubWallet}
-          xpubKey={xpubKey}
           activityStatus={activityStatus}
           actionStatus={handleTransactionRequestAction}
         />
@@ -199,11 +203,16 @@ const HomeRequests = (props: {
         />
       )}
       {evmSigningData && (
+        // Keyed on the request: a request swapped in mid-approval remounts
+        // the screen; the approval is bound to the digest (item 4).
         <EvmSigningRequest
+          key={evmSigningDigest}
           activityStatus={activityStatus}
           dataToSign={evmSigningData.data || ''}
+          messageType={evmSigningData.messageType}
           chain={evmSigningData.chain as keyof cryptos}
           walletInUse={evmSigningData.walletInUse}
+          requestDigest={evmSigningDigest}
           actionStatus={handleEvmSigningRequestAction}
         />
       )}
@@ -228,6 +237,8 @@ const HomeRequests = (props: {
           vaultName={vaultXpubData.vaultName}
           orgName={vaultXpubData.orgName}
           chain={vaultXpubData.chain}
+          orgIndex={vaultXpubData.orgIndex}
+          vaultIndex={vaultXpubData.vaultIndex}
           actionStatus={handleVaultXpubRequestAction}
         />
       )}

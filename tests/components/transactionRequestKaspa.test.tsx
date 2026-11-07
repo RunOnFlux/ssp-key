@@ -1,19 +1,15 @@
 import React from 'react';
-import * as CryptoJS from 'crypto-js';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import TransactionRequest from '../../src/components/TransactionRequest/TransactionRequest';
 import { decodeTransactionForApproval } from '../../src/lib/transactions';
 
 /**
  * Kaspa approval wiring: the decode must receive the pair's DECRYPTED xpubs
- * and the request path (the vault is derived on-device, never read from the
- * payload), the fee is shown, describeTransaction warnings are surfaced and a
- * failed own-lookup decode blocks approval.
+ * (this chain's stored ones) and the request path (the vault is derived
+ * on-device, never read from the payload), the fee is shown,
+ * describeTransaction warnings are surfaced and a failed own-lookup decode
+ * blocks approval.
  */
-
-const ENC_KEY = 'enc-key';
-const PASSWORD = 'pw';
-const PW_FOR_ENCRYPTION = ENC_KEY + PASSWORD;
 
 jest.mock('react-native-keychain', () => ({
   getGenericPassword: jest.fn((opts: { service: string }) =>
@@ -47,6 +43,16 @@ jest.mock('react-native-toast-message', () => ({
 jest.mock('../../src/hooks', () => {
   const anyStyle = new Proxy({}, { get: () => ({}) });
   const anyColor = new Proxy({}, { get: () => '#000000' });
+  // This chain's stored (encrypted) xpubs, as the screen reads them.
+  const enc = (v: string) =>
+    require('crypto-js')
+      .AES.encrypt(v, 'enc-key' + 'pw')
+      .toString();
+  const chainState = {
+    xpubWallet: enc('XPUB_WALLET'),
+    xpubKey: enc('XPUB_KEY'),
+  };
+  const state = new Proxy({}, { get: () => chainState });
   return {
     useTheme: () => ({
       Fonts: anyStyle,
@@ -55,6 +61,7 @@ jest.mock('../../src/hooks', () => {
       Common: anyStyle,
       Colors: anyColor,
     }),
+    useAppSelector: (selector: (s: unknown) => unknown) => selector(state),
   };
 });
 
@@ -112,21 +119,13 @@ const decodeMock = decodeTransactionForApproval as jest.MockedFunction<
   typeof decodeTransactionForApproval
 >;
 
-const encrypt = (v: string) =>
-  CryptoJS.AES.encrypt(v, PW_FOR_ENCRYPTION).toString();
-
-const renderKas = (
-  actionStatus: jest.Mock = jest.fn(),
-  xpubWallet = encrypt('XPUB_WALLET'),
-) =>
+const renderKas = (actionStatus: jest.Mock = jest.fn()) =>
   render(
     <TransactionRequest
       rawTx='{"format":"kaspa-core-signing-bundle"}'
       chain="kas"
       utxos={[]}
       path="0-2"
-      xpubWallet={xpubWallet}
-      xpubKey={encrypt('XPUB_KEY')}
       activityStatus={false}
       actionStatus={actionStatus}
     />,
@@ -157,14 +156,13 @@ describe('TransactionRequest (kas)', () => {
       fee: '2',
       tokenSymbol: 'KAS',
       recipientCount: 1,
-      warnings: ['fee-above-threshold'],
+      kasWarnings: ['fee-above-threshold'],
     });
     renderKas();
     await settle();
     expect(decodeMock).toHaveBeenCalledWith(
       '{"format":"kaspa-core-signing-bundle"}',
       'kas',
-      [],
       { xpubWallet: 'XPUB_WALLET', xpubKey: 'XPUB_KEY', path: '0-2' },
     );
     expect(screen.getByTestId('fee')).toHaveTextContent('2');
@@ -201,7 +199,7 @@ describe('TransactionRequest (kas)', () => {
       fee: '2',
       tokenSymbol: 'KAS',
       recipientCount: 1,
-      warnings: [],
+      kasWarnings: [],
       kasApproved: APPROVED,
     });
     const actionStatus = jest.fn();
@@ -220,7 +218,7 @@ describe('TransactionRequest (kas)', () => {
       fee: '2',
       tokenSymbol: 'KAS',
       recipientCount: 1,
-      warnings: [],
+      kasWarnings: [],
     });
     const actionStatus = jest.fn();
     renderKas(actionStatus);
@@ -231,7 +229,7 @@ describe('TransactionRequest (kas)', () => {
     expect(actionStatus).not.toHaveBeenCalledWith(true);
   });
 
-  it('re-decodes when the paired xpubs change (effect deps)', async () => {
+  it('re-decodes when the request path changes (effect deps)', async () => {
     decodeMock.mockResolvedValue({
       sender: 'kaspa:pvault',
       receiver: 'kaspa:qrecipient',
@@ -239,7 +237,7 @@ describe('TransactionRequest (kas)', () => {
       fee: '2',
       tokenSymbol: 'KAS',
       recipientCount: 1,
-      warnings: [],
+      kasWarnings: [],
       kasApproved: APPROVED,
     });
     const actionStatus = jest.fn();
@@ -251,9 +249,7 @@ describe('TransactionRequest (kas)', () => {
         rawTx='{"format":"kaspa-core-signing-bundle"}'
         chain="kas"
         utxos={[]}
-        path="0-2"
-        xpubWallet={encrypt('XPUB_WALLET_2')}
-        xpubKey={encrypt('XPUB_KEY')}
+        path="0-3"
         activityStatus={false}
         actionStatus={actionStatus}
       />,
@@ -263,8 +259,7 @@ describe('TransactionRequest (kas)', () => {
     expect(decodeMock).toHaveBeenLastCalledWith(
       '{"format":"kaspa-core-signing-bundle"}',
       'kas',
-      [],
-      { xpubWallet: 'XPUB_WALLET_2', xpubKey: 'XPUB_KEY', path: '0-2' },
+      { xpubWallet: 'XPUB_WALLET', xpubKey: 'XPUB_KEY', path: '0-3' },
     );
   });
 });

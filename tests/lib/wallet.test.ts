@@ -82,6 +82,48 @@ describe('Wallet Lib', () => {
       );
     });
 
+    test('refuses to derive keys from an empty mnemonic (undecryptable seed)', () => {
+      expect(() => getMasterXpriv('', 48, 1, 0, 'p2sh', 'flux')).toThrow(
+        /Invalid mnemonic/,
+      );
+      expect(() => getMasterXpub('', 48, 1, 0, 'p2sh', 'flux')).toThrow(
+        /Invalid mnemonic/,
+      );
+    });
+
+    test('derives keys from a restored non-standard phrase (bad checksum)', () => {
+      const words = mnemonic.split(' ');
+      words[words.length - 1] = 'abandon';
+      const badChecksum = words.join(' ');
+      expect(validateMnemonic(badChecksum)).toBe(false);
+      const xpub = getMasterXpub(badChecksum, 48, 1, 0, 'p2sh', 'flux');
+      expect(xpub).toMatch(/^xpub/);
+      expect(xpub).not.toBe(getMasterXpub(mnemonic, 48, 1, 0, 'p2sh', 'flux'));
+      expect(getMasterXpub(badChecksum, 48, 1, 0, 'p2sh', 'flux')).toBe(xpub);
+    });
+
+    test('derives keys from a phrase outside the English word list', () => {
+      // Spanish BIP-39 words (accented, NFKD-normalised on derivation)
+      const spanish =
+        'ábaco ábaco ábaco ábaco ábaco ábaco ábaco ábaco ábaco ábaco ábaco abierto';
+      expect(validateMnemonic(spanish)).toBe(false);
+      expect(getMasterXpub(spanish, 48, 1, 0, 'p2sh', 'flux')).toMatch(/^xpub/);
+    });
+
+    test('refuses to derive keys from garbage (undecryptable seed)', () => {
+      for (const garbage of [
+        'ab#cd',
+        'one two three',
+        `${mnemonic} extra`,
+        mnemonic.replace(' ', '  '),
+        mnemonic.replace('a', '1'),
+      ]) {
+        expect(() => getMasterXpriv(garbage, 48, 1, 0, 'p2sh', 'flux')).toThrow(
+          /Invalid mnemonic/,
+        );
+      }
+    });
+
     test('should return generateMultisigAddressEVM data when value is valid', () => {
       const res = generateMultisigAddressEVM(
         'xpub6DrK6ePttTnvR7NRoCkLEYRdNHb8y5oRbzJLeDCv8dCcGJ3yamC9y37iKpAdUnyjmeb6wphWTTRpWFHPdTe8hUDkCUN7YXM5M834FmHr9K5',

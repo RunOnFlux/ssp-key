@@ -23,6 +23,7 @@ jest.mock('@notifee/react-native', () => ({
 jest.mock('react-native-keychain', () => ({
   getGenericPassword: jest.fn(),
   setGenericPassword: jest.fn(),
+  resetGenericPassword: jest.fn(() => Promise.resolve(true)),
   STORAGE_TYPE: { AES_GCM_NO_AUTH: 'AESGCMNoAuth' },
   ACCESSIBLE: { WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WhenUnlockedThisDeviceOnly' },
 }));

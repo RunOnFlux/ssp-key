@@ -13,7 +13,7 @@ import { explorerAddressUrl } from '../../lib/explorerUrl';
 import { MONOSPACE_FONT } from '../../lib/typography';
 import { PrimaryButton, SuccessHeader } from '../ui';
 import { cryptos } from '../../types';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import Toast from 'react-native-toast-message';
 import { generateMultisigAddress } from '../../lib/wallet';
 import BlurOverlay from '../../BlurOverlay';

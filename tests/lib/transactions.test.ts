@@ -194,7 +194,7 @@ describe('Transactions Lib', () => {
   describe('decodeTransactionForApproval (legacy 2-of-2)', () => {
     test('should return error values for invalid EVM JSON', async () => {
       const res = await decodeTransactionForApproval('{}', 'sepolia');
-      expect(res).toEqual({
+      expect(res).toMatchObject({
         sender: 'decodingError',
         receiver: 'decodingError',
         amount: 'decodingError',
@@ -206,8 +206,8 @@ describe('Transactions Lib', () => {
     });
 
     test('should return error values for EVM JSON passed as UTXO chain', async () => {
-      const res = await decodeTransactionForApproval(rawTxSepolia, 'flux', []);
-      expect(res).toEqual({
+      const res = await decodeTransactionForApproval(rawTxSepolia, 'flux');
+      expect(res).toMatchObject({
         sender: 'decodingError',
         receiver: 'decodingError',
         amount: 'decodingError',
@@ -216,24 +216,19 @@ describe('Transactions Lib', () => {
       });
     });
 
-    test('should decode valid Flux UTXO transaction', async () => {
-      const res = await decodeTransactionForApproval(rawTxFlux, 'flux', []);
-      expect(res).toEqual({
-        sender: 't3VhYxSXapJEq2mH1z5MmFUcVLYvrYNfqbv',
-        receiver: 't3cwthwVvGg7WKkxhzw87xnDDsdb9kS92x3',
-        amount: '0.0009968',
-        fee: '-0.0009968',
-        tokenSymbol: 'FLUX',
-        recipientCount: 1,
+    test('fails closed on a real Flux transaction without key material', async () => {
+      // The decode used to read the sender from input 0's embedded script and
+      // print a negative fee. Without this device's own xpubs + the request
+      // path nothing can be verified, so it now refuses (C-2 / H-2). The
+      // verified flows are covered in consumerUtxo.test.ts.
+      const res = await decodeTransactionForApproval(rawTxFlux, 'flux');
+      expect(res).toMatchObject({
+        sender: 'decodingError',
+        receiver: 'decodingError',
+        amount: 'decodingError',
+        fee: 'decodingError',
       });
-    });
-
-    test('sums amount and counts recipients for a multi-output tx', async () => {
-      // Rebuild the same decode against a crafted 2-recipient tx would require
-      // a fixture; instead assert the single-recipient invariant here and rely
-      // on the summation logic (recipientTotal) covered by the field above.
-      const res = await decodeTransactionForApproval(rawTxFlux, 'flux', []);
-      expect(res.recipientCount).toBe(1);
+      expect(res.error).toMatch(/key material/);
     });
 
     test('should decode valid Sepolia EVM transaction', async () => {
@@ -248,7 +243,7 @@ describe('Transactions Lib', () => {
         fee: '0.000332876934602552',
         token: '',
         tokenSymbol: 'TEST-ETH',
-        data: '0x',
+        data: '',
       });
     });
 
@@ -335,7 +330,7 @@ describe('Transactions Lib', () => {
 
     test('should return error values for invalid EVM JSON in EVM decoder', async () => {
       const res = await decodeEVMTransactionForApproval('{}', 'sepolia');
-      expect(res).toEqual({
+      expect(res).toMatchObject({
         sender: 'decodingError',
         receiver: 'decodingError',
         amount: 'decodingError',
@@ -723,8 +718,10 @@ describe('Transactions Lib', () => {
 
   describe('decodeVaultTransaction — EVM fee calculation', () => {
     test('fee = totalGas * totalMaxFeePerGas (exact math)', () => {
+      // Target differs from the sender: a call to the account itself is
+      // refused outright by the EVM call-safety rules (C-4).
       const callData = encodeExecute(
-        '0x0000000000000000000000000000000000000001',
+        '0x0000000000000000000000000000000000000002',
         '1',
       );
 
@@ -747,8 +744,10 @@ describe('Transactions Lib', () => {
     });
 
     test('fee with large gas values does not lose precision', () => {
+      // Target differs from the sender: a call to the account itself is
+      // refused outright by the EVM call-safety rules (C-4).
       const callData = encodeExecute(
-        '0x0000000000000000000000000000000000000001',
+        '0x0000000000000000000000000000000000000002',
         '1',
       );
 

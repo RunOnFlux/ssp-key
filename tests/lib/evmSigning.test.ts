@@ -102,7 +102,8 @@ import {
 } from '../../src/lib/evmSigning';
 
 // ---- Test data helpers ----
-const MOCK_MESSAGE = 'test message to sign';
+// Consumer co-sign only accepts EIP-191 personal-message preimages (AA-2).
+const MOCK_MESSAGE = '\x19Ethereum Signed Message:\n20test message to sign';
 const MOCK_PRIV_KEY = '0x' + 'aa'.repeat(32);
 const MOCK_PUB_KEY_HEX = 'bb'.repeat(33);
 const MOCK_WALLET_PUB_KEY_HEX = 'cc'.repeat(33);
@@ -175,6 +176,33 @@ describe('evmSigning', () => {
   // continueSigningSchnorrMultisig — Legacy 2-of-2
   // ==========================================================================
   describe('continueSigningSchnorrMultisig()', () => {
+    test.each([
+      ['a raw eth_sign string', 'test message to sign'],
+      [
+        'an EIP-712 \\x19\\x01 preimage',
+        '\x19\x01' + 'a'.repeat(32) + 'b'.repeat(32),
+      ],
+      ['a wrong length prefix', '\x19Ethereum Signed Message:\n5test message'],
+      ['typed-data JSON', JSON.stringify({ primaryType: 'Permit' })],
+    ])(
+      'AA-2: refuses %s before touching the signer or nonce',
+      (_label, data) => {
+        expect(() =>
+          continueSigningSchnorrMultisig(
+            data,
+            makeKeyKeypair(),
+            MOCK_WALLET_PUB_KEY_HEX,
+            makeWalletPublicNonces(),
+            makeKeyNonce(),
+            MOCK_SIG_ONE_HEX,
+            MOCK_CHALLENGE_HEX,
+          ),
+        ).toThrow(/EIP-191|length prefix/);
+        expect(mockCreateSchnorrSigner).not.toHaveBeenCalled();
+        expect(mockRestorePubNonces).not.toHaveBeenCalled();
+      },
+    );
+
     test('should create signer from key private key', () => {
       continueSigningSchnorrMultisig(
         MOCK_MESSAGE,

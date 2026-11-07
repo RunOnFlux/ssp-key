@@ -17,7 +17,7 @@ import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import { useKeyboardVisible } from '../../hooks/keyboardVisible';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import * as CryptoJS from 'crypto-js';
 

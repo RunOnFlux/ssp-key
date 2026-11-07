@@ -111,7 +111,7 @@ describe('ConstructTx Lib', () => {
       );
     });
 
-    test('should return signTransaction data when value is valid', () => {
+    test('signTransaction refuses an input that carries no wallet-signed 2-of-2 script', () => {
       // Pre-computed test data derived from mnemonic:
       // 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
       // Using BIP48 derivation for Flux (coin 19167), accounts 0 and 1, p2sh script type
@@ -138,28 +138,33 @@ describe('ConstructTx Lib', () => {
       const fakeTxId =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-      // Sign the transaction
-      const signedTx = signTransaction(
-        unsignedTxHex,
-        'flux',
-        privateKeyWIF,
-        redeemScriptHex,
-        '', // no witness script for p2sh
-        [
-          {
-            txid: fakeTxId,
-            vout: 0,
-            scriptPubKey: scriptPubKeyHex,
-            satoshis: '100000',
-            confirmations: 100,
-            coinbase: false,
-          },
-        ],
-      );
-
-      expect(typeof signedTx).toBe('string');
-      expect(signedTx.length).toBeGreaterThan(unsignedTxHex.length);
-      expect(signedTx).not.toBe(unsignedTxHex);
+      // The key only co-signs inputs that already carry the wallet's partial
+      // signature over the key's own derived 2-of-2 script (C-2 / UTXO-8).
+      // The full verified flow is covered in consumerUtxo.test.ts.
+      const verified = {
+        scripts: {
+          address: 't3fxsCXJHeGmaDP7Xu7UbjXUM7opop9Mf4K',
+          scriptPubKey: Buffer.from(scriptPubKeyHex, 'hex'),
+          redeemScript: Buffer.from(redeemScriptHex, 'hex'),
+          walletPubKey: Buffer.from(
+            '03246fe832ca2c161020db8fedf91a70540d3b6554bc105eb30f7fb67ce83867ca',
+            'hex',
+          ),
+          keyPubKey: Buffer.from(
+            '037558d40625e76a85afc55040fdc4c13ee24b6dad4b2dddd7caf1275220a67493',
+            'hex',
+          ),
+        },
+        sender: 't3fxsCXJHeGmaDP7Xu7UbjXUM7opop9Mf4K',
+        recipients: [],
+        change: '50000',
+        fee: '50000',
+        maxFee: '1000000000',
+        inputs: [{ txid: fakeTxId, vout: 0, satoshis: '100000' }],
+      };
+      expect(() =>
+        signTransaction(unsignedTxHex, 'flux', privateKeyWIF, verified),
+      ).toThrow(/does not spend from this wallet/);
     });
 
     test('should return selectPublicNonce data when value is valid', () => {
@@ -201,6 +206,12 @@ describe('ConstructTx Lib', () => {
             '020e2cade92e0e199e6833e0081943a0e5226344b8bf17357a406a80ed762a5747',
           kTwoPublic:
             '030e2cade92e0e199e6833e0081943a0e5226344b8bf17357a406a80ed762a5747',
+        },
+        {
+          sender: rawTxSepolia.userOpRequest.sender,
+          walletPubKey: '',
+          keyPubKey: '',
+          opHash: rawTxSepolia.opHash,
         },
       );
     });

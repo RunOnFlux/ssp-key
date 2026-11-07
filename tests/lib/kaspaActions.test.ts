@@ -5,7 +5,7 @@
  *    maybe-broadcast and never reports it as a success, and offers the
  *    guarded reset on a corrupt ledger;
  *  - handleVaultSignAction (enterprise): the fail-closed decode gate, the kas
- *    co-sign branch and the wallet_only pass-through;
+ *    co-sign branch, and wallet_only failing closed;
  *  - handleFluxNodeStart: refuses every chain but flux.
  */
 import * as CryptoJS from 'crypto-js';
@@ -64,7 +64,29 @@ jest.mock('../../src/lib/wallet', () => ({
   getLibId: jest.fn(() => 'kaspa'),
 }));
 
+// The vault descriptor checks (VD-3 / VD-4) have their own suites; here the
+// vault is pinned so the Kaspa branch is exercised on its own.
+jest.mock('../../src/lib/vaultDescriptorGate', () => {
+  const actual = jest.requireActual('../../src/lib/vaultDescriptorGate');
+  return {
+    ...actual,
+    requireVaultDescriptor: jest.fn(() => ({
+      kind: 'ok',
+      descriptor: {},
+      hash: 'h',
+      pinKey: 'k',
+      persisted: true,
+    })),
+    commitVaultPin: jest.fn(),
+  };
+});
+
 import { approveTransaction } from '../../src/screens/Home/actions/signingActions';
+import {
+  armVaultApproval,
+  disarmVaultApproval,
+  vaultRequestDigest,
+} from '../../src/lib/vaultApprovalBinding';
 import {
   handleFluxNodeStart,
   handleVaultSignAction,
@@ -236,6 +258,12 @@ describe('approveTransaction (kas)', () => {
 });
 
 describe('handleVaultSignAction (kas)', () => {
+  // CHN-5: the approval screen arms the digest of the request it showed.
+  const signShown = async (ctx: HomeActionContext) => {
+    armVaultApproval(vaultRequestDigest(ctx.vaultSigningData));
+    await handleVaultSignAction(ctx);
+  };
+  afterEach(() => disarmVaultApproval());
   const vaultData = (extra: Record<string, unknown> = {}) => ({
     chain: 'kas',
     orgIndex: 100,
@@ -263,7 +291,7 @@ describe('handleVaultSignAction (kas)', () => {
       vaultSigningData: vaultData() as never,
       kasDecodeState: state,
     });
-    await handleVaultSignAction(ctx);
+    await signShown(ctx);
     expect(keychain).not.toHaveBeenCalled();
     expect(mockSignVault).not.toHaveBeenCalled();
     expect(ctx.postAction).not.toHaveBeenCalled();
@@ -281,7 +309,7 @@ describe('handleVaultSignAction (kas)', () => {
       vaultSigningData: vaultData({ signingMode: 'wallet_only' }) as never,
       kasDecodeState: null,
     });
-    await handleVaultSignAction(ctx);
+    await signShown(ctx);
     expect(ctx.postAction).not.toHaveBeenCalled();
   });
 
@@ -296,7 +324,7 @@ describe('handleVaultSignAction (kas)', () => {
       vaultSigningData: vaultData() as never,
       kasDecodeState: ok,
     });
-    await handleVaultSignAction(ctx);
+    await signShown(ctx);
     const opts = mockSignVault.mock.calls[0][0] as {
       vaultXpriv: string;
       vaultIndex: number;
@@ -320,24 +348,22 @@ describe('handleVaultSignAction (kas)', () => {
     );
   });
 
-  it('wallet_only passes the wallet bundle through without signing', async () => {
+  // There is no Kaspa vault-descriptor check (VD-4) yet, so a wallet_only
+  // pass-through cannot be bound to the pinned vault: it fails closed.
+  it('wallet_only fails closed (no Kaspa VD-4 pass-through check yet)', async () => {
     const data = vaultData({ signingMode: 'wallet_only' });
     const ctx = baseCtx({
       vaultSigningData: data as never,
       kasDecodeState: ok,
     });
-    await handleVaultSignAction(ctx);
+    await signShown(ctx);
     expect(mockSignVault).not.toHaveBeenCalled();
-    expect(ctx.postAction).toHaveBeenCalledWith(
+    expect(ctx.postAction).not.toHaveBeenCalledWith(
       'enterprisevaultsigned',
-      JSON.stringify({
-        signedHex: data.walletSignedHex,
-        keyPubKey: '22'.repeat(32),
-        requestId: 'req-1',
-      }),
-      'kas',
-      '',
-      'wk',
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
     );
   });
 
@@ -349,7 +375,7 @@ describe('handleVaultSignAction (kas)', () => {
       vaultSigningData: vaultData() as never,
       kasDecodeState: ok,
     });
-    await handleVaultSignAction(ctx);
+    await signShown(ctx);
     expect(ctx.postAction).not.toHaveBeenCalled();
     expect(ctx.displayMessage).toHaveBeenCalledWith(
       'error',
@@ -380,13 +406,13 @@ describe('handleFluxNodeStart', () => {
       expect(keychain).not.toHaveBeenCalled();
       expect(ctx.displayMessage).toHaveBeenCalledWith(
         'error',
-        'home:err_flux_node_flux_only',
+        'home:err_vault_request_invalid',
       );
       expect(ctx.postAction).toHaveBeenCalledWith(
         'enterprisefluxnodestarted',
         JSON.stringify({
           requestId: 'node-1',
-          error: 'Flux node start is only available for Flux vaults',
+          error: 'Request refused: unsupported chain',
         }),
         chain,
         '',
@@ -395,13 +421,18 @@ describe('handleFluxNodeStart', () => {
     },
   );
 
-  it('lets flux through to key derivation', async () => {
+  it('does not refuse flux for its chain', async () => {
     const ctx = baseCtx();
     await handleFluxNodeStart(ctx, request('flux'));
-    expect(keychain).toHaveBeenCalled();
-    expect(ctx.displayMessage).not.toHaveBeenCalledWith(
-      'error',
-      'home:err_flux_node_flux_only',
+    expect(ctx.postAction).not.toHaveBeenCalledWith(
+      'enterprisefluxnodestarted',
+      JSON.stringify({
+        requestId: 'node-1',
+        error: 'Request refused: unsupported chain',
+      }),
+      'flux',
+      '',
+      'wk',
     );
   });
 });

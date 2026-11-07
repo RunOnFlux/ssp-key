@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
 import PoweredByFlux from '../../components/PoweredByFlux/PoweredByFlux';
 import { PrimaryButton } from '../../components/ui';
-import * as Keychain from 'react-native-keychain';
+import * as Keychain from '../../lib/keychain';
 import { clearSignHistory } from '../../lib/signHistory';
 
 type Props = { navigation: any };

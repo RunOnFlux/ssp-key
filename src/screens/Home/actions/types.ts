@@ -123,6 +123,9 @@ export interface HomeActionContext {
   setBatchVerifyWords: React.Dispatch<React.SetStateAction<string[]>>;
   // refs
   identityVerifyEntryRef: React.MutableRefObject<VerifyEntry | null>;
+  // Verification words of the single-chain sync that just finished, shown
+  // once its success screen is closed.
+  singleChainWordsRef: React.MutableRefObject<string[] | null>;
   nonceReplenishInProgressRef: React.MutableRefObject<boolean>;
   // socket values / clear callbacks
   evmSigningRequest: evmSigningRequest | null;

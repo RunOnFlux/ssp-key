@@ -11,14 +11,14 @@ import {
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import BigNumber from 'bignumber.js';
-import * as CryptoJS from 'crypto-js';
-import * as Keychain from 'react-native-keychain';
 import Authentication from '../Authentication/Authentication';
-import { useTheme } from '../../hooks';
-import {
-  decodeTransactionForApproval,
-  type KasApprovalContext,
+import { useAppSelector, useTheme } from '../../hooks';
+import { decodeTransactionForApproval } from '../../lib/transactions';
+import type {
+  ApprovalRecipient,
+  ApprovalWarning,
 } from '../../lib/transactions';
+import { loadConsumerKeyMaterial } from '../../lib/consumerKeys';
 import { decodeErc20Calldata } from '../../lib/calldataDecode';
 import { truncateAddress } from '../../lib/addressDisplay';
 import type { KasApprovedSummary } from '../../lib/kaspa';
@@ -38,43 +38,6 @@ import {
 } from '../request';
 
 /**
- * Kaspa decode context: the vault is derived on this device from the pair's
- * stored (encrypted) xpubs + the request path — never from the payload.
- */
-async function kasApprovalContext(
-  encryptedXpubWallet: string,
-  encryptedXpubKey: string,
-  path: string,
-): Promise<KasApprovalContext> {
-  const encryptionKey = await Keychain.getGenericPassword({
-    service: 'enc_key',
-  });
-  const passwordData = await Keychain.getGenericPassword({
-    service: 'sspkey_pw',
-  });
-  if (!passwordData || !encryptionKey) {
-    throw new Error('Unable to decrypt stored data');
-  }
-  const password = CryptoJS.AES.decrypt(
-    passwordData.password,
-    encryptionKey.password,
-  ).toString(CryptoJS.enc.Utf8);
-  const pwForEncryption = encryptionKey.password + password;
-  const xpubWallet = CryptoJS.AES.decrypt(
-    encryptedXpubWallet,
-    pwForEncryption,
-  ).toString(CryptoJS.enc.Utf8);
-  const xpubKey = CryptoJS.AES.decrypt(
-    encryptedXpubKey,
-    pwForEncryption,
-  ).toString(CryptoJS.enc.Utf8);
-  if (!xpubWallet || !xpubKey) {
-    throw new Error('Kaspa is not synced with SSP Wallet');
-  }
-  return { xpubWallet, xpubKey, path };
-}
-
-/**
  * Consumer transaction approval — rebuilt on the shared request blocks.
  *
  * Every displayed value comes from the SAME on-device decode as before
@@ -88,16 +51,20 @@ async function kasApprovalContext(
  * resets every displayed field synchronously and only the newest decode may
  * write state (see decodeSeqRef); until it resolves the screen shows the
  * loading state and approval is disabled.
+ *
+ * The decode is bound to the key's OWN key material for `path` (the stored
+ * wallet xpub + own xpub of this chain): sender, change, input values and the
+ * fee are derived on-device, never read from the request. Without a path or
+ * synced keys nothing can be verified, so the screen fails closed. The
+ * request's `utxos` are kept in the props for compatibility but are never
+ * used for any displayed or signed value.
  */
 const TransactionRequest = (props: {
   rawTx: string;
   chain: keyof cryptos;
-  utxos: utxo[];
-  // `typeIndex-addressIndex` of the sending vault plus the pair's ENCRYPTED
-  // xpubs; used by chains whose decode derives the vault on-device (Kaspa).
+  /** Request derivation path `typeIndex-addressIndex`. */
   path?: string;
-  xpubWallet?: string;
-  xpubKey?: string;
+  utxos: utxo[];
   activityStatus: boolean;
   // Kaspa approvals hand back exactly what was displayed; the signing path
   // refuses unless its own re-description is identical.
@@ -133,8 +100,16 @@ const TransactionRequest = (props: {
   const [kasApproved, setKasApproved] = useState<
     KasApprovedSummary | undefined
   >(undefined);
+  const [recipients, setRecipients] = useState<ApprovalRecipient[]>([]);
+  const [warnings, setWarnings] = useState<ApprovalWarning[]>([]);
+  const [nativeValue, setNativeValue] = useState('');
+  const [memo, setMemo] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
+  // Encrypted per-chain xpubs; decrypted only inside the decode run.
+  const chainState = useAppSelector((state) => state[props.chain]);
+  const encryptedXpubWallet = chainState?.xpubWallet;
+  const encryptedXpubKey = chainState?.xpubKey;
 
   const approve = () => {
     console.log('Approve');
@@ -195,6 +170,10 @@ const TransactionRequest = (props: {
     setMultiRecipient(false);
     setTxWarnings([]);
     setKasApproved(undefined);
+    setRecipients([]);
+    setWarnings([]);
+    setNativeValue('');
+    setMemo('');
     setToken('');
     setTokenSymbol('');
     setTxData('');
@@ -202,29 +181,19 @@ const TransactionRequest = (props: {
     setUsdRate(0); // never show a stale fiat value on a re-used component
     void (async function () {
       try {
-        const isKas = blockchains[props.chain].chainType === 'kas';
-        const kasContext = isKas
-          ? await kasApprovalContext(
-              props.xpubWallet ?? '',
-              props.xpubKey ?? '',
-              props.path ?? '',
-            )
-          : undefined;
+        const keyMaterial = await loadConsumerKeyMaterial(
+          encryptedXpubWallet,
+          encryptedXpubKey,
+          props.path,
+        );
         if (!isCurrentDecode()) {
           return;
         }
-        const txInfo = kasContext
-          ? await decodeTransactionForApproval(
-              props.rawTx,
-              props.chain,
-              props.utxos,
-              kasContext,
-            )
-          : await decodeTransactionForApproval(
-              props.rawTx,
-              props.chain,
-              props.utxos,
-            );
+        const txInfo = await decodeTransactionForApproval(
+          props.rawTx,
+          props.chain,
+          keyMaterial,
+        );
         if (!isCurrentDecode()) {
           return; // a newer payload arrived — these values are not on screen
         }
@@ -232,21 +201,19 @@ const TransactionRequest = (props: {
         setSendingAmount(txInfo.amount);
         setReceiverAddress(txInfo.receiver);
         setMultiRecipient((txInfo.recipientCount ?? 0) > 1);
+        setRecipients(txInfo.recipients ?? []);
+        setWarnings(txInfo.warnings ?? []);
+        setNativeValue(txInfo.nativeValue ?? '');
+        setMemo(txInfo.memo ?? '');
         setSenderAddress(txInfo.sender);
         setToken(txInfo.token || '');
         setTokenSymbol(txInfo.tokenSymbol);
         setTxData(txInfo.data || '');
-        setTxWarnings(txInfo.warnings ?? []);
+        // H-2: the fee is computed on-device for every chain and is always
+        // shown; a decode that cannot compute it fails below.
+        setFee(txInfo.fee);
+        setTxWarnings(txInfo.kasWarnings ?? []);
         setKasApproved(txInfo.kasApproved);
-        if (
-          (props.utxos && props.utxos.length) ||
-          blockchains[props.chain].chainType === 'evm' ||
-          blockchains[props.chain].chainType === 'sol' ||
-          // Kaspa's fee comes from this device's own UTXO lookup
-          blockchains[props.chain].chainType === 'kas'
-        ) {
-          setFee(txInfo.fee);
-        }
         // USD estimate for the chain's NATIVE asset — used for the native
         // amount and for the fee (fees are always native). Token amounts
         // never get a fiat estimate (never risk a wrong fiat value for
@@ -297,9 +264,7 @@ const TransactionRequest = (props: {
       // run still has in flight (including its USD rate fetch).
       decodeSeqRef.current += 1;
     };
-    // The xpubs select the vault the Kaspa decode derives: a change of pair
-    // must re-decode, never keep a verdict computed for another vault.
-  }, [props.rawTx, props.chain, props.path, props.xpubWallet, props.xpubKey]);
+  }, [props.rawTx, props.chain, props.path]);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
       type,
@@ -413,7 +378,34 @@ const TransactionRequest = (props: {
   } else if (token && txData && txData !== '0x') {
     // Unrecognized contract execution — generic action, raw hex in Advanced.
     actionText = t('home:action_contract_interaction');
+  } else if (token && !tokenSymbol) {
+    // Token this device does not know (Solana SPL mint): never borrow a
+    // symbol from the request — say so and show the raw units.
+    actionText = t('home:unknown_token_units', { amount: sendingAmount });
   }
+
+  // Solana SPL: the recipient card shows the verified OWNER when the wallet
+  // supplied one, otherwise the raw token account with a warning.
+  const splOwnerUnverified = warnings.includes('spl_owner_unverified');
+  if (!humanCalldata && recipients.length === 1) {
+    if (recipients[0].ownerVerified) {
+      recipientLabel = t('home:spl_recipient_verified');
+    } else if (splOwnerUnverified) {
+      recipientLabel = t('home:token_account');
+    }
+  }
+  // Unknown token, but only where an amount is shown in raw units: an ERC-20
+  // call on a contract this device does not list, or an unlisted SPL mint.
+  const showUnverifiedToken =
+    warnings.includes('unknown_token') &&
+    (!!humanCalldata || (!txData && !!token));
+  // KAS-4: every non-change destination is listed, not only the first.
+  const listAllRecipients = !humanCalldata && recipients.length > 1;
+  const contractCallWithValue =
+    warnings.includes('contract_call_with_value') && !!nativeValue;
+  // A token transfer (EVM token contract or Solana mint) always shows the
+  // token address in the main view.
+  const showTokenAddress = !!token && (!!humanCalldata || !txData);
 
   const hasAdvancedContent =
     !!senderAddress || (!!txData && txData !== '0x') || !!token;
@@ -507,10 +499,34 @@ const TransactionRequest = (props: {
                 )}
               />
             ) : null}
+            {contractCallWithValue ? (
+              <RiskBanner
+                severity="high"
+                title={t('home:risk_contract_call_value_title', {
+                  amount: nativeValue,
+                  symbol: blockchainConfig.symbol,
+                })}
+                messages={[t('home:risk_contract_call_value_desc')]}
+              />
+            ) : null}
             {!humanCalldata && token && txData && txData !== '0x' ? (
               <RiskBanner
-                severity="info"
+                severity={contractCallWithValue ? 'high' : 'info'}
                 title={t('home:risk_unreadable_contract_call')}
+              />
+            ) : null}
+            {showUnverifiedToken ? (
+              <RiskBanner
+                severity="high"
+                title={t('home:risk_unverified_token_title')}
+                messages={[t('home:risk_unverified_token_desc')]}
+              />
+            ) : null}
+            {splOwnerUnverified ? (
+              <RiskBanner
+                severity="high"
+                title={t('home:risk_spl_owner_unverified_title')}
+                messages={[t('home:risk_spl_owner_unverified_desc')]}
               />
             ) : null}
             <ActionCard
@@ -522,13 +538,38 @@ const TransactionRequest = (props: {
               }
               decodedOnDevice={true}
             />
-            {recipientAddress ? (
+            {listAllRecipients ? (
+              <>
+                <Text
+                  style={[
+                    Fonts.textSmall,
+                    { color: Colors.error, marginBottom: 8 },
+                  ]}
+                >
+                  {t('home:warn_multi_recipient_listed', {
+                    count: recipients.length,
+                  })}
+                </Text>
+                {recipients.map((recipient, index) => (
+                  <RecipientCard
+                    key={`${recipient.address}-${index}`}
+                    label={t('home:recipient_n', {
+                      amount: recipient.amount,
+                      symbol: token
+                        ? tokenSymbol || t('home:vault_sign_unknown_token')
+                        : blockchainConfig.symbol,
+                    })}
+                    address={recipient.address}
+                  />
+                ))}
+              </>
+            ) : recipientAddress ? (
               <RecipientCard
                 label={recipientLabel}
                 address={recipientAddress}
               />
             ) : null}
-            {multiRecipient ? (
+            {multiRecipient && !listAllRecipients ? (
               <Text
                 style={[
                   Fonts.textSmall,
@@ -537,6 +578,35 @@ const TransactionRequest = (props: {
               >
                 {t('home:warn_multi_recipient')}
               </Text>
+            ) : null}
+            {showTokenAddress ? (
+              <View style={[styles.mainBlock, Layout.fullWidth]}>
+                <Text
+                  style={[Fonts.textTinyTiny, { color: Colors.textGray400 }]}
+                >
+                  {blockchainConfig.chainType === 'sol'
+                    ? t('home:vault_sign_token_mint')
+                    : t('home:token_contract')}
+                </Text>
+                <Text
+                  style={[Fonts.textTinyTiny, styles.mono]}
+                  selectable={true}
+                >
+                  {token}
+                </Text>
+              </View>
+            ) : null}
+            {memo ? (
+              <View style={[styles.mainBlock, Layout.fullWidth]}>
+                <Text
+                  style={[Fonts.textTinyTiny, { color: Colors.textGray400 }]}
+                >
+                  {t('home:vault_sign_memo')}
+                </Text>
+                <Text style={[Fonts.textTiny]} selectable={true}>
+                  {memo}
+                </Text>
+              </View>
             ) : null}
             {fee ? (
               <FeeRow
@@ -692,6 +762,10 @@ const TransactionRequest = (props: {
 const styles = StyleSheet.create({
   mono: {
     fontFamily: MONOSPACE_FONT,
+  },
+  mainBlock: {
+    marginBottom: 8,
+    paddingHorizontal: 4,
   },
   advancedBlock: {
     marginBottom: 8,
