@@ -1,7 +1,8 @@
 name: android-build-self
-# Release builds on the self-hosted runner. It used to run on every push to
-# any branch; it now runs only for v* tags (or manually from a v* tag), behind
-# the android-release environment.
+# Release builds on the self-hosted runner, for master and v* tags only:
+# every push to master, every v* tag, and manual runs from master or a v*
+# tag. Other branches never get the signing key (protected master is the
+# boundary). Signing happens behind the android-release environment.
 #
 # The runner must be EPHEMERAL (registered with --ephemeral, one job per
 # fresh VM/container). On a persistent runner, code from any earlier job
@@ -9,6 +10,8 @@ name: android-build-self
 # keystore of the next release.
 on:
   push:
+    branches:
+      - master
     tags:
       - 'v*'
   workflow_dispatch:
@@ -22,7 +25,7 @@ concurrency:
 
 jobs:
   install-and-test:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ssp-key-android
     permissions:
       contents: read
@@ -50,7 +53,7 @@ jobs:
 
   build-android:
     needs: install-and-test
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ssp-key-android
     # Configure required reviewers on this environment; the signing secrets
     # live in the environment, not in repository secrets.
