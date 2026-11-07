@@ -1,9 +1,11 @@
 import * as K from '@runonflux/kaspa-core';
 import {
   decodeVaultKasTransaction,
+  kasVaultIndicesError,
   signKasVaultBundle,
   verifyKasVaultBundle,
 } from '../../src/lib/kaspaVault';
+import { KasLedgerConflictError } from '../../src/lib/kaspaLedger';
 import { generateAddressKeypair } from '../../src/lib/wallet';
 import {
   KAS,
@@ -68,6 +70,8 @@ async function proposal(
     tx,
     data: {
       chain: KAS,
+      orgIndex: ORG,
+      vaultIndex: VAULT,
       rawUnsignedTx: unsigned,
       walletSignedHex: walletSigned,
       inputDetails: JSON.stringify(
@@ -183,6 +187,8 @@ describe('Kaspa vault consolidation (recipient is the vault itself)', () => {
       vaultAddress,
       data: {
         chain: KAS,
+        orgIndex: ORG,
+        vaultIndex: VAULT,
         rawUnsignedTx: JSON.stringify(K.createSigningBundle(tx, claimed, [])),
         walletSignedHex: JSON.stringify(
           K.createSigningBundle(tx, claimed, partials),
@@ -348,20 +354,67 @@ describe('Kaspa vault co-sign', () => {
     expect(ledger.map.size).toBe(0);
   });
 
-  it('refuses a ledger mismatch', async () => {
+  it('refuses a ledger mismatch it cannot resolve by a proof', async () => {
     const utxos = [fakeUtxo(spend0, 500000000n)];
     const { data } = await proposal(utxos, [0]);
     const ledger = memoryLedger();
-    ledger.set(`${K.bytesToHex(utxos[0].outpoint.transactionId)}:0`, 1n);
-    await expect(
-      signKasVaultBundle({
-        data,
-        vaultXpriv: xprivs.Kk,
-        vaultIndex: VAULT,
-        ledger,
-        fetchUtxos: lookup(utxos),
-      }),
-    ).rejects.toThrow(/different amount/);
+    const outpoint = `${K.bytesToHex(utxos[0].outpoint.transactionId)}:0`;
+    ledger.set(outpoint, 1n);
+    const prove = jest.fn(() => Promise.reject(new Error('unprovable')));
+    const err = await signKasVaultBundle({
+      data,
+      vaultXpriv: xprivs.Kk,
+      vaultIndex: VAULT,
+      ledger,
+      fetchUtxos: lookup(utxos),
+      prove,
+    }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(KasLedgerConflictError);
+    expect((err as KasLedgerConflictError).unprovable).toEqual([outpoint]);
+    expect(prove).toHaveBeenCalledWith(
+      K.bytesToHex(utxos[0].outpoint.transactionId),
+      0,
+    );
+    expect(ledger.map.get(outpoint)).toBe(1n); // untouched
+    expect(ledger.flush).not.toHaveBeenCalled();
+  });
+
+  it('KAS-2: a poisoned entry the chain proves wrong is replaced and the real amount signs', async () => {
+    const utxos = [fakeUtxo(spend0, 500000000n)];
+    const { data } = await proposal(utxos, [0]);
+    const ledger = memoryLedger();
+    const outpoint = `${K.bytesToHex(utxos[0].outpoint.transactionId)}:0`;
+    ledger.set(outpoint, 499999999n); // a lying backend, once
+    const result = await signKasVaultBundle({
+      data,
+      vaultXpriv: xprivs.Kk,
+      vaultIndex: VAULT,
+      ledger,
+      fetchUtxos: lookup(utxos),
+      prove: () => Promise.resolve(500000000n),
+    });
+    expect(JSON.parse(result.signedHex).partials).toHaveLength(2);
+    expect(ledger.map.get(outpoint)).toBe(500000000n);
+    expect(ledger.flush).toHaveBeenCalledTimes(1);
+  });
+
+  it('KAS-2: an entry the chain proves RIGHT keeps refusing a lying lookup', async () => {
+    const utxos = [fakeUtxo(spend0, 500000000n)]; // the lookup lies: real 600
+    const { data } = await proposal(utxos, [0]);
+    const ledger = memoryLedger();
+    const outpoint = `${K.bytesToHex(utxos[0].outpoint.transactionId)}:0`;
+    ledger.set(outpoint, 600000000n);
+    const err = await signKasVaultBundle({
+      data,
+      vaultXpriv: xprivs.Kk,
+      vaultIndex: VAULT,
+      ledger,
+      fetchUtxos: lookup(utxos),
+      prove: () => Promise.resolve(600000000n),
+    }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(KasLedgerConflictError);
+    expect((err as KasLedgerConflictError).refused).toEqual([outpoint]);
+    expect(ledger.map.get(outpoint)).toBe(600000000n);
   });
 
   it('refuses a bundle carrying an invalid partial signature', async () => {
@@ -424,6 +477,8 @@ describe('Kaspa vault: mixed-script drain (C1)', () => {
     const redeems = detailRedeems(redeemHex(spend0), redeemHex(sAtt));
     const data = {
       chain: KAS,
+      orgIndex: ORG,
+      vaultIndex: VAULT,
       rawUnsignedTx: unsigned,
       inputDetails: utxos.map((u, index) => ({
         index,
@@ -507,5 +562,98 @@ describe('Kaspa vault: mixed-script drain (C1)', () => {
         fetchUtxos: lookup(utxos),
       }),
     ).rejects.toThrow(/not a signer/);
+  });
+});
+
+/**
+ * KAS-1 regression (poc/kas-poc-orgindex0.mjs): orgIndex 0 + vault 0 is the
+ * CONSUMER account; a forged "enterprise" request naming the consumer 2-of-2
+ * script used to pass every check and get the consumer UTXOs co-signed.
+ */
+describe('Kaspa vault: organisation / vault / address indices (KAS-1)', () => {
+  it.each([
+    ['orgIndex 0 (the consumer account)', { orgIndex: 0 }],
+    ['orgIndex 99 (the reserved recovery account)', { orgIndex: 99 }],
+    ['orgIndex as a string', { orgIndex: '100' }],
+    ['a fractional orgIndex', { orgIndex: 100.5 }],
+    ['orgIndex above 99999', { orgIndex: 100000 }],
+    ['no orgIndex', { orgIndex: undefined }],
+    ['a negative vaultIndex', { vaultIndex: -1 }],
+    ['a hardened vaultIndex', { vaultIndex: 2 ** 31 }],
+    ['a string vaultIndex', { vaultIndex: '0' }],
+  ])('decode and co-sign refuse %s', async (_label, over) => {
+    const utxos = [fakeUtxo(spend0, 500000000n)];
+    const { data } = await proposal(utxos, [0]);
+    const bad = { ...data, ...over };
+    expect(kasVaultIndicesError(bad)).toMatch(/Invalid Kaspa/);
+    const { state } = await decodeVaultKasTransaction(bad, lookup(utxos));
+    expect(state.status).toBe('failed');
+    expect(state.reasons[0]).toMatch(
+      /Invalid Kaspa (organisation|vault) index/,
+    );
+    const ledger = memoryLedger();
+    await expect(
+      signKasVaultBundle({
+        data: bad,
+        vaultXpriv: xprivs.Kk,
+        vaultIndex: VAULT,
+        ledger,
+        fetchUtxos: lookup(utxos),
+      }),
+    ).rejects.toThrow(/Invalid Kaspa/);
+    expect(ledger.map.size).toBe(0);
+  });
+
+  it('the consumer 0-0 script under orgIndex 0 is never co-signed', async () => {
+    const consumer = K.multisigSpend(
+      [MNEMONIC_W, MNEMONIC_KK].map((m) =>
+        K.hexToBytes(generateAddressKeypair(kasXpriv(m, 0), 0, 0, KAS).pubKey),
+      ),
+      2,
+    );
+    const utxos = [fakeUtxo(consumer, 100000000000n)];
+    const { data } = await proposal(utxos, [0]);
+    const forged = { ...data, orgIndex: 0, signingMode: 'dual' };
+    const ledger = memoryLedger();
+    await expect(
+      signKasVaultBundle({
+        data: forged,
+        vaultXpriv: kasXpriv(MNEMONIC_KK, 0),
+        vaultIndex: 0,
+        ledger,
+        fetchUtxos: lookup(utxos),
+      }),
+    ).rejects.toThrow(/Invalid Kaspa organisation index 0/);
+    expect(ledger.map.size).toBe(0);
+  });
+
+  it('refuses address indices that are not non-hardened integers', async () => {
+    const utxos = [fakeUtxo(spend0, 500000000n)];
+    const { data } = await proposal(utxos, [0]);
+    for (const addressIndex of [-1, 0.5, 2 ** 31, '0']) {
+      const bad = {
+        ...data,
+        inputDetails: [
+          { index: 0, addressIndex, redeemScript: redeemHex(spend0) },
+        ],
+      };
+      const { state } = await decodeVaultKasTransaction(bad, lookup(utxos));
+      expect(state.status).toBe('failed');
+      expect(state.reasons[0]).toMatch(/Invalid Kaspa input detail/);
+    }
+  });
+
+  it('the key derives with the request’s own vault index only', async () => {
+    const utxos = [fakeUtxo(spend0, 500000000n)];
+    const { data } = await proposal(utxos, [0]);
+    await expect(
+      signKasVaultBundle({
+        data,
+        vaultXpriv: xprivs.Kk,
+        vaultIndex: VAULT + 1,
+        ledger: memoryLedger(),
+        fetchUtxos: lookup(utxos),
+      }),
+    ).rejects.toThrow(/Invalid Kaspa vault index/);
   });
 });

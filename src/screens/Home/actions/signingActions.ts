@@ -20,12 +20,19 @@ import {
   RelayAuthUnavailableError,
 } from '../../../lib/constructTx';
 import {
+  kasBundleClaims,
+  kasLedgerProver,
   kasMaxFeeForUsdRate,
   kasVaultSpend,
   type KasApprovedSummary,
 } from '../../../lib/kaspa';
-import { openKasLedger } from '../../../lib/kaspaLedger';
+import {
+  openKasLedger,
+  reconcileKasLedgerClaims,
+  withKasLedgerLock,
+} from '../../../lib/kaspaLedger';
 import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
+import { handleKasLedgerConflict } from '../../../lib/kaspaLedgerConflict';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
 import { parseTypedData, typedDataMatchesChain } from '../../../lib/typedData';
 import {
@@ -353,14 +360,26 @@ export const approveTransaction = async (
       try {
         // min($100-equivalent, 5 KAS) — 5 KAS alone when no rate is known
         const maxFee = kasMaxFeeForUsdRate(await getCryptoUsdRate(chain));
-        ttxid = await cosignAndBroadcastKASTransaction({
-          chain,
-          bundleJson: rawTransaction,
-          vaultSpend,
-          keyPrivKeyHex: keyPair.privKey,
-          ledger: openKasLedger(),
-          approved: kasApproved,
-          maxFee,
+        // One Kaspa signing session at a time (KAS-3): the ledger snapshot
+        // is taken inside the lock, after any earlier session flushed.
+        ttxid = await withKasLedgerLock(async () => {
+          const ledger = openKasLedger();
+          // KAS-2: an outpoint this device signed under another amount is
+          // proven (and the entry replaced) or refused before signing.
+          await reconcileKasLedgerClaims(
+            ledger,
+            kasBundleClaims(rawTransaction),
+            kasLedgerProver(chain),
+          );
+          return cosignAndBroadcastKASTransaction({
+            chain,
+            bundleJson: rawTransaction,
+            vaultSpend,
+            keyPrivKeyHex: keyPair.privKey,
+            ledger,
+            approved: kasApproved,
+            maxFee,
+          });
         });
       } catch (error) {
         if (!(error instanceof KasMaybeBroadcastError)) {
@@ -449,6 +468,12 @@ export const approveTransaction = async (
     // Kaspa ledger unreadable / full: fail closed; a corrupt ledger also
     // offers the explicit (warned) reset.
     if (handleKasLedgerError(error, t, displayMessage)) {
+      console.log(error);
+      return;
+    }
+    // Kaspa signed-amount conflict (KAS-2): refused; an unprovable one
+    // offers the explicit per-outpoint reset.
+    if (handleKasLedgerConflict(error, t, displayMessage)) {
       console.log(error);
       return;
     }

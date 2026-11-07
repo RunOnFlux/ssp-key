@@ -52,10 +52,14 @@ import {
   type OwnVaultIdentity,
 } from '../../../lib/vaultDescriptorGate';
 import { verifyVaultUtxoAmounts } from '../../../lib/vaultUtxoAmounts';
-import { signKasVaultBundle } from '../../../lib/kaspaVault';
-import { openKasLedger } from '../../../lib/kaspaLedger';
+import {
+  kasVaultIndicesError,
+  signKasVaultBundle,
+} from '../../../lib/kaspaVault';
+import { openKasLedger, withKasLedgerLock } from '../../../lib/kaspaLedger';
 import { kasMaxFeeForUsdRate } from '../../../lib/kaspa';
 import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
+import { handleKasLedgerConflict } from '../../../lib/kaspaLedgerConflict';
 import { getCryptoUsdRate } from '../../../lib/rates';
 import { cryptos, publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
@@ -379,6 +383,16 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     }
     return;
   }
+  // KAS-1: a Kaspa enterprise request derives only under an org account
+  // (100…99999) with integer child indices — never the consumer 0' or the
+  // reserved 99'. Checked before any key is derived (and again at sign time).
+  if (
+    blockchains[vaultSigningData.chain as keyof cryptos]?.chainType === 'kas' &&
+    kasVaultIndicesError(vaultSigningData)
+  ) {
+    displayMessage('error', t('home:err_kas_vault_bad_index'), 8000);
+    return;
+  }
 
   // Hoist sensitive vars outside try so they can be cleared in catch/finally
   let vaultXpriv = '';
@@ -612,13 +626,17 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         await getCryptoUsdRate(vaultSigningData.chain),
       );
       commitPinBeforeSigning();
-      const kasResult = await signKasVaultBundle({
-        data: vaultSigningData,
-        vaultXpriv,
-        vaultIndex: vaultSigningData.vaultIndex,
-        ledger: openKasLedger(),
-        maxFee: kasMaxFee,
-      });
+      // One Kaspa signing session at a time (KAS-3); the ledger conflict
+      // reconcile (KAS-2) runs inside signKasVaultBundle before signing.
+      const kasResult = await withKasLedgerLock(() =>
+        signKasVaultBundle({
+          data: vaultSigningData,
+          vaultXpriv,
+          vaultIndex: vaultSigningData.vaultIndex,
+          ledger: openKasLedger(),
+          maxFee: kasMaxFee,
+        }),
+      );
       vaultXpriv = '';
       pwForEncryption = '';
       await postAction(
@@ -1147,6 +1165,11 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
     console.error('[Vault Signing] Error:', errMsg);
     // Kaspa ledger unreadable / full: refused, with the guarded reset offer.
     if (handleKasLedgerError(error, t, displayMessage)) {
+      return;
+    }
+    // Kaspa signed-amount conflict (KAS-2): refused; an unprovable one
+    // offers the explicit per-outpoint reset.
+    if (handleKasLedgerConflict(error, t, displayMessage)) {
       return;
     }
     displayMessage(
