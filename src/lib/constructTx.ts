@@ -312,6 +312,25 @@ export async function broadcastTx(
   }
 }
 
+/**
+ * The wallet built this EVM user operation around public nonces this SSP Key
+ * does not hold (`mismatch`), or this Key holds none at all (`missing`).
+ * Signing is refused either way; the cure is a public-nonce sync started from
+ * SSP Wallet. The Home actions turn this into an explanatory dialog.
+ */
+export class PublicNoncesMismatchError extends Error {
+  readonly reason: 'missing' | 'mismatch';
+  constructor(reason: 'missing' | 'mismatch') {
+    super(
+      reason === 'missing'
+        ? 'SSP Key Public nonces are missing'
+        : 'SSP Key Public nonces do not match',
+    );
+    this.name = 'PublicNoncesMismatchError';
+    this.reason = reason;
+  }
+}
+
 export function selectPublicNonce(
   rawTx: string,
   publicNonces: publicPrivateNonce[], // ssp Key
@@ -325,7 +344,7 @@ export function selectPublicNonce(
   // here restore public nonce
   const txPublicNonces = multiSigUserOp._getPublicNonces();
   if (!publicNonces || !publicNonces.length) {
-    throw new Error('SSP Key Public nonces are missing');
+    throw new PublicNoncesMismatchError('missing');
   }
   let nonceToUse;
   for (let i = 0; i < txPublicNonces.length; i += 1) {
@@ -341,7 +360,7 @@ export function selectPublicNonce(
   }
 
   if (!nonceToUse) {
-    throw new Error('SSP Key Public nonces do not match');
+    throw new PublicNoncesMismatchError('mismatch');
   }
   return nonceToUse;
 }
