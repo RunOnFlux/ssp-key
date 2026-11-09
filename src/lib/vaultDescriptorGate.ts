@@ -23,6 +23,7 @@ import { toCashAddress } from 'bchaddrjs';
 import { blockchains } from '@storage/blockchains';
 import type { cryptos } from '../types';
 import { isHdIndex, parseInputDetails } from './enterpriseGuards';
+import { assertChainTxVersion, assertTransparentOnly } from './consumerUtxo';
 import {
   chainFamily,
   deriveVaultAddress,
@@ -346,6 +347,9 @@ export function checkVaultUtxoTransaction(
       ins: unknown[];
       outs: Array<{ value: number; script: Buffer }>;
     };
+    // No shielded parts; ZEC must be v5 since NU7 (ZIP 2003).
+    assertTransparentOnly(tx);
+    assertChainTxVersion(tx, descriptor.chain as keyof cryptos);
     const entries = parseInputDetails(rawInputDetails);
     if (entries.length === 0 || entries.length !== tx.ins.length) {
       return {
