@@ -61,6 +61,8 @@ import { toCashAddress } from 'bchaddrjs';
 import { blockchains } from '@storage/blockchains';
 import { generateMultisigAddress, getLibId } from './wallet';
 import { maxConsumerFee, parseConsumerDerivationPath } from './consumerGuards';
+import { verifyUtxoSignature } from './fastSecp256k1';
+import type { ApprovalProgressListener } from './approvalProgress';
 import type { cryptos, utxo } from '../types';
 
 // utxo-lib ships no types and the local declaration (src/utxolib.d.ts) only
@@ -740,6 +742,85 @@ function inputSignatureHash(
 }
 
 /**
+ * Signatures already proven valid in this app session, keyed by
+ * `wallet pubkey : sighash : signature bytes`. ECDSA verification of the same
+ * triple always gives the same answer, so a repeat (the signing pass right
+ * after the display pass, then signTransaction's own re-check) skips the
+ * curve maths without accepting anything that was not verified. The sighash
+ * commits to the transaction and to the input value used, so a different
+ * transaction or value is a different key and is verified afresh.
+ */
+const VERIFIED_SIGNATURE_CACHE_MAX = 20000;
+const verifiedSignatureCache = new Set<string>();
+
+function rememberVerifiedSignature(key: string): void {
+  verifiedSignatureCache.delete(key);
+  verifiedSignatureCache.add(key);
+  while (verifiedSignatureCache.size > VERIFIED_SIGNATURE_CACHE_MAX) {
+    const oldest = verifiedSignatureCache.values().next().value;
+    if (oldest === undefined) break;
+    verifiedSignatureCache.delete(oldest);
+  }
+}
+
+/** Forget every verified signature (tests; wallet reset). */
+export function clearVerifiedSignatureCache(): void {
+  verifiedSignatureCache.clear();
+}
+
+/**
+ * Check one input's wallet signature: present in the wallet's slot, a
+ * well-formed SIGHASH_ALL (ALL|FORKID on BCH) signature, valid over the
+ * sighash computed with the key's own value for that input.
+ */
+function verifyWalletSignatureOnInput(
+  txb: UtxoLibTxb,
+  chain: keyof cryptos,
+  scripts: ConsumerUtxoScripts,
+  values: number[],
+  i: number,
+  hashType: number,
+): void {
+  const input = txb.inputs[i];
+  const pubKeys: Buffer[] = input.pubKeys ?? [];
+  const slot = pubKeys.findIndex((pk) =>
+    Buffer.from(pk).equals(scripts.walletPubKey),
+  );
+  const signature: Buffer | undefined =
+    slot >= 0 && Array.isArray(input.signatures)
+      ? input.signatures[slot]
+      : undefined;
+  if (!signature) {
+    throw new Error(`Input ${i} is missing the wallet signature`);
+  }
+  let parsed: {
+    signature: Parameters<typeof verifyUtxoSignature>[1];
+    hashType: number;
+  };
+  try {
+    parsed = lib.ECSignature.parseScriptSignature(signature);
+  } catch {
+    throw new Error(`Input ${i} has a malformed wallet signature`);
+  }
+  if (parsed.hashType !== hashType) {
+    throw new Error(`Input ${i} wallet signature uses a non-ALL sighash`);
+  }
+  const hash: Buffer = inputSignatureHash(txb, chain, i, values[i], hashType);
+  const cacheKey = `${Buffer.from(scripts.walletPubKey).toString(
+    'hex',
+  )}:${Buffer.from(hash).toString('hex')}:${Buffer.from(signature).toString(
+    'hex',
+  )}`;
+  if (verifiedSignatureCache.has(cacheKey)) {
+    return;
+  }
+  if (!verifyUtxoSignature(hash, parsed.signature, scripts.walletPubKey)) {
+    throw new Error(`Input ${i} wallet signature is invalid`);
+  }
+  rememberVerifiedSignature(cacheKey);
+}
+
+/**
  * UTXO-8: verify the wallet's partial signature on EVERY input (SIGHASH_ALL,
  * or ALL|FORKID on BCH) before the key adds its own and broadcasts. On ZEC v5
  * this also sets the ZIP-244 prevouts (key values, derived scriptPubKey) on
@@ -751,12 +832,7 @@ export function verifyWalletPartialSignatures(
   scripts: ConsumerUtxoScripts,
   values: number[],
 ): void {
-  const network = getNetwork(chain);
   const hashType = expectedHashType(chain);
-  const walletKey = lib.ECPair.fromPublicKeyBuffer(
-    scripts.walletPubKey,
-    network,
-  );
   // ZEC v5: every input spends the derived 2-of-2, valued by the key.
   setZip244PrevoutsIfNeeded(
     txb,
@@ -764,32 +840,43 @@ export function verifyWalletPartialSignatures(
     values.map(() => scripts.scriptPubKey),
   );
   for (let i = 0; i < txb.inputs.length; i += 1) {
-    const input = txb.inputs[i];
-    const pubKeys: Buffer[] = input.pubKeys ?? [];
-    const slot = pubKeys.findIndex((pk) =>
-      Buffer.from(pk).equals(scripts.walletPubKey),
-    );
-    const signature: Buffer | undefined =
-      slot >= 0 && Array.isArray(input.signatures)
-        ? input.signatures[slot]
-        : undefined;
-    if (!signature) {
-      throw new Error(`Input ${i} is missing the wallet signature`);
-    }
-    let parsed: { signature: unknown; hashType: number };
-    try {
-      parsed = lib.ECSignature.parseScriptSignature(signature);
-    } catch {
-      throw new Error(`Input ${i} has a malformed wallet signature`);
-    }
-    if (parsed.hashType !== hashType) {
-      throw new Error(`Input ${i} wallet signature uses a non-ALL sighash`);
-    }
-    const hash = inputSignatureHash(txb, chain, i, values[i], hashType);
-    if (!walletKey.verify(hash, parsed.signature)) {
-      throw new Error(`Input ${i} wallet signature is invalid`);
+    verifyWalletSignatureOnInput(txb, chain, scripts, values, i, hashType);
+  }
+}
+
+/** Inputs verified between two yields to the UI thread. */
+const SIGNATURE_VERIFY_BATCH = 25;
+
+/**
+ * Same checks as `verifyWalletPartialSignatures`, but yields to the event
+ * loop every few inputs and reports progress, so a transaction with many
+ * inputs keeps the approval screen responsive and shows how far it got.
+ */
+export async function verifyWalletPartialSignaturesAsync(
+  txb: UtxoLibTxb,
+  chain: keyof cryptos,
+  scripts: ConsumerUtxoScripts,
+  values: number[],
+  onProgress?: ApprovalProgressListener,
+): Promise<void> {
+  const hashType = expectedHashType(chain);
+  // ZEC v5: every input spends the derived 2-of-2, valued by the key.
+  setZip244PrevoutsIfNeeded(
+    txb,
+    values,
+    values.map(() => scripts.scriptPubKey),
+  );
+  const total = txb.inputs.length;
+  onProgress?.({ step: 'verifying_signatures', done: 0, total });
+  for (let i = 0; i < total; i += 1) {
+    verifyWalletSignatureOnInput(txb, chain, scripts, values, i, hashType);
+    const done = i + 1;
+    if (done % SIGNATURE_VERIFY_BATCH === 0 && done < total) {
+      onProgress?.({ step: 'verifying_signatures', done, total });
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
   }
+  onProgress?.({ step: 'verifying_signatures', done: total, total });
 }
 
 /**
@@ -801,13 +888,18 @@ export async function verifyConsumerUtxoTransaction(
   chain: keyof cryptos,
   keys: ConsumerKeyMaterial,
   deps: ConsumerUtxoDeps,
+  onProgress?: ApprovalProgressListener,
 ): Promise<VerifiedConsumerUtxoTx> {
+  // The USD rate only tightens the fee cap: fetch it alongside the input
+  // lookup and signature checks instead of after them.
+  const usdRatePromise = deps.getUsdRate(chain).catch(() => 0);
   const scripts = deriveConsumerUtxoScripts(chain, keys);
   const { tx, txb, inputs } = inspectConsumerUtxoTransaction(
     rawTx,
     chain,
     scripts,
   );
+  onProgress?.({ step: 'loading_inputs' });
   const values = await resolveConsumerInputValues(chain, inputs, scripts, deps);
   const totalIn = values.reduce((sum, v) => sum.plus(v), new BigNumber(0));
   const { recipients, change, total } = summarizeConsumerUtxoOutputs(
@@ -824,14 +916,29 @@ export async function verifyConsumerUtxoTransaction(
   if (typeof hardCap !== 'number' || !(hardCap > 0)) {
     throw new Error('No fee cap configured for this chain');
   }
-  const usdRate = await deps.getUsdRate(chain).catch(() => 0);
-  const maxFee = maxConsumerFee(hardCap, blockchains[chain].decimals, usdRate);
+  const decimals = blockchains[chain].decimals;
+  // The hard cap needs no rate: refuse an absurd fee before the slow part.
+  const hardMaxFee = maxConsumerFee(hardCap, decimals, 0);
+  if (fee.isGreaterThan(hardMaxFee)) {
+    throw new Error(
+      `Network fee ${fee.toFixed()} exceeds the maximum of ${hardMaxFee.toFixed()}`,
+    );
+  }
+  await verifyWalletPartialSignaturesAsync(
+    txb,
+    chain,
+    scripts,
+    values,
+    onProgress,
+  );
+  onProgress?.({ step: 'checking_fee' });
+  const usdRate = await usdRatePromise;
+  const maxFee = maxConsumerFee(hardCap, decimals, usdRate);
   if (fee.isGreaterThan(maxFee)) {
     throw new Error(
       `Network fee ${fee.toFixed()} exceeds the maximum of ${maxFee.toFixed()}`,
     );
   }
-  verifyWalletPartialSignatures(txb, chain, scripts, values);
   // Only values that passed everything (incl. the wallet's signatures) are
   // remembered for reuse.
   rememberVerifiedValues(chain, scripts, inputs, values);

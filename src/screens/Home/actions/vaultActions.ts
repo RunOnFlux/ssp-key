@@ -52,6 +52,7 @@ import {
   type OwnVaultIdentity,
 } from '../../../lib/vaultDescriptorGate';
 import { verifyVaultUtxoAmounts } from '../../../lib/vaultUtxoAmounts';
+import { fastUtxoSigner } from '../../../lib/fastSecp256k1';
 import {
   assertChainTxVersion,
   assertTransparentOnly,
@@ -1040,7 +1041,10 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
           keyPubKey = signingKeypair.pubKey;
         }
 
-        const keyPair = utxolib.ECPair.fromWIF(signingKeypair.privKey, network);
+        // noble-backed signer (same RFC 6979 low-S signatures, much faster).
+        const keyPair = fastUtxoSigner(
+          utxolib.ECPair.fromWIF(signingKeypair.privKey, network),
+        );
 
         // Scripts re-derived from the pinned descriptor (VD-4), equal to the
         // relay's inputDetails by the check above.
