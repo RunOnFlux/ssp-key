@@ -16,7 +16,9 @@ import {
   selectPublicNonce,
   cosignAndBroadcastSOLTransaction,
   RelayAuthUnavailableError,
+  PublicNoncesMismatchError,
 } from '../../../lib/constructTx';
+import { isPublicNoncesMismatchError } from '../../../lib/publicNoncesHelp';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
 import { parseTypedData, typedDataMatchesChain } from '../../../lib/typedData';
 import {
@@ -203,6 +205,7 @@ export const approveTransaction = async (
     setTxPath,
     setTxUtxos,
     setTxid,
+    setPublicNoncesHelp,
   } = ctx;
   try {
     console.log('tx request');
@@ -380,6 +383,13 @@ export const approveTransaction = async (
     }
     setTxid(ttxid);
   } catch (error) {
+    // Out-of-sync public nonces: explain what happened and how to fix it
+    // instead of a bare toast (nothing was signed, funds are untouched).
+    if (isPublicNoncesMismatchError(error)) {
+      console.log(error);
+      setPublicNoncesHelp(error.reason);
+      return;
+    }
     const txErrMsg =
       error instanceof RelayAuthUnavailableError
         ? t('home:err_relay_auth_unavailable')
@@ -539,6 +549,7 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     setEvmSigningData,
     evmSigningRequest,
     clearEvmSigningRequest,
+    setPublicNoncesHelp,
   } = ctx;
   // Handle both socket-received and scanned/manual EVM signing requests requests
   if (!evmSigningData) return;
@@ -651,7 +662,9 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     console.log('[EVM Signing] nonce matched:', !!noncesToUse);
 
     if (!noncesToUse) {
-      throw new Error('Nonces not found');
+      throw new PublicNoncesMismatchError(
+        pubNonces.length ? 'mismatch' : 'missing',
+      );
     }
 
     // crucial delete nonce from publicNonces - same as normal transactions
@@ -746,7 +759,11 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     xprivKeyDecrypted = '';
     pwForEncryption = '';
     console.error('[EVM Signing] Error handling request:', error);
-    displayMessage('error', t('home:err_invalid_request'));
+    if (isPublicNoncesMismatchError(error)) {
+      setPublicNoncesHelp(error.reason);
+    } else {
+      displayMessage('error', t('home:err_invalid_request'));
+    }
   } finally {
     xprivKeyDecrypted = '';
     pwForEncryption = '';
