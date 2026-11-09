@@ -24,19 +24,31 @@
  *    display pass's values (no second round of fetches), and a later request
  *    for the same outpoint cannot be valued differently.
  *
- * Residual on amount-committing chains (BTC/LTC/BCH/ZEC/FLUX), where values
- * come from the key's own UTXO lookup and are not hash-checked: a wallet AND
- * the key's backend that are both compromised could get the same transaction
- * approved twice with a different input under-valued each time (BIP143 /
- * FORKID / ZIP-243 sighashes commit only to the signed input's own amount)
+ * Residual on amount-committing chains whose sighash commits only to the
+ * signed input's own amount (BIP143 / FORKID / ZIP-243: BTC/LTC/BCH/FLUX),
+ * where values come from the key's own UTXO lookup and are not hash-checked:
+ * a wallet AND the key's backend that are both compromised could get the same
+ * transaction approved twice with a different input under-valued each time
  * and combine the valid half of each, so the real fee exceeds the one shown.
  * The outpoint cache defeats this within one app session; across an app
  * restart it remains (both approvals still show a fee under the cap).
- * Hash-checking these prevouts was not adopted: utxo-lib cannot compute
- * Zcash v5 (ZIP-244) txids, so ZEC spends of v5 outputs would be refused, and
- * it costs one extra fetch per previous transaction on every spend.
- *  - Zcash/Flux shielded components are refused, and the wallet's partial
- *    signature on every input is verified before the key adds its own.
+ * Hash-checking these prevouts was not adopted: it costs one extra fetch per
+ * previous transaction on every spend.
+ *
+ * ZEC no longer has this residual. Since NU7 (ZIP 2003) ZEC is sent as v5
+ * transactions, whose ZIP-244 signatures commit to the value AND
+ * scriptPubKey of EVERY input (the key sets them with `setPrevouts` from its
+ * own values and its own derived script before any v5 sighash). A signature
+ * made over an under-valued input is invalid on chain, and halves of two
+ * approvals with different values cannot be combined, so a transaction that
+ * confirms always has the fee the key showed. Hash-checking ZEC prevouts
+ * would add nothing, so ZEC keeps the UTXO lookup. (utxo-lib computes ZIP-244
+ * txids since 1.1.0, so a v5 previous transaction can still be hash-checked
+ * when the UTXO lookup misses an input.)
+ *  - Zcash/Flux shielded components (v4 JoinSplit/Sapling, v5 Sapling/
+ *    Orchard) are refused, a ZEC transaction must be v5, and the wallet's
+ *    partial signature on every input is verified before the key adds its
+ *    own.
  *
  * Display (TransactionRequest) and signing (approveTransaction) both run
  * `verifyConsumerUtxoTransaction`, so they enforce one rulebook.
@@ -235,7 +247,8 @@ export function deriveConsumerUtxoScripts(
 
 /**
  * True when the chain's signature hash commits to each input's amount
- * (BIP143 witness v0, BCH FORKID, ZIP-243). False for legacy P2SH on
+ * (BIP143 witness v0, BCH FORKID, ZIP-243; ZIP-244 even commits to every
+ * input's amount). False for legacy P2SH on
  * BTC-family coins (DOGE, RVN): there a wrong amount still yields a valid
  * signature, so amounts must come from hash-verified previous transactions.
  */
@@ -255,19 +268,84 @@ function txidOfInput(tx: UtxoLibTx, index: number): string {
   return Buffer.from(tx.ins[index].hash).reverse().toString('hex');
 }
 
-/** Refuse Zcash/Flux transactions that carry shielded or JoinSplit data. */
-function assertTransparentOnly(tx: UtxoLibTx): void {
+/**
+ * Refuse Zcash/Flux transactions that carry shielded or JoinSplit data: v4
+ * JoinSplits / Sapling spends and outputs, and v5 (ZIP 225) Sapling and
+ * Orchard bundles. Exported for the enterprise vault path.
+ */
+export function assertTransparentOnly(tx: UtxoLibTx): void {
   const count = (value: unknown) => (Array.isArray(value) ? value.length : 0);
   if (
     count(tx.joinsplits) > 0 ||
     count(tx.vShieldedSpend) > 0 ||
-    count(tx.vShieldedOutput) > 0
+    count(tx.vShieldedOutput) > 0 ||
+    count(tx.sapling?.spends) > 0 ||
+    count(tx.sapling?.outputs) > 0 ||
+    count(tx.orchard?.actions) > 0
   ) {
     throw new Error('Shielded transaction components are not supported');
   }
   if (tx.valueBalance !== undefined && Number(tx.valueBalance) !== 0) {
     throw new Error('Shielded value balance is not supported');
   }
+  const nonZero = (value: unknown) =>
+    value !== undefined &&
+    value !== null &&
+    !Buffer.from(value as Buffer).equals(Buffer.alloc(8));
+  if (nonZero(tx.sapling?.valueBalance) || nonZero(tx.orchard?.valueBalance)) {
+    throw new Error('Shielded value balance is not supported');
+  }
+}
+
+/**
+ * The transaction version the chain requires. Since NU7 (ZIP 2003) Zcash
+ * only accepts v5 transactions, so a ZEC v4 transaction (e.g. from an SSP
+ * Wallet that predates NU7) is refused with a clear message instead of a
+ * confusing signature failure. Flux and other chains are not checked here.
+ */
+export function assertChainTxVersion(
+  tx: UtxoLibTx,
+  chain: keyof cryptos,
+): void {
+  const required = blockchains[chain].txVersion;
+  if (
+    typeof required === 'number' &&
+    required >= 5 &&
+    lib.coins.isZcash(getNetwork(chain)) &&
+    tx.version !== required
+  ) {
+    throw new Error(
+      `${blockchains[chain].symbol} transactions must be version ${required} since the network upgrade (got version ${tx.version}); update the app that built it`,
+    );
+  }
+}
+
+/**
+ * Zcash v5 (ZIP 244): give the transaction the value and scriptPubKey of the
+ * coin spent by EVERY input before any signature hash is computed or any
+ * input is signed. `values` and `scriptPubKeys` must be the key's own (never
+ * read from the request). No-op for every other transaction type.
+ */
+export function setZip244PrevoutsIfNeeded(
+  txb: UtxoLibTxb,
+  values: number[],
+  scriptPubKeys: Buffer[],
+): void {
+  if (!txb.tx.isZcashV5 || !txb.tx.isZcashV5()) {
+    return;
+  }
+  if (
+    values.length !== txb.tx.ins.length ||
+    scriptPubKeys.length !== txb.tx.ins.length
+  ) {
+    throw new Error('Input values do not cover every transaction input');
+  }
+  txb.setPrevouts(
+    values.map((value, i) => ({
+      value,
+      script: Buffer.from(scriptPubKeys[i]),
+    })),
+  );
 }
 
 /**
@@ -283,6 +361,7 @@ export function inspectConsumerUtxoTransaction(
   const network = getNetwork(chain);
   const tx = lib.Transaction.fromHex(rawTx, network);
   assertTransparentOnly(tx);
+  assertChainTxVersion(tx, chain);
   const txb = lib.TransactionBuilder.fromTransaction(tx, network);
   if (!txb.inputs.length || !tx.outs.length) {
     throw new Error('Transaction has no inputs or no outputs');
@@ -437,7 +516,11 @@ async function fetchVerifiedPrevTx(
   const hasWitness = prevTx.ins.some(
     (txIn: { witness?: Buffer[] }) => !!txIn.witness && txIn.witness.length > 0,
   );
-  if (!hasWitness) {
+  // Zcash v5: the txid is the ZIP-244 digest of the parsed transaction (not
+  // sha256d of its bytes), computed by `getId()` above. It commits to every
+  // output's value and script; parsing refuses trailing bytes.
+  const isZcashV5 = !!prevTx.isZcashV5 && prevTx.isZcashV5();
+  if (!hasWitness && !isZcashV5) {
     // Non-witness serialization: sha256d of the exact fetched bytes is the
     // txid. Checked directly on the raw bytes, not on a re-serialization.
     const digest = Buffer.from(lib.crypto.hash256(Buffer.from(rawHex, 'hex')))
@@ -739,7 +822,9 @@ function verifyWalletSignatureOnInput(
 
 /**
  * UTXO-8: verify the wallet's partial signature on EVERY input (SIGHASH_ALL,
- * or ALL|FORKID on BCH) before the key adds its own and broadcasts.
+ * or ALL|FORKID on BCH) before the key adds its own and broadcasts. On ZEC v5
+ * this also sets the ZIP-244 prevouts (key values, derived scriptPubKey) on
+ * `txb`, so the key's own signatures commit to the same.
  */
 export function verifyWalletPartialSignatures(
   txb: UtxoLibTxb,
@@ -748,6 +833,12 @@ export function verifyWalletPartialSignatures(
   values: number[],
 ): void {
   const hashType = expectedHashType(chain);
+  // ZEC v5: every input spends the derived 2-of-2, valued by the key.
+  setZip244PrevoutsIfNeeded(
+    txb,
+    values,
+    values.map(() => scripts.scriptPubKey),
+  );
   for (let i = 0; i < txb.inputs.length; i += 1) {
     verifyWalletSignatureOnInput(txb, chain, scripts, values, i, hashType);
   }
@@ -769,6 +860,12 @@ export async function verifyWalletPartialSignaturesAsync(
   onProgress?: ApprovalProgressListener,
 ): Promise<void> {
   const hashType = expectedHashType(chain);
+  // ZEC v5: every input spends the derived 2-of-2, valued by the key.
+  setZip244PrevoutsIfNeeded(
+    txb,
+    values,
+    values.map(() => scripts.scriptPubKey),
+  );
   const total = txb.inputs.length;
   onProgress?.({ step: 'verifying_signatures', done: 0, total });
   for (let i = 0; i < total; i += 1) {

@@ -14,7 +14,10 @@
  *    derived from the pinned descriptor. Any mismatch blocks approval.
  *  - On amount-committing chains (BIP143 / FORKID / ZIP-243) a wrong amount
  *    only yields a signature that does not verify on chain, so the relay's
- *    amounts are used as committed values.
+ *    amounts are used as committed values. ZEC v5 (ZIP-244, since NU7)
+ *    commits every signature to ALL input amounts and scriptPubKeys; the sign
+ *    action sets them (`setZip244PrevoutsIfNeeded`) from these amounts and the
+ *    descriptor-derived scripts.
  *  - On every UTXO vault chain the fee must be non-negative and at most
  *    `maxVaultFee`: min(chain maxFee — the enterprise builder's own absurd-fee
  *    limit — and VAULT_MAX_FEE_USD at the Key's own rate).

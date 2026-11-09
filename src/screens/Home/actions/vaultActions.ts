@@ -53,6 +53,11 @@ import {
 } from '../../../lib/vaultDescriptorGate';
 import { verifyVaultUtxoAmounts } from '../../../lib/vaultUtxoAmounts';
 import { fastUtxoSigner } from '../../../lib/fastSecp256k1';
+import {
+  assertChainTxVersion,
+  assertTransparentOnly,
+  setZip244PrevoutsIfNeeded,
+} from '../../../lib/consumerUtxo';
 import { cryptos, publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
 
@@ -950,6 +955,9 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
 
       // Parse wallet-signed TX into TransactionBuilder
       const signedTx = utxolib.Transaction.fromHex(walletSignedHex, network);
+      // No shielded parts (v4 or v5), and ZEC must be v5 since NU7.
+      assertTransparentOnly(signedTx);
+      assertChainTxVersion(signedTx, vaultChain);
       const txb = utxolib.TransactionBuilder.fromTransaction(signedTx, network);
 
       // TRUSTLESS BINDING (parity with the Solana vault path): the approval UI
@@ -1002,6 +1010,19 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
           `Input details count (${parsedInputDetails.length}) does not match transaction inputs (${txb.inputs.length})`,
         );
       }
+
+      // ZEC v5 (ZIP 244): every signature commits to the value and
+      // scriptPubKey of EVERY input. Values are the amounts verified above;
+      // scripts are the vault scriptPubKeys re-derived from the pinned
+      // descriptor (never the relay's). utxo-lib's sign() also refuses an
+      // input whose own P2SH script differs from these.
+      setZip244PrevoutsIfNeeded(
+        txb,
+        amountCheck.amounts,
+        utxoCheck.inputs.map((derived) =>
+          Buffer.from(derived.scriptPubKey, 'hex'),
+        ),
+      );
 
       // Every check passed: save a pin confirmed on screen, then sign.
       commitPinBeforeSigning();
