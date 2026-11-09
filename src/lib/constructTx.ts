@@ -20,6 +20,7 @@ import { blockchains } from '@storage/blockchains';
 import { getLibId } from './wallet';
 import {
   inspectConsumerUtxoTransaction,
+  setZip244PrevoutsIfNeeded,
   verifyWalletPartialSignatures,
 } from './consumerUtxo';
 import type { VerifiedConsumerUtxoTx } from './consumerUtxo';
@@ -262,6 +263,14 @@ export function signTransaction(
       }
       return new BigNumber(known.satoshis).toNumber();
     });
+    // ZEC v5 (ZIP 244): the key's signatures commit to the value and
+    // scriptPubKey of every input. Both come from the key itself: the
+    // verified values and the derived 2-of-2 every input was bound to above.
+    setZip244PrevoutsIfNeeded(
+      txb,
+      values,
+      values.map(() => scripts.scriptPubKey),
+    );
     verifyWalletPartialSignatures(txb, chain, scripts, values);
     const keyPair = utxolib.ECPair.fromWIF(privateKey, network) as {
       sign: (hash: Buffer) => Buffer;

@@ -83,11 +83,30 @@ beforeEach(() => {
 
 const network = (chain) => utxolib.networks[blockchains[chain].libid];
 const isZcashLike = (chain) => utxolib.coins.isZcash(network(chain));
+/** ZEC since NU7: v5 transactions (Flux stays v4). */
+const isV5 = (chain) =>
+  isZcashLike(chain) && blockchains[chain].txVersion === 5;
+
+/** Version fields the chain's builder uses (v4 Sapling or v5 NU7). */
+function setChainVersion(chain, txb) {
+  if (!isZcashLike(chain)) return;
+  if (isV5(chain)) {
+    txb.setVersion(5);
+  } else {
+    txb.setVersion(4);
+    txb.setVersionGroupId(0x892f2085);
+  }
+}
 
 /** A previous transaction paying `value` to `script`. */
 function fundingTx(chain, script, value, tag) {
   const tx = new utxolib.Transaction(network(chain));
-  if (isZcashLike(chain)) {
+  if (isV5(chain)) {
+    tx.version = 5;
+    tx.overwintered = 1;
+    tx.versionGroupId = 0x26a7270a;
+    tx.consensusBranchId = network(chain).consensusBranchId[5];
+  } else if (isZcashLike(chain)) {
     tx.version = 4;
     tx.overwintered = 1;
     tx.versionGroupId = 0x892f2085;
@@ -108,12 +127,18 @@ function hashTypeFor(chain) {
 function walletBuild(chain, m, inputs, outputs, opts = {}) {
   const net = network(chain);
   const txb = new utxolib.TransactionBuilder(net);
-  if (isZcashLike(chain)) {
-    txb.setVersion(4);
-    txb.setVersionGroupId(0x892f2085);
-  }
+  setChainVersion(chain, txb);
   inputs.forEach((input) => txb.addInput(input.tx.getId(), input.vout));
   outputs.forEach((out) => txb.addOutput(out.script, out.value));
+  if (isV5(chain)) {
+    // ZIP 244: the wallet commits to every input's value and scriptPubKey.
+    txb.setPrevouts(
+      inputs.map((input, i) => ({
+        value: opts.signValues?.[i] ?? opts.signValue ?? input.value,
+        script: m.scripts.scriptPubKey,
+      })),
+    );
+  }
   const walletPair = utxolib.ECPair.fromWIF(m.walletKp.privKey, net);
   inputs.forEach((input, i) => {
     if (opts.skipSignIndex === i) return;
@@ -194,7 +219,7 @@ describe('consumer UTXO: own-script derivation', () => {
 });
 
 describe('consumer UTXO: honest round trips', () => {
-  it.each(['btc', 'flux', 'bch', 'ltc'])(
+  it.each(['btc', 'flux', 'bch', 'ltc', 'zec'])(
     '%s: verifies, shows every recipient + change + fee, then co-signs',
     async (chain) => {
       const m = material(chain);
@@ -537,12 +562,12 @@ describe('UTXO-5: DOGE/RVN previous-transaction verification (poc_sighash_amount
     const net = network(chain);
     const sigFor = (amount) => {
       const txb = new utxolib.TransactionBuilder(net);
-      if (isZcashLike(chain)) {
-        txb.setVersion(4);
-        txb.setVersionGroupId(0x892f2085);
-      }
+      setChainVersion(chain, txb);
       txb.addInput(Buffer.alloc(32, 0x42).toString('hex'), 0);
       txb.addOutput(payee(), 1000);
+      if (isV5(chain)) {
+        txb.setPrevouts([{ value: amount, script: m.scripts.scriptPubKey }]);
+      }
       txb.sign(
         0,
         utxolib.ECPair.fromWIF(m.walletKp.privKey, net),
