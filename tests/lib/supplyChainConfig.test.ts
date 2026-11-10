@@ -4,7 +4,8 @@ import path from 'path';
 /**
  * Release-pipeline hardening (security review DEP-3 / DEP-5):
  * - dependency install scripts never run automatically;
- * - the release keystore is decoded in a plain run step, only for v* tags,
+ * - the release keystore is decoded in a plain run step, only for v* tags
+ *   (and protected master on the self-hosted runner),
  *   behind a protected environment, with SHA-pinned actions.
  */
 
@@ -50,11 +51,17 @@ describe.each(WORKFLOWS)('workflow %s', (name) => {
     expect(src).toMatch(/rm -f android\/app\/release\.keystore/);
   });
 
-  it('signs only for v* tags, behind the android-release environment', () => {
+  it('signs only for v* tags (self-hosted: also master), behind the android-release environment', () => {
     expect(src).toMatch(/^permissions: \{\}$/m);
     expect(src).toMatch(/environment: android-release/);
     const buildJob = src.slice(src.indexOf('build-android:'));
-    expect(buildJob).toMatch(/if: startsWith\(github\.ref, 'refs\/tags\/v'\)/);
+    // The self-hosted runner also builds protected master; other branches
+    // never reach the signing step.
+    expect(buildJob).toMatch(
+      name === 'android_release_self_hosted.yml'
+        ? /if: github\.ref == 'refs\/heads\/master' \|\| startsWith\(github\.ref, 'refs\/tags\/v'\)/
+        : /if: startsWith\(github\.ref, 'refs\/tags\/v'\)/,
+    );
   });
 
   it('installs with a frozen lockfile and no install scripts', () => {
@@ -65,11 +72,12 @@ describe.each(WORKFLOWS)('workflow %s', (name) => {
 });
 
 describe('self-hosted workflow', () => {
-  it('no longer runs on every branch push', () => {
+  it('runs only on master and v* tags, not on every branch push', () => {
     const src = read('.github/workflows/android_release_self_hosted.yml');
     const on = src.slice(src.indexOf('\non:'), src.indexOf('\npermissions:'));
-    expect(on).not.toMatch(/branches/);
+    expect(on).toMatch(/branches:\s*\n\s*-\s*master\s*\n\s*tags:/);
     expect(on).toMatch(/tags:\s*\n\s*-\s*'v\*'/);
+    expect(on).not.toMatch(/pull_request/);
   });
 });
 
