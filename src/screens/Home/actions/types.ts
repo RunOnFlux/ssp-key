@@ -110,6 +110,10 @@ export interface HomeActionContext {
   setTxid: React.Dispatch<React.SetStateAction<string>>;
   setPNonces: React.Dispatch<React.SetStateAction<string>>;
   setPublicNoncesShared: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Opens the PublicNoncesOutOfSync screen (EVM nonce mismatch/missing). */
+  setPublicNoncesHelp: React.Dispatch<
+    React.SetStateAction<'missing' | 'mismatch' | null>
+  >;
   setSyncSuccessOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setEvmSigningSignature: React.Dispatch<React.SetStateAction<string | null>>;
   setActivityStatus: React.Dispatch<React.SetStateAction<boolean>>;

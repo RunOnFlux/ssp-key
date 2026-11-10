@@ -56,6 +56,7 @@ import {
   userOpHashMatches,
 } from '../../../lib/userOpVerify';
 import { useSocket } from '../../../hooks/useSocket';
+import { prefetchRates } from '../../../lib/rates';
 import type { RecoveryRequestPayload } from '../../../lib/recoveryHandler';
 
 /**
@@ -406,6 +407,8 @@ export function usePendingRequests(
       rejectUnsupportedChain('tx', chain);
       return;
     }
+    // Warm the USD rates while the approval screen mounts and decodes.
+    prefetchRates();
     setActiveChain(chain);
     if (utxos) {
       setTxUtxos(utxos);

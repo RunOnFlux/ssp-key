@@ -240,7 +240,13 @@ describe('TransactionRequest payload identity', () => {
     // never changed again, TX_B was never decoded at all. The decode is bound
     // to the key's own key material, never to the request's utxos.
     expect(decodeMock).toHaveBeenCalledTimes(2);
-    expect(decodeMock).toHaveBeenLastCalledWith('TX_B', 'btc', KEY_MATERIAL);
+    expect(decodeMock).toHaveBeenLastCalledWith(
+      'TX_B',
+      'btc',
+      KEY_MATERIAL,
+      {},
+      expect.any(Function),
+    );
 
     await decodes.settle('TX_B', txInfo('B'));
 
@@ -450,5 +456,34 @@ describe('HomeRequests mounts one TransactionRequest per payload', () => {
       source.indexOf('/>', source.indexOf('<TransactionRequest')),
     );
     expect(mount).toContain('key={rawTx}');
+  });
+
+  it('shows what the decode is doing under the loading state', async () => {
+    const decodes = deferredDecodes();
+    await renderRequest('TX_P');
+    const onProgress = decodeMock.mock.calls[0][4];
+    expect(typeof onProgress).toBe('function');
+
+    await flush(() =>
+      onProgress?.({ step: 'verifying_signatures', done: 25, total: 30 }),
+    );
+    expect(
+      screen.getByText('home:tx_progress_verifying_signatures'),
+    ).toBeTruthy();
+
+    await flush(() => onProgress?.({ step: 'checking_fee' }));
+    expect(screen.getByText('home:tx_progress_checking_fee')).toBeTruthy();
+
+    await decodes.settle('TX_P', txInfo('P'));
+    expect(screen.queryByText('home:tx_progress_checking_fee')).toBeNull();
+  });
+
+  it('ignores progress from a superseded decode', async () => {
+    deferredDecodes();
+    const { rerenderWith } = await renderRequest('TX_OLD');
+    const staleProgress = decodeMock.mock.calls[0][4];
+    await rerenderWith('TX_NEW');
+    await flush(() => staleProgress?.({ step: 'checking_fee' }));
+    expect(screen.queryByText('home:tx_progress_checking_fee')).toBeNull();
   });
 });

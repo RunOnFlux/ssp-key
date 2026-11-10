@@ -83,11 +83,30 @@ beforeEach(() => {
 
 const network = (chain) => utxolib.networks[blockchains[chain].libid];
 const isZcashLike = (chain) => utxolib.coins.isZcash(network(chain));
+/** ZEC since NU7: v5 transactions (Flux stays v4). */
+const isV5 = (chain) =>
+  isZcashLike(chain) && blockchains[chain].txVersion === 5;
+
+/** Version fields the chain's builder uses (v4 Sapling or v5 NU7). */
+function setChainVersion(chain, txb) {
+  if (!isZcashLike(chain)) return;
+  if (isV5(chain)) {
+    txb.setVersion(5);
+  } else {
+    txb.setVersion(4);
+    txb.setVersionGroupId(0x892f2085);
+  }
+}
 
 /** A previous transaction paying `value` to `script`. */
 function fundingTx(chain, script, value, tag) {
   const tx = new utxolib.Transaction(network(chain));
-  if (isZcashLike(chain)) {
+  if (isV5(chain)) {
+    tx.version = 5;
+    tx.overwintered = 1;
+    tx.versionGroupId = 0x26a7270a;
+    tx.consensusBranchId = network(chain).consensusBranchId[5];
+  } else if (isZcashLike(chain)) {
     tx.version = 4;
     tx.overwintered = 1;
     tx.versionGroupId = 0x892f2085;
@@ -108,12 +127,18 @@ function hashTypeFor(chain) {
 function walletBuild(chain, m, inputs, outputs, opts = {}) {
   const net = network(chain);
   const txb = new utxolib.TransactionBuilder(net);
-  if (isZcashLike(chain)) {
-    txb.setVersion(4);
-    txb.setVersionGroupId(0x892f2085);
-  }
+  setChainVersion(chain, txb);
   inputs.forEach((input) => txb.addInput(input.tx.getId(), input.vout));
   outputs.forEach((out) => txb.addOutput(out.script, out.value));
+  if (isV5(chain)) {
+    // ZIP 244: the wallet commits to every input's value and scriptPubKey.
+    txb.setPrevouts(
+      inputs.map((input, i) => ({
+        value: opts.signValues?.[i] ?? opts.signValue ?? input.value,
+        script: m.scripts.scriptPubKey,
+      })),
+    );
+  }
   const walletPair = utxolib.ECPair.fromWIF(m.walletKp.privKey, net);
   inputs.forEach((input, i) => {
     if (opts.skipSignIndex === i) return;
@@ -194,7 +219,7 @@ describe('consumer UTXO: own-script derivation', () => {
 });
 
 describe('consumer UTXO: honest round trips', () => {
-  it.each(['btc', 'flux', 'bch', 'ltc'])(
+  it.each(['btc', 'flux', 'bch', 'ltc', 'zec'])(
     '%s: verifies, shows every recipient + change + fee, then co-signs',
     async (chain) => {
       const m = material(chain);
@@ -537,12 +562,12 @@ describe('UTXO-5: DOGE/RVN previous-transaction verification (poc_sighash_amount
     const net = network(chain);
     const sigFor = (amount) => {
       const txb = new utxolib.TransactionBuilder(net);
-      if (isZcashLike(chain)) {
-        txb.setVersion(4);
-        txb.setVersionGroupId(0x892f2085);
-      }
+      setChainVersion(chain, txb);
       txb.addInput(Buffer.alloc(32, 0x42).toString('hex'), 0);
       txb.addOutput(payee(), 1000);
+      if (isV5(chain)) {
+        txb.setPrevouts([{ value: amount, script: m.scripts.scriptPubKey }]);
+      }
       txb.sign(
         0,
         utxolib.ECPair.fromWIF(m.walletKp.privKey, net),
@@ -808,5 +833,145 @@ describe('UTXO-8: shielded data and wallet partial signatures', () => {
     await expect(
       verifyConsumerUtxoTransaction(raw, chain, m.keys, depsFor(chain, inputs)),
     ).rejects.toThrow(/non-ALL sighash/);
+  });
+});
+
+describe('approval speed: noble signer, verified-signature cache, progress', () => {
+  it.each(['btc', 'flux', 'bch', 'ltc', 'doge', 'zec'])(
+    "%s: the key signs byte-identically to utxo-lib's own signer",
+    async (chain) => {
+      const m = material(chain);
+      const f1 = fundingTx(chain, m.scripts.scriptPubKey, 150000, 41);
+      const f2 = fundingTx(chain, m.scripts.scriptPubKey, 90000, 42);
+      const inputs = [
+        { tx: f1, vout: 0, value: 150000 },
+        { tx: f2, vout: 0, value: 90000 },
+      ];
+      const raw = walletBuild(chain, m, inputs, [
+        { script: payee(), value: 100000 },
+        { script: m.scripts.scriptPubKey, value: 135000 },
+      ]);
+      const verified = await verifyConsumerUtxoTransaction(
+        raw,
+        chain,
+        m.keys,
+        depsFor(chain, inputs),
+      );
+      const signed = signTransaction(raw, chain, m.keyKp.privKey, verified);
+
+      // Reference: the same co-sign with utxo-lib's own ECPair.
+      const net = network(chain);
+      const txb = utxolib.TransactionBuilder.fromTransaction(
+        utxolib.Transaction.fromHex(raw, net),
+        net,
+      );
+      if (isV5(chain)) {
+        txb.setPrevouts(
+          inputs.map((input) => ({
+            value: input.value,
+            script: m.scripts.scriptPubKey,
+          })),
+        );
+      }
+      const keyPair = utxolib.ECPair.fromWIF(m.keyKp.privKey, net);
+      inputs.forEach((input, i) =>
+        txb.sign(
+          i,
+          keyPair,
+          m.scripts.redeemScript,
+          hashTypeFor(chain),
+          input.value,
+          m.scripts.witnessScript,
+        ),
+      );
+      expect(signed).toBe(txb.buildIncomplete().toHex());
+    },
+  );
+
+  it('a remembered valid signature never lets a different signature through', async () => {
+    const chain = 'flux';
+    const m = material(chain);
+    const f1 = fundingTx(chain, m.scripts.scriptPubKey, 100000, 43);
+    const inputs = [{ tx: f1, vout: 0, value: 100000 }];
+    const outputs = [{ script: payee(), value: 90000 }];
+    const honest = walletBuild(chain, m, inputs, outputs);
+    await expect(
+      verifyConsumerUtxoTransaction(
+        honest,
+        chain,
+        m.keys,
+        depsFor(chain, inputs),
+      ),
+    ).resolves.toBeDefined();
+    // Same transaction, same sighash, but the wallet signed a different
+    // amount: the signature bytes differ, so it is verified (and refused).
+    const forged = walletBuild(chain, m, inputs, outputs, {
+      signValue: 100001,
+    });
+    await expect(
+      verifyConsumerUtxoTransaction(
+        forged,
+        chain,
+        m.keys,
+        depsFor(chain, inputs),
+      ),
+    ).rejects.toThrow(/wallet signature is invalid/);
+  });
+
+  it('reports progress while verifying many inputs', async () => {
+    const chain = 'flux';
+    const m = material(chain);
+    const inputs = Array.from({ length: 30 }, (_, i) => ({
+      tx: fundingTx(chain, m.scripts.scriptPubKey, 10000, 100 + i),
+      vout: 0,
+      value: 10000,
+    }));
+    const raw = walletBuild(chain, m, inputs, [
+      { script: payee(), value: 290000 },
+    ]);
+    const progress = [];
+    await verifyConsumerUtxoTransaction(
+      raw,
+      chain,
+      m.keys,
+      depsFor(chain, inputs),
+      (p) => progress.push(p),
+    );
+    expect(progress).toEqual([
+      { step: 'loading_inputs' },
+      { step: 'verifying_signatures', done: 0, total: 30 },
+      { step: 'verifying_signatures', done: 25, total: 30 },
+      { step: 'verifying_signatures', done: 30, total: 30 },
+      { step: 'checking_fee' },
+    ]);
+  });
+
+  it('asks for the USD rate before the input lookup finishes (in parallel)', async () => {
+    const chain = 'btc';
+    const m = material(chain);
+    const f1 = fundingTx(chain, m.scripts.scriptPubKey, 100000, 44);
+    const inputs = [{ tx: f1, vout: 0, value: 100000 }];
+    const raw = walletBuild(chain, m, inputs, [
+      { script: payee(), value: 90000 },
+    ]);
+    const order = [];
+    const base = depsFor(chain, inputs);
+    const deps = {
+      ...base,
+      fetchOwnUtxos: jest.fn(async (...args) => {
+        order.push('utxos:start');
+        const result = await base.fetchOwnUtxos(...args);
+        order.push('utxos:done');
+        return result;
+      }),
+      getUsdRate: jest.fn(() => {
+        order.push('rate:start');
+        return Promise.resolve(0);
+      }),
+    };
+    await verifyConsumerUtxoTransaction(raw, chain, m.keys, deps);
+    expect(order.indexOf('rate:start')).toBeLessThan(
+      order.indexOf('utxos:done'),
+    );
   });
 });

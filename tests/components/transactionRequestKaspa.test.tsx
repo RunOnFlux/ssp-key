@@ -164,6 +164,8 @@ describe('TransactionRequest (kas)', () => {
       '{"format":"kaspa-core-signing-bundle"}',
       'kas',
       { xpubWallet: 'XPUB_WALLET', xpubKey: 'XPUB_KEY', path: '0-2' },
+      {},
+      expect.any(Function),
     );
     expect(screen.getByTestId('fee')).toHaveTextContent('2');
     expect(screen.getByTestId('risk')).toHaveTextContent(
@@ -260,6 +262,8 @@ describe('TransactionRequest (kas)', () => {
       '{"format":"kaspa-core-signing-bundle"}',
       'kas',
       { xpubWallet: 'XPUB_WALLET', xpubKey: 'XPUB_KEY', path: '0-3' },
+      {},
+      expect.any(Function),
     );
   });
 });

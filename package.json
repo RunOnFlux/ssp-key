@@ -35,6 +35,7 @@
   "dependencies": {
     "@alchemy/aa-core": "3.19.0",
     "@lavamoat/react-native-lockdown": "1.0.0",
+    "@noble/curves": "1.9.1",
     "@noble/hashes": "2.2.0",
     "@notifee/react-native": "9.1.8",
     "@react-native-clipboard/clipboard": "1.16.3",
@@ -51,7 +52,7 @@
     "@runonflux/kaspa-core": "1.0.1",
     "@runonflux/react-native-step-indicator": "1.0.0",
     "@runonflux/solana-multisig": "0.12.1",
-    "@runonflux/utxo-lib": "1.0.6",
+    "@runonflux/utxo-lib": "1.1.0",
     "@scure/bip32": "2.2.0",
     "@scure/bip39": "2.2.0",
     "@solana/web3.js": "1.98.4",

@@ -253,8 +253,9 @@ const zec = {
     public: 0x0488b21e,
     private: 0x0488ade4,
   },
-  txVersion: 4,
-  txGroupID: 0x892f2085,
+  // NU7 (ZIP 2003): v4 is invalid, ZEC is sent as v5 (ZIP 225 / ZIP 244)
+  txVersion: 5,
+  txGroupID: 0x26a7270a,
   backend: 'blockbook',
   dustLimit: 546, // min utxo amount
   minFeePerByte: 1, // min fee per byte
@@ -263,7 +264,7 @@ const zec = {
   maxTxSize: 100000, // 100,000 vbytes
   maxFee: 10000000, // 0.1 ZEC
   rbf: false,
-  txExpiryHeight: 60, // 1 hour
+  txExpiryHeight: 144, // 1 hour at 25 s blocks (NU7)
 };
 
 const bch = {

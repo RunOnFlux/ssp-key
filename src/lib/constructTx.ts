@@ -34,8 +34,10 @@ import {
   type KasSpend,
 } from './kaspa';
 import type { KasLedger } from './kaspaLedger';
+import { fastUtxoSigner } from './fastSecp256k1';
 import {
   inspectConsumerUtxoTransaction,
+  setZip244PrevoutsIfNeeded,
   verifyWalletPartialSignatures,
 } from './consumerUtxo';
 import type { VerifiedConsumerUtxoTx } from './consumerUtxo';
@@ -278,11 +280,18 @@ export function signTransaction(
       }
       return new BigNumber(known.satoshis).toNumber();
     });
+    // ZEC v5 (ZIP 244): the key's signatures commit to the value and
+    // scriptPubKey of every input. Both come from the key itself: the
+    // verified values and the derived 2-of-2 every input was bound to above.
+    setZip244PrevoutsIfNeeded(
+      txb,
+      values,
+      values.map(() => scripts.scriptPubKey),
+    );
     verifyWalletPartialSignatures(txb, chain, scripts, values);
-    const keyPair = utxolib.ECPair.fromWIF(privateKey, network) as {
-      sign: (hash: Buffer) => Buffer;
-      getPublicKeyBuffer: () => Buffer;
-    };
+    // noble-backed signer: same RFC 6979 low-S signatures as utxo-lib's
+    // own, without the slow pure-JS curve fallback.
+    const keyPair = fastUtxoSigner(utxolib.ECPair.fromWIF(privateKey, network));
     if (!keyPair.getPublicKeyBuffer().equals(scripts.keyPubKey)) {
       throw new Error('Signing key does not belong to this address');
     }
@@ -328,6 +337,25 @@ export async function broadcastTx(
   }
 }
 
+/**
+ * The wallet built this EVM user operation around public nonces this SSP Key
+ * does not hold (`mismatch`), or this Key holds none at all (`missing`).
+ * Signing is refused either way; the cure is a public-nonce sync started from
+ * SSP Wallet. The Home actions turn this into an explanatory dialog.
+ */
+export class PublicNoncesMismatchError extends Error {
+  readonly reason: 'missing' | 'mismatch';
+  constructor(reason: 'missing' | 'mismatch') {
+    super(
+      reason === 'missing'
+        ? 'SSP Key Public nonces are missing'
+        : 'SSP Key Public nonces do not match',
+    );
+    this.name = 'PublicNoncesMismatchError';
+    this.reason = reason;
+  }
+}
+
 export function selectPublicNonce(
   rawTx: string,
   publicNonces: publicPrivateNonce[], // ssp Key
@@ -341,7 +369,7 @@ export function selectPublicNonce(
   // here restore public nonce
   const txPublicNonces = multiSigUserOp._getPublicNonces();
   if (!publicNonces || !publicNonces.length) {
-    throw new Error('SSP Key Public nonces are missing');
+    throw new PublicNoncesMismatchError('missing');
   }
   let nonceToUse;
   for (let i = 0; i < txPublicNonces.length; i += 1) {
@@ -357,7 +385,7 @@ export function selectPublicNonce(
   }
 
   if (!nonceToUse) {
-    throw new Error('SSP Key Public nonces do not match');
+    throw new PublicNoncesMismatchError('mismatch');
   }
   return nonceToUse;
 }

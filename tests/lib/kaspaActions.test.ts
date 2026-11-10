@@ -26,6 +26,7 @@ jest.mock('@storage/ssp', () => ({
 const mockRate = jest.fn<Promise<number>, [string]>(() => Promise.resolve(0));
 jest.mock('../../src/lib/rates', () => ({
   getCryptoUsdRate: (chain: string) => mockRate(chain),
+  getCryptoUsdRateForCap: (chain: string) => mockRate(chain),
 }));
 
 const mockCosign = jest.fn();

@@ -18,6 +18,7 @@ import {
   cosignAndBroadcastKASTransaction,
   KasMaybeBroadcastError,
   RelayAuthUnavailableError,
+  PublicNoncesMismatchError,
 } from '../../../lib/constructTx';
 import {
   kasBundleClaims,
@@ -33,6 +34,7 @@ import {
 } from '../../../lib/kaspaLedger';
 import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
 import { handleKasLedgerConflict } from '../../../lib/kaspaLedgerConflict';
+import { isPublicNoncesMismatchError } from '../../../lib/publicNoncesHelp';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
 import { parseTypedData, typedDataMatchesChain } from '../../../lib/typedData';
 import {
@@ -44,7 +46,7 @@ import {
   checkWkSigningRequest,
   deriveIdentityPubKeyFromXpub,
 } from '../../../lib/wkMessage';
-import { getCryptoUsdRate } from '../../../lib/rates';
+import { getCryptoUsdRateForCap } from '../../../lib/rates';
 import {
   buildEip191Preimage,
   parseConsumerDerivationPath,
@@ -222,6 +224,7 @@ export const approveTransaction = async (
     setTxPath,
     setTxUtxos,
     setTxid,
+    setPublicNoncesHelp,
   } = ctx;
   try {
     console.log('tx request');
@@ -298,7 +301,7 @@ export const approveTransaction = async (
       assertConsumerEvmFeeWithinCap(
         rawTransaction,
         chain,
-        await getCryptoUsdRate(chain).catch(() => 0),
+        await getCryptoUsdRateForCap(chain).catch(() => 0),
       );
       // C-4: the same call-safety rules the approval screen applied.
       const decodedEvm = await decodeEVMTransactionForApproval(
@@ -359,7 +362,7 @@ export const approveTransaction = async (
       );
       try {
         // min($100-equivalent, 5 KAS) — 5 KAS alone when no rate is known
-        const maxFee = kasMaxFeeForUsdRate(await getCryptoUsdRate(chain));
+        const maxFee = kasMaxFeeForUsdRate(await getCryptoUsdRateForCap(chain));
         // One Kaspa signing session at a time (KAS-3): the ledger snapshot
         // is taken inside the lock, after any earlier session flushed.
         ttxid = await withKasLedgerLock(async () => {
@@ -406,7 +409,7 @@ export const approveTransaction = async (
         xpubKeyDecrypted,
         derivationPath,
       );
-      const usdRate = await getCryptoUsdRate(chain);
+      const usdRate = await getCryptoUsdRateForCap(chain);
       ttxid = await cosignAndBroadcastSOLTransaction({
         chain,
         payload,
@@ -475,6 +478,13 @@ export const approveTransaction = async (
     // offers the explicit per-outpoint reset.
     if (handleKasLedgerConflict(error, t, displayMessage)) {
       console.log(error);
+      return;
+    }
+    // Out-of-sync public nonces: explain what happened and how to fix it
+    // instead of a bare toast (nothing was signed, funds are untouched).
+    if (isPublicNoncesMismatchError(error)) {
+      console.log(error);
+      setPublicNoncesHelp(error.reason);
       return;
     }
     const txErrMsg =
@@ -636,6 +646,7 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     setEvmSigningData,
     evmSigningRequest,
     clearEvmSigningRequest,
+    setPublicNoncesHelp,
   } = ctx;
   // Handle both socket-received and scanned/manual EVM signing requests requests
   if (!evmSigningData) return;
@@ -748,7 +759,9 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     console.log('[EVM Signing] nonce matched:', !!noncesToUse);
 
     if (!noncesToUse) {
-      throw new Error('Nonces not found');
+      throw new PublicNoncesMismatchError(
+        pubNonces.length ? 'mismatch' : 'missing',
+      );
     }
 
     // crucial delete nonce from publicNonces - same as normal transactions
@@ -843,7 +856,11 @@ export const handleSignEVMAction = async (ctx: HomeActionContext) => {
     xprivKeyDecrypted = '';
     pwForEncryption = '';
     console.error('[EVM Signing] Error handling request:', error);
-    displayMessage('error', t('home:err_invalid_request'));
+    if (isPublicNoncesMismatchError(error)) {
+      setPublicNoncesHelp(error.reason);
+    } else {
+      displayMessage('error', t('home:err_invalid_request'));
+    }
   } finally {
     xprivKeyDecrypted = '';
     pwForEncryption = '';

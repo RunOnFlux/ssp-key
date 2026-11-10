@@ -23,6 +23,7 @@ import { decodeErc20Calldata } from '../../lib/calldataDecode';
 import { truncateAddress } from '../../lib/addressDisplay';
 import type { KasApprovedSummary } from '../../lib/kaspa';
 import { getCryptoUsdRate, formatUsdAmount } from '../../lib/rates';
+import type { ApprovalProgress } from '../../lib/approvalProgress';
 import { cryptos, utxo } from '../../types';
 
 import { blockchains } from '@storage/blockchains';
@@ -87,6 +88,10 @@ const TransactionRequest = (props: {
   const [txData, setTxData] = useState('');
   const [fee, setFee] = useState('');
   const [usdRate, setUsdRate] = useState(0);
+  // True until this payload's USD rate fetch settles (shown as a placeholder).
+  const [usdRateLoading, setUsdRateLoading] = useState(false);
+  // What the decode is doing right now, shown under the loading state.
+  const [progress, setProgress] = useState<ApprovalProgress | null>(null);
   // Starts true and only ever goes false for a decode that is still current:
   // no payload has been read yet, so there is nothing safe to display or
   // approve (fail closed — a component mounted without a rawTx stays here).
@@ -179,6 +184,22 @@ const TransactionRequest = (props: {
     setTxData('');
     setFee('');
     setUsdRate(0); // never show a stale fiat value on a re-used component
+    setProgress(null);
+    // USD estimate for the chain's NATIVE asset — used for the native amount
+    // and for the fee (fees are always native). Token amounts never get a
+    // fiat estimate (never risk a wrong fiat value for tokens on an
+    // authorization screen). Fetched in parallel with the decode and never
+    // blocks or fails the approval path; a placeholder shows until it lands.
+    setUsdRateLoading(true);
+    void getCryptoUsdRate(props.chain).then((rate) => {
+      if (!isCurrentDecode()) {
+        return; // effect re-ran for a new tx — this rate is stale
+      }
+      if (rate > 0) {
+        setUsdRate(rate);
+      }
+      setUsdRateLoading(false);
+    });
     void (async function () {
       try {
         const keyMaterial = await loadConsumerKeyMaterial(
@@ -193,6 +214,12 @@ const TransactionRequest = (props: {
           props.rawTx,
           props.chain,
           keyMaterial,
+          {},
+          (next) => {
+            if (isCurrentDecode()) {
+              setProgress(next);
+            }
+          },
         );
         if (!isCurrentDecode()) {
           return; // a newer payload arrived — these values are not on screen
@@ -214,21 +241,6 @@ const TransactionRequest = (props: {
         setFee(txInfo.fee);
         setTxWarnings(txInfo.kasWarnings ?? []);
         setKasApproved(txInfo.kasApproved);
-        // USD estimate for the chain's NATIVE asset — used for the native
-        // amount and for the fee (fees are always native). Token amounts
-        // never get a fiat estimate (never risk a wrong fiat value for
-        // tokens on an authorization screen). Fire-and-forget: must never
-        // block or fail the decode/approval path.
-        if (txInfo.amount !== 'decodingError') {
-          void getCryptoUsdRate(props.chain).then((rate) => {
-            if (!isCurrentDecode()) {
-              return; // effect re-ran for a new tx — this rate is stale
-            }
-            if (rate > 0) {
-              setUsdRate(rate);
-            }
-          });
-        }
         if (
           txInfo.amount === 'decodingError' ||
           txInfo.receiver === 'decodingError' ||
@@ -302,6 +314,25 @@ const TransactionRequest = (props: {
       return formatUsdAmount(usd.toNumber());
     }
     return '';
+  })();
+
+  // Plain-language status of the decode, under "Reading this transaction…".
+  const progressText = (() => {
+    switch (progress?.step) {
+      case 'checking_operation':
+        return t('home:tx_progress_checking_operation');
+      case 'loading_inputs':
+        return t('home:tx_progress_loading_inputs');
+      case 'verifying_signatures':
+        return t('home:tx_progress_verifying_signatures', {
+          done: progress.done,
+          total: progress.total,
+        });
+      case 'checking_fee':
+        return t('home:tx_progress_checking_fee');
+      default:
+        return '';
+    }
   })();
 
   // Allowance-granting calls (spend-rights, not a movement of funds). The
@@ -447,6 +478,17 @@ const TransactionRequest = (props: {
             >
               {t('home:tx_decoding')}
             </Text>
+            {progressText ? (
+              <Text
+                style={[
+                  Fonts.textTinyTiny,
+                  Fonts.textCenter,
+                  { color: Colors.textGray400, marginTop: 4 },
+                ]}
+              >
+                {progressText}
+              </Text>
+            ) : null}
           </View>
         ) : (
           <>
@@ -534,7 +576,9 @@ const TransactionRequest = (props: {
               fiat={
                 amountUsd !== ''
                   ? t('home:approx_usd', { usd: amountUsd })
-                  : undefined
+                  : usdRateLoading && !token && sendingAmount
+                    ? t('home:usd_rate_loading')
+                    : undefined
               }
               decodedOnDevice={true}
             />
@@ -616,7 +660,9 @@ const TransactionRequest = (props: {
                 fiat={
                   feeUsd !== ''
                     ? t('home:approx_usd', { usd: feeUsd })
-                    : undefined
+                    : usdRateLoading
+                      ? t('home:usd_rate_loading')
+                      : undefined
                 }
               />
             ) : null}

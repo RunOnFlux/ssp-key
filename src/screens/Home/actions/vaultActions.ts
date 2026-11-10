@@ -60,7 +60,13 @@ import { openKasLedger, withKasLedgerLock } from '../../../lib/kaspaLedger';
 import { kasMaxFeeForUsdRate } from '../../../lib/kaspa';
 import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
 import { handleKasLedgerConflict } from '../../../lib/kaspaLedgerConflict';
-import { getCryptoUsdRate } from '../../../lib/rates';
+import { getCryptoUsdRateForCap } from '../../../lib/rates';
+import { fastUtxoSigner } from '../../../lib/fastSecp256k1';
+import {
+  assertChainTxVersion,
+  assertTransparentOnly,
+  setZip244PrevoutsIfNeeded,
+} from '../../../lib/consumerUtxo';
 import { cryptos, publicPrivateNonce } from '../../../types';
 import type { HomeActionContext } from './types';
 
@@ -623,7 +629,7 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       // signs only that script through the ledger (flushed before posting).
       // A pin confirmed on screen is saved right before signing (VD-3).
       const kasMaxFee = kasMaxFeeForUsdRate(
-        await getCryptoUsdRate(vaultSigningData.chain),
+        await getCryptoUsdRateForCap(vaultSigningData.chain),
       );
       commitPinBeforeSigning();
       // One Kaspa signing session at a time (KAS-3); the ledger conflict
@@ -1025,6 +1031,9 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
 
       // Parse wallet-signed TX into TransactionBuilder
       const signedTx = utxolib.Transaction.fromHex(walletSignedHex, network);
+      // No shielded parts (v4 or v5), and ZEC must be v5 since NU7.
+      assertTransparentOnly(signedTx);
+      assertChainTxVersion(signedTx, vaultChain);
       const txb = utxolib.TransactionBuilder.fromTransaction(signedTx, network);
 
       // TRUSTLESS BINDING (parity with the Solana vault path): the approval UI
@@ -1078,6 +1087,19 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         );
       }
 
+      // ZEC v5 (ZIP 244): every signature commits to the value and
+      // scriptPubKey of EVERY input. Values are the amounts verified above;
+      // scripts are the vault scriptPubKeys re-derived from the pinned
+      // descriptor (never the relay's). utxo-lib's sign() also refuses an
+      // input whose own P2SH script differs from these.
+      setZip244PrevoutsIfNeeded(
+        txb,
+        amountCheck.amounts,
+        utxoCheck.inputs.map((derived) =>
+          Buffer.from(derived.scriptPubKey, 'hex'),
+        ),
+      );
+
       // Every check passed: save a pin confirmed on screen, then sign.
       commitPinBeforeSigning();
 
@@ -1095,7 +1117,10 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
           keyPubKey = signingKeypair.pubKey;
         }
 
-        const keyPair = utxolib.ECPair.fromWIF(signingKeypair.privKey, network);
+        // noble-backed signer (same RFC 6979 low-S signatures, much faster).
+        const keyPair = fastUtxoSigner(
+          utxolib.ECPair.fromWIF(signingKeypair.privKey, network),
+        );
 
         // Scripts re-derived from the pinned descriptor (VD-4), equal to the
         // relay's inputDetails by the check above.

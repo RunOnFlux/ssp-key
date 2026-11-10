@@ -139,6 +139,9 @@ function Home({ navigation }: Props) {
   const { Gutters, Layout, Colors } = useTheme();
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [publicNoncesShared, setPublicNoncesShared] = useState(false);
+  const [publicNoncesHelp, setPublicNoncesHelp] = useState<
+    'missing' | 'mismatch' | null
+  >(null);
   const [pNonces, setPNonces] = useState('');
   const [txid, setTxid] = useState('');
   const [syncSuccessOpen, setSyncSuccessOpen] = useState(false);
@@ -932,6 +935,7 @@ function Home({ navigation }: Props) {
     setTxid,
     setPNonces,
     setPublicNoncesShared,
+    setPublicNoncesHelp,
     setSyncSuccessOpen,
     setEvmSigningSignature,
     setActivityStatus,
@@ -1890,6 +1894,8 @@ function Home({ navigation }: Props) {
             handlePublicNoncesSharedModalAction={
               handlePublicNoncesSharedModalAction
             }
+            publicNoncesHelp={publicNoncesHelp}
+            handlePublicNoncesHelpClose={() => setPublicNoncesHelp(null)}
             evmSigningData={evmSigningData}
             handleEvmSigningRequestAction={handleEvmSigningRequestAction}
             evmSigningSignature={evmSigningSignature}

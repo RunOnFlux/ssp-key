@@ -5,6 +5,7 @@ import ChainSyncRequest from '../../../components/ChainSyncRequest/ChainSyncRequ
 import PublicNoncesRequest from '../../../components/PublicNoncesRequest/PublicNoncesRequest';
 import RecoveryRequest from '../../../components/RecoveryRequest/RecoveryRequest';
 import PublicNoncesSuccess from '../../../components/PublicNoncesSuccess/PublicNoncesSuccess';
+import PublicNoncesOutOfSync from '../../../components/PublicNoncesOutOfSync/PublicNoncesOutOfSync';
 import EvmSigningRequest from '../../../components/EvmSigningRequest/EvmSigningRequest';
 import EvmSigningSuccess from '../../../components/EvmSigningSuccess/EvmSigningSuccess';
 import WkSigningRequest from '../../../components/WkSigningRequest/WkSigningRequest';
@@ -73,6 +74,8 @@ const HomeRequests = (props: {
   publicNoncesShared: boolean;
   pNonces: string;
   handlePublicNoncesSharedModalAction: () => void;
+  publicNoncesHelp: 'missing' | 'mismatch' | null;
+  handlePublicNoncesHelpClose: () => void;
   evmSigningData: evmSigningRequest | null;
   handleEvmSigningRequestAction: (status: boolean) => Promise<void>;
   evmSigningSignature: string | null;
@@ -120,6 +123,8 @@ const HomeRequests = (props: {
     publicNoncesShared,
     pNonces,
     handlePublicNoncesSharedModalAction,
+    publicNoncesHelp,
+    handlePublicNoncesHelpClose,
     evmSigningData,
     handleEvmSigningRequestAction,
     evmSigningSignature,
@@ -200,6 +205,12 @@ const HomeRequests = (props: {
         <PublicNoncesSuccess
           actionStatus={handlePublicNoncesSharedModalAction}
           nonces={pNonces}
+        />
+      )}
+      {publicNoncesHelp && (
+        <PublicNoncesOutOfSync
+          reason={publicNoncesHelp}
+          actionStatus={handlePublicNoncesHelpClose}
         />
       )}
       {evmSigningData && (
