@@ -7,7 +7,7 @@ Source of truth for the SSP Key store listings. Standard fastlane layout so it c
 | `android/en-US/title.txt` | Play Store app name | 30 chars |
 | `android/en-US/short_description.txt` | Play Store short description | 80 chars |
 | `android/en-US/full_description.txt` | Play Store full description | 4000 chars |
-| `android/en-US/changelogs/<versionCode>.txt` | Play Store release notes for that versionCode (66 = v2.2.2) | 500 chars |
+| `android/en-US/changelogs/<versionCode>.txt` | Play Store release notes for that versionCode (67 = v2.2.3) | 500 chars |
 | `en-US/name.txt` | App Store name | 30 chars |
 | `en-US/subtitle.txt` | App Store subtitle | 30 chars |
 | `en-US/promotional_text.txt` | App Store promotional text (editable without review) | 170 chars |

@@ -1,0 +1,6 @@
+Fix update. Please update SSP Wallet to 2.2.2 as well.
+• Fixes Zcash sends after the NU7 network upgrade
+• Faster transaction approval, with progress
+• Clear help when public nonces are out of sync
+• Fixes sending on Ethereum and other EVM chains
+• Fixes SSP Key not opening on iOS 27
