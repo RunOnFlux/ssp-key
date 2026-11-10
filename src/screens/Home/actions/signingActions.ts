@@ -15,9 +15,25 @@ import {
   signAndBroadcastEVM,
   selectPublicNonce,
   cosignAndBroadcastSOLTransaction,
+  cosignAndBroadcastKASTransaction,
+  KasMaybeBroadcastError,
   RelayAuthUnavailableError,
   PublicNoncesMismatchError,
 } from '../../../lib/constructTx';
+import {
+  kasBundleClaims,
+  kasLedgerProver,
+  kasMaxFeeForUsdRate,
+  kasVaultSpend,
+  type KasApprovedSummary,
+} from '../../../lib/kaspa';
+import {
+  openKasLedger,
+  reconcileKasLedgerClaims,
+  withKasLedgerLock,
+} from '../../../lib/kaspaLedger';
+import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
+import { handleKasLedgerConflict } from '../../../lib/kaspaLedgerConflict';
 import { isPublicNoncesMismatchError } from '../../../lib/publicNoncesHelp';
 import { continueSigningSchnorrMultisig } from '../../../lib/evmSigning';
 import { parseTypedData, typedDataMatchesChain } from '../../../lib/typedData';
@@ -188,6 +204,9 @@ export const approveTransaction = async (
   chain: keyof cryptos,
   derivationPath: string,
   suggestedUtxos: utxo[],
+  // Kaspa: what the approval screen displayed (TransactionRequest). Required
+  // for kas — the co-sign refuses unless its own re-description matches.
+  kasApproved?: KasApprovedSummary,
 ) => {
   const {
     xpubKey,
@@ -252,6 +271,9 @@ export const approveTransaction = async (
     // KEY-8: refuses typeIndex other than 0 / 1 before any key is derived.
     const { typeIndex, addressIndex } =
       parseConsumerDerivationPath(derivationPath);
+    // Kaspa never uses request UTXOs either: its co-sign path always does
+    // its own lookup of the vault derived from the stored xpubs (below).
+    const isKas = blockchains[chain].chainType === 'kas';
 
     const xpk = CryptoJS.AES.decrypt(xprivKey, pwForEncryption);
     const xprivKeyDecrypted = xpk.toString(CryptoJS.enc.Utf8);
@@ -263,6 +285,8 @@ export const approveTransaction = async (
       chain,
     );
     let ttxid = '';
+    // Kaspa: set when the submission MAY have landed (never definite).
+    let kasMaybeBroadcast = false;
     if (blockchains[chain].chainType === 'evm') {
       // EVM-8 / K5: recompute the userOp hash from the displayed operation
       // with this device's EntryPoint + chainId, and bind the signer set and
@@ -319,6 +343,59 @@ export const approveTransaction = async (
         publicNonceKey,
         verifiedEvm,
       );
+    } else if (isKas) {
+      // Kaspa: the payload is the wallet's half-signed SigningBundle JSON.
+      // The relay-supplied `utxos` are IGNORED — the co-sign opens the bundle
+      // against this device's own UTXO lookup of the vault address derived
+      // from the stored xpubs + path (KASPA_SSP_CONTRACT.md §4.1). The key
+      // stays the broadcaster, then posts `txid` like the UTXO chains.
+      if (!kasApproved) {
+        keyPair.privKey = '';
+        throw new Error(t('home:err_kas_not_displayed'));
+      }
+      const vaultSpend = kasVaultSpend(
+        xpubKeyWalletDecrypted,
+        xpubKeyDecrypted,
+        typeIndex,
+        addressIndex,
+        chain,
+      );
+      try {
+        // min($100-equivalent, 5 KAS) — 5 KAS alone when no rate is known
+        const maxFee = kasMaxFeeForUsdRate(await getCryptoUsdRateForCap(chain));
+        // One Kaspa signing session at a time (KAS-3): the ledger snapshot
+        // is taken inside the lock, after any earlier session flushed.
+        ttxid = await withKasLedgerLock(async () => {
+          const ledger = openKasLedger();
+          // KAS-2: an outpoint this device signed under another amount is
+          // proven (and the entry replaced) or refused before signing.
+          await reconcileKasLedgerClaims(
+            ledger,
+            kasBundleClaims(rawTransaction),
+            kasLedgerProver(chain),
+          );
+          return cosignAndBroadcastKASTransaction({
+            chain,
+            bundleJson: rawTransaction,
+            vaultSpend,
+            keyPrivKeyHex: keyPair.privKey,
+            ledger,
+            approved: kasApproved,
+            maxFee,
+          });
+        });
+      } catch (error) {
+        if (!(error instanceof KasMaybeBroadcastError)) {
+          throw error;
+        }
+        // The transaction ID is known and it may be on the network: tell
+        // the wallet about it (it tracks it like any sent txid) and tell the
+        // user to check the explorer — never re-sign something else.
+        ttxid = error.txid;
+        kasMaybeBroadcast = true;
+      } finally {
+        keyPair.privKey = '';
+      }
     } else if (blockchains[chain].chainType === 'sol') {
       // Wallet pre-signed the outer tx with its leaf. The key re-runs the
       // fail-closed consumer decode on the exact bytes (bound to its own
@@ -381,8 +458,28 @@ export const approveTransaction = async (
       console.log(error);
       displayMessage('info', t('home:warn_tx_sent_notify_failed'), 6000);
     }
+    if (kasMaybeBroadcast) {
+      displayMessage(
+        'error',
+        t('home:err_kas_maybe_broadcast', { txid: ttxid }),
+        10000,
+      );
+      return;
+    }
     setTxid(ttxid);
   } catch (error) {
+    // Kaspa ledger unreadable / full: fail closed; a corrupt ledger also
+    // offers the explicit (warned) reset.
+    if (handleKasLedgerError(error, t, displayMessage)) {
+      console.log(error);
+      return;
+    }
+    // Kaspa signed-amount conflict (KAS-2): refused; an unprovable one
+    // offers the explicit per-outpoint reset.
+    if (handleKasLedgerConflict(error, t, displayMessage)) {
+      console.log(error);
+      return;
+    }
     // Out-of-sync public nonces: explain what happened and how to fix it
     // instead of a bare toast (nothing was signed, funds are untouched).
     if (isPublicNoncesMismatchError(error)) {

@@ -282,3 +282,33 @@ describe('constants', () => {
     expect(CHAIN_SYNC_POST_SPACING_MS).toBeGreaterThan(1000);
   });
 });
+
+describe('parseChainSyncRequest (kas)', () => {
+  it('accepts Kaspa with a standard account xpub (no pubkey array)', () => {
+    const result = parseChainSyncRequest(
+      payload({ chains: [{ chain: 'kas', xpubWallet: VALID_XPUB }] }),
+      IDENTITY_CHAIN,
+    );
+    expect(result).toEqual({
+      status: 'ok',
+      request: {
+        version: 1,
+        chains: [{ chain: 'kas', xpubWallet: VALID_XPUB }],
+      },
+    });
+  });
+
+  it('rejects Kaspa carrying a Solana-style pubkey array', () => {
+    const result = parseChainSyncRequest(
+      payload({ chains: [{ chain: 'kas', xpubWallet: solPubkeyArray() }] }),
+      IDENTITY_CHAIN,
+    );
+    expect(result).toEqual({ status: 'invalid', reason: 'bad_xpub' });
+  });
+
+  it('lists KAS in the approval copy', () => {
+    expect(chainSyncSymbols(['btc', 'kas'] as (keyof cryptos)[])).toBe(
+      'BTC, KAS',
+    );
+  });
+});

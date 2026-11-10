@@ -21,6 +21,7 @@ import type {
 import { loadConsumerKeyMaterial } from '../../lib/consumerKeys';
 import { decodeErc20Calldata } from '../../lib/calldataDecode';
 import { truncateAddress } from '../../lib/addressDisplay';
+import type { KasApprovedSummary } from '../../lib/kaspa';
 import { getCryptoUsdRate, formatUsdAmount } from '../../lib/rates';
 import type { ApprovalProgress } from '../../lib/approvalProgress';
 import { cryptos, utxo } from '../../types';
@@ -66,7 +67,9 @@ const TransactionRequest = (props: {
   path?: string;
   utxos: utxo[];
   activityStatus: boolean;
-  actionStatus: (status: boolean) => void;
+  // Kaspa approvals hand back exactly what was displayed; the signing path
+  // refuses unless its own re-description is identical.
+  actionStatus: (status: boolean, kasApproved?: KasApprovedSummary) => void;
 }) => {
   // Monotonic decode token. Every decode run captures its value; a run whose
   // token is no longer current has been superseded by a newer payload and
@@ -95,6 +98,13 @@ const TransactionRequest = (props: {
   const [decoding, setDecoding] = useState(true);
   const [decodeFailed, setDecodeFailed] = useState(false);
   const [multiRecipient, setMultiRecipient] = useState(false);
+  // kaspa-core describeTransaction warnings for the current payload
+  const [txWarnings, setTxWarnings] = useState<string[]>([]);
+  // Kaspa: the displayed summary of the CURRENT payload (undefined until its
+  // decode resolves). Approval of a kas payload without one never signs.
+  const [kasApproved, setKasApproved] = useState<
+    KasApprovedSummary | undefined
+  >(undefined);
   const [recipients, setRecipients] = useState<ApprovalRecipient[]>([]);
   const [warnings, setWarnings] = useState<ApprovalWarning[]>([]);
   const [nativeValue, setNativeValue] = useState('');
@@ -111,6 +121,13 @@ const TransactionRequest = (props: {
     if (decoding || decodeFailed) {
       // Single choke point for BOTH approve paths (slider and a completed
       // Authentication): what was not decoded and displayed is never signed.
+      return;
+    }
+    if (blockchainConfig.chainType === 'kas') {
+      if (!kasApproved) {
+        return; // nothing displayed for this payload — never sign it
+      }
+      props.actionStatus(true, kasApproved);
       return;
     }
     props.actionStatus(true);
@@ -156,6 +173,8 @@ const TransactionRequest = (props: {
     setReceiverAddress('');
     setSenderAddress('');
     setMultiRecipient(false);
+    setTxWarnings([]);
+    setKasApproved(undefined);
     setRecipients([]);
     setWarnings([]);
     setNativeValue('');
@@ -220,6 +239,8 @@ const TransactionRequest = (props: {
         // H-2: the fee is computed on-device for every chain and is always
         // shown; a decode that cannot compute it fails below.
         setFee(txInfo.fee);
+        setTxWarnings(txInfo.kasWarnings ?? []);
+        setKasApproved(txInfo.kasApproved);
         if (
           txInfo.amount === 'decodingError' ||
           txInfo.receiver === 'decodingError' ||
@@ -227,7 +248,14 @@ const TransactionRequest = (props: {
         ) {
           // Fail closed with a VISIBLE error state — approval is impossible,
           // reject stays reachable. Previously this silently auto-rejected.
-          displayMessage('error', t('home:err_tx_decode'));
+          displayMessage(
+            'error',
+            txInfo.errorReason === 'kas_utxo_fetch'
+              ? t('home:err_kas_utxo_fetch')
+              : txInfo.errorReason === 'kas_wrong_vault'
+                ? t('home:err_kas_wrong_vault')
+                : t('home:err_tx_decode'),
+          );
           setDecodeFailed(true);
         }
       } catch (error) {
@@ -500,6 +528,17 @@ const TransactionRequest = (props: {
                     operator: truncateAddress(humanCalldata.counterparty),
                   }),
                 ]}
+              />
+            ) : null}
+            {txWarnings.length > 0 ? (
+              <RiskBanner
+                severity="high"
+                title={t('home:kas_tx_warnings_title')}
+                messages={txWarnings.map((w) =>
+                  t(`home:kas_warning_${w.replace(/-/g, '_')}`, {
+                    defaultValue: w,
+                  }),
+                )}
               />
             ) : null}
             {contractCallWithValue ? (

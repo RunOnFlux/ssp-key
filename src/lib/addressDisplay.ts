@@ -24,12 +24,17 @@ export function splitAddressForDisplay(
   edge: number = ADDRESS_EDGE_CHARS,
 ): AddressParts {
   const value = address.trim();
-  if (value.length <= edge * 2 + 3) {
+  // Prefixed addresses (`kaspa:…`, `bitcoincash:…`): the prefix is the same
+  // for every address of the chain, so it never counts toward the
+  // emphasized characters — the edge starts after it.
+  const prefixLen = /^[a-z]+:/.exec(value)?.[0].length ?? 0;
+  const startLen = prefixLen + edge;
+  if (value.length <= startLen + edge + 3) {
     return { start: value, middle: '', end: '' };
   }
   return {
-    start: value.slice(0, edge),
-    middle: value.slice(edge, value.length - edge),
+    start: value.slice(0, startLen),
+    middle: value.slice(startLen, value.length - edge),
     end: value.slice(value.length - edge),
   };
 }

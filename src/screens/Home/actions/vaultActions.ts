@@ -52,6 +52,15 @@ import {
   type OwnVaultIdentity,
 } from '../../../lib/vaultDescriptorGate';
 import { verifyVaultUtxoAmounts } from '../../../lib/vaultUtxoAmounts';
+import {
+  kasVaultIndicesError,
+  signKasVaultBundle,
+} from '../../../lib/kaspaVault';
+import { openKasLedger, withKasLedgerLock } from '../../../lib/kaspaLedger';
+import { kasMaxFeeForUsdRate } from '../../../lib/kaspa';
+import { handleKasLedgerError } from '../../../lib/kaspaLedgerRecovery';
+import { handleKasLedgerConflict } from '../../../lib/kaspaLedgerConflict';
+import { getCryptoUsdRateForCap } from '../../../lib/rates';
 import { fastUtxoSigner } from '../../../lib/fastSecp256k1';
 import {
   assertChainTxVersion,
@@ -318,6 +327,7 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
   const {
     vaultSigningData,
     solDecodeState,
+    kasDecodeState,
     seedPhrase,
     postAction,
     displayMessage,
@@ -366,6 +376,28 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
       displayMessage('error', t('home:vault_sign_sol_undecodable'), 8000);
       return;
     }
+  }
+  // Same sign-time recheck for Kaspa: only an 'ok' verdict of this device's
+  // own-lookup decode may proceed (pending and failed both refuse). The
+  // signing path below re-verifies from scratch regardless.
+  if (
+    blockchains[vaultSigningData.chain as keyof cryptos]?.chainType === 'kas' &&
+    kasDecodeState?.status !== 'ok'
+  ) {
+    if (kasDecodeState) {
+      displayMessage('error', t('home:vault_sign_kas_decode_failed'), 8000);
+    }
+    return;
+  }
+  // KAS-1: a Kaspa enterprise request derives only under an org account
+  // (100…99999) with integer child indices — never the consumer 0' or the
+  // reserved 99'. Checked before any key is derived (and again at sign time).
+  if (
+    blockchains[vaultSigningData.chain as keyof cryptos]?.chainType === 'kas' &&
+    kasVaultIndicesError(vaultSigningData)
+  ) {
+    displayMessage('error', t('home:err_kas_vault_bad_index'), 8000);
+    return;
   }
 
   // Hoist sensitive vars outside try so they can be cleared in catch/finally
@@ -580,6 +612,50 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
         sspWalletKeyInternalIdentity,
       );
 
+      displayMessage('success', t('home:vault_sign_success'));
+      return;
+    }
+
+    // Kaspa enterprise: co-sign the SigningBundle. wallet_only falls through
+    // to the generic pass-through below (the key signs nothing there).
+    if (
+      blockchainConfig.chainType === 'kas' &&
+      vaultSigningData.signingMode !== 'wallet_only'
+    ) {
+      // Re-opens the bundle against this device's own UTXO lookup of the
+      // proposal's ONE vault script (contract §4.7), re-checks recipients +
+      // fee against the payload, confirms this key's leaf
+      // m/48'/111111'/org'/0'/vaultIndex/addressIndex is in that script, and
+      // signs only that script through the ledger (flushed before posting).
+      // A pin confirmed on screen is saved right before signing (VD-3).
+      const kasMaxFee = kasMaxFeeForUsdRate(
+        await getCryptoUsdRateForCap(vaultSigningData.chain),
+      );
+      commitPinBeforeSigning();
+      // One Kaspa signing session at a time (KAS-3); the ledger conflict
+      // reconcile (KAS-2) runs inside signKasVaultBundle before signing.
+      const kasResult = await withKasLedgerLock(() =>
+        signKasVaultBundle({
+          data: vaultSigningData,
+          vaultXpriv,
+          vaultIndex: vaultSigningData.vaultIndex,
+          ledger: openKasLedger(),
+          maxFee: kasMaxFee,
+        }),
+      );
+      vaultXpriv = '';
+      pwForEncryption = '';
+      await postAction(
+        'enterprisevaultsigned',
+        JSON.stringify({
+          signedHex: kasResult.signedHex,
+          keyPubKey: kasResult.keyPubKey,
+          requestId: vaultSigningData.requestId,
+        }),
+        vaultSigningData.chain,
+        '',
+        sspWalletKeyInternalIdentity,
+      );
       displayMessage('success', t('home:vault_sign_success'));
       return;
     }
@@ -1112,6 +1188,15 @@ export const handleVaultSignAction = async (ctx: HomeActionContext) => {
               ? error.message
               : 'Unknown error';
     console.error('[Vault Signing] Error:', errMsg);
+    // Kaspa ledger unreadable / full: refused, with the guarded reset offer.
+    if (handleKasLedgerError(error, t, displayMessage)) {
+      return;
+    }
+    // Kaspa signed-amount conflict (KAS-2): refused; an unprovable one
+    // offers the explicit per-outpoint reset.
+    if (handleKasLedgerConflict(error, t, displayMessage)) {
+      return;
+    }
     displayMessage(
       'error',
       `${t('home:err_vault_sign_failed')}: ${errMsg}`,

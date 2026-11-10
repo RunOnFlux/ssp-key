@@ -21,6 +21,7 @@ import {
   requestDigestOfDecoded,
 } from '../../lib/vaultApprovalBinding';
 import VaultRiskStrip from './VaultRiskStrip';
+import { KAS_BLOCKING_WARNINGS } from '../../lib/kaspa';
 import VaultPinConfirm from '../VaultPinConfirm/VaultPinConfirm';
 import {
   isVaultPinStaged,
@@ -88,6 +89,13 @@ interface VaultSignRequestProps {
   // True while the async sol byte-decode has not produced a verdict yet —
   // approval stays disabled (fail closed) until the decode resolves.
   solDecodePending?: boolean;
+  // Kaspa (see lib/kaspaVault): approval is blocked unless this device opened
+  // the bundle against its own UTXO lookup AND it matched the relay payload.
+  // Blocked while pending too (fail closed).
+  kasDecodeBlocked?: boolean;
+  kasDecodePending?: boolean;
+  kasDecodeReasons?: string[];
+  kasWarnings?: string[];
   // WalletConnect Phase 2 — vault MESSAGE signing (personal_sign). When set, this
   // is a message signature (not a transaction): show the message text + dApp
   // instead of recipients/amounts. Signing math is identical (signs the digest).
@@ -108,6 +116,10 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   solDecodeKind,
   solMismatchReasons,
   solDecodePending,
+  kasDecodeBlocked,
+  kasDecodePending,
+  kasDecodeReasons,
+  kasWarnings,
   signMessage,
   dappOrigin,
 }) => {
@@ -174,6 +186,13 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
   // Fail closed on ANY decode error, matching TransactionRequest: nothing this
   // device cannot read is approvable. Reject stays reachable.
   const decodeBlocked = !!decodedTx?.error;
+  // Belt and braces: a blocking kaspa-core warning blocks even if the
+  // verdict (which already fails on them) were somehow 'ok'.
+  const kasBlockingWarning = (kasWarnings ?? []).some((w) =>
+    (KAS_BLOCKING_WARNINGS as readonly string[]).includes(w),
+  );
+  const kasBlocked = kasDecodeBlocked === true || kasBlockingWarning;
+  const kasFailed = kasBlocked && kasDecodePending !== true;
   // CHN-5: message signing exists only for EVM vaults.
   const messageUnsupported = isMessageSign && chainType !== 'evm';
   // CHN-5: the request this screen shows. A decoded view not bound to a
@@ -206,6 +225,7 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
     solPending ||
     solUndecodable ||
     decodeBlocked ||
+    kasBlocked ||
     messageUnsupported ||
     descriptorBlocked ||
     !requestDigest;
@@ -472,8 +492,63 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
           </Card>
         )}
 
+        {/* Kaspa: own-lookup decode failed or contradicts the proposal */}
+        {kasFailed && (
+          <Card style={[styles.card, { borderColor: Colors.error }]}>
+            <Text
+              style={[
+                Fonts.textTiny,
+                Fonts.textBold,
+                { color: Colors.error, textAlign: 'center' },
+              ]}
+            >
+              {t('home:vault_sign_kas_decode_failed')}
+            </Text>
+            {(kasDecodeReasons ?? []).map((reason, index) => (
+              <Text
+                key={index}
+                style={[
+                  Fonts.textTiny,
+                  { color: Colors.error, textAlign: 'center', marginTop: 4 },
+                ]}
+              >
+                {reason}
+              </Text>
+            ))}
+          </Card>
+        )}
+        {kasWarnings && kasWarnings.length > 0 ? (
+          <Card style={[styles.card, { borderColor: Colors.warning }]}>
+            <Text
+              style={[
+                Fonts.textTiny,
+                Fonts.textBold,
+                { color: Colors.warning, textAlign: 'center' },
+              ]}
+            >
+              {t('home:kas_tx_warnings_title')}
+            </Text>
+            {kasWarnings.map((w) => (
+              <Text
+                key={w}
+                style={[
+                  Fonts.textTiny,
+                  { color: Colors.warning, textAlign: 'center', marginTop: 4 },
+                ]}
+              >
+                {t(`home:kas_warning_${w.replace(/-/g, '_')}`, {
+                  defaultValue: w,
+                })}
+              </Text>
+            ))}
+          </Card>
+        ) : null}
+
         {/* Decode error — approval is blocked */}
-        {decodedTx?.error && !solUndecodable && !descriptorRefused ? (
+        {decodedTx?.error &&
+        !solUndecodable &&
+        !descriptorRefused &&
+        !kasFailed ? (
           <Card style={[styles.card, { borderColor: Colors.error }]}>
             <Text
               style={[
