@@ -16,6 +16,7 @@ import {
   selectPublicNonce,
   cosignAndBroadcastSOLTransaction,
   RelayAuthUnavailableError,
+  BroadcastRejectedError,
   PublicNoncesMismatchError,
 } from '../../../lib/constructTx';
 import { isPublicNoncesMismatchError } from '../../../lib/publicNoncesHelp';
@@ -393,9 +394,11 @@ export const approveTransaction = async (
     const txErrMsg =
       error instanceof RelayAuthUnavailableError
         ? t('home:err_relay_auth_unavailable')
-        : error instanceof Error
-          ? error.message
-          : t('home:err_tx_failed');
+        : error instanceof BroadcastRejectedError
+          ? t('home:err_broadcast_rejected', { reason: error.reason })
+          : error instanceof Error
+            ? error.message
+            : t('home:err_tx_failed');
     displayMessage('error', txErrMsg);
     console.log(error);
   } finally {

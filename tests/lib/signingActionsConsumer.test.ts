@@ -23,7 +23,10 @@ import {
   getMasterXpriv,
   getMasterXpub,
 } from '../../src/lib/wallet';
-import { RelayAuthUnavailableError } from '../../src/lib/constructTx';
+import {
+  RelayAuthUnavailableError,
+  BroadcastRejectedError,
+} from '../../src/lib/constructTx';
 import { deriveConsumerUtxoScripts } from '../../src/lib/consumerUtxo';
 import {
   armEvmSigningApproval,
@@ -576,6 +579,24 @@ describe('K4: consumer nonce burn is durable before signing', () => {
     expect(ctx.displayMessage).toHaveBeenCalledWith(
       'error',
       expect.stringMatching(/exceeds the maximum/),
+    );
+  });
+
+  it('a rejected broadcast shows the node reason, not "status code 400"', async () => {
+    const { ctx, raw } = evmTxCtx();
+    mockBroadcast.mockImplementation(() =>
+      Promise.reject(
+        new BroadcastRejectedError('64: bad-txns-too-many-sigops. Code:-26'),
+      ),
+    );
+    ctx.t = jest.fn((key, opts) =>
+      opts?.reason ? `${key}: ${opts.reason}` : key,
+    );
+    await approveTransaction(ctx, raw, 'sepolia', '0-0', []);
+    expect(ctx.postAction).not.toHaveBeenCalled();
+    expect(ctx.displayMessage).toHaveBeenCalledWith(
+      'error',
+      'home:err_broadcast_rejected: 64: bad-txns-too-many-sigops. Code:-26',
     );
   });
 

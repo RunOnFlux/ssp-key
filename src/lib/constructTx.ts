@@ -298,6 +298,54 @@ export function signTransaction(
   }
 }
 
+/**
+ * The backend answered a broadcast with an error. `reason` is the node's
+ * reject string: insight (Flux) returns it as the 4xx body, e.g.
+ * "64: bad-txns-too-many-sigops. Code:-26"; blockbook as `{ error }`.
+ * Nothing was broadcast.
+ */
+export class BroadcastRejectedError extends Error {
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(`Transaction rejected by the network: ${reason}`);
+    this.name = 'BroadcastRejectedError';
+    this.reason = reason;
+  }
+}
+
+const BROADCAST_REASON_MAX = 200;
+
+/**
+ * The node's reject reason from a failed broadcast, or null when there is
+ * none worth showing (no response, a 5xx or proxy page, an empty body).
+ */
+export function getBroadcastRejectReason(error: unknown): string | null {
+  if (!axios.isAxiosError(error) || !error.response) return null;
+  const { status, data } = error.response;
+  if (status < 400 || status >= 500) return null;
+  let reason = '';
+  if (typeof data === 'string') {
+    reason = data;
+  } else if (data && typeof data === 'object') {
+    const inner: unknown = (data as { error?: unknown }).error;
+    if (typeof inner === 'string') {
+      reason = inner;
+    } else if (
+      inner &&
+      typeof inner === 'object' &&
+      typeof (inner as { message?: unknown }).message === 'string'
+    ) {
+      reason = (inner as { message: string }).message;
+    }
+  }
+  reason = reason.replace(/\s+/g, ' ').trim();
+  if (!reason || /<(!doctype|html)/i.test(reason)) return null;
+  return reason.length > BROADCAST_REASON_MAX
+    ? `${reason.slice(0, BROADCAST_REASON_MAX)}…`
+    : reason;
+}
+
 export async function broadcastTx(
   txHex: string,
   chain: keyof cryptos,
@@ -317,6 +365,11 @@ export async function broadcastTx(
     }
   } catch (error) {
     console.log(error);
+    // Show the node's reason instead of axios' "status code 400".
+    const reason = getBroadcastRejectReason(error);
+    if (reason) {
+      throw new BroadcastRejectedError(reason);
+    }
     throw error;
   }
 }
