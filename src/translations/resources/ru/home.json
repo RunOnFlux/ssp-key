@@ -54,6 +54,7 @@
   "err_refresh_failed": "Could not check for pending requests. Try again.",
   "err_tx_failed": "Транзакция не удалась. Попробуйте позже.",
   "err_relay_auth_unavailable": "Relay authentication unavailable. Nothing was sent. Make sure SSP Key is synced with SSP Wallet, then try again.",
+  "err_broadcast_rejected": "The network rejected this transaction, nothing was sent. Reason: {{reason}}",
   "warn_tx_sent_notify_failed": "Transaction sent to the network, but SSP Wallet could not be notified. It will detect the transaction on its own shortly.",
   "err_sync_with_ssp_needed": "Необходима синхронизация с кошельком SSP.",
   "err_invalid_manual_input": "Недействительный ручной ввод.",
