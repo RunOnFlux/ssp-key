@@ -24,6 +24,8 @@ interface TxRequest {
   chain: string;
   path: string;
   utxos: utxo[];
+  /** Recipient as the user entered it in SSP Wallet (Zcash TEX only). */
+  receiver?: string;
 }
 
 interface SocketContextType {
@@ -192,6 +194,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         chain: string;
         path: string;
         utxos?: utxo[];
+        receiver?: unknown;
       }) => {
         console.log(
           '[Socket] Transaction request received for chain:',
@@ -202,6 +205,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
           chain: data.chain,
           path: data.path,
           utxos: data.utxos || [],
+          receiver:
+            typeof data.receiver === 'string' ? data.receiver : undefined,
         });
       },
     );

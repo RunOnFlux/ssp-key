@@ -50,6 +50,8 @@ const HomeRequests = (props: {
   rawTx: string;
   /** Derivation path (`typeIndex-addressIndex`) of the pending tx request. */
   txPath: string;
+  /** Recipient as entered in SSP Wallet ('' when the request has none). */
+  txReceiver: string;
   xpubWallet: string;
   xpubKey: string;
   activeChain: keyof cryptos;
@@ -98,6 +100,7 @@ const HomeRequests = (props: {
     submittingTransaction,
     rawTx,
     txPath,
+    txReceiver,
     xpubWallet,
     xpubKey,
     activeChain,
@@ -162,6 +165,7 @@ const HomeRequests = (props: {
           path={txPath}
           chain={activeChain}
           utxos={txUtxos}
+          receiverHint={txReceiver || undefined}
           activityStatus={activityStatus}
           actionStatus={handleTransactionRequestAction}
         />

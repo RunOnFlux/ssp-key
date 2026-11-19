@@ -12,6 +12,7 @@ import {
 import { blockchains } from '@storage/blockchains';
 import {
   decodeVaultTransaction,
+  labelVaultTexRecipients,
   type VaultDecodedTx,
 } from '../../../lib/transactions';
 import {
@@ -78,6 +79,8 @@ export interface RelayActionEnvelope {
   chain?: unknown;
   path?: unknown;
   utxos?: unknown;
+  /** 'tx' only: the recipient as entered in SSP Wallet (Zcash TEX). */
+  receiver?: unknown;
 }
 
 /**
@@ -105,7 +108,13 @@ export type KeyRelayAction = (typeof KEY_RELAY_ACTIONS)[number];
  * pending-request setters; tests wire them to spies.
  */
 export interface RelayActionHandlers {
-  onTx: (payload: string, chain: string, path: string, utxos: utxo[]) => void;
+  onTx: (
+    payload: string,
+    chain: string,
+    path: string,
+    utxos: utxo[],
+    receiver?: string,
+  ) => void;
   onPublicNoncesRequest: (chain: string) => void;
   onEvmSigningRequest: (data: evmSigningRequest) => void;
   onWkSigningRequest: (data: wkSigningRequest) => void;
@@ -185,6 +194,9 @@ export const routeRelayAction = (
         asActionString(envelope.path),
         // relay-supplied; shape is validated downstream when the tx is signed
         Array.isArray(envelope.utxos) ? (envelope.utxos as utxo[]) : [],
+        // the recipient as entered in SSP Wallet; only ever shown once it
+        // matches an output (applyZcashTexReceiver)
+        typeof envelope.receiver === 'string' ? envelope.receiver : undefined,
       );
       return true;
     }
@@ -315,6 +327,8 @@ export function usePendingRequests(
   const [activeChain, setActiveChain] = useState<keyof cryptos>(identityChain);
   const [txPath, setTxPath] = useState('');
   const [txUtxos, setTxUtxos] = useState<utxo[]>([]);
+  // Recipient as entered in SSP Wallet ('' when the request carries none).
+  const [txReceiver, setTxReceiver] = useState('');
   const [syncReq, setSyncReq] = useState('');
   const [publicNoncesReq, setPublicNoncesReq] = useState('');
   const [evmSigningData, setEvmSigningData] =
@@ -394,6 +408,7 @@ export function usePendingRequests(
     chain: string,
     path: string,
     utxos: utxo[] = [],
+    receiver?: string,
   ) => {
     if (!isSupportedChain(chain)) {
       rejectUnsupportedChain('tx', chain);
@@ -405,6 +420,9 @@ export function usePendingRequests(
     if (utxos) {
       setTxUtxos(utxos);
     }
+    // Always replaced, so a hint never outlives the request it came with
+    // (QR and manual input carry none).
+    setTxReceiver(receiver ?? '');
     setRawTx(rawTransaction);
     setTxPath(path);
   };
@@ -649,7 +667,17 @@ export function usePendingRequests(
         decoded.error = decoded.error ?? utxoCheck.reason;
       } else if (!decoded.error) {
         decoded.sender = utxoCheck.sender;
-        decoded.recipients = utxoCheck.recipients;
+        // ZIP 320: outputs paying a TEX recipient the proposal names are
+        // shown as that tex1… address; a TEX recipient no output pays blocks.
+        const tex = labelVaultTexRecipients(
+          utxoCheck.recipients,
+          data.recipients,
+          chain,
+        );
+        decoded.recipients = tex.recipients;
+        if (tex.error) {
+          decoded.error = tex.error;
+        }
       }
       if (decoded.error || !utxoCheck.ok) {
         setDecodedVaultTx(bind(decoded));
@@ -729,7 +757,13 @@ export function usePendingRequests(
 
   useEffect(() => {
     if (newTx.rawTx) {
-      handleTxRequest(newTx.rawTx, newTx.chain, newTx.path, newTx.utxos);
+      handleTxRequest(
+        newTx.rawTx,
+        newTx.chain,
+        newTx.path,
+        newTx.utxos,
+        newTx.receiver,
+      );
       clearTx?.();
     }
   }, [newTx.rawTx]);
@@ -823,6 +857,7 @@ export function usePendingRequests(
     setActiveChain,
     txPath,
     setTxPath,
+    txReceiver,
     txUtxos,
     setTxUtxos,
     syncReq,

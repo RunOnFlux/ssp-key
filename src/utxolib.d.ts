@@ -54,6 +54,7 @@ declare module '@runonflux/utxo-lib' {
   type networks = Record<string, network>;
   let address: {
     fromOutputScript: (scriptPubKey: Uint8Array, network: network) => string;
+    toOutputScript: (address: string, network: network) => Uint8Array;
   };
   let script: {
     multisig: {
@@ -67,6 +68,11 @@ declare module '@runonflux/utxo-lib' {
       };
     };
     scriptHash: {
+      output: {
+        encode: (hash160: Buffer) => Uint8Array;
+      };
+    };
+    pubKeyHash: {
       output: {
         encode: (hash160: Buffer) => Uint8Array;
       };

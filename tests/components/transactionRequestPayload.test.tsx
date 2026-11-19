@@ -25,6 +25,9 @@ import type { utxo } from '../../src/types';
 
 jest.mock('../../src/lib/transactions', () => ({
   decodeTransactionForApproval: jest.fn(),
+  // the real ZIP 320 check: it only reads the decode it is given
+  applyZcashTexReceiver: jest.requireActual('../../src/lib/transactions')
+    .applyZcashTexReceiver,
 }));
 
 // The screen decrypts this chain's stored xpubs and binds the decode to them
@@ -97,8 +100,20 @@ jest.mock('../../src/components/request', () => {
     RequestHeader: (props: { identity?: string }) =>
       leaf('sender', props.identity),
     ActionCard: (props: { action: string }) => leaf('action', props.action),
-    RecipientCard: (props: { address: string }) =>
-      leaf('recipient', props.address),
+    RecipientCard: (props: {
+      address: string;
+      note?: string;
+      expandedNote?: string;
+    }) =>
+      ReactLib.createElement(
+        ReactLib.Fragment,
+        null,
+        leaf('recipient', props.address),
+        props.note ? leaf('recipient-note', props.note) : null,
+        props.expandedNote
+          ? leaf('recipient-onchain', props.expandedNote)
+          : null,
+      ),
     FeeRow: (props: { fee: string }) => leaf('fee', props.fee),
     RiskBanner: (props: { title: string }) => leaf('risk', props.title),
     AdvancedSection: (props: { children?: React.ReactNode }) =>
@@ -177,13 +192,16 @@ const renderRequest = async (
   rawTx: string,
   actionStatus = jest.fn(),
   path = '0-0',
+  chain: 'btc' | 'zec' = 'btc',
+  receiverHint?: string,
 ) => {
   const view = render(
     <TransactionRequest
       rawTx={rawTx}
-      chain="btc"
+      chain={chain}
       path={path}
       utxos={UTXOS}
+      receiverHint={receiverHint}
       activityStatus={false}
       actionStatus={actionStatus}
     />,
@@ -388,6 +406,51 @@ describe('TransactionRequest verified display', () => {
       'PAYEE_1',
       'ATTACKER_2',
     ]);
+  });
+
+  // ZIP 320: SSP Wallet says which TEX address the user entered; it is shown
+  // only for the output whose key hash it encodes.
+  const ZIP320_T1 = 't1VmmGiyjVNeCjxDZzg7vZmd99WyzVby9yC';
+  const ZIP320_TEX = 'tex1s2rt77ggv6q989lr49rkgzmh5slsksa9khdgte';
+
+  it('shows a Zcash TEX recipient as entered, with its on-chain form', async () => {
+    const decodes = deferredDecodes();
+    const { actionStatus } = await renderRequest(
+      'TX_A',
+      jest.fn(),
+      '0-0',
+      'zec',
+      ZIP320_TEX,
+    );
+    await decodes.settle('TX_A', {
+      ...txInfo('A'),
+      receiver: ZIP320_T1,
+      recipientCount: 1,
+      recipients: [{ address: ZIP320_T1, amount: '0.5' }],
+    });
+    expect(screen.getByTestId('recipient')).toHaveTextContent(ZIP320_TEX);
+    expect(screen.getByTestId('recipient-note')).toHaveTextContent(
+      'home:tex_address_note',
+    );
+    expect(screen.getByTestId('recipient-onchain')).toHaveTextContent(
+      'home:tex_address_onchain',
+    );
+    expect(isSliderDisabled()).toBe(false);
+    expect(actionStatus).not.toHaveBeenCalled();
+  });
+
+  it('blocks a Zcash TEX recipient that the transaction does not pay', async () => {
+    const decodes = deferredDecodes();
+    await renderRequest('TX_A', jest.fn(), '0-0', 'zec', ZIP320_TEX);
+    await decodes.settle('TX_A', {
+      ...txInfo('A'),
+      recipientCount: 1,
+      recipients: [{ address: 'RECEIVER_A', amount: '0.5' }],
+    });
+    expect(screen.getByTestId('risk')).toHaveTextContent(
+      'home:tx_decode_failed_title',
+    );
+    expect(screen.queryByTestId('slider')).toBeNull();
   });
 
   it('flags a contract call that carries native value (C-4)', async () => {

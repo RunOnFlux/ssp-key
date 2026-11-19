@@ -4,6 +4,7 @@ import { decodeFunctionData, erc20Abi } from 'viem';
 import * as abi from '@runonflux/aa-schnorr-multisig-sdk/dist/abi';
 import { toCashAddress } from 'bchaddrjs';
 import { getLibId } from './wallet';
+import { texToTransparentAddress, transparentToTexAddress } from './zcashTex';
 import { fetchRawTransactionHex, fetchUtxos } from './constructTx';
 import { getCryptoUsdRateForCap } from './rates';
 import type { ApprovalProgressListener } from './approvalProgress';
@@ -26,6 +27,12 @@ import { blockchains } from '@storage/blockchains';
 export interface VaultDecodedRecipient {
   address: string;
   amount: string; // base units (satoshis / wei)
+  /**
+   * Zcash TEX (ZIP 320): `address` is the `tex1…` address the proposal names
+   * and this is the `t1…` address of the output it was matched to (same key
+   * hash). See labelVaultTexRecipients.
+   */
+  transparentAddress?: string;
 }
 
 export interface VaultDecodedTx {
@@ -308,6 +315,12 @@ export interface ApprovalRecipient {
   ata?: string;
   /** Solana SPL: the ATA was derived from the wallet-supplied owner. */
   ownerVerified?: boolean;
+  /**
+   * Zcash TEX (ZIP 320): `address` is the `tex1…` address the user entered
+   * and this is the `t1…` address of the output it was matched to (same key
+   * hash). See applyZcashTexReceiver.
+   */
+  transparentAddress?: string;
 }
 
 export type ApprovalWarning =
@@ -493,6 +506,145 @@ export async function decodeTransactionForApproval(
       error: info.error,
     };
   }
+}
+
+/**
+ * The transparent P2PKH addresses (`t1…`) whose key hash one of the Zcash TEX
+ * addresses among `addresses` encodes. Addresses that are not TEX for this
+ * chain are left out. Only used to pick outputs: what is shown for a picked
+ * output is encoded from the output itself (texDisplay).
+ */
+function texRequestedOutputs(
+  addresses: string[],
+  chain: keyof cryptos,
+): Set<string> {
+  const result = new Set<string>();
+  const libid = blockchains[chain]?.libid;
+  if (!libid) {
+    return result;
+  }
+  for (const address of addresses) {
+    const transparent = texToTransparentAddress(address, libid);
+    if (transparent) {
+      result.add(transparent);
+    }
+  }
+  return result;
+}
+
+/**
+ * Show a decoded output as its TEX address when `requested` names it. The
+ * `tex1…` text is encoded on this device from the output's own key hash, so
+ * the request only decides the format, never the address shown.
+ */
+function texDisplay<T extends { address: string }>(
+  output: T,
+  requested: Set<string>,
+  chain: keyof cryptos,
+): T & { transparentAddress?: string } {
+  if (!requested.has(output.address)) {
+    return output;
+  }
+  const tex = transparentToTexAddress(
+    output.address,
+    blockchains[chain]?.libid ?? '',
+  );
+  return tex
+    ? { ...output, address: tex, transparentAddress: output.address }
+    : output;
+}
+
+const TEX_NOT_PAID =
+  'The TEX recipient shown in SSP Wallet is not paid by this transaction';
+
+/**
+ * ZIP 320: show a Zcash TEX recipient the way the user entered it.
+ *
+ * `hint` is the request's optional `receiver`: the recipient as SSP Wallet
+ * says the user entered it. Only a TEX address for this chain is acted on. The
+ * transaction pays its key hash as an ordinary P2PKH output, which the decode
+ * names in `t1…` form; that output is then shown as its `tex1…` address,
+ * encoded here from the output's key hash (the hint only picks the format),
+ * with the `t1…` form kept in `transparentAddress`.
+ *
+ * A TEX hint that no output pays means the wallet showed the user another
+ * recipient than the one it built: the request is refused. No hint, any other
+ * address type and an already failed decode leave `info` as it is.
+ */
+export function applyZcashTexReceiver(
+  info: tokenInfo,
+  chain: keyof cryptos,
+  hint?: string,
+): tokenInfo {
+  if (!hint || info.error || info.receiver === 'decodingError') {
+    return info;
+  }
+  const requested = texRequestedOutputs([hint], chain);
+  if (requested.size === 0) {
+    return info;
+  }
+  const recipients = info.recipients ?? [];
+  if (!recipients.some((r) => requested.has(r.address))) {
+    const failed = decodingErrorInfo(chain, new Error(TEX_NOT_PAID));
+    return {
+      sender: failed.sender,
+      receiver: failed.receiver,
+      amount: failed.amount,
+      fee: failed.fee,
+      tokenSymbol: failed.tokenSymbol,
+      error: failed.error,
+    };
+  }
+  const shown = recipients.map((r) => texDisplay(r, requested, chain));
+  const receiverIndex = recipients.findIndex(
+    (r) => r.address === info.receiver,
+  );
+  return {
+    ...info,
+    receiver: receiverIndex >= 0 ? shown[receiverIndex].address : info.receiver,
+    recipients: shown,
+  };
+}
+
+/**
+ * ZIP 320 for vault requests: the request's `recipients` (the proposal as the
+ * enterprise app stored it) may name Zcash TEX addresses. Each decoded output
+ * whose key hash one of them encodes is shown as its `tex1…` address, encoded
+ * here from the output's key hash, with its `t1…` form kept in
+ * `transparentAddress`. The request's recipients change
+ * nothing else on screen. A TEX recipient that no output pays is an error, as
+ * the transaction then pays someone other than the proposal names.
+ */
+export function labelVaultTexRecipients(
+  recipients: VaultDecodedRecipient[],
+  requestRecipients: unknown,
+  chain: keyof cryptos,
+): { recipients: VaultDecodedRecipient[]; error?: string } {
+  if (!Array.isArray(requestRecipients)) {
+    return { recipients };
+  }
+  const named = requestRecipients
+    .map((r: unknown) =>
+      r && typeof r === 'object' ? (r as { address?: unknown }).address : null,
+    )
+    .filter((a): a is string => typeof a === 'string');
+  const requested = texRequestedOutputs(named, chain);
+  if (requested.size === 0) {
+    return { recipients };
+  }
+  const paid = new Set(recipients.map((r) => r.address));
+  for (const transparent of requested) {
+    if (!paid.has(transparent)) {
+      return {
+        recipients,
+        error:
+          'The TEX recipient named by the proposal is not paid by this transaction',
+      };
+    }
+  }
+  return {
+    recipients: recipients.map((r) => texDisplay(r, requested, chain)),
+  };
 }
 
 interface output {
