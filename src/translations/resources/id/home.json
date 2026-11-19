@@ -364,6 +364,8 @@
   "warn_multi_recipient": "Transaksi ini ditujukan ke beberapa alamat. Jumlah yang ditampilkan adalah total dari semua alamat tersebut; alamat yang ditampilkan adalah yang pertama. Setujui hanya jika Anda mengharapkan transaksi dengan beberapa output.",
   "warn_multi_recipient_listed": "Transaksi ini membayar ke {{count}} tujuan. Jumlah di atas adalah totalnya; setiap tujuan tercantum di bawah ini. Hanya setujui jika Anda mengharapkan masing-masing tujuan tersebut.",
   "recipient_n": "Kepada · {{amount}} {{symbol}}",
+  "tex_address_note": "TEX address: it accepts ZEC from transparent addresses only.",
+  "tex_address_onchain": "Block explorers show this address as {{address}}",
   "risk_contract_call_value_title": "Panggilan kontrak yang juga mengirimkan {{amount}} {{symbol}}",
   "risk_contract_call_value_desc": "Ini bukan transfer biasa: tindakan ini menjalankan kode kontrak dengan dana Anda yang disertakan. Hanya setujui jika Anda mempercayai situs yang meminta.",
   "risk_unverified_token_title": "Token tidak terverifikasi",
