@@ -18,6 +18,10 @@ interface RecipientCardProps {
   /** Card label, e.g. "To" / "Spender" / "From". */
   label: string;
   address: string;
+  /** Short line always shown under the address (e.g. the address type). */
+  note?: string;
+  /** Extra line shown under the full address once expanded. */
+  expandedNote?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -26,7 +30,13 @@ interface RecipientCardProps {
  * characters emphasized, middle de-emphasized. Tapping expands the full
  * address as selectable text.
  */
-const RecipientCard = ({ label, address, style }: RecipientCardProps) => {
+const RecipientCard = ({
+  label,
+  address,
+  note,
+  expandedNote,
+  style,
+}: RecipientCardProps) => {
   const { Colors, Fonts } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const parts = splitAddressForDisplay(address);
@@ -77,6 +87,17 @@ const RecipientCard = ({ label, address, style }: RecipientCardProps) => {
           )}
         </View>
       </TouchableOpacity>
+      {note ? (
+        <Text
+          style={[
+            Fonts.textTinyTiny,
+            styles.note,
+            { color: Colors.textGray400 },
+          ]}
+        >
+          {note}
+        </Text>
+      ) : null}
       {expanded ? (
         <Text
           style={[
@@ -88,6 +109,18 @@ const RecipientCard = ({ label, address, style }: RecipientCardProps) => {
           selectable={true}
         >
           {address}
+        </Text>
+      ) : null}
+      {expanded && expandedNote ? (
+        <Text
+          style={[
+            Fonts.textTinyTiny,
+            styles.note,
+            { color: Colors.textGray400 },
+          ]}
+          selectable={true}
+        >
+          {expandedNote}
         </Text>
       ) : null}
     </Card>
@@ -115,6 +148,10 @@ const styles = StyleSheet.create({
   fullAddress: {
     marginTop: 8,
     lineHeight: 18,
+  },
+  note: {
+    marginTop: 6,
+    lineHeight: 16,
   },
 });
 

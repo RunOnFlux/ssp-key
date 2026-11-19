@@ -152,15 +152,45 @@ describe('routeRelayAction', () => {
         handlers,
       ),
     ).toBe(true);
-    expect(handlers.onTx).toHaveBeenCalledWith('0100000001', 'btc', '0-0', [
-      { txid: 'a', vout: 0 },
-    ]);
+    expect(handlers.onTx).toHaveBeenCalledWith(
+      '0100000001',
+      'btc',
+      '0-0',
+      [{ txid: 'a', vout: 0 }],
+      undefined, // no wallet-entered receiver
+    );
+  });
+
+  it('passes the wallet-entered receiver of a tx on, strings only', () => {
+    const handlers = makeHandlers();
+    routeRelayAction(
+      { action: 'tx', payload: 'raw', chain: 'zec', receiver: 'tex1abc' },
+      handlers,
+    );
+    expect(handlers.onTx).toHaveBeenLastCalledWith(
+      'raw',
+      'zec',
+      '',
+      [],
+      'tex1abc',
+    );
+    routeRelayAction(
+      { action: 'tx', payload: 'raw', chain: 'zec', receiver: { x: 1 } },
+      handlers,
+    );
+    expect(handlers.onTx).toHaveBeenLastCalledWith(
+      'raw',
+      'zec',
+      '',
+      [],
+      undefined,
+    );
   });
 
   it('defaults a missing tx path/utxos instead of passing undefined on', () => {
     const handlers = makeHandlers();
     routeRelayAction({ action: 'tx', payload: 'raw', chain: 'btc' }, handlers);
-    expect(handlers.onTx).toHaveBeenCalledWith('raw', 'btc', '', []);
+    expect(handlers.onTx).toHaveBeenCalledWith('raw', 'btc', '', [], undefined);
   });
 
   it('reports an invalid payload rather than surfacing an empty request', () => {

@@ -634,6 +634,20 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
                   >
                     {recipient.address}
                   </Text>
+                  {recipient.transparentAddress ? (
+                    <Text
+                      style={[
+                        Fonts.textTinyTiny,
+                        { color: Colors.textGray400, marginTop: 4 },
+                      ]}
+                      selectable={true}
+                    >
+                      {t('home:tex_address_note')}{' '}
+                      {t('home:tex_address_onchain', {
+                        address: recipient.transparentAddress,
+                      })}
+                    </Text>
+                  ) : null}
                   <Text
                     style={[
                       styles.label,

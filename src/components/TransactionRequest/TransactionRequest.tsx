@@ -13,7 +13,10 @@ import Toast from 'react-native-toast-message';
 import BigNumber from 'bignumber.js';
 import Authentication from '../Authentication/Authentication';
 import { useAppSelector, useTheme } from '../../hooks';
-import { decodeTransactionForApproval } from '../../lib/transactions';
+import {
+  applyZcashTexReceiver,
+  decodeTransactionForApproval,
+} from '../../lib/transactions';
 import type {
   ApprovalRecipient,
   ApprovalWarning,
@@ -65,6 +68,12 @@ const TransactionRequest = (props: {
   /** Request derivation path `typeIndex-addressIndex`. */
   path?: string;
   utxos: utxo[];
+  /**
+   * The recipient as the user entered it in SSP Wallet. Only a Zcash TEX
+   * address is used: it is shown instead of the `t1…` output it encodes, and
+   * a TEX address that no output pays blocks approval (applyZcashTexReceiver).
+   */
+  receiverHint?: string;
   activityStatus: boolean;
   actionStatus: (status: boolean) => void;
 }) => {
@@ -191,16 +200,20 @@ const TransactionRequest = (props: {
         if (!isCurrentDecode()) {
           return;
         }
-        const txInfo = await decodeTransactionForApproval(
-          props.rawTx,
+        const txInfo = applyZcashTexReceiver(
+          await decodeTransactionForApproval(
+            props.rawTx,
+            props.chain,
+            keyMaterial,
+            {},
+            (next) => {
+              if (isCurrentDecode()) {
+                setProgress(next);
+              }
+            },
+          ),
           props.chain,
-          keyMaterial,
-          {},
-          (next) => {
-            if (isCurrentDecode()) {
-              setProgress(next);
-            }
-          },
+          props.receiverHint,
         );
         if (!isCurrentDecode()) {
           return; // a newer payload arrived — these values are not on screen
@@ -248,7 +261,7 @@ const TransactionRequest = (props: {
       // run still has in flight (including its USD rate fetch).
       decodeSeqRef.current += 1;
     };
-  }, [props.rawTx, props.chain, props.path]);
+  }, [props.rawTx, props.chain, props.path, props.receiverHint]);
   const displayMessage = (type: string, content: string) => {
     Toast.show({
       type,
@@ -329,6 +342,21 @@ const TransactionRequest = (props: {
   });
   let recipientLabel = t('home:to_recipient');
   let recipientAddress = receiverAddress;
+  // Zcash TEX recipient (matched to its output on this device): say what the
+  // address type is and which `t1…` address explorers will show.
+  const texNotes = (address: string) => {
+    const transparent = recipients.find(
+      (r) => r.address === address,
+    )?.transparentAddress;
+    return transparent
+      ? {
+          note: t('home:tex_address_note'),
+          expandedNote: t('home:tex_address_onchain', {
+            address: transparent,
+          }),
+        }
+      : {};
+  };
   if (humanCalldata) {
     const known = humanCalldata.amount && humanCalldata.tokenSymbol;
     if (humanCalldata.kind === 'transfer') {
@@ -565,6 +593,7 @@ const TransactionRequest = (props: {
                         : blockchainConfig.symbol,
                     })}
                     address={recipient.address}
+                    {...texNotes(recipient.address)}
                   />
                 ))}
               </>
@@ -572,6 +601,7 @@ const TransactionRequest = (props: {
               <RecipientCard
                 label={recipientLabel}
                 address={recipientAddress}
+                {...texNotes(recipientAddress)}
               />
             ) : null}
             {multiRecipient && !listAllRecipients ? (

@@ -187,6 +187,7 @@ function Home({ navigation }: Props) {
     setActiveChain,
     txPath,
     setTxPath,
+    txReceiver,
     txUtxos,
     setTxUtxos,
     syncReq,
@@ -1863,6 +1864,7 @@ function Home({ navigation }: Props) {
             submittingTransaction={submittingTransaction}
             rawTx={rawTx}
             txPath={txPath}
+            txReceiver={txReceiver}
             xpubWallet={xpubWallet}
             xpubKey={xpubKey}
             activeChain={activeChain}
