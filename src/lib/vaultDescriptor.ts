@@ -902,6 +902,17 @@ function deriveUtxo(
   };
 }
 
+/**
+ * EVM vault addresses by their inputs. Deriving one builds the combined key of
+ * every M-sized combination of the vault's keys — seconds on a large vault on
+ * Hermes — and one signing request checks the same address several times
+ * (receipt, account check, sign). The result is a pure function of public
+ * data (chain configuration, threshold, member public keys), so it is kept for
+ * the session; nothing secret goes in or out.
+ */
+const evmAddressCache = new Map<string, string>();
+const EVM_ADDRESS_CACHE_MAX = 256;
+
 function deriveEvm(
   descriptor: VaultDescriptor,
   typeIndex: number,
@@ -921,6 +932,18 @@ function deriveEvm(
     ? descriptor.requiredSigners
     : descriptor.requiredSigners * 2;
   const pubKeys = deriveModePubKeys(descriptor, typeIndex, addressIndex, false);
+  const cacheKey = [
+    factoryAddress,
+    factorySalt,
+    entrypointAddress,
+    accountSalt,
+    m,
+    ...pubKeys,
+  ].join('|');
+  const cached = evmAddressCache.get(cacheKey);
+  if (cached !== undefined) {
+    return { family: 'evm', address: cached, pubKeys };
+  }
   const keys = pubKeys.map(
     (hex) => new aaSchnorrMultisig.types.Key(Buffer.from(hex, 'hex')),
   );
@@ -942,6 +965,13 @@ function deriveEvm(
       combined,
       accountSalt,
     );
+  if (evmAddressCache.size >= EVM_ADDRESS_CACHE_MAX) {
+    const oldest = evmAddressCache.keys().next().value;
+    if (oldest !== undefined) {
+      evmAddressCache.delete(oldest);
+    }
+  }
+  evmAddressCache.set(cacheKey, address);
   return { family: 'evm', address, pubKeys };
 }
 

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks';
@@ -362,6 +363,35 @@ const VaultSignRequest: React.FC<VaultSignRequestProps> = ({
             {chainDisplay}
           </Text>
         </Card>
+
+        {/* The vault check runs after this screen is shown, so the request
+            never appears as a frozen app; nothing can be approved until it
+            has published its verdict and decoded view. */}
+        {!decodedTx ? (
+          <Card style={styles.card}>
+            <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+              <ActivityIndicator size="large" color={Colors.textGray400} />
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  Fonts.textCenter,
+                  { color: Colors.textGray400, marginTop: 8 },
+                ]}
+              >
+                {t('home:vault_sign_verifying')}
+              </Text>
+              <Text
+                style={[
+                  Fonts.textTinyTiny,
+                  Fonts.textCenter,
+                  { color: Colors.textGray400, marginTop: 4 },
+                ]}
+              >
+                {t('home:vault_sign_verifying_desc')}
+              </Text>
+            </View>
+          </Card>
+        ) : null}
 
         {/* Decoded data notice — provenance depends on the sol decode kind:
             'approve' values come from the on-chain proposal this device

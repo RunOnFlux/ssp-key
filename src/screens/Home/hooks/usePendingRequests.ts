@@ -65,6 +65,12 @@ import type { RecoveryRequestPayload } from '../../../lib/recoveryHandler';
  * long as the request state lives. Every chain that arrives from the relay
  * MUST pass this before it is written to state.
  */
+/**
+ * Delay before the vault checks of an incoming signing request run: long
+ * enough for the approval screen and its spinner to be drawn first.
+ */
+const VAULT_CHECK_DEFER_MS = 50;
+
 export const isSupportedChain = (chain: unknown): chain is keyof cryptos =>
   typeof chain === 'string' &&
   Object.prototype.hasOwnProperty.call(blockchains, chain);
@@ -516,11 +522,6 @@ export function usePendingRequests(
     // (first sight → pin confirmation; refused → blocked with the reason);
     // the descriptor is part of the request digest, so the sign action signs
     // only the request — and the vault — that was confirmed on screen.
-    const verdict: VaultDescriptorVerdict = evaluateVaultDescriptor(
-      data,
-      ownVault(),
-    );
-    publishVaultVerdict('vaultsign', requestDigest, verdict);
     setVaultSigningData(data);
     // Every incoming request must start from a clean decode state — never
     // render a stale sol verdict or stale decoded values from a previous
@@ -530,180 +531,210 @@ export function usePendingRequests(
     const decodeSeq = solDecodeSeqRef.current;
     setDecodedVaultTx(null);
     setSolDecodeState(null);
-    if (verdict.kind === 'refused') {
-      console.log('[Vault Signing] Vault descriptor refused:', verdict.code);
-      setDecodedVaultTx(failed(verdict.reason));
-      return;
-    }
-    const vaultDescriptor = verdict.descriptor;
-    let vaultAddressIndex: number;
-    try {
-      vaultAddressIndex = primaryAddressIndex(data.inputDetails);
-    } catch {
-      setDecodedVaultTx(failed('invalid address index'));
-      return;
-    }
-    // Decode independently for trustless verification. Every branch ends in
-    // a bound decoded view: either a successful decode, or one carrying the
-    // error that blocks approval.
-    const chain = data.chain as keyof cryptos;
-    const chainType = blockchains[chain].chainType;
-    if (chainType === 'evm') {
-      if (data.signMessage !== undefined) {
-        // Vault MESSAGE signing: rawUnsignedTx is the EIP-191 digest of the
-        // displayed text. Check the binding now so a mismatch is visible
-        // (and blocking) before the user approves; the sign action re-checks.
-        // VD-4: every Schnorr signer key is a key of the pinned vault.
-        const signerProblem = checkVaultEvmAccount(
-          vaultDescriptor,
-          vaultAddressIndex,
-          undefined,
-          data.allSignerKeys,
-        );
-        setDecodedVaultTx(
-          signerProblem
-            ? failed(signerProblem)
-            : messageDigestMatches(data.signMessage, data.rawUnsignedTx)
-              ? bind({ sender: '', recipients: [], fee: '0' })
-              : failed('The message digest does not match the message shown'),
-        );
-      } else if (data.evmUserOp) {
-        // EVM: rawUnsignedTx is a hash, decode from evmUserOp instead —
-        // after the call-safety rules, and only if the hash is the hash of
-        // this very operation (computed with this device's EntryPoint and
-        // chainId).
-        const safety = checkVaultEvmUserOp(data.evmUserOp);
-        if (!safety.ok) {
-          setDecodedVaultTx(failed(safety.reason));
-        } else {
-          const decoded = decodeVaultTransaction(
-            JSON.stringify({ userOpRequest: safety.userOp }),
-            chain,
-          );
-          if (
-            !decoded.error &&
-            !userOpHashMatches(safety.userOp, chain, data.rawUnsignedTx)
-          ) {
-            decoded.error =
-              'The operation hash does not match the operation shown';
-          }
-          // VD-4: the sender is the vault account derived from the pinned
-          // descriptor at this address index.
-          const accountProblem = checkVaultEvmAccount(
+    // The vault checks below are synchronous and heavy on large vaults
+    // (every M-of-N key combination), so the screen opens first with its
+    // "Verifying vault…" state and the checks run once it has drawn. Nothing
+    // can be approved until they publish the verdict and the decoded view; a
+    // newer request (or a cleared one) discards this run.
+    const verifyIngestedVaultRequest = () => {
+      const verdict: VaultDescriptorVerdict = evaluateVaultDescriptor(
+        data,
+        ownVault(),
+      );
+      publishVaultVerdict('vaultsign', requestDigest, verdict);
+      if (verdict.kind === 'refused') {
+        console.log('[Vault Signing] Vault descriptor refused:', verdict.code);
+        setDecodedVaultTx(failed(verdict.reason));
+        return;
+      }
+      const vaultDescriptor = verdict.descriptor;
+      let vaultAddressIndex: number;
+      try {
+        vaultAddressIndex = primaryAddressIndex(data.inputDetails);
+      } catch {
+        setDecodedVaultTx(failed('invalid address index'));
+        return;
+      }
+      // Decode independently for trustless verification. Every branch ends in
+      // a bound decoded view: either a successful decode, or one carrying the
+      // error that blocks approval.
+      const chain = data.chain as keyof cryptos;
+      const chainType = blockchains[chain].chainType;
+      if (chainType === 'evm') {
+        if (data.signMessage !== undefined) {
+          // Vault MESSAGE signing: rawUnsignedTx is the EIP-191 digest of the
+          // displayed text. Check the binding now so a mismatch is visible
+          // (and blocking) before the user approves; the sign action re-checks.
+          // VD-4: every Schnorr signer key is a key of the pinned vault.
+          const signerProblem = checkVaultEvmAccount(
             vaultDescriptor,
             vaultAddressIndex,
-            safety.userOp.sender,
+            undefined,
             data.allSignerKeys,
           );
-          if (!decoded.error && accountProblem) {
-            decoded.error = accountProblem;
+          setDecodedVaultTx(
+            signerProblem
+              ? failed(signerProblem)
+              : messageDigestMatches(data.signMessage, data.rawUnsignedTx)
+                ? bind({ sender: '', recipients: [], fee: '0' })
+                : failed('The message digest does not match the message shown'),
+          );
+        } else if (data.evmUserOp) {
+          // EVM: rawUnsignedTx is a hash, decode from evmUserOp instead —
+          // after the call-safety rules, and only if the hash is the hash of
+          // this very operation (computed with this device's EntryPoint and
+          // chainId).
+          const safety = checkVaultEvmUserOp(data.evmUserOp);
+          if (!safety.ok) {
+            setDecodedVaultTx(failed(safety.reason));
+          } else {
+            const decoded = decodeVaultTransaction(
+              JSON.stringify({ userOpRequest: safety.userOp }),
+              chain,
+            );
+            if (
+              !decoded.error &&
+              !userOpHashMatches(safety.userOp, chain, data.rawUnsignedTx)
+            ) {
+              decoded.error =
+                'The operation hash does not match the operation shown';
+            }
+            // VD-4: the sender is the vault account derived from the pinned
+            // descriptor at this address index.
+            const accountProblem = checkVaultEvmAccount(
+              vaultDescriptor,
+              vaultAddressIndex,
+              safety.userOp.sender,
+              data.allSignerKeys,
+            );
+            if (!decoded.error && accountProblem) {
+              decoded.error = accountProblem;
+            }
+            setDecodedVaultTx(bind(decoded));
           }
-          setDecodedVaultTx(bind(decoded));
+        } else {
+          setDecodedVaultTx(
+            failed('The request carries no operation to verify'),
+          );
         }
-      } else {
-        setDecodedVaultTx(failed('The request carries no operation to verify'));
-      }
-    } else if (chainType === 'sol') {
-      // Solana: trustlessly decode the raw base64 bundle bytes and
-      // compare against the relay-supplied payload (shared helper —
-      // used by the socket effect and the pull-to-refresh path). Any
-      // verdict other than a complete verification blocks approval in
-      // VaultSignRequest. Setters are seq-guarded so a decode that
-      // resolves after a newer request arrived is discarded.
-      // VD-4: the bytes must act on the multisig + vault PDA derived from
-      // the pinned descriptor (its member set replaces any relay-supplied
-      // solMembers / solThreshold).
-      let vaultBinding: VaultSolBinding;
-      try {
-        vaultBinding = vaultSolBinding(vaultDescriptor, vaultAddressIndex);
-      } catch (error) {
-        setDecodedVaultTx(
-          failed(
-            error instanceof Error
-              ? error.message
-              : 'could not derive the vault address',
-          ),
-        );
-        return;
-      }
-      void applyVaultSolDecode(
-        data,
-        (tx) => {
-          if (solDecodeSeqRef.current === decodeSeq) {
-            setDecodedVaultTx(bind(tx));
-          }
-        },
-        (state) => {
-          if (solDecodeSeqRef.current === decodeSeq) {
-            setSolDecodeState(state);
-          }
-        },
-        { requestDigest, vaultBinding },
-      );
-    } else {
-      // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
-      const inputs = Array.isArray(data.inputDetails) ? data.inputDetails : [];
-      const inputAmounts = inputs.map(
-        (inp: { amount?: string }) => inp.amount || '0',
-      );
-      const firstInput = inputs[0] as
-        | { witnessScript?: string; redeemScript?: string }
-        | undefined;
-      const decoded = decodeVaultTransaction(
-        data.rawUnsignedTx,
-        chain,
-        inputAmounts,
-        firstInput,
-      );
-      // VD-4: every input spends a vault address derived from the pinned
-      // descriptor; change is only an output back to the vault; every other
-      // output is a recipient and is shown.
-      const utxoCheck = checkVaultUtxoTransaction(
-        vaultDescriptor,
-        data.rawUnsignedTx,
-        data.inputDetails,
-      );
-      if (!utxoCheck.ok) {
-        decoded.error = decoded.error ?? utxoCheck.reason;
-      } else if (!decoded.error) {
-        decoded.sender = utxoCheck.sender;
-        // ZIP 320: outputs paying a TEX recipient the proposal names are
-        // shown as that tex1… address; a TEX recipient no output pays blocks.
-        const tex = labelVaultTexRecipients(
-          utxoCheck.recipients,
-          data.recipients,
-          chain,
-        );
-        decoded.recipients = tex.recipients;
-        if (tex.error) {
-          decoded.error = tex.error;
-        }
-      }
-      if (decoded.error || !utxoCheck.ok) {
-        setDecodedVaultTx(bind(decoded));
-        return;
-      }
-      // The relay's input amounts make the fee: on DOGE/RVN each one is
-      // checked against its hash-verified previous transaction, and the fee
-      // is capped on every chain. Until that resolves nothing is shown as
-      // decoded, so approval stays disabled; a newer request discards it.
-      void verifyVaultUtxoAmounts(
-        chain,
-        data.rawUnsignedTx,
-        data.inputDetails,
-        utxoCheck.inputs,
-      ).then((amountCheck) => {
-        if (solDecodeSeqRef.current !== decodeSeq) {
+      } else if (chainType === 'sol') {
+        // Solana: trustlessly decode the raw base64 bundle bytes and
+        // compare against the relay-supplied payload (shared helper —
+        // used by the socket effect and the pull-to-refresh path). Any
+        // verdict other than a complete verification blocks approval in
+        // VaultSignRequest. Setters are seq-guarded so a decode that
+        // resolves after a newer request arrived is discarded.
+        // VD-4: the bytes must act on the multisig + vault PDA derived from
+        // the pinned descriptor (its member set replaces any relay-supplied
+        // solMembers / solThreshold).
+        let vaultBinding: VaultSolBinding;
+        try {
+          vaultBinding = vaultSolBinding(vaultDescriptor, vaultAddressIndex);
+        } catch (error) {
+          setDecodedVaultTx(
+            failed(
+              error instanceof Error
+                ? error.message
+                : 'could not derive the vault address',
+            ),
+          );
           return;
         }
-        if (amountCheck.ok) {
-          decoded.fee = amountCheck.fee;
-        } else {
-          decoded.error = amountCheck.reason;
+        void applyVaultSolDecode(
+          data,
+          (tx) => {
+            if (solDecodeSeqRef.current === decodeSeq) {
+              setDecodedVaultTx(bind(tx));
+            }
+          },
+          (state) => {
+            if (solDecodeSeqRef.current === decodeSeq) {
+              setSolDecodeState(state);
+            }
+          },
+          { requestDigest, vaultBinding },
+        );
+      } else {
+        // UTXO: decode from raw TX hex, pass first input scripts for sender derivation
+        const inputs = Array.isArray(data.inputDetails)
+          ? data.inputDetails
+          : [];
+        const inputAmounts = inputs.map(
+          (inp: { amount?: string }) => inp.amount || '0',
+        );
+        const firstInput = inputs[0] as
+          | { witnessScript?: string; redeemScript?: string }
+          | undefined;
+        const decoded = decodeVaultTransaction(
+          data.rawUnsignedTx,
+          chain,
+          inputAmounts,
+          firstInput,
+        );
+        // VD-4: every input spends a vault address derived from the pinned
+        // descriptor; change is only an output back to the vault; every other
+        // output is a recipient and is shown.
+        const utxoCheck = checkVaultUtxoTransaction(
+          vaultDescriptor,
+          data.rawUnsignedTx,
+          data.inputDetails,
+        );
+        if (!utxoCheck.ok) {
+          decoded.error = decoded.error ?? utxoCheck.reason;
+        } else if (!decoded.error) {
+          decoded.sender = utxoCheck.sender;
+          // ZIP 320: outputs paying a TEX recipient the proposal names are
+          // shown as that tex1… address; a TEX recipient no output pays blocks.
+          const tex = labelVaultTexRecipients(
+            utxoCheck.recipients,
+            data.recipients,
+            chain,
+          );
+          decoded.recipients = tex.recipients;
+          if (tex.error) {
+            decoded.error = tex.error;
+          }
         }
-        setDecodedVaultTx(bind(decoded));
-      });
-    }
+        if (decoded.error || !utxoCheck.ok) {
+          setDecodedVaultTx(bind(decoded));
+          return;
+        }
+        // The relay's input amounts make the fee: on DOGE/RVN each one is
+        // checked against its hash-verified previous transaction, and the fee
+        // is capped on every chain. Until that resolves nothing is shown as
+        // decoded, so approval stays disabled; a newer request discards it.
+        void verifyVaultUtxoAmounts(
+          chain,
+          data.rawUnsignedTx,
+          data.inputDetails,
+          utxoCheck.inputs,
+        ).then((amountCheck) => {
+          if (solDecodeSeqRef.current !== decodeSeq) {
+            return;
+          }
+          if (amountCheck.ok) {
+            decoded.fee = amountCheck.fee;
+          } else {
+            decoded.error = amountCheck.reason;
+          }
+          setDecodedVaultTx(bind(decoded));
+        });
+      }
+    };
+
+    setTimeout(() => {
+      if (solDecodeSeqRef.current !== decodeSeq) {
+        return;
+      }
+      try {
+        verifyIngestedVaultRequest();
+      } catch (error) {
+        console.log('[Vault Signing] Verification failed:', error);
+        if (solDecodeSeqRef.current === decodeSeq) {
+          setDecodedVaultTx(failed('could not verify this request'));
+        }
+      }
+    }, VAULT_CHECK_DEFER_MS);
   };
 
   // Flux node start requests: every ingestion path (socket effect below and

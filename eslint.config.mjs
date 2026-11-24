@@ -30,6 +30,7 @@ export default [
             'metro.config.js',
             'react-native.config.js',
             'shim.js',
+            'src/lib/secp256k1Noble.js',
           ],
           defaultProject: './tsconfig.json',
         },
