@@ -1,0 +1,5 @@
+Update. Please update SSP Wallet to 2.3.0 as well.
+• Much faster vault approvals and EVM signing
+• No frozen screen: vault requests show "Verifying vault…" right away
+• Zcash TEX addresses (tex1…) shown as entered, checked on the phone
+• A readable reason when the network rejects a transaction
