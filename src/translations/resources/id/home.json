@@ -194,6 +194,8 @@
   "vault_xpub_success": "Kunci brankas publik telah dibagikan dengan sukses.",
   "err_vault_xpub_failed": "Gagal membagikan kunci brankas publik. Coba lagi.",
   "vault_sign_request": "Transaksi Brankas",
+  "vault_sign_verifying": "Verifying vault…",
+  "vault_sign_verifying_desc": "Checking that this request belongs to your vault before anything can be approved.",
   "vault_sign_request_info": "Sebuah sistem brankas data perusahaan meminta tanda tangan milik Anda untuk sebuah transaksi. Silakan periksa detail di bawah ini.",
   "vault": "Brankas",
   "organization": "Organisasi",
