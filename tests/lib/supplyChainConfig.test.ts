@@ -101,6 +101,15 @@ describe('release publishing', () => {
     expect(publish).toMatch(/gh release create/);
   });
 
+  it('attaches SHA256SUMS for the local GPG signature', () => {
+    const publish = job('publish-release');
+    expect(publish).toMatch(
+      /sha256sum "ssp-key-\$\{TAG\}\.aab" "ssp-key-\$\{TAG\}\.apk"/,
+    );
+    expect(publish).toMatch(/ssp-key-\$\{TAG\}\.aab" SHA256SUMS/);
+    expect(publish).toMatch(/gpg --verify SHA256SUMS\.asc SHA256SUMS/);
+  });
+
   it('gives write access only to the job without the signing secrets', () => {
     const publish = job('publish-release');
     expect(publish).toMatch(/contents: write/);

@@ -143,6 +143,14 @@ jobs:
           gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir "$dir"
           cp "$dir/app-release.apk/app-release.apk" "ssp-key-${TAG}.apk"
           cp "$dir/app-release.aab/app-release.aab" "ssp-key-${TAG}.aab"
+          # SHA256SUMS in SSP Wallet's layout; the release key holder signs it
+          # locally afterwards and uploads SHA256SUMS.asc.
+          {
+            echo "# SSP Key ${TAG} - Release Build Hashes"
+            echo "# Git Commit: $(git rev-parse HEAD)"
+            echo "#"
+            sha256sum "ssp-key-${TAG}.aab" "ssp-key-${TAG}.apk"
+          } > SHA256SUMS
           # Release text: RELEASE_NOTES_<tag>.md below its date line, plus a
           # Full Changelog link from the previous release.
           prev="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)"
@@ -155,12 +163,15 @@ jobs:
             if [ -n "$prev" ] && [ "$prev" != "$TAG" ]; then
               printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' "$GITHUB_REPOSITORY" "$prev" "$TAG"
             fi
+            printf '\n---\n\n## Verification\n\n'
+            printf '**Files verification:** `sha256sum -c SHA256SUMS`\n\n'
+            printf '**GPG verification:** `gpg --verify SHA256SUMS.asc SHA256SUMS`\n'
           } > notes.md
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             # Created by hand already: only attach the signed files.
-            gh release upload "$TAG" "ssp-key-${TAG}.apk" "ssp-key-${TAG}.aab" \
+            gh release upload "$TAG" "ssp-key-${TAG}.apk" "ssp-key-${TAG}.aab" SHA256SUMS \
               --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" "ssp-key-${TAG}.apk" "ssp-key-${TAG}.aab" \
+            gh release create "$TAG" "ssp-key-${TAG}.apk" "ssp-key-${TAG}.aab" SHA256SUMS \
               --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md
           fi
