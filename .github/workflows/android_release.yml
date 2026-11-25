@@ -116,3 +116,51 @@ jobs:
         with:
           name: app-release.aab
           path: android/app/build/outputs/bundle/release/app-release.aab
+
+  # Tags only: publishes the GitHub release with the signed APK/AAB of this
+  # run. The only job that can write to the repository, and it never sees the
+  # signing secrets (those stay in build-android behind android-release).
+  publish-release:
+    needs: build-android
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # gh is preinstalled on the runner: no third-party action holds the
+      # write token.
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          dir="$(mktemp -d)"
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir "$dir"
+          cp "$dir/app-release.apk/app-release.apk" "ssp-key-${TAG}.apk"
+          cp "$dir/app-release.aab/app-release.aab" "ssp-key-${TAG}.aab"
+          # Release text: RELEASE_NOTES_<tag>.md below its date line, plus a
+          # Full Changelog link from the previous release.
+          prev="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)"
+          {
+            if [ -f "RELEASE_NOTES_${TAG}.md" ]; then
+              awk 'f { print } /^_Release date/ { f = 1 }' "RELEASE_NOTES_${TAG}.md" | sed '/./,$!d'
+            else
+              echo "SSP Key ${TAG}"
+            fi
+            if [ -n "$prev" ] && [ "$prev" != "$TAG" ]; then
+              printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' "$GITHUB_REPOSITORY" "$prev" "$TAG"
+            fi
+          } > notes.md
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            # Created by hand already: only attach the signed files.
+            gh release upload "$TAG" "ssp-key-${TAG}.apk" "ssp-key-${TAG}.aab" \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" "ssp-key-${TAG}.apk" "ssp-key-${TAG}.aab" \
+              --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md
+          fi

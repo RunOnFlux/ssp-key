@@ -83,6 +83,35 @@ describe.each(WORKFLOWS)('workflow %s', (name) => {
   });
 });
 
+describe('release publishing', () => {
+  const src = read('.github/workflows/android_release.yml');
+  const jobs = src.slice(src.indexOf('\njobs:'));
+  const job = (name: string) => {
+    const start = jobs.indexOf(`\n  ${name}:`);
+    const next = jobs.slice(start + 1).search(/\n {2}[a-z][\w-]*:\n/);
+    return next === -1
+      ? jobs.slice(start)
+      : jobs.slice(start, start + 1 + next);
+  };
+
+  it('publishes from its own tag-only job after the signed build', () => {
+    const publish = job('publish-release');
+    expect(publish).toMatch(/needs: build-android/);
+    expect(publish).toMatch(/if: startsWith\(github\.ref, 'refs\/tags\/v'\)/);
+    expect(publish).toMatch(/gh release create/);
+  });
+
+  it('gives write access only to the job without the signing secrets', () => {
+    const publish = job('publish-release');
+    expect(publish).toMatch(/contents: write/);
+    expect(publish).not.toMatch(/secrets\./);
+    expect(publish).not.toMatch(/environment:/);
+    for (const name of ['install-and-test', 'build-android']) {
+      expect(job(name)).not.toMatch(/contents: write/);
+    }
+  });
+});
+
 describe('workflows', () => {
   it('has the Android release workflow and nothing self-hosted', () => {
     expect(WORKFLOWS).toContain('android_release.yml');
