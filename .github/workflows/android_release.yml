@@ -1,15 +1,20 @@
 name: android-build
+# Everything runs on GitHub-hosted runners: a fresh VM per job that is
+# discarded afterwards, so nothing from one job can stay behind and read the
+# keystore of the next. SSP Key is public and never uses a self-hosted runner:
+# on a public repo a fork pull request can bring its own workflow, and that
+# workflow would run on any runner the repo can reach.
 on:
-  # Branch pushes and PRs run the tests on GitHub-hosted runners (no
-  # secrets). Only v* tags reach the signing job.
+  # Branch pushes and PRs run the tests (no secrets). Only protected master
+  # and v* tags reach the signing job.
   push:
     branches:
       - '**'
     tags:
       - 'v*'
   pull_request:
-  # Manual runs test only, unless started from a v* tag (the signing job is
-  # gated on the ref and on the android-release environment).
+  # Manual runs test only, unless started from master or a v* tag (the
+  # signing job is gated on the ref and on the android-release environment).
   workflow_dispatch:
 
 # Nothing by default; each job asks for what it needs.
@@ -48,7 +53,10 @@ jobs:
 
   build-android:
     needs: install-and-test
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Signed builds for every push to protected master (device testing) and
+    # every v* tag (releases). Pull requests, fork ones included, run on
+    # refs/pull/… and never get here.
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     # Configure required reviewers on this environment; the signing secrets
     # live in the environment, not in repository secrets.
@@ -108,3 +116,62 @@ jobs:
         with:
           name: app-release.aab
           path: android/app/build/outputs/bundle/release/app-release.aab
+
+  # Tags only: publishes the GitHub release with the signed APK/AAB of this
+  # run. The only job that can write to the repository, and it never sees the
+  # signing secrets (those stay in build-android behind android-release).
+  publish-release:
+    needs: build-android
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # gh is preinstalled on the runner: no third-party action holds the
+      # write token.
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          dir="$(mktemp -d)"
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir "$dir"
+          cp "$dir/app-release.apk/app-release.apk" "ssp-key-${TAG}.apk"
+          cp "$dir/app-release.aab/app-release.aab" "ssp-key-${TAG}.aab"
+          # SHA256SUMS in SSP Wallet's layout; the release key holder signs it
+          # locally afterwards and uploads SHA256SUMS.asc.
+          {
+            echo "# SSP Key ${TAG} - Release Build Hashes"
+            echo "# Git Commit: $(git rev-parse HEAD)"
+            echo "#"
+            sha256sum "ssp-key-${TAG}.aab" "ssp-key-${TAG}.apk"
+          } > SHA256SUMS
+          # Release text: RELEASE_NOTES_<tag>.md below its date line, plus a
+          # Full Changelog link from the previous release.
+          prev="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)"
+          {
+            if [ -f "RELEASE_NOTES_${TAG}.md" ]; then
+              awk 'f { print } /^_Release date/ { f = 1 }' "RELEASE_NOTES_${TAG}.md" | sed '/./,$!d'
+            else
+              echo "SSP Key ${TAG}"
+            fi
+            if [ -n "$prev" ] && [ "$prev" != "$TAG" ]; then
+              printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' "$GITHUB_REPOSITORY" "$prev" "$TAG"
+            fi
+            printf '\n---\n\n## Verification\n\n'
+            printf '**Files verification:** `sha256sum -c SHA256SUMS`\n\n'
+            printf '**GPG verification:** `gpg --verify SHA256SUMS.asc SHA256SUMS`\n'
+          } > notes.md
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            # Created by hand already: only attach the signed files.
+            gh release upload "$TAG" "ssp-key-${TAG}.apk" "ssp-key-${TAG}.aab" SHA256SUMS \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" "ssp-key-${TAG}.apk" "ssp-key-${TAG}.aab" SHA256SUMS \
+              --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md
+          fi

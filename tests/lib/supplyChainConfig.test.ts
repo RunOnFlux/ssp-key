@@ -4,15 +4,20 @@ import path from 'path';
 /**
  * Release-pipeline hardening (security review DEP-3 / DEP-5):
  * - dependency install scripts never run automatically;
- * - the release keystore is decoded in a plain run step, only for v* tags
- *   (and protected master on the self-hosted runner),
- *   behind a protected environment, with SHA-pinned actions.
+ * - the release keystore is decoded in a plain run step, only for protected
+ *   master and v* tags, behind a protected environment, with SHA-pinned
+ *   actions;
+ * - every job runs on a GitHub-hosted runner: SSP Key is public, and a fork
+ *   pull request can bring its own workflow onto any runner the repo reaches.
  */
 
 const ROOT = path.join(__dirname, '..', '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
-const WORKFLOWS = ['android_release.yml', 'android_release_self_hosted.yml'];
+const WORKFLOW_DIR = path.join(ROOT, '.github', 'workflows');
+const WORKFLOWS = fs
+  .readdirSync(WORKFLOW_DIR)
+  .filter((f) => /\.ya?ml$/.test(f));
 
 describe('install-script policy', () => {
   it('disables install scripts for yarn classic', () => {
@@ -51,17 +56,24 @@ describe.each(WORKFLOWS)('workflow %s', (name) => {
     expect(src).toMatch(/rm -f android\/app\/release\.keystore/);
   });
 
-  it('signs only for v* tags (self-hosted: also master), behind the android-release environment', () => {
+  it('signs only for protected master and v* tags, behind the android-release environment', () => {
     expect(src).toMatch(/^permissions: \{\}$/m);
     expect(src).toMatch(/environment: android-release/);
     const buildJob = src.slice(src.indexOf('build-android:'));
-    // The self-hosted runner also builds protected master; other branches
-    // never reach the signing step.
+    // Other branches and pull requests (refs/pull/…) never reach signing.
     expect(buildJob).toMatch(
-      name === 'android_release_self_hosted.yml'
-        ? /if: github\.ref == 'refs\/heads\/master' \|\| startsWith\(github\.ref, 'refs\/tags\/v'\)/
-        : /if: startsWith\(github\.ref, 'refs\/tags\/v'\)/,
+      /if: github\.ref == 'refs\/heads\/master' \|\| startsWith\(github\.ref, 'refs\/tags\/v'\)/,
     );
+  });
+
+  it('runs every job on a GitHub-hosted runner', () => {
+    const runners = [...src.matchAll(/^\s*runs-on:\s*(.+)$/gm)].map((m) =>
+      m[1].trim(),
+    );
+    expect(runners.length).toBeGreaterThan(0);
+    for (const r of runners) {
+      expect(r).toMatch(/^(ubuntu|windows|macos)-[\w.]+$/);
+    }
   });
 
   it('installs with a frozen lockfile and no install scripts', () => {
@@ -71,13 +83,48 @@ describe.each(WORKFLOWS)('workflow %s', (name) => {
   });
 });
 
-describe('self-hosted workflow', () => {
-  it('runs only on master and v* tags, not on every branch push', () => {
-    const src = read('.github/workflows/android_release_self_hosted.yml');
-    const on = src.slice(src.indexOf('\non:'), src.indexOf('\npermissions:'));
-    expect(on).toMatch(/branches:\s*\n\s*-\s*master\s*\n\s*tags:/);
-    expect(on).toMatch(/tags:\s*\n\s*-\s*'v\*'/);
-    expect(on).not.toMatch(/pull_request/);
+describe('release publishing', () => {
+  const src = read('.github/workflows/android_release.yml');
+  const jobs = src.slice(src.indexOf('\njobs:'));
+  const job = (name: string) => {
+    const start = jobs.indexOf(`\n  ${name}:`);
+    const next = jobs.slice(start + 1).search(/\n {2}[a-z][\w-]*:\n/);
+    return next === -1
+      ? jobs.slice(start)
+      : jobs.slice(start, start + 1 + next);
+  };
+
+  it('publishes from its own tag-only job after the signed build', () => {
+    const publish = job('publish-release');
+    expect(publish).toMatch(/needs: build-android/);
+    expect(publish).toMatch(/if: startsWith\(github\.ref, 'refs\/tags\/v'\)/);
+    expect(publish).toMatch(/gh release create/);
+  });
+
+  it('attaches SHA256SUMS for the local GPG signature', () => {
+    const publish = job('publish-release');
+    expect(publish).toMatch(
+      /sha256sum "ssp-key-\$\{TAG\}\.aab" "ssp-key-\$\{TAG\}\.apk"/,
+    );
+    expect(publish).toMatch(/ssp-key-\$\{TAG\}\.aab" SHA256SUMS/);
+    expect(publish).toMatch(/gpg --verify SHA256SUMS\.asc SHA256SUMS/);
+  });
+
+  it('gives write access only to the job without the signing secrets', () => {
+    const publish = job('publish-release');
+    expect(publish).toMatch(/contents: write/);
+    expect(publish).not.toMatch(/secrets\./);
+    expect(publish).not.toMatch(/environment:/);
+    for (const name of ['install-and-test', 'build-android']) {
+      expect(job(name)).not.toMatch(/contents: write/);
+    }
+  });
+});
+
+describe('workflows', () => {
+  it('has the Android release workflow and nothing self-hosted', () => {
+    expect(WORKFLOWS).toContain('android_release.yml');
+    expect(WORKFLOWS).not.toContain('android_release_self_hosted.yml');
   });
 });
 
