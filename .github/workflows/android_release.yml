@@ -1,15 +1,20 @@
 name: android-build
+# Everything runs on GitHub-hosted runners: a fresh VM per job that is
+# discarded afterwards, so nothing from one job can stay behind and read the
+# keystore of the next. SSP Key is public and never uses a self-hosted runner:
+# on a public repo a fork pull request can bring its own workflow, and that
+# workflow would run on any runner the repo can reach.
 on:
-  # Branch pushes and PRs run the tests on GitHub-hosted runners (no
-  # secrets). Only v* tags reach the signing job.
+  # Branch pushes and PRs run the tests (no secrets). Only protected master
+  # and v* tags reach the signing job.
   push:
     branches:
       - '**'
     tags:
       - 'v*'
   pull_request:
-  # Manual runs test only, unless started from a v* tag (the signing job is
-  # gated on the ref and on the android-release environment).
+  # Manual runs test only, unless started from master or a v* tag (the
+  # signing job is gated on the ref and on the android-release environment).
   workflow_dispatch:
 
 # Nothing by default; each job asks for what it needs.
@@ -48,7 +53,10 @@ jobs:
 
   build-android:
     needs: install-and-test
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Signed builds for every push to protected master (device testing) and
+    # every v* tag (releases). Pull requests, fork ones included, run on
+    # refs/pull/… and never get here.
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     # Configure required reviewers on this environment; the signing secrets
     # live in the environment, not in repository secrets.
