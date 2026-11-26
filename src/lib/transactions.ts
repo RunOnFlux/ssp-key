@@ -341,6 +341,11 @@ interface tokenInfo {
   recipientCount?: number;
   /** Every non-change destination with its own amount (UTXO / Solana). */
   recipients?: ApprovalRecipient[];
+  /**
+   * UTXO self-transfer: the remaining outputs back to the sender after the
+   * first one (human-readable). `amount` is the first output.
+   */
+  selfChange?: string;
   /** EVM: native value sent along with a contract call (human-readable). */
   nativeValue?: string;
   warnings?: ApprovalWarning[];
@@ -478,15 +483,24 @@ export async function decodeTransactionForApproval(
       new BigNumber(0),
     );
     // A transaction whose only outputs return to the derived address is a
-    // self-transfer: show the sender as the destination, never a guess.
+    // self-transfer: the payment and the change pay the same script, so they
+    // cannot be told apart by address. The wallet always writes the payment
+    // first, so the first output is the amount (as before 2.2.0) and the
+    // rest is shown as change. Every output is the key's own verified
+    // address, so no choice here moves funds anywhere else.
     const selfTransfer = recipients.length === 0;
+    const selfAmount = new BigNumber(verified.selfOutputs[0] ?? '0');
+    const selfChange = new BigNumber(verified.change).minus(selfAmount);
     return {
       sender: verified.sender,
       receiver: selfTransfer ? verified.sender : recipients[0].address,
       amount: toHumanAmount(
-        selfTransfer ? verified.change : recipientTotal,
+        selfTransfer ? selfAmount : recipientTotal,
         decimals,
       ),
+      ...(selfTransfer && selfChange.isGreaterThan(0)
+        ? { selfChange: toHumanAmount(selfChange, decimals) }
+        : {}),
       fee: toHumanAmount(verified.fee, decimals),
       tokenSymbol: blockchains[chain].symbol,
       recipientCount: recipients.length,

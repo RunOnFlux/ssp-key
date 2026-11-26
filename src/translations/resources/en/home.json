@@ -316,6 +316,7 @@
   "a11y_slide_hint": "Slide right to approve. With a screen reader, double tap to approve.",
   "decoded_on_device": "Decoded on this device",
   "to_recipient": "To",
+  "self_transfer_change": "Plus {{amount}} {{symbol}} change, also back to your wallet",
   "from_sender": "From",
   "spender": "Spender",
   "operator": "Operator",

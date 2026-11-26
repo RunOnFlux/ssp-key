@@ -108,6 +108,7 @@ const TransactionRequest = (props: {
   const [warnings, setWarnings] = useState<ApprovalWarning[]>([]);
   const [nativeValue, setNativeValue] = useState('');
   const [memo, setMemo] = useState('');
+  const [selfChange, setSelfChange] = useState('');
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
   // Encrypted per-chain xpubs; decrypted only inside the decode run.
@@ -169,6 +170,7 @@ const TransactionRequest = (props: {
     setWarnings([]);
     setNativeValue('');
     setMemo('');
+    setSelfChange('');
     setToken('');
     setTokenSymbol('');
     setTxData('');
@@ -226,6 +228,7 @@ const TransactionRequest = (props: {
         setWarnings(txInfo.warnings ?? []);
         setNativeValue(txInfo.nativeValue ?? '');
         setMemo(txInfo.memo ?? '');
+        setSelfChange(txInfo.selfChange ?? '');
         setSenderAddress(txInfo.sender);
         setToken(txInfo.token || '');
         setTokenSymbol(txInfo.tokenSymbol);
@@ -603,6 +606,19 @@ const TransactionRequest = (props: {
                 address={recipientAddress}
                 {...texNotes(recipientAddress)}
               />
+            ) : null}
+            {selfChange ? (
+              <Text
+                style={[
+                  Fonts.textSmall,
+                  { color: Colors.textGray400, marginBottom: 8 },
+                ]}
+              >
+                {t('home:self_transfer_change', {
+                  amount: selfChange,
+                  symbol: blockchainConfig.symbol,
+                })}
+              </Text>
             ) : null}
             {multiRecipient && !listAllRecipients ? (
               <Text

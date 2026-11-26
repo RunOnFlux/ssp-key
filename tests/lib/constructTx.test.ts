@@ -158,6 +158,7 @@ describe('ConstructTx Lib', () => {
         sender: 't3fxsCXJHeGmaDP7Xu7UbjXUM7opop9Mf4K',
         recipients: [],
         change: '50000',
+        selfOutputs: ['50000'],
         fee: '50000',
         maxFee: '1000000000',
         inputs: [{ txid: fakeTxId, vout: 0, satoshis: '100000' }],
