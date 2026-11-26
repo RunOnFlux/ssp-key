@@ -328,6 +328,15 @@ export type ApprovalWarning =
   | 'unknown_token'
   | 'contract_call_with_value';
 
+/** UTXO: where the coins go (human-readable). sent + change + fee = inputTotal. */
+export interface UtxoBreakdown {
+  inputCount: number;
+  inputTotal: string;
+  sent: string;
+  change: string;
+  fee: string;
+}
+
 interface tokenInfo {
   sender: string;
   receiver: string;
@@ -341,11 +350,13 @@ interface tokenInfo {
   recipientCount?: number;
   /** Every non-change destination with its own amount (UTXO / Solana). */
   recipients?: ApprovalRecipient[];
+  /** UTXO: every output pays the sender's own verified address. */
+  selfTransfer?: boolean;
   /**
-   * UTXO self-transfer: the remaining outputs back to the sender after the
-   * first one (human-readable). `amount` is the first output.
+   * UTXO: where the coins go, for the Advanced section (human-readable).
+   * sent + change + fee = inputTotal.
    */
-  selfChange?: string;
+  utxoBreakdown?: UtxoBreakdown;
   /** EVM: native value sent along with a contract call (human-readable). */
   nativeValue?: string;
   warnings?: ApprovalWarning[];
@@ -489,18 +500,28 @@ export async function decodeTransactionForApproval(
     // rest is shown as change. Every output is the key's own verified
     // address, so no choice here moves funds anywhere else.
     const selfTransfer = recipients.length === 0;
-    const selfAmount = new BigNumber(verified.selfOutputs[0] ?? '0');
-    const selfChange = new BigNumber(verified.change).minus(selfAmount);
+    const sent = selfTransfer
+      ? new BigNumber(verified.selfOutputs[0] ?? '0')
+      : recipientTotal;
+    const change = new BigNumber(verified.change).minus(
+      selfTransfer ? sent : 0,
+    );
+    const inputTotal = verified.inputs.reduce(
+      (sum, input) => sum.plus(input.satoshis),
+      new BigNumber(0),
+    );
     return {
       sender: verified.sender,
       receiver: selfTransfer ? verified.sender : recipients[0].address,
-      amount: toHumanAmount(
-        selfTransfer ? selfAmount : recipientTotal,
-        decimals,
-      ),
-      ...(selfTransfer && selfChange.isGreaterThan(0)
-        ? { selfChange: toHumanAmount(selfChange, decimals) }
-        : {}),
+      amount: toHumanAmount(sent, decimals),
+      selfTransfer,
+      utxoBreakdown: {
+        inputCount: verified.inputs.length,
+        inputTotal: toHumanAmount(inputTotal, decimals),
+        sent: toHumanAmount(sent, decimals),
+        change: toHumanAmount(change, decimals),
+        fee: toHumanAmount(verified.fee, decimals),
+      },
       fee: toHumanAmount(verified.fee, decimals),
       tokenSymbol: blockchains[chain].symbol,
       recipientCount: recipients.length,
