@@ -194,6 +194,8 @@
   "vault_xpub_success": "Veřejný klíč vaultu byl úspěšně sdílen.",
   "err_vault_xpub_failed": "Nepodařilo se sdílet veřejný klíč vaultu. Zkuste to znovu.",
   "vault_sign_request": "Transakce vaultu",
+  "vault_sign_verifying": "Verifying vault…",
+  "vault_sign_verifying_desc": "Checking that this request belongs to your vault before anything can be approved.",
   "vault_sign_request_info": "Enterprise vault požaduje váš podpis transakce. Zkontrolujte prosím detaily níže.",
   "vault": "Vault",
   "organization": "Ogranizace",

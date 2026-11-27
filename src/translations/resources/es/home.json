@@ -194,6 +194,8 @@
   "vault_xpub_success": "Vault public key shared successfully.",
   "err_vault_xpub_failed": "Failed to share vault public key. Try again.",
   "vault_sign_request": "Vault Transaction",
+  "vault_sign_verifying": "Verifying vault…",
+  "vault_sign_verifying_desc": "Checking that this request belongs to your vault before anything can be approved.",
   "vault_sign_request_info": "An enterprise vault is requesting your signature on a transaction. Please review the details below.",
   "vault": "Vault",
   "organization": "Organization",
