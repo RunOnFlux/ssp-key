@@ -104,6 +104,8 @@ export interface VerifiedConsumerUtxoTx {
   recipients: ConsumerUtxoRecipient[];
   /** Base units returned to the derived 2-of-2. */
   change: string;
+  /** Each value-bearing output to the derived 2-of-2, in output order. */
+  selfOutputs: string[];
   /** Base units, computed from the key's own input values. */
   fee: string;
   /** Base-unit ceiling the fee was checked against. */
@@ -686,12 +688,15 @@ export function summarizeConsumerUtxoOutputs(
 ): {
   recipients: ConsumerUtxoRecipient[];
   change: BigNumber;
+  /** Each value-bearing output to the derived script, in output order. */
+  selfOutputs: BigNumber[];
   total: BigNumber;
 } {
   const network = getNetwork(chain);
   const cashAddr = !!blockchains[chain].cashaddr;
   const recipients: ConsumerUtxoRecipient[] = [];
   let change = new BigNumber(0);
+  const selfOutputs: BigNumber[] = [];
   let total = new BigNumber(0);
   tx.outs.forEach((out: { script: Buffer; value: number }) => {
     const value = toSafeSatoshis(out.value, 'output');
@@ -701,6 +706,7 @@ export function summarizeConsumerUtxoOutputs(
     total = total.plus(value);
     if (Buffer.from(out.script).equals(scripts.scriptPubKey)) {
       change = change.plus(value);
+      selfOutputs.push(new BigNumber(value));
       return;
     }
     // Throws for any value-bearing output that has no address form — the
@@ -711,7 +717,7 @@ export function summarizeConsumerUtxoOutputs(
     }
     recipients.push({ address, amount: String(value) });
   });
-  return { recipients, change, total };
+  return { recipients, change, selfOutputs, total };
 }
 
 function expectedHashType(chain: keyof cryptos): number {
@@ -902,11 +908,8 @@ export async function verifyConsumerUtxoTransaction(
   onProgress?.({ step: 'loading_inputs' });
   const values = await resolveConsumerInputValues(chain, inputs, scripts, deps);
   const totalIn = values.reduce((sum, v) => sum.plus(v), new BigNumber(0));
-  const { recipients, change, total } = summarizeConsumerUtxoOutputs(
-    tx,
-    chain,
-    scripts,
-  );
+  const { recipients, change, selfOutputs, total } =
+    summarizeConsumerUtxoOutputs(tx, chain, scripts);
   const fee = totalIn.minus(total);
   if (!fee.isFinite() || fee.isNegative()) {
     throw new Error('Transaction outputs exceed its inputs');
@@ -947,6 +950,7 @@ export async function verifyConsumerUtxoTransaction(
     sender: scripts.address,
     recipients,
     change: change.toFixed(),
+    selfOutputs: selfOutputs.map((v) => v.toFixed()),
     fee: fee.toFixed(),
     maxFee: maxFee.toFixed(),
     inputs: inputs.map((input, i) => ({

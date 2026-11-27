@@ -310,6 +310,67 @@ describe('consumer UTXO: honest round trips', () => {
     expect(info.recipients.map((r) => r.amount)).toEqual(['0.001', '0.0005']);
     expect(info.amount).toBe('0.0015');
     expect(info.fee).toBe('0.0001');
+    expect(info.selfTransfer).toBe(false);
+    expect(info.utxoBreakdown).toEqual({
+      inputCount: 1,
+      inputTotal: '0.003',
+      sent: '0.0015',
+      change: '0.0014',
+      fee: '0.0001',
+    });
+  });
+
+  it('decodeTransactionForApproval: send-to-self shows the first output as the amount and the rest as change', async () => {
+    const chain = 'flux';
+    const m = material(chain);
+    const f1 = fundingTx(chain, m.scripts.scriptPubKey, 300000, 6);
+    const f2 = fundingTx(chain, m.scripts.scriptPubKey, 200000, 7);
+    const inputs = [
+      { tx: f1, vout: 0, value: 300000 },
+      { tx: f2, vout: 0, value: 200000 },
+    ];
+    // Wallet layout: payment first, change last — both to the same address.
+    const raw = walletBuild(chain, m, inputs, [
+      { script: m.scripts.scriptPubKey, value: 400000 },
+      { script: m.scripts.scriptPubKey, value: 95000 },
+    ]);
+    const info = await decodeTransactionForApproval(
+      raw,
+      chain,
+      m.keys,
+      depsFor(chain, inputs),
+    );
+    expect(info.sender).toBe(m.ms.address);
+    expect(info.receiver).toBe(m.ms.address);
+    expect(info.recipientCount).toBe(0);
+    expect(info.amount).toBe('0.004');
+    expect(info.selfTransfer).toBe(true);
+    expect(info.utxoBreakdown).toEqual({
+      inputCount: 2,
+      inputTotal: '0.005',
+      sent: '0.004',
+      change: '0.00095',
+      fee: '0.00005',
+    });
+  });
+
+  it('decodeTransactionForApproval: send-to-self without change shows zero change', async () => {
+    const chain = 'flux';
+    const m = material(chain);
+    const f1 = fundingTx(chain, m.scripts.scriptPubKey, 300000, 8);
+    const inputs = [{ tx: f1, vout: 0, value: 300000 }];
+    const raw = walletBuild(chain, m, inputs, [
+      { script: m.scripts.scriptPubKey, value: 295000 },
+    ]);
+    const info = await decodeTransactionForApproval(
+      raw,
+      chain,
+      m.keys,
+      depsFor(chain, inputs),
+    );
+    expect(info.receiver).toBe(m.ms.address);
+    expect(info.amount).toBe('0.00295');
+    expect(info.utxoBreakdown?.change).toBe('0');
   });
 
   it('decodeTransactionForApproval fails closed without key material', async () => {

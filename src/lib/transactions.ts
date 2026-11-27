@@ -328,6 +328,15 @@ export type ApprovalWarning =
   | 'unknown_token'
   | 'contract_call_with_value';
 
+/** UTXO: where the coins go (human-readable). sent + change + fee = inputTotal. */
+export interface UtxoBreakdown {
+  inputCount: number;
+  inputTotal: string;
+  sent: string;
+  change: string;
+  fee: string;
+}
+
 interface tokenInfo {
   sender: string;
   receiver: string;
@@ -341,6 +350,13 @@ interface tokenInfo {
   recipientCount?: number;
   /** Every non-change destination with its own amount (UTXO / Solana). */
   recipients?: ApprovalRecipient[];
+  /** UTXO: every output pays the sender's own verified address. */
+  selfTransfer?: boolean;
+  /**
+   * UTXO: where the coins go, for the Advanced section (human-readable).
+   * sent + change + fee = inputTotal.
+   */
+  utxoBreakdown?: UtxoBreakdown;
   /** EVM: native value sent along with a contract call (human-readable). */
   nativeValue?: string;
   warnings?: ApprovalWarning[];
@@ -478,15 +494,34 @@ export async function decodeTransactionForApproval(
       new BigNumber(0),
     );
     // A transaction whose only outputs return to the derived address is a
-    // self-transfer: show the sender as the destination, never a guess.
+    // self-transfer: the payment and the change pay the same script, so they
+    // cannot be told apart by address. The wallet always writes the payment
+    // first, so the first output is the amount (as before 2.2.0) and the
+    // rest is shown as change. Every output is the key's own verified
+    // address, so no choice here moves funds anywhere else.
     const selfTransfer = recipients.length === 0;
+    const sent = selfTransfer
+      ? new BigNumber(verified.selfOutputs[0] ?? '0')
+      : recipientTotal;
+    const change = new BigNumber(verified.change).minus(
+      selfTransfer ? sent : 0,
+    );
+    const inputTotal = verified.inputs.reduce(
+      (sum, input) => sum.plus(input.satoshis),
+      new BigNumber(0),
+    );
     return {
       sender: verified.sender,
       receiver: selfTransfer ? verified.sender : recipients[0].address,
-      amount: toHumanAmount(
-        selfTransfer ? verified.change : recipientTotal,
-        decimals,
-      ),
+      amount: toHumanAmount(sent, decimals),
+      selfTransfer,
+      utxoBreakdown: {
+        inputCount: verified.inputs.length,
+        inputTotal: toHumanAmount(inputTotal, decimals),
+        sent: toHumanAmount(sent, decimals),
+        change: toHumanAmount(change, decimals),
+        fee: toHumanAmount(verified.fee, decimals),
+      },
       fee: toHumanAmount(verified.fee, decimals),
       tokenSymbol: blockchains[chain].symbol,
       recipientCount: recipients.length,

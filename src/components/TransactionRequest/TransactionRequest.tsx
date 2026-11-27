@@ -20,6 +20,7 @@ import {
 import type {
   ApprovalRecipient,
   ApprovalWarning,
+  UtxoBreakdown,
 } from '../../lib/transactions';
 import { loadConsumerKeyMaterial } from '../../lib/consumerKeys';
 import { decodeErc20Calldata } from '../../lib/calldataDecode';
@@ -108,6 +109,10 @@ const TransactionRequest = (props: {
   const [warnings, setWarnings] = useState<ApprovalWarning[]>([]);
   const [nativeValue, setNativeValue] = useState('');
   const [memo, setMemo] = useState('');
+  const [selfTransfer, setSelfTransfer] = useState(false);
+  const [utxoBreakdown, setUtxoBreakdown] = useState<UtxoBreakdown | undefined>(
+    undefined,
+  );
   const [authenticationOpen, setAuthenticationOpen] = useState(false);
   const blockchainConfig = blockchains[props.chain];
   // Encrypted per-chain xpubs; decrypted only inside the decode run.
@@ -169,6 +174,8 @@ const TransactionRequest = (props: {
     setWarnings([]);
     setNativeValue('');
     setMemo('');
+    setSelfTransfer(false);
+    setUtxoBreakdown(undefined);
     setToken('');
     setTokenSymbol('');
     setTxData('');
@@ -226,6 +233,8 @@ const TransactionRequest = (props: {
         setWarnings(txInfo.warnings ?? []);
         setNativeValue(txInfo.nativeValue ?? '');
         setMemo(txInfo.memo ?? '');
+        setSelfTransfer(!!txInfo.selfTransfer);
+        setUtxoBreakdown(txInfo.utxoBreakdown);
         setSenderAddress(txInfo.sender);
         setToken(txInfo.token || '');
         setTokenSymbol(txInfo.tokenSymbol);
@@ -340,7 +349,9 @@ const TransactionRequest = (props: {
     amount: sendingAmount,
     symbol: displaySymbol,
   });
-  let recipientLabel = t('home:to_recipient');
+  let recipientLabel = selfTransfer
+    ? t('home:to_own_wallet')
+    : t('home:to_recipient');
   let recipientAddress = receiverAddress;
   // Zcash TEX recipient (matched to its output on this device): say what the
   // address type is and which `t1…` address explorers will show.
@@ -677,6 +688,71 @@ const TransactionRequest = (props: {
                     </Text>
                   </View>
                 ) : null}
+                {utxoBreakdown ? (
+                  <View style={styles.advancedBlock}>
+                    <Text
+                      style={[
+                        Fonts.textTinyTiny,
+                        { color: Colors.textGray400, marginBottom: 4 },
+                      ]}
+                    >
+                      {t('home:utxo_inputs_outputs')}
+                    </Text>
+                    {[
+                      {
+                        label: t('home:utxo_spending_inputs', {
+                          inputs: utxoBreakdown.inputCount,
+                        }),
+                        value: utxoBreakdown.inputTotal,
+                      },
+                      {
+                        label: selfTransfer
+                          ? t('home:utxo_sending_own_wallet')
+                          : t('home:utxo_sending'),
+                        value: utxoBreakdown.sent,
+                      },
+                      {
+                        label: t('home:utxo_change_same_address'),
+                        value: utxoBreakdown.change,
+                      },
+                      {
+                        label: t('home:network_fee'),
+                        value: utxoBreakdown.fee,
+                      },
+                    ].map((row) => (
+                      <View key={row.label} style={styles.breakdownRow}>
+                        <Text
+                          style={[
+                            Fonts.textTiny,
+                            styles.breakdownLabel,
+                            { color: Colors.textGray400 },
+                          ]}
+                        >
+                          {row.label}
+                        </Text>
+                        <Text
+                          style={[
+                            Fonts.textTiny,
+                            Fonts.textBold,
+                            styles.tabular,
+                          ]}
+                        >
+                          {row.value} {blockchainConfig.symbol}
+                        </Text>
+                      </View>
+                    ))}
+                    <Text
+                      style={[
+                        Fonts.textTinyTiny,
+                        { color: Colors.textGray400, marginTop: 6 },
+                      ]}
+                    >
+                      {t('home:utxo_change_explainer', {
+                        inputs: utxoBreakdown.inputCount,
+                      })}
+                    </Text>
+                  </View>
+                ) : null}
                 {token ? (
                   <View style={styles.advancedBlock}>
                     <Text
@@ -803,6 +879,19 @@ const styles = StyleSheet.create({
   mainBlock: {
     marginBottom: 8,
     paddingHorizontal: 4,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
+  },
+  breakdownLabel: {
+    flexShrink: 1,
+    marginRight: 12,
   },
   advancedBlock: {
     marginBottom: 8,
