@@ -1,7 +1,4 @@
-Update. Please update SSP Wallet to 2.3.0 as well.
-• Much faster vault approvals and EVM signing
-• No frozen screen: vault requests show "Verifying vault…" right away
-• Zcash TEX addresses (tex1…) shown as entered, checked on the phone
-• A readable reason when the network rejects a transaction
-
-Open SSP Key once after updating to finish a quick security upgrade.
+Fixes the amount shown when you send to your own address: SSP Key now shows the amount you entered, labelled "To your own wallet", instead of adding the change to it.
+• New "Inputs and outputs" section under Advanced: inputs spent, amount, change and network fee
+• Updated translations
+Works with SSP Wallet 2.3.0.

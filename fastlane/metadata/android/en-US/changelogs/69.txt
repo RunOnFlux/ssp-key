@@ -1,0 +1,4 @@
+Fixes the amount shown when you send to your own address: SSP Key now shows the amount you entered, labelled "To your own wallet", instead of adding the change to it.
+• New "Inputs and outputs" section under Advanced: inputs spent, amount, change and network fee
+• Updated translations
+Works with SSP Wallet 2.3.0.
